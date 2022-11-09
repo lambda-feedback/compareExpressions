@@ -29,9 +29,9 @@ except ImportError:
     from symbolic_equal import evaluation_function as symbolic_equal
     from strict_si_syntax import strict_SI_parsing
 
-parse_error_warning = (
-    lambda x: f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct notation is used, that the expression is unambiguous and that all parentheses are closed."
-)
+
+def parse_error_warning(x):
+    return f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct notation is used, that the expression is unambiguous and that all parentheses are closed."
 
 
 def evaluation_function(response, answer, params) -> dict:
