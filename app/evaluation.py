@@ -31,15 +31,23 @@ def evaluation_function(response, answer, params) -> dict:
     answer, response = preprocess_expression([answer, response],parameters)
     parsing_params = create_sympy_parsing_params(parameters, unsplittable_symbols=unsplittable_symbols)
 
-    if params.get("strict_SI_syntax",False):
+    if params.get("strict_SI_syntax",False): # NOTE: this is the only mode that is supported right now
+        # The expected forms of the response are:
+        #       NUMBER UNIT_EXPRESSION
+        #       MATHEMATICAL_EXPRESSION UNIT_EXPRESSION
+        # strict_SI_parsing returns a Quantity object. 
+        # For this file the relevant content of the quantity object is the messages and the passed criteria.
         ans_parsed = strict_SI_parsing(answer)
         res_parsed = strict_SI_parsing(response)
 
+        # Collects messages from parsing the response, these needs to be returned as feedback later
         remark = "\n".join(res_parsed.messages)
 
+        # Computes the desired tolerance used for numerical computations based on the formatting of the answer
         if ans_parsed.passed("NUMBER_VALUE"):
             rtol = parameters.get("rtol",compute_relative_tolerance_from_significant_decimals(ans_parsed.value()))
 
+        # Formats results of parse in way that allows furrther analysis with sympy
         expression = ""
         if res_parsed.passed("HAS_VALUE"):
             expression += "("+res_parsed.value()+")"
@@ -50,7 +58,8 @@ def evaluation_function(response, answer, params) -> dict:
             res = parse_expression(expression,parsing_params)
         except Exception as e:
             separator = "" if len(remark) == 0 else "\n"
-            return {"is_correct": False, "feedback": parse_error_warning(response)+separator+remark}
+            # NOTE: Parsing issues are returned as feedback here
+            return {"is_correct": False, "feedback": "\n".join([parse_error_warning(response),remark]) }
 
         expression = ""
         if ans_parsed.passed("HAS_VALUE"):
@@ -63,10 +72,14 @@ def evaluation_function(response, answer, params) -> dict:
         except Exception as e:
             raise Exception(f"SymPy was unable to parse the answer {answer}") from e
 
+        # Latex version of response is used for preview in web client
         interp = {"response_latex": res_parsed.print_latex()}
 
         result = {"is_correct": False}
 
+        # TODO: Comparison of dimensions in way that allows for constructive feedback
+
+        # Numerical comparison of value of expression
         equal_up_to_multiplication = bool(simplify(res/ans).is_constant() and res != 0)
         error_below_atol = False
         error_below_rtol = False
@@ -90,6 +103,7 @@ def evaluation_function(response, answer, params) -> dict:
         if error_below_atol and error_below_rtol:
             result["is_correct"] = True
 
+    # Check some of the criteria and creates corresponding feedback
     tested_criteria = ["FULL_QUANTITY","NO_UNIT","ONLY_UNIT","NUMBER_VALUE","EXPR_VALUE"]
     feedback = []
     for criterion in tested_criteria:
