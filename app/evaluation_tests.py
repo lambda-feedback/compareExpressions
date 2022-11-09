@@ -52,6 +52,9 @@ class TestEvaluationFunction(unittest.TestCase):
                  "q",\
                  "10",\
                  "1/s^2",\
+                 "10 gram/metresecond",\
+                 "10 second/gram + 5 gram*second + 7 ms + 5 gram/second",\
+                 "10 second/gram * 7 ms * 5 gram/second",\
                 ]
         params = {"strict_syntax": False, "strict_SI_syntax": True}
         for expr in exprs:
@@ -63,11 +66,6 @@ class TestEvaluationFunction(unittest.TestCase):
                 print(result["feedback"])
                 print(result["response_latex"])
                 self.assertEqual(result["is_correct"],True)
-
-        exprs = ["10 gram/metresecond",\
-                 "10 second/gram + 5 gram*second + 7 ms + 5 gram/second",\
-                 "10 second/gram * 7 ms * 5 gram/second",\
-                ]
 
 if __name__ == "__main__":
     unittest.main()

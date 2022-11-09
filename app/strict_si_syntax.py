@@ -1,8 +1,13 @@
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy import latex
-from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes
-from expression_utilities import expression_to_latex
+
+try:
+    from .static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes
+    from .expression_utilities import expression_to_latex
+except ImportError:
+    from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes
+    from expression_utilities import expression_to_latex
 
 # -------------------
 # GLOBALS DEFINITIONS

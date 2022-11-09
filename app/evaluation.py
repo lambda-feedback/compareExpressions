@@ -6,7 +6,7 @@ try:
     from .static_unit_conversion_arrays import unit_dictionary, names_of_prefixes_units_and_dimensions
     from .expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
     from .symbolic_equal import evaluation_function as symbolic_equal
-    from .strict_si_syntax import strict_SI_parsing, convert_to_base_units
+    from .strict_si_syntax import strict_SI_parsing
 except ImportError:
     from static_unit_conversion_arrays import unit_dictionary, names_of_prefixes_units_and_dimensions
     from expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
