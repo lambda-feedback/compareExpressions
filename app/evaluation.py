@@ -37,19 +37,19 @@ def parse_error_warning(x):
 class EvaluationResponse:
     def __init__(self):
         self.is_correct = False
-        self._latex = None
+        self.latex = None
         self._feedback = []
 
-    def add_feedback(self, tuple[str, str]):
-        pass
+    def add_feedback(self, feedback_item: tuple[str, str] | str):
+        self._feedback.append(feedback_item)
 
     def _serialise_feedback(self) -> str:
         return "\n".join(self._feedback)
 
     def serialise(self) -> dict:
         out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback())
-        if self._latex:
-            out.update(dict(response_latex=self._latex))
+        if self.latex:
+            out.update(dict(response_latex=self.latex))
         return out
 
 
@@ -57,6 +57,8 @@ def evaluation_function(response, answer, params) -> dict:
     """
     Function that provides some basic dimensional analysis functionality.
     """
+    eval_response = EvaluationResponse()
+
     default_rtol = 1e-12
     if "substitutions" in params.keys():
         unsplittable_symbols = tuple()
@@ -83,7 +85,7 @@ def evaluation_function(response, answer, params) -> dict:
         res_parsed = strict_SI_parsing(response)
 
         # Collects messages from parsing the response, these needs to be returned as feedback later
-        remark = "\n".join(res_parsed.messages)
+        eval_response.add_feedback("\n".join(res_parsed.messages))
 
         # Computes the desired tolerance used for numerical computations based on the formatting of the answer
         if ans_parsed.passed("NUMBER_VALUE"):
@@ -106,10 +108,8 @@ def evaluation_function(response, answer, params) -> dict:
         except Exception as e:
             separator = "" if len(remark) == 0 else "\n"
             # NOTE: Parsing issues are returned as feedback here
-            return {
-                "is_correct": False,
-                "feedback": "\n".join([parse_error_warning(response), remark]),
-            }
+            eval_response.add_feedback(parse_error_warning(response))
+            return eval_response.serialise()
 
         expression = ""
         if ans_parsed.passed("HAS_VALUE"):
@@ -121,11 +121,6 @@ def evaluation_function(response, answer, params) -> dict:
             ans = parse_expression(expression, parsing_params)
         except Exception as e:
             raise Exception(f"SymPy was unable to parse the answer {answer}") from e
-
-        # Latex version of response is used for preview in web client
-        interp = {"response_latex": res_parsed.print_latex()}
-
-        result = {"is_correct": False}
 
         # TODO: Comparison of dimensions in way that allows for constructive feedback
 
@@ -159,7 +154,7 @@ def evaluation_function(response, answer, params) -> dict:
                         float(abs(((ans - res) / ans).simplify())) < default_rtol
                     )
         if error_below_atol and error_below_rtol:
-            result["is_correct"] = True
+            eval_response.is_correct = True
 
     # Check some of the criteria and creates corresponding feedback
     tested_criteria = [
@@ -172,11 +167,10 @@ def evaluation_function(response, answer, params) -> dict:
     feedback = []
     for criterion in tested_criteria:
         if res_parsed.passed(criterion):
-            feedback += [res_parsed.feedback(criterion)]
+            eval_response.add_feedback(res_parsed.feedback(criterion))
 
-    feedback = {"feedback": "\n".join(feedback + [remark])}
-
-    return {**result, **interp, **feedback}
+    eval_response.latex = res_parsed.print_latex()
+    return eval_response.serialise()
 
 
 def compute_relative_tolerance_from_significant_decimals(string):
