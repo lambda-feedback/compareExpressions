@@ -34,6 +34,25 @@ def parse_error_warning(x):
     return f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct notation is used, that the expression is unambiguous and that all parentheses are closed."
 
 
+class EvaluationResponse:
+    def __init__(self):
+        self.is_correct = False
+        self._latex = None
+        self._feedback = []
+
+    def add_feedback(self, tuple[str, str]):
+        pass
+
+    def _serialise_feedback(self) -> str:
+        return "\n".join(self._feedback)
+
+    def serialise(self) -> dict:
+        out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback())
+        if self._latex:
+            out.update(dict(response_latex=self._latex))
+        return out
+
+
 def evaluation_function(response, answer, params) -> dict:
     """
     Function that provides some basic dimensional analysis functionality.
