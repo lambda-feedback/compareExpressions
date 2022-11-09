@@ -11,6 +11,12 @@ RUN pip3 install -r requirements.txt
 # Copy the evaluation and testing scripts
 COPY evaluation.py ./app/
 COPY evaluation_tests.py ./app/
+COPY static_unit_conversion_arrays.py ./app/
+COPY strict_si_syntax.py ./app/
+COPY expression_utilities.py ./app/
+COPY static_unit_conversion_arrays.py ./app/
+COPY static_unit_conversion_arrays.py ./app/
+COPY static_unit_conversion_arrays.py ./app/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
