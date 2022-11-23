@@ -13,6 +13,7 @@ try:
         create_sympy_parsing_params,
         substitute,
     )
+    from .evaluation_response_utils import EvaluationResponse
     from .symbolic_equal import evaluation_function as symbolic_equal
     from .strict_si_syntax import strict_SI_parsing
 except ImportError:
@@ -26,32 +27,12 @@ except ImportError:
         create_sympy_parsing_params,
         substitute,
     )
+    from evaluation_response_utils import EvaluationResponse
     from symbolic_equal import evaluation_function as symbolic_equal
     from strict_si_syntax import strict_SI_parsing
 
-
 def parse_error_warning(x):
     return f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct notation is used, that the expression is unambiguous and that all parentheses are closed."
-
-
-class EvaluationResponse:
-    def __init__(self):
-        self.is_correct = False
-        self.latex = None
-        self._feedback = []
-
-    def add_feedback(self, feedback_item: tuple[str, str] | str):
-        self._feedback.append(feedback_item)
-
-    def _serialise_feedback(self) -> str:
-        return "\n".join(self._feedback)
-
-    def serialise(self) -> dict:
-        out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback())
-        if self.latex:
-            out.update(dict(response_latex=self.latex))
-        return out
-
 
 def evaluation_function(response, answer, params) -> dict:
     """
@@ -106,8 +87,6 @@ def evaluation_function(response, answer, params) -> dict:
         try:
             res = parse_expression(expression, parsing_params)
         except Exception as e:
-            separator = "" if len(remark) == 0 else "\n"
-            # NOTE: Parsing issues are returned as feedback here
             eval_response.add_feedback(parse_error_warning(response))
             return eval_response.serialise()
 
@@ -167,11 +146,10 @@ def evaluation_function(response, answer, params) -> dict:
     feedback = []
     for criterion in tested_criteria:
         if res_parsed.passed(criterion):
-            eval_response.add_feedback(res_parsed.feedback(criterion))
+            eval_response.add_feedback((criterion,res_parsed.feedback(criterion)))
 
     eval_response.latex = res_parsed.print_latex()
     return eval_response.serialise()
-
 
 def compute_relative_tolerance_from_significant_decimals(string):
     rtol = None

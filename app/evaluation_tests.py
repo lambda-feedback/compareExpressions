@@ -35,37 +35,40 @@ class TestEvaluationFunction(unittest.TestCase):
     """
 
     def test_AAA(self):
-        exprs = ["-10.5 (kg m)^3/s^2",\
-                 "10 kilogram*metre*second**(-2)",\
-                 "10 kilogram*metre/second**2",\
-                 "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",\
-                 "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",\
-                 "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",\
-                 "(pi+10) kg*m/s^2",\
-                 "10*pi kilogram*metre/second^2",\
-                 "10 kilogram/(metre second^2)",\
-                 "10 kilogram*metre/second^2",\
-                 "10 kilogram metre/second^2",\
-                 "10 kg*m/s^2",\
-                 " 10 kg m/s^2 ",\
-                 "10 1/s^2",\
-                 "q",\
-                 "10",\
-                 "1/s^2",\
-                 "10 gram/metresecond",\
-                 "10 second/gram + 5 gram*second + 7 ms + 5 gram/second",\
-                 "10 second/gram * 7 ms * 5 gram/second",\
-                ]
+        exprs = [
+            ("-10.5 (kg m)^3/s^2", ["NUMBER_VALUE","FULL_QUANTITY"]),\
+            ("10 kilogram*metre*second**(-2)", []),\
+            ("10 kilogram*metre/second**2", []),\
+            ("(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)", []),\
+            ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)", []),\
+            ("(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)", []),\
+            ("(pi+10) kg*m/s^2", []),\
+            ("10*pi kilogram*metre/second^2", []),\
+            ("10 kilogram/(metre second^2)", []),\
+            ("10 kilogram*metre/second^2", []),\
+            ("10 kilogram metre/second^2", []),\
+            ("10 kg*m/s^2", []),\
+            (" 10 kg m/s^2 ", []),\
+            ("10 1/s^2", []),\
+            ("q", []),\
+            ("10", ["NUMBER_VALUE"]),\
+            ("1/s^2", []),\
+            ("10 gram/metresecond", []),\
+            ("10 second/gram + 5 gram*second + 7 ms + 5 gram/second", []),\
+            ("10 second/gram * 7 ms * 5 gram/second", []),\
+        ]
         params = {"strict_syntax": False, "strict_SI_syntax": True}
-        for expr in exprs:
+        for (expr,criteria) in exprs:
             with self.subTest(expr=expr):
                 answer = expr
                 response = expr
                 result = evaluation_function(response, answer, params)
-                print("-------------------------")
-                print(result["feedback"])
-                print(result["response_latex"])
+                #print("-------------------------")
+                #print(result["feedback"])
+                #print(result["response_latex"])
                 self.assertEqual(result["is_correct"],True)
+                for criterion in criteria:
+                    self.assertEqual(result["tags"][criterion] != None,True)
 
 if __name__ == "__main__":
     unittest.main()
