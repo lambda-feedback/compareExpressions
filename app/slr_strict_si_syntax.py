@@ -37,6 +37,10 @@
 # -------
 # CLASSES
 # -------
+
+from enum import Enum
+QuantityTags = Enum("QuantityTags",{v:i for i,v in enumerate("UVN",1)})
+
 class PhysicalQuantity:
 
     def __init__(self,ast_root,messages):
@@ -48,7 +52,7 @@ class PhysicalQuantity:
         if self.ast_root.label == "SPACE":
             self.value = self.ast_root.children[0]
             self.unit = self.ast_root.children[1]
-        elif "U" in self.ast_root.tags:
+        elif QuantityTags.U in self.ast_root.tags:
             self.unit = self.ast_root
         else:
             self.value = self.ast_root
@@ -67,12 +71,12 @@ class PhysicalQuantity:
                 new_root.children.append(old_root)
             for child in old_root.children:
                 old_root.tags = old_root.tags | child.tags
-                if "V" in old_root.tags and "U" in old_root.tags:
-                    old_root.tags.remove("U")
+                if QuantityTags.V in old_root.tags and QuantityTags.U in old_root.tags:
+                    old_root.tags.remove(QuantityTags.U)
             for child in old_root.children:
                 new_root.tags = new_root.tags | child.tags
-                if "V" in new_root.tags and "U" in new_root.tags:
-                    new_root.tags.remove("U")
+                if QuantityTags.V in new_root.tags and QuantityTags.U in new_root.tags:
+                    new_root.tags.remove(QuantityTags.U)
             self.ast_root = new_root
         else:
             raise Exception("Cannot rotate right.")
@@ -91,12 +95,12 @@ class PhysicalQuantity:
                 new_root.children.append(old_root)
             for child in old_root.children:
                 old_root.tags = old_root.tags | child.tags
-                if "V" in old_root.tags and "U" in old_root.tags:
-                    old_root.tags.remove("U")
+                if QuantityTags.V in old_root.tags and QuantityTags.U in old_root.tags:
+                    old_root.tags.remove(QuantityTags.U)
             for child in old_root.children:
                 new_root.tags = new_root.tags | child.tags
-                if "V" in new_root.tags and "U" in new_root.tags:
-                    new_root.tags.remove("U")
+                if QuantityTags.V in new_root.tags and QuantityTags.U in new_root.tags:
+                    new_root.tags.remove(QuantityTags.U)
             self.ast_root = new_root
         else:
             raise Exception("Cannot rotate left.")
@@ -195,7 +199,7 @@ def SLR_strict_SI_parsing(expr):
 
     def transfer_tags_op(op):
         def apply(p,o):
-            return tag_removal(p,tag_transfer(p,op(p,o)),"U",lambda x: "V" in x)
+            return tag_removal(p,tag_transfer(p,op(p,o)),QuantityTags.U,lambda x: QuantityTags.V in x)
         return apply
 
     def tag_node(tag_value):
@@ -206,9 +210,9 @@ def SLR_strict_SI_parsing(expr):
     productions = [( start_symbol, "Q" , relabel )]
     productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
     productions += [( "Q", "QQ" , transfer_tags_op(append) )]
-    productions += [( "Q", "U" , tag_node("U") )]
-    productions += [( "Q", "N" , tag_node("N") )]
-    productions += [( "Q", "V" , tag_node("V") )]
+    productions += [( "Q", "U" , tag_node(QuantityTags.U) )]
+    productions += [( "Q", "N" , tag_node(QuantityTags.N) )]
+    productions += [( "Q", "V" , tag_node(QuantityTags.V) )]
     productions += [( "Q", "Q"+x+"Q", transfer_tags_op(infix) ) for x in list(" */^")]
 
     prods = []
