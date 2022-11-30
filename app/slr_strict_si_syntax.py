@@ -108,10 +108,10 @@ class PhysicalQuantity:
 
     def _rotate_until_root_is_split(self):
         if self.ast_root.label == "SPACE":
-            if "V" in self.ast_root.children[1].tags:
+            if QuantityTags.V in self.ast_root.children[1].tags:
                 self._rotate_left()
                 self._rotate_until_root_is_split()
-            elif "U" in self.ast_root.children[0].tags:
+            elif QuantityTags.U in self.ast_root.children[0].tags:
                 self._rotate_right()
                 self._rotate_until_root_is_split()
         return
