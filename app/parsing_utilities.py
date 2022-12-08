@@ -51,7 +51,6 @@ class ExprNode(Token):
             s += "\n"+str(k)+": "+child.tree_string().replace("\n","\n|   ")
         return s
 
-
 class SLR_Parser:
 
     def __init__(self,token_list,productions,start_symbol,end_symbol,null_symbol):

@@ -41,6 +41,8 @@
 from enum import Enum
 QuantityTags = Enum("QuantityTags",{v:i for i,v in enumerate("UVN",1)})
 
+from slr_parsing_utilities import token_print_prefix, token_print_postfix, token_print_infix
+
 class PhysicalQuantity:
 
     def __init__(self,ast_root,messages):
@@ -48,60 +50,67 @@ class PhysicalQuantity:
         self.ast_root = ast_root
         self.value = None
         self.unit = None
+        self._rotations_performed = []
         self._rotate_until_root_is_split()
         if self.ast_root.label == "SPACE":
             self.value = self.ast_root.children[0]
             self.unit = self.ast_root.children[1]
         elif QuantityTags.U in self.ast_root.tags:
+            self._undo_rotations()
             self.unit = self.ast_root
         else:
+            self._undo_rotations()
             self.value = self.ast_root
+        if self.value != None:
+            self._revert_content(self.value)
+        return
+
+    def _rotate(self,direction):
+        # right: direction = 1
+        # left: direction = 0
+        print_rule_dict = {0: token_print_prefix, 1: token_print_postfix}
+        if direction not in {0,1}:
+            raise Exception("Unknown direction: "+str(direction))
+        self._rotations_performed.append(direction)
+        old_root = self.ast_root
+        new_root = old_root.children[1-direction]
+        if len(new_root.children) == 1:
+            new_root._print_rule = token_print_infix
+            old_root._print_rule = print_rule_dict[direction]
+            old_root.children = old_root.children[1-direction:len(old_root.children)-direction]
+            a = [] if direction == 0 else [old_root]
+            b = [old_root] if direction == 0 else []
+            new_root.children = a+new_root.children+b
+        elif len(new_root.children) > 1:
+            switch = new_root.children[-direction]
+            old_root.children[1-direction] = switch
+            new_root.children[-direction] = old_root
+        else:
+            direction_string = "right" if direction == 1 else "left"
+            raise Exception("Cannot rotate "+direction_string+".")
+            #old_root.children = old_root.children[direction:len(old_root.children)-1+direction]
+            #new_root.children.append(old_root)
+        for child in old_root.children:
+            old_root.tags = old_root.tags | child.tags
+            if QuantityTags.V in old_root.tags and QuantityTags.U in old_root.tags:
+                old_root.tags.remove(QuantityTags.U)
+        for child in old_root.children:
+            new_root.tags = new_root.tags | child.tags
+            if QuantityTags.V in new_root.tags and QuantityTags.U in new_root.tags:
+                new_root.tags.remove(QuantityTags.U)
+        self.ast_root = new_root
         return
 
     def _rotate_right(self):
         if len(self.ast_root.children) > 0:
-            old_root = self.ast_root
-            new_root = old_root.children[0]
-            if len(new_root.children) > 0:
-                switch = new_root.children[-1]
-                old_root.children[0] = switch
-                new_root.children[-1] = old_root
-            else:
-                old_root.children = old_root.children[1:]
-                new_root.children.append(old_root)
-            for child in old_root.children:
-                old_root.tags = old_root.tags | child.tags
-                if QuantityTags.V in old_root.tags and QuantityTags.U in old_root.tags:
-                    old_root.tags.remove(QuantityTags.U)
-            for child in old_root.children:
-                new_root.tags = new_root.tags | child.tags
-                if QuantityTags.V in new_root.tags and QuantityTags.U in new_root.tags:
-                    new_root.tags.remove(QuantityTags.U)
-            self.ast_root = new_root
+            self._rotate(1)
         else:
             raise Exception("Cannot rotate right.")
         return
 
     def _rotate_left(self):
         if len(self.ast_root.children) > 0:
-            old_root = self.ast_root
-            new_root = old_root.children[-1]
-            if len(new_root.children) > 0:
-                switch = new_root.children[0]
-                old_root.children[-1] = switch
-                new_root.children[0] = old_root
-            else:
-                old_root.children = old_root.children[0:-1]
-                new_root.children.append(old_root)
-            for child in old_root.children:
-                old_root.tags = old_root.tags | child.tags
-                if QuantityTags.V in old_root.tags and QuantityTags.U in old_root.tags:
-                    old_root.tags.remove(QuantityTags.U)
-            for child in old_root.children:
-                new_root.tags = new_root.tags | child.tags
-                if QuantityTags.V in new_root.tags and QuantityTags.U in new_root.tags:
-                    new_root.tags.remove(QuantityTags.U)
-            self.ast_root = new_root
+            self._rotate(0)
         else:
             raise Exception("Cannot rotate left.")
         return
@@ -116,30 +125,19 @@ class PhysicalQuantity:
                 self._rotate_until_root_is_split()
         return
 
-    # TODO: fix this function!
-    def _find_value_unit_split(self,root=None):
-        if root == None:
-            root = self.ast_root
-        split = None
-        if root.label == "SPACE":
-            if "U" not in root.children[0].tags and "U" in root.children[1].tags:
-                split = root
-            elif "U" in root.children[0].tags and "U" in root.children[1].tags:
-                split = self._find_value_unit_split(root=root.children[0])
-            else:
-                split = self._find_value_unit_split(root=root.children[1])
-        elif len(root.children) == 2:
-            if "U" not in root.children[1].tags:
-                split = self._find_value_unit_split(root=root.children[1])
-            elif "U" in root.children[0].tags:
-                split = self._find_value_unit_split(root=root.children[0])
-        elif len(root.children) == 1:
-            split = self._find_value_unit_split(root=root.children[0])
-        elif len(root.children) == 0:
-            split = root
-        else:
-            raise Exception("Node has too many children:\n"+self.tree_string(root))
-        return split
+    def _revert_content(self,node):
+        if node.label != "GROUP":
+            node.content = node.original[node.start:node.end+1]
+        for child in node.children:
+            # TODO: Add messages about units not being interpreted as units here.
+            self._revert_content(child)
+        return
+
+    def _undo_rotations(self):
+        while len(self._rotations_performed) > 0:
+            self._rotate((self._rotations_performed[-1]+1) % 2)
+            self._rotations_performed = self._rotations_performed[0:-2]
+        return
 
 # ---------
 # FUNCTIONS
@@ -193,7 +191,6 @@ def SLR_strict_SI_parsing(expr):
         ("N",          "NUMBER",         is_number) ,\
         ("U",          "UNIT",           lookup_unit) ,\
         ("V",          "NON-UNIT",       catch_undefined) ,\
-        ("E",          "UNIT_EXPR",      None) ,\
         ("Q",          "QUANTITY_NODE",  None) ,\
         ]
 
@@ -208,8 +205,8 @@ def SLR_strict_SI_parsing(expr):
         return apply
 
     productions = [( start_symbol, "Q" , relabel )]
-    productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
     productions += [( "Q", "QQ" , transfer_tags_op(append) )]
+    productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
     productions += [( "Q", "U" , tag_node(QuantityTags.U) )]
     productions += [( "Q", "N" , tag_node(QuantityTags.N) )]
     productions += [( "Q", "V" , tag_node(QuantityTags.V) )]
@@ -224,8 +221,16 @@ def SLR_strict_SI_parsing(expr):
     parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     tokens = parser.scan(expr)
 
+    def revert_content_and_join(p,o):
+        for k in range(0,len(p[1])):
+            original_content = o[-k].original[o[-k].start:o[-k].end+1]
+        return join(p,o)
+
     rules = [( "N", "N"+x+"N", join ) for x in list("*/^")]
-    rules += [( "V", "N V", join ), ( "V", "V N", join )]
+    rules += [( "V", "V(V)", join ), ( "V", "V(N)", join )]
+    rules += [( "V", "NV", join ), ( "V", "VV", join )]
+    rules += [( "V", x, revert_content_and_join ) for x in ["UV","VU"]]
+    rules += [( "V", "V N", join ), ( "V", " V", join )]
     rules += [( x, " "+x, join ) for x in list(" */^")]
     rules += [( x, x+" ", join ) for x in list(" */^")]
     tokens = parser.process(tokens,rules)
@@ -238,11 +243,36 @@ def SLR_strict_SI_parsing(expr):
         print(quantity)
         raise Exception("Parsed quantity does not have a single root.")
 
-    print(str(quantity[0].tags)+" "+str(len(quantity[0].children)))
-
     quantity = PhysicalQuantity(quantity[0],[])
 
-    return quantity
+    def unit_latex(node):
+        # TODO: skip unnecessary parenthesis (i.e. chech for GROUP children for powers and fraction and inside groups)
+        content = node.content
+        children = node.children
+        match node.label:
+            case "PRODUCT":
+                return unit_latex(children[0])+["\\cdot"]+unit_latex(children[1])
+            case "NUMBER":
+                return [content]
+            case "SPACE":
+                return unit_latex(children[0])+["~"]+unit_latex(children[1])
+            case "UNIT":
+                return ["\\mathrm{"]+[content]+["}"]
+            case "GROUP":
+                out = [content[0]]
+                for child in children:
+                    out += unit_latex(child)
+                return out+[content[1]]
+            case "POWER":
+                return unit_latex(children[0])+["^{"]+unit_latex(children[1])+["}"]
+            case "SOLIDUS":
+                return ["\\frac{"]+unit_latex(children[0])+["}{"]+unit_latex(children[1])+["}"]
+            case _:
+                return [content]
+
+    unit_latex_string = quantity.unit.content_string(print_rule=unit_latex) if quantity.unit != None else None
+
+    return quantity, unit_latex_string
 
 # -----
 # TESTS
@@ -268,7 +298,6 @@ if __name__ == "__main__":
         "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
         "(pi+10) kg*m/s^2",
         "10 kilogram*metre/second^2",
-        "10 kilogram metre/second^2",
         "10 kg*m/s^2",
         " 10 kg m/s^2 ",
         "10 gram/metresecond",
@@ -286,11 +315,13 @@ if __name__ == "__main__":
         print("*"*len(mid))
         print(mid)
         print("*"*len(mid))
-        quantity = SLR_strict_SI_parsing(expr)
+        quantity, unit_latex = SLR_strict_SI_parsing(expr)
         value = quantity.value.original_string() if quantity.value != None else None
         unit = quantity.unit.original_string() if quantity.unit != None else None
 
-        print("Value: "+str(value))
-        print("Unit: "+str(unit))
-        #print(quantity.ast_root.tree_string())
+        print("Content: "+quantity.ast_root.content_string())
+        print("Value:   "+str(value))
+        print("Unit:    "+str(unit))
+        print("LaTeX:   "+str(unit_latex))
+        print(quantity.ast_root.tree_string())
     print("** COMPLETE **")

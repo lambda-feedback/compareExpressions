@@ -1,3 +1,126 @@
+# -----------------
+# UTILITY FUNCTIONS
+# -----------------
+
+# Scanner utilities
+
+def catch_undefined(label,content,original,start,end):
+    return Token(label,content,original,start,end)
+
+# Parser utilities
+
+def package(production,output):
+    label = production[0].label
+    handle = production[1]
+    children = output[-len(handle):]
+    output = output[0:(-len(handle))]
+    package_content = "".join(str(children))
+    new_package = ExprNode(Token(label,package_content,children[0].original,children[0].start,children[0].end),children)
+    output.append(new_package)
+    return output
+
+def append(production,output):
+    handle = production[1]
+    children = output[1-len(handle):]
+    output = output[0:(1-len(handle))]
+    output[-1].children = children
+    output[-1]._print_rule = token_print_prefix
+    return output
+
+def join(production,output):
+    label = production[0].label
+    handle = production[1]
+    joined_content = "".join([node.content for node in output[-len(handle):]])
+    joined_end = output[-1].end
+    output = output[0:(1-len(handle))]
+    output[-1].label = label
+    output[-1].content = joined_content
+    output[-1].end = joined_end
+    return output
+
+def node(production,output):
+    a = output.pop()
+    output.append(ExprNode(a,[]))
+    return output
+
+def relabel(production,output):
+    a = output.pop()
+    output.append(Token(production[0].label,a.content,a.original,a.start,a.end))
+    return output
+
+def tag_rule_union(x,y):
+    return x | y
+
+def tag_rule_intersection(x,y):
+    return x & y
+
+def tag_transfer(production,output,rule=tag_rule_union):
+    node = output[-1]
+    tags = node.children[0].tags
+    for child in node.children[1:]:
+        tags = rule(tags,child.tags)
+    output[-1].tags.update(tags)
+    return output
+
+def tag_removal(production,output,tag,rule=lambda x: True):
+    if rule(output[-1].tags) and tag in output[-1].tags:
+        output[-1].tags.remove(tag)
+    return output
+
+def tag(production,output,tag=None):
+    if tag != None:
+        if output[-1].tags == None:
+            output[-1].tags = set()
+        output[-1].tags.add(tag)
+    return output
+
+def group(production,output):
+    end_delim = output.pop()
+    content = output.pop()
+    start_delim = output.pop()
+    output.append(\
+        ExprNode(\
+            Token(\
+                "GROUP",\
+                [start_delim.content,end_delim.content],\
+                content.original,\
+                start_delim.start,end_delim.end
+                ),
+            [content],print_rule=token_print_group)
+        )
+    return output
+
+def infix(handle,output):
+    right = output.pop()
+    operator = output.pop()
+    left = output.pop()
+    output.append(ExprNode(operator,[left,right],print_rule=token_print_infix))
+    return output
+
+# Node printing utilities
+
+def token_print_prefix(expr_node):
+    out = [expr_node.content]
+    for x in expr_node.children:
+        out += x._print_rule(x)
+    return out
+
+def token_print_postfix(expr_node):
+    out = []
+    for x in expr_node.children:
+        out += x._print_rule(x)
+    return out+[expr_node.content]
+
+def token_print_infix(expr_node):
+    return expr_node.children[0]._print_rule(expr_node.children[0])+[expr_node.content]+expr_node.children[1]._print_rule(expr_node.children[1])
+
+def token_print_group(expr_node):
+    out = [expr_node.content[0]]
+    for x in expr_node.children:
+        out += x._print_rule(x)
+    out += [expr_node.content[1]]
+    return out
+
 # -------
 # CLASSES
 # -------
@@ -13,11 +136,9 @@ class Token:
         return
 
     def __eq__(self, other):
-        #return self.label == other.label and self.content == other.content
         return isinstance(other,Token) and self.label == other.label
 
     def __hash__(self):
-        #return hash((self.label,self.content))
         return hash(self.label)
 
     def __str__(self):
@@ -30,7 +151,7 @@ class Token:
 
 class ExprNode(Token):
 
-    def __init__(self,token,children,tags=None):
+    def __init__(self,token,children,tags=None,print_rule=token_print_prefix):
         super().__init__(token.label,token.content,token.original,token.start,token.end)
         self.children = []
         for child in children:
@@ -44,6 +165,7 @@ class ExprNode(Token):
             self.tags = set()
         else:
             self.tags = tags
+        self._print_rule = print_rule
         return
 
     def tree_string(self):
@@ -53,6 +175,13 @@ class ExprNode(Token):
             padding = "\n|   " if k < len(self.children)-1 else "\n    "
             s += "\n"+str(k)+": "+child.tree_string().replace("\n",padding)
         return s
+
+    def content_string(self,print_rule=None):
+        if print_rule != None:
+            out = print_rule(self)
+        else:
+            out = self._print_rule(self)
+        return "".join(out)
 
     def original_string(self):
         left_children = self.children
@@ -485,104 +614,6 @@ class SLR_Parser:
                 break
         return output
 
-# -----------------
-# UTILITY FUNCTIONS
-# -----------------
-
-# Scanner utilities
-
-def catch_undefined(label,content,original,start,end):
-    return Token(label,content,original,start,end)
-
-# Parser utilities
-
-def package(production,output):
-    label = production[0].label
-    handle = production[1]
-    children = output[-len(handle):]
-    output = output[0:(-len(handle))]
-    package_content = "".join(str(children))
-    new_package = ExprNode(Token(label,package_content,children[0].original,children[0].start,children[0].end),children)
-    output.append(new_package)
-    return output
-
-def append(production,output):
-    handle = production[1]
-    children = output[1-len(handle):]
-    output = output[0:(1-len(handle))]
-    output[-1].children = children
-    return output
-
-def join(production,output):
-    label = production[0].label
-    handle = production[1]
-    joined_content = "".join([node.content for node in output[-len(handle):]])
-    joined_end = output[-1].end
-    output = output[0:(1-len(handle))]
-    output[-1].label = label
-    output[-1].content = joined_content
-    output[-1].end = joined_end
-    return output
-
-def node(production,output):
-    a = output.pop()
-    output.append(ExprNode(a,[]))
-    return output
-
-def relabel(production,output):
-    a = output.pop()
-    output.append(Token(production[0].label,a.content,a.original,a.start,a.end))
-    return output
-
-def tag_rule_union(x,y):
-    return x | y
-
-def tag_rule_intersection(x,y):
-    return x & y
-
-def tag_transfer(production,output,rule=tag_rule_union):
-    node = output[-1]
-    tags = node.children[0].tags
-    for child in node.children[1:]:
-        tags = rule(tags,child.tags)
-    output[-1].tags.update(tags)
-    return output
-
-def tag_removal(production,output,tag,rule=lambda x: True):
-    if rule(output[-1].tags) and tag in output[-1].tags:
-        output[-1].tags.remove(tag)
-    return output
-
-def tag(production,output,tag=None):
-    if tag != None:
-        if output[-1].tags == None:
-            output[-1].tags = set()
-        output[-1].tags.add(tag)
-    return output
-
-def group(production,output):
-    end_delim = output.pop()
-    content = output.pop()
-    start_delim = output.pop()
-    output.append(\
-        ExprNode(\
-            Token(\
-                "GROUP",\
-                [start_delim,end_delim],\
-                content.original,\
-                start_delim.start,end_delim.end
-                ),
-            [content])
-        )
-    return output
-
-def infix(handle,output):
-    right = output.pop()
-    operator = output.pop()
-    left = output.pop()
-    output.append(ExprNode(operator,[left,right]))
-    return output
-
 # -------
 # TESTING
 # -------
@@ -611,7 +642,7 @@ if __name__ == "__main__":
     test_parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     print(test_parser.parsing_table_to_string())
 
-    ref_string ='\t+\t*\t(\t)\tI\t$\tS\tE\n0\tx\tx\ts2\tx\ts3\tx\tx\ts1\t\n1\ts4\ts5\tx\tx\tx\tr0\tx\tx\t\n2\tx\tx\ts2\tx\ts3\tx\tx\ts6\t\n3\tr4\tr4\tx\tr4\tx\tr4\tx\tx\t\n4\tx\tx\ts2\tx\ts3\tx\tx\ts7\t\n5\tx\tx\ts2\tx\ts3\tx\tx\ts8\t\n6\ts4\ts5\tx\ts9\tx\tx\tx\tx\t\n7\tr1\ts5\tx\tr1\tx\tr1\tx\tx\t\n8\tr2\tr2\tx\tr2\tx\tr2\tx\tx\t\n9\tr3\tr3\tx\tr3\tx\tr3\tx\tx\t\n'
+    ref_string ='\t+\t*\t(\t)\tI\t$\te\tS\tE\n0\tx\tx\ts2\tx\ts3\tx\tx\tx\ts1\t\n1\ts4\ts5\tx\tx\tx\tr0\tx\tx\tx\t\n2\tx\tx\ts2\tx\ts3\tx\tx\tx\ts6\t\n3\tr4\tr4\tx\tr4\tx\tr4\tx\tx\tx\t\n4\tx\tx\ts2\tx\ts3\tx\tx\tx\ts7\t\n5\tx\tx\ts2\tx\ts3\tx\tx\tx\ts8\t\n6\ts4\ts5\tx\ts9\tx\tx\tx\tx\tx\t\n7\tr1\ts5\tx\tr1\tx\tr1\tx\tx\tx\t\n8\tr2\tr2\tx\tr2\tx\tr2\tx\tx\tx\t\n9\tr3\tr3\tx\tr3\tx\tr3\tx\tx\tx\t\n'
 
     if ref_string != test_parser.parsing_table_to_string():
         print(" ***************************************\n * WARNING: test parsing table changed *\n ***************************************")
