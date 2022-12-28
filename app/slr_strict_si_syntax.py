@@ -298,26 +298,25 @@ def SLR_strict_SI_parsing(expr):
         # TODO: skip unnecessary parenthesis (i.e. chech for GROUP children for powers and fraction and inside groups)
         content = node.content
         children = node.children
-        match node.label:
-            case "PRODUCT":
-                return unit_latex(children[0])+["\\cdot"]+unit_latex(children[1])
-            case "NUMBER":
-                return [content]
-            case "SPACE":
-                return unit_latex(children[0])+["~"]+unit_latex(children[1])
-            case "UNIT":
-                return ["\\mathrm{"]+[content]+["}"]
-            case "GROUP":
-                out = [content[0]]
-                for child in children:
-                    out += unit_latex(child)
-                return out+[content[1]]
-            case "POWER":
-                return unit_latex(children[0])+["^{"]+unit_latex(children[1])+["}"]
-            case "SOLIDUS":
-                return ["\\frac{"]+unit_latex(children[0])+["}{"]+unit_latex(children[1])+["}"]
-            case _:
-                return [content]
+        if node.label == "PRODUCT":
+            return unit_latex(children[0])+["\\cdot"]+unit_latex(children[1])
+        elif node.label == "NUMBER":
+            return [content]
+        elif node.label == "SPACE":
+            return unit_latex(children[0])+["~"]+unit_latex(children[1])
+        elif node.label == "UNIT":
+            return ["\\mathrm{"]+[content]+["}"]
+        elif node.label == "GROUP":
+            out = [content[0]]
+            for child in children:
+                out += unit_latex(child)
+            return out+[content[1]]
+        elif node.label == "POWER":
+            return unit_latex(children[0])+["^{"]+unit_latex(children[1])+["}"]
+        elif node.label == "SOLIDUS":
+            return ["\\frac{"]+unit_latex(children[0])+["}{"]+unit_latex(children[1])+["}"]
+        else:
+            return [content]
 
     unit_latex_string = "".join(unit_latex(quantity.unit)) if quantity.unit != None else None
 
