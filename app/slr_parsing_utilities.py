@@ -9,6 +9,7 @@ def catch_undefined(label,content,original,start,end):
 
 # Parser utilities
 
+## Syntax tree building utilities
 def package(production,output):
     label = production[0].label
     handle = production[1]
@@ -23,8 +24,7 @@ def append(production,output):
     handle = production[1]
     children = output[1-len(handle):]
     output = output[0:(1-len(handle))]
-    output[-1].children = children
-    output[-1]._print_rule = token_print_prefix
+    output[-1].children += children
     return output
 
 def join(production,output):
@@ -48,6 +48,46 @@ def relabel(production,output):
     output.append(Token(production[0].label,a.content,a.original,a.start,a.end))
     return output
 
+def group(production,output):
+    end_delim = output.pop()
+    content = output.pop()
+    start_delim = output.pop()
+    output.append(\
+        ExprNode(\
+            Token(\
+                "GROUP",\
+                [start_delim.content,end_delim.content],\
+                content.original,\
+                start_delim.start,end_delim.end
+                ),
+            [content],traverse_step=traverse_group)
+        )
+    return output
+
+def hidden(production,output):
+    right = output.pop()
+    left = output.pop()
+    output.append(\
+        ExprNode(\
+            Token(\
+                "HIDDEN",\
+                "",\
+                right.original,\
+                0,-1
+                ),
+            [left,right],traverse_step=traverse_infix)
+        )
+    return output
+
+def infix(handle,output):
+    right = output.pop()
+    operator = output.pop()
+    left = output.pop()
+    output.append(ExprNode(operator,[left,right],traverse_step=traverse_infix))
+    return output
+
+## Tag management utilities
+
 def tag_rule_union(x,y):
     return x | y
 
@@ -67,37 +107,36 @@ def tag_removal(production,output,tag,rule=lambda x: True):
         output[-1].tags.remove(tag)
     return output
 
-def tag(production,output,tag=None):
+def tag(production,output,tag=None,rule=lambda x: True):
     if tag != None:
         if output[-1].tags == None:
             output[-1].tags = set()
-        output[-1].tags.add(tag)
+        if rule(output[-1].tags):
+            output[-1].tags.add(tag)
     return output
 
-def group(production,output):
-    end_delim = output.pop()
-    content = output.pop()
-    start_delim = output.pop()
-    output.append(\
-        ExprNode(\
-            Token(\
-                "GROUP",\
-                [start_delim.content,end_delim.content],\
-                content.original,\
-                start_delim.start,end_delim.end
-                ),
-            [content],print_rule=token_print_group)
-        )
-    return output
+# Node traversal utilities
 
-def infix(handle,output):
-    right = output.pop()
-    operator = output.pop()
-    left = output.pop()
-    output.append(ExprNode(operator,[left,right],print_rule=token_print_infix))
-    return output
+def traverse_prefix(expr_node,action):
+    out = [(True,action(expr_node))]
+    for x in expr_node.children:
+        out += [(False,x)]
+    return out
 
-# Node printing utilities
+def traverse_postfix(expr_node,action):
+    out = []
+    for x in expr_node.children:
+        out += [(False,x)]
+    return out+[(True,action(expr_node))]
+
+def traverse_infix(expr_node,action):
+    return [(False,expr_node.children[0])]+[(True,action(expr_node))]+[(False,expr_node.children[1])]
+
+def traverse_group(expr_node,action):
+    out = [(True,action(expr_node)[0])]
+    for x in expr_node.children:
+        out += [(False,x)]
+    return out+[(True,action(expr_node)[1])]
 
 def token_print_prefix(expr_node):
     out = [expr_node.content]
@@ -151,7 +190,7 @@ class Token:
 
 class ExprNode(Token):
 
-    def __init__(self,token,children,tags=None,print_rule=token_print_prefix):
+    def __init__(self,token,children,tags=None,traverse_step=traverse_prefix):
         super().__init__(token.label,token.content,token.original,token.start,token.end)
         self.children = []
         for child in children:
@@ -165,7 +204,7 @@ class ExprNode(Token):
             self.tags = set()
         else:
             self.tags = tags
-        self._print_rule = print_rule
+        self._traverse_step = lambda action: traverse_step(self,action)
         return
 
     def tree_string(self):
@@ -176,12 +215,21 @@ class ExprNode(Token):
             s += "\n"+str(k)+": "+child.tree_string().replace("\n",padding)
         return s
 
-    def content_string(self,print_rule=None):
-        if print_rule != None:
-            out = print_rule(self)
-        else:
-            out = self._print_rule(self)
-        return "".join(out)
+    def content_string(self,max_depth=None):
+        output = self.traverse(lambda x: x.content,max_depth)
+        return "".join(output)
+
+    def traverse(self,action,max_depth=None):
+        stack = [x+(0,) for x in self._traverse_step(action)[::-1]]
+        output = []
+        while len(stack) > 0:
+            (is_output,elem,depth) = stack.pop()
+            if max_depth == None or depth <= max_depth:
+                if is_output:
+                    output.append(elem)
+                else:
+                    stack += [x+(depth+1,) for x in elem._traverse_step(action)[::-1]]
+        return output
 
     def original_string(self):
         left_children = self.children
@@ -502,14 +550,6 @@ class SLR_Parser:
                 else:
                     transitions[[x[0] for x in transitions].index(token)][1].append((i,j+1))
         return transitions
-
-    def goto(state,symbol):
-        items = [] 
-        for (production,item) in state:
-            (head,body) = productions_index[production]
-            if body[item] == symbol and item < len(body):
-                items.append((production,item+1))
-        return self.closure(items)
 
     def first(self,tokens):
         # Computes FIRST for strings of tokens

@@ -1,47 +1,91 @@
 # -------
-# GLOBALS
+# IMPORTS
 # -------
-#add_criterion("FULL_QUANTITY",\
-#    lambda x: x.value != None and x.unit != None,\
-#    lambda x: (x.value,x.unit),\
-#    "")
-#add_criterion("HAS_UNIT",\
-#    lambda x: x.unit != None,\
-#    lambda x: x.unit,\
-#    "Quantity has unit(s).")
-#add_criterion("ONLY_UNIT",
-#    lambda x: x.value == None and x.unit != None,\
-#    lambda x: x.unit,\
-#    "Quantity only has unit(s).")
-#add_criterion("NO_UNIT",
-#    lambda x: x.unit == None,\
-#    lambda x: None,\
-#    "Quantity has no unit(s).")
-#add_criterion("HAS_VALUE",\
-#    lambda x: x.value != None,\
-#    lambda x: x.value,\
-#    "Quantity has value.")
-#add_criterion("NO_VALUE",\
-#    lambda tokens: "NON_UNIT" not in types(tokens) and "NUMBER" not in types(tokens),\
-#    lambda tokens: None,\
-#    "Quantity has value.")
-#add_criterion("NUMBER_VALUE",\
-#    lambda tokens: types(tokens) == ["NUMBER","SPACE","UNIT_EXPR"] or types(tokens) == ["NUMBER"],\
-#    lambda tokens: tokens[0].content,\
-#    "Value is a number.")
-#add_criterion("EXPR_VALUE",\
-#    lambda tokens: types(tokens) == ["NON_UNIT","SPACE","UNIT_EXPR"] or types(tokens) == ["NON_UNIT"],\
-#    lambda tokens: tokens[0].content,\
-#    "Value is an expression.")
+
+from enum import Enum
+try:
+    from expression_utilities import substitute
+    from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
+    from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
+except ImportError:
+    from .expression_utilities import substitute
+    from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
+    from .static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
+
 
 # -------
 # CLASSES
 # -------
 
-from enum import Enum
 QuantityTags = Enum("QuantityTags",{v:i for i,v in enumerate("UVN",1)})
 
-from slr_parsing_utilities import token_print_prefix, token_print_postfix, token_print_infix
+class CriterionCollection:
+
+    def __init__(self):
+        self.tags = set()
+        self.checks = dict()
+        self.results = dict()
+        self.feedbacks = dict()
+        return
+
+    def add_criterion(self,tag,check,result,feedback):
+        if tag in self.tags:
+            raise Exception("Criterion with tag: '"+str(tag)+"' already defined, use update_criterion to change criterion or choose a unique tag")
+        else:
+            self.tags.add(tag)
+            self.checks.update({tag:check})
+            self.results.update({tag:result})
+            self.feedbacks.update({tag:feedback})
+        return
+
+    def update_criterion(self,tag,check,result,feedback):
+        if tag not in self.tags:
+            raise Exception("No criterion with tag: '"+str(tag)+"' defined.")
+        else:
+            self.checks.update({tag:check})
+            self.results.update({tag:result})
+            self.feedbacks.update({tag:feedback})
+        return
+
+criteria = CriterionCollection()
+
+criteria.add_criterion("FULL_QUANTITY",\
+    lambda x: x.value != None and x.unit != None,\
+    lambda x: (x.value.content_string(),x.unit.content_string()),\
+    lambda result: "Quantity has both value and unit.\nUnit: "+result[1]+"\nValue: "+result[0])
+criteria.add_criterion("HAS_UNIT",\
+    lambda x: x.unit != None,\
+    lambda x: x.unit.content_string(),\
+    lambda result: "Quantity has unit: "+result)
+criteria.add_criterion("ONLY_UNIT",
+    lambda x: x.value == None and x.unit != None,\
+    lambda x: x.unit.content_string(),\
+    lambda result: "Quantity has no value, only unit(s): "+result)
+criteria.add_criterion("NO_UNIT",
+    lambda x: x.unit == None,\
+    lambda x: None,\
+    lambda result: "Quantity has no unit.")
+criteria.add_criterion("HAS_VALUE",\
+    lambda x: x.value != None,\
+    lambda x: x.value.content_string(),\
+    lambda result: "Quantity has value: "+result)
+criteria.add_criterion("NO_VALUE",\
+    lambda x: x.value == None,\
+    lambda x: None,\
+    lambda result: "Quantity has no value.")
+criteria.add_criterion("NUMBER_VALUE",\
+    lambda x: x.value != None and x.value.tags == {QuantityTags.N},\
+    lambda x: x.value.content_string(),\
+    lambda result: "Value is a number: "+result)
+criteria.add_criterion("EXPR_VALUE",\
+    lambda x: x.value != None and QuantityTags.V in x.value.tags,\
+    lambda x: x.value.content_string(),\
+    lambda result: "Value is an expression: "+result)
+criteria.add_criterion("REVERTED_UNIT",\
+    lambda x: "REVERTED_UNIT" in [y[0] for y in x.messages],\
+    lambda x: "\n".join([y[1] for y in x.messages if y[0]=="REVERTED_UNIT"]),\
+    lambda result: "There were parsing ambiguities:\n"+result)
+
 
 class PhysicalQuantity:
 
@@ -62,21 +106,31 @@ class PhysicalQuantity:
             self._undo_rotations()
             self.value = self.ast_root
         if self.value != None:
-            self._revert_content(self.value)
+            def revert_content(node):
+                if node.label != "GROUP":
+                    node.content = node.original[node.start:node.end+1]
+                if node.label == "UNIT":
+                    self.messages += [("REVERTED_UNIT","WARNING: Possible ambiguity: '<mark>"+node.content+"</mark>' was not interpreted as a unit in `"+node.original[:node.start]+"<mark>"+node.content+"</mark>"+node.original[node.end+1:]+"`")]
+                return ["",""]
+            self.value.traverse(revert_content)
+        self.passed_dict = dict()
+        for tag in criteria.tags:
+            if criteria.checks[tag](self):
+                self.passed_dict.update({tag:criteria.feedbacks[tag](criteria.results[tag](self))})
         return
+
+    def passed(self,tag):
+        return self.passed_dict.get(tag,None)
 
     def _rotate(self,direction):
         # right: direction = 1
         # left: direction = 0
-        print_rule_dict = {0: token_print_prefix, 1: token_print_postfix}
         if direction not in {0,1}:
             raise Exception("Unknown direction: "+str(direction))
         self._rotations_performed.append(direction)
         old_root = self.ast_root
         new_root = old_root.children[1-direction]
         if len(new_root.children) == 1:
-            new_root._print_rule = token_print_infix
-            old_root._print_rule = print_rule_dict[direction]
             old_root.children = old_root.children[1-direction:len(old_root.children)-direction]
             a = [] if direction == 0 else [old_root]
             b = [old_root] if direction == 0 else []
@@ -88,8 +142,7 @@ class PhysicalQuantity:
         else:
             direction_string = "right" if direction == 1 else "left"
             raise Exception("Cannot rotate "+direction_string+".")
-            #old_root.children = old_root.children[direction:len(old_root.children)-1+direction]
-            #new_root.children.append(old_root)
+        # TODO: Use user defined operations for tag transfer instead
         for child in old_root.children:
             old_root.tags = old_root.tags | child.tags
             if QuantityTags.V in old_root.tags and QuantityTags.U in old_root.tags:
@@ -116,21 +169,13 @@ class PhysicalQuantity:
         return
 
     def _rotate_until_root_is_split(self):
-        if self.ast_root.label == "SPACE":
+        if self.ast_root.label in ["SPACE","HIDDEN"] :
             if QuantityTags.V in self.ast_root.children[1].tags:
                 self._rotate_left()
                 self._rotate_until_root_is_split()
             elif QuantityTags.U in self.ast_root.children[0].tags:
                 self._rotate_right()
                 self._rotate_until_root_is_split()
-        return
-
-    def _revert_content(self,node):
-        if node.label != "GROUP":
-            node.content = node.original[node.start:node.end+1]
-        for child in node.children:
-            # TODO: Add messages about units not being interpreted as units here.
-            self._revert_content(child)
         return
 
     def _undo_rotations(self):
@@ -142,9 +187,6 @@ class PhysicalQuantity:
 # ---------
 # FUNCTIONS
 # ---------
-
-from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append
-from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes
 
 def SLR_generate_unit_dictionary():
     base_units = {x[0]: x[0] for x in list_of_SI_base_unit_dimensions}
@@ -195,22 +237,35 @@ def SLR_strict_SI_parsing(expr):
         ]
 
     def transfer_tags_op(op):
-        def apply(p,o):
-            return tag_removal(p,tag_transfer(p,op(p,o)),QuantityTags.U,lambda x: QuantityTags.V in x)
+        def apply(prod,out):
+            return tag_removal(prod,tag_transfer(prod,op(prod,out)),QuantityTags.U,lambda x: QuantityTags.V in x)
         return apply
 
+    def transfer_tags_infix(prod,out):
+        out = tag_transfer(prod,infix(prod,out))
+        node = out[-1]
+        if node.label == "POWER" and QuantityTags.U in node.children[0].tags and node.children[1].tags == {QuantityTags.N}:
+            out = tag_removal(prod,out,QuantityTags.N)
+        elif node.label == "SOLIDUS" and node.children[0].content == "1" and node.children[1].tags == {QuantityTags.U}:
+            out = tag_removal(prod,out,QuantityTags.N)
+        elif node.label != "SPACE":
+            out = tag_removal(prod,out,QuantityTags.U,lambda x: QuantityTags.N in x)
+            out = tag(prod,out,QuantityTags.V,lambda x: QuantityTags.N in x)
+        out = tag_removal(prod,out,QuantityTags.U,lambda x: QuantityTags.V in x)
+        return out
+
     def tag_node(tag_value):
-        def apply(p,o):
-            return tag(p,node(p,o),tag_value)
+        def apply(prod,out):
+            return tag(prod,node(prod,out),tag_value)
         return apply
 
     productions = [( start_symbol, "Q" , relabel )]
-    productions += [( "Q", "QQ" , transfer_tags_op(append) )]
+    productions += [( "Q", "QQ" , transfer_tags_op(hidden) )]
     productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
     productions += [( "Q", "U" , tag_node(QuantityTags.U) )]
     productions += [( "Q", "N" , tag_node(QuantityTags.N) )]
     productions += [( "Q", "V" , tag_node(QuantityTags.V) )]
-    productions += [( "Q", "Q"+x+"Q", transfer_tags_op(infix) ) for x in list(" */^")]
+    productions += [( "Q", "Q"+x+"Q", transfer_tags_infix ) for x in list(" */^")]
 
     prods = []
     for prod in [(x[0],x[1]) for x in productions]:
@@ -221,15 +276,9 @@ def SLR_strict_SI_parsing(expr):
     parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     tokens = parser.scan(expr)
 
-    def revert_content_and_join(p,o):
-        for k in range(0,len(p[1])):
-            original_content = o[-k].original[o[-k].start:o[-k].end+1]
-        return join(p,o)
-
     rules = [( "N", "N"+x+"N", join ) for x in list("*/^")]
     rules += [( "V", "V(V)", join ), ( "V", "V(N)", join )]
     rules += [( "V", "NV", join ), ( "V", "VV", join )]
-    rules += [( "V", x, revert_content_and_join ) for x in ["UV","VU"]]
     rules += [( "V", "V N", join ), ( "V", " V", join )]
     rules += [( x, " "+x, join ) for x in list(" */^")]
     rules += [( x, x+" ", join ) for x in list(" */^")]
@@ -270,7 +319,7 @@ def SLR_strict_SI_parsing(expr):
             case _:
                 return [content]
 
-    unit_latex_string = quantity.unit.content_string(print_rule=unit_latex) if quantity.unit != None else None
+    unit_latex_string = "".join(unit_latex(quantity.unit)) if quantity.unit != None else None
 
     return quantity, unit_latex_string
 
@@ -301,7 +350,7 @@ if __name__ == "__main__":
         "10 kg*m/s^2",
         " 10 kg m/s^2 ",
         "10 gram/metresecond",
-        "10 second/gram + 5 gram*second^2 + 7 ms + 5 gram/second^3",
+        "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
         "10 second/gram * 7 ms * 5 gram/second",
         "pi+metre second+pi",
         "1/s^2",
@@ -318,10 +367,13 @@ if __name__ == "__main__":
         quantity, unit_latex = SLR_strict_SI_parsing(expr)
         value = quantity.value.original_string() if quantity.value != None else None
         unit = quantity.unit.original_string() if quantity.unit != None else None
-
         print("Content: "+quantity.ast_root.content_string())
         print("Value:   "+str(value))
         print("Unit:    "+str(unit))
         print("LaTeX:   "+str(unit_latex))
+        messages = [x[1] for x in quantity.messages]
+        for criteria_tag in quantity.passed_dict:
+            messages += [criteria.feedbacks[criteria_tag](criteria.results[criteria_tag](quantity))]
+        print("\n".join(messages))
         print(quantity.ast_root.tree_string())
     print("** COMPLETE **")
