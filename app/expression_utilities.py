@@ -1,3 +1,11 @@
+elementary_functions_names = [
+    ('sin',[]), ('sinc',[]), ('csc',['cosec']), ('cos',[]), ('sec',[]), ('tan',[]), ('cot',['cotan']), ('asin',['arcsin']), ('acsc',['arccsc','arccosec']), ('acos',['arccos']), ('asec',['arcsec']), ('atan',['arctan']), ('acot',['arccot','arccotan']), ('atan2',['arctan2']),\
+    ('sinh',[]), ('cosh',[]), ('tanh',[]), ('csch',['cosech']), ('sech',[]), ('asinh',['arcsinh']), ('acosh',['arccosh']), ('atanh',['arctanh']), ('acsch',['arccsch','arccosech']), ('asech',['arcsech']),\
+    ('exp',['Exp']), ('E',['e']),('log',[]),\
+    ('sqrt',[]), ('sign',[]), ('Abs',['abs']), ('Max',['max']), ('Min',['min']), ('arg',[]), ('ceiling',['ceil']), ('floor',[])\
+]
+elementary_functions_names.sort(key=lambda x: -len(x))
+
 # -------- String Manipulation Utilities
 def preprocess_expression(exprs, params):
     '''
@@ -14,10 +22,27 @@ def preprocess_expression(exprs, params):
         exprs = [exprs]
 
     if "input_symbols" in params.keys():
+        input_symbols = params["input_symbols"]
+        input_symbols_to_remove = []
+        alternatives_to_remove = []
+        for k in range(0,len(input_symbols)):
+            if len(input_symbols[k]) > 0:
+                input_symbols[k][0].strip()
+                if len(input_symbols[k][0]) == 0:
+                    input_symbols_to_remove += [k]
+            else:
+                for i in range(0,len(input_symbols[k][1])):
+                    if len(input_symbols[k][1][i]) > 0:
+                        input_symbols[k][1][i].strip()
+                    if len(input_symbols[k][1][i]) == 0:
+                        alternatives_to_remove += [(k,i)]
+        for (k,i) in alternatives_to_remove:
+            del input_symbols[k][1][i]
+        for k in input_symbols_to_remove:
+            del input_symbols[k]
         substitutions = []
         for input_symbol in params["input_symbols"]:
-            if len(input_symbol) > 0:
-                substitutions.append((input_symbol[0],input_symbol[0]))
+            substitutions.append((input_symbol[0],input_symbol[0]))
             for alternative in input_symbol[1]:
                 if len(alternative) > 0:
                     substitutions.append((alternative,input_symbol[0]))
@@ -99,7 +124,7 @@ def substitute(string, substitutions):
 
 # -------- (Sympy) Expression Parsing Utilities
 
-from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom
+from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy import Symbol
 
@@ -113,8 +138,13 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
         parsing_params: A dictionary that contains necessary info for the
                         parse_expression function.
     '''
+
     if "input_symbols" in params.keys():
-        unsplittable_symbols += tuple(x[0] for x in params["input_symbols"])
+        to_keep = []
+        for symbol in [x[0] for x in params["input_symbols"]]:
+            if len(symbol) > 1:
+                to_keep.append(symbol)
+        unsplittable_symbols += tuple(to_keep)
 
     if params.get("specialFunctions", False) == True:
         from sympy import beta, gamma, zeta
@@ -126,7 +156,11 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
         from sympy import I
     else:
         I = Symbol("I")
-    E = Symbol("E")
+    if params.get("elementary_functions", False) == True:
+        from sympy import E
+        e = E
+    else:
+        E = Symbol("E")
     N = Symbol("N")
     O = Symbol("O")
     Q = Symbol("Q")
@@ -148,7 +182,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
 
     strict_syntax = params.get("strict_syntax",True)
 
-    parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple()}
+    parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple(), "elementary_functions": params.get("elementary_functions",False)}
 
     return parsing_params
 
@@ -161,24 +195,25 @@ def parse_expression(expr, parsing_params):
         sympy expression created by parsing expr configured according
         to the parameters in parsing_params
     '''
+
     strict_syntax = parsing_params.get("strict_syntax",False)
     extra_transformations = parsing_params.get("extra_transformations",())
     unsplittable_symbols = parsing_params.get("unsplittable_symbols",())
     symbol_dict = parsing_params.get("symbol_dict",{})
-    separate_unsplittable_symbols = [(x,x+" ") for x in unsplittable_symbols]
-    evaluate = parsing_params.get("evaluate",True)
+    separate_unsplittable_symbols = [(x," "+x+" ") for x in unsplittable_symbols]
+    if parsing_params["elementary_functions"] == True:
+        alias_substitutions = []
+        for (name,alias) in elementary_functions_names:
+            alias_substitutions += [(name,name)] + [(x,name) for x in alias]
+        alias_substitutions.sort(key=lambda x: -len(x[0]))
+        expr = substitute(expr,alias_substitutions)
+        separate_unsplittable_symbols = [(x[0]," "+x[0]) for x in elementary_functions_names] + separate_unsplittable_symbols
+        separate_unsplittable_symbols.sort(key=lambda x: -len(x[0]))
     expr = substitute(expr,separate_unsplittable_symbols)
+    can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
     if strict_syntax:
         transformations = parser_transformations[0:4]+extra_transformations
     else:
-        transformations = parser_transformations[0:4,6]+extra_transformations+(split_symbols_custom(lambda x: x not in unsplittable_symbols),)+parser_transformations[8]
-    return parse_expr(expr,transformations=transformations,local_dict=symbol_dict,evaluate=evaluate)
-
-def expression_to_latex(expression):
-    from sympy import latex
-    try:
-        expression_preview = parse_expr(expression,transformations = parser_transformations[0:4,6,8],evaluate=False)
-    except (SyntaxError, TypeError) as e:
-        return "`"+expression+"` could not be parsed as a valid mathematical expression."
-    latex_str = latex(expression_preview)
-    return latex_str
+        transformations = parser_transformations[0:4,6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
+    parsed_expr = parse_expr(expr,transformations=transformations,local_dict=symbol_dict)
+    return parsed_expr

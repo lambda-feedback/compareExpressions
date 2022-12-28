@@ -4,10 +4,8 @@ from sympy import latex
 
 try:
     from .static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes
-    from .expression_utilities import expression_to_latex
 except ImportError:
     from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes
-    from expression_utilities import expression_to_latex
 
 # -------------------
 # GLOBALS DEFINITIONS

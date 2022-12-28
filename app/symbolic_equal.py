@@ -301,17 +301,17 @@ def check_equality(response, answer, params) -> dict:
     # Safely try to parse answer and response into symbolic expressions
     try:
         res = parse_expression(response, parsing_params)
-    except (SyntaxError, TypeError) as e:
+    except Exception as e:
         separator = "" if len(remark) == 0 else "\n"
         return {"is_correct": False, "feedback": parse_error_warning(response)+separator+remark}
 
     try:
         ans = parse_expression(answer, parsing_params)
-    except (SyntaxError, TypeError) as e:
+    except Exception as e:
         raise Exception("SymPy was unable to parse the answer."+remark,) from e
 
     # Add how res was interpreted to the response
-    interp = {"response_latex": latex(res)}
+    interp = {"response_latex": latex(res), "response_simplified": str(res)}
 
     feedback = {}
 
@@ -321,7 +321,6 @@ def check_equality(response, answer, params) -> dict:
         return {
             "is_correct": False,
             "feedback": "The response was an expression but was expected to be an equality."+separator+remark,
-            "response_simplified": str(ans),
             **interp
         }
         return
@@ -330,7 +329,6 @@ def check_equality(response, answer, params) -> dict:
         return {
             "is_correct": False,
             "feedback": "The response was an equality but was expected to be an expression."+separator+remark,
-            "response_simplified": str(ans),
             **interp
         }
         return
@@ -341,7 +339,6 @@ def check_equality(response, answer, params) -> dict:
             feedback = {"feedback": remark}
         return {
             "is_correct": is_correct,
-            "response_simplified": str(ans),
             **feedback,
             **interp
         }
@@ -364,28 +361,46 @@ def check_equality(response, answer, params) -> dict:
 
     error_below_atol = False
     error_below_rtol = False
-    
-    if res.is_constant() and ans.is_constant() and params.get("numerical",False): 
 
-        if "atol" in params.keys():
-            error_below_atol = bool(abs(float(ans-res)) < float(params["atol"]))
-        else:
-            error_below_atol = True
-        if "rtol" in params.keys():
-            rtol = float(params["rtol"])
-            error_below_rtol = bool(float(abs(((ans-res)/ans).simplify())) < rtol)
-        else:
-            error_below_rtol = True
-    if error_below_atol and error_below_rtol:
-        return {
-            "is_correct": True,
-            "level": "0",
-            "feedback": "The response is numerically equal to the answer."+separator+remark,
-            **interp
-            }
+    if params.get("numerical",False) or params.get("rtol",False) or params.get("atol",False):
+        # REMARK: 'pi' should be a reserve symbols but is sometimes not treated as one, possibly because of input symbols
+        # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
+        # are other reserved symbols.
+        ans = ans.subs(Symbol('pi'),float(pi))
+        res = res.subs(Symbol('pi'),float(pi))
+        if res.is_constant() and ans.is_constant(): 
+            if "atol" in params.keys():
+                error_below_atol = bool(abs(float(ans-res)) < float(params["atol"]))
+            else:
+                error_below_atol = True
+            if "rtol" in params.keys():
+                rtol = float(params["rtol"])
+                error_below_rtol = bool(float(abs(((ans-res)/ans).simplify())) < rtol)
+            else:
+                error_below_rtol = True
+        if error_below_atol and error_below_rtol:
+            return {
+                "is_correct": True,
+                "level": "0",
+                "feedback": "The response is numerically equal to the answer."+separator+remark,
+                **interp
+                }
 
     # Going from the simplest to complex tranformations available in sympy, check equality
     # https://github.com/sympy/sympy/wiki/Faq#why-does-sympy-say-that-two-equal-expressions-are-unequal
+
+    # General catch-all, placed first to improve performance
+    is_correct = bool((res - ans).simplify() == 0)
+    if is_correct:
+        if remark != "":
+            feedback = {"feedback": remark}
+        return {
+            "is_correct": True,
+            "level": "4",
+            **feedback,
+            **interp
+        }
+
     is_correct = bool(res.expand() == ans.expand())
     if is_correct:
         if remark != "":
@@ -393,7 +408,6 @@ def check_equality(response, answer, params) -> dict:
         return {
             "is_correct": True,
             "level": "1",
-            "response_simplified": str(res.simplify()),
             **feedback,
             **interp
         }
@@ -405,7 +419,6 @@ def check_equality(response, answer, params) -> dict:
         return {
             "is_correct": True,
             "level": "2",
-            "response_simplified": str(res.simplify()),
             **feedback,
             **interp
         }
@@ -418,27 +431,13 @@ def check_equality(response, answer, params) -> dict:
         return {
             "is_correct": True,
             "level": "3",
-            "response_simplified": str(res.simplify()),
-            **feedback,
-            **interp
-        }
-
-    # General catch-all if above does not work
-    is_correct = bool((res.simplify() - ans.simplify()).simplify() == 0)
-    if is_correct:
-        if remark != "":
-            feedback = {"feedback": remark}
-        return {
-            "is_correct": True,
-            "level": "4",
-            "response_simplified": str(res.simplify()),
             **feedback,
             **interp
         }
 
     if remark != "":
         feedback = {"feedback": remark}
-    return {"is_correct": False, "response_simplified": str(res), **feedback, **interp}
+    return {"is_correct": False, **feedback, **interp}
 
 def find_matching_parenthesis(string,index):
     depth = 0
