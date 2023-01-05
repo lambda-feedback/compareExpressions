@@ -13,7 +13,7 @@ from expression_utilities import (
     create_sympy_parsing_params,
     substitute,
 )
-from evaluation_response_utils import EvaluationResponse
+from evaluation_response_utilities import EvaluationResponse
 from symbolic_equal import evaluation_function as symbolicEqual
 #from strict_si_syntax import strict_SI_parsing
 from slr_strict_si_syntax import SLR_strict_SI_parsing as strict_SI_parsing
