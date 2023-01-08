@@ -606,10 +606,23 @@ class SLR_Parser:
             prod_strings.append(prod_string)
         return ["I"+str(self._states_index[state])]+prod_strings
 
+    def default_error_handler(stack,a,input_tokens,tokens,output,parser):
+        m = 70
+        raise Exception(\
+            f"\n{'-'*m}\n"+\
+            f"ERROR:\n{'-'*m}\n"+\
+            f"accepted: {input_tokens[:-len(tokens)]}\n"+\
+            f"current: {a}, {parser._symbols_index[a]}\n"+\
+            f"remaining: {tokens}\n"+\
+            f"stack: {stack}\n"+\
+            f"output: {output}\n"+\
+            f"state: {parser.state_string(parser._states_index[stack[-1]])}\n"+\
+            f"{'-'*m}")
+
     def parsing_action(self,s,a):
         return self.parsing_table[s][self._symbols_index[a]]
 
-    def parse(self,input_tokens,verbose=False,restart_on_error=False):
+    def parse(self,input_tokens,verbose=False,error_handler=default_error_handler):
         productions_token = self.productions_token
         tokens = list(input_tokens)+[self.end_token]
         a = tokens.pop(0)
@@ -617,17 +630,20 @@ class SLR_Parser:
         output = []
         while True:
             parse_action = self.parsing_action(stack[-1],a)
-            if parse_action < 0:
-                if restart_on_error:
-                    stack.append(0)
-                    if a == self.end_token:
-                        break
-                    output.append(a)
-                    a = tokens.pop(0)
-                    continue
-                else:
-                    m = 70
-                    raise Exception(f"{'-'*m}\nERROR:\n{'-'*m}\naccepted: {input_tokens[:-len(tokens)]}\ncurrent: {a}, {self._symbols_index[a]}\nremaining: {tokens}\nstack: {stack}\noutput: {output}\n{'-'*m}")
+            while parse_action < 0:
+                stack,a,input_tokens,tokens,output,parser = error_handler(stack,a,input_tokens,tokens,output,self)
+                #m = 70
+                #raise Exception(\
+                #    f"{'-'*m}\n"+\
+                #    f"ERROR:\n{'-'*m}\n"+\
+                #    f"accepted: {input_tokens[:-len(tokens)]}\n"+\
+                #    f"current: {a}, {self._symbols_index[a]}\n"+\
+                #    f"remaining: {tokens}\n"+\
+                #    f"stack: {stack}\n"+\
+                #    f"output: {output}\n"+\
+                #    f"state: {self.state_string(self._states_index[stack[-1]])}\n"+\
+                #    f"{'-'*m}")
+                parse_action = self.parsing_action(stack[-1],a)
             if parse_action < len(self.states):
                 stack.append(parse_action)
                 output.append(a)

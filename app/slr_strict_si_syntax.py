@@ -260,18 +260,23 @@ def SLR_strict_SI_parsing(expr):
         return apply
 
     productions = [( start_symbol, "Q" , relabel )]
-    productions += [( "Q", "QQ" , transfer_tags_op(hidden) )]
+    #productions += [( "Q", "QQ" , transfer_tags_op(hidden) )]
+    productions += [( "Q", "QQ" , transfer_tags_op(append) )]
     productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
     productions += [( "Q", "U" , tag_node(QuantityTags.U) )]
     productions += [( "Q", "N" , tag_node(QuantityTags.N) )]
     productions += [( "Q", "V" , tag_node(QuantityTags.V) )]
     productions += [( "Q", "Q"+x+"Q", transfer_tags_infix ) for x in list(" */^")]
 
+    #TODO: Change this so duplicate productions give an error instead of just being printed
     prods = []
+    duplicate_error_string = []
     for prod in [(x[0],x[1]) for x in productions]:
         if prod in prods:
-            print(f"duplicate: {prod}")
+            duplicate_error_string.append(f"duplicate: {prod}")
         prods.append(prod)
+    if len(duplicate_error_string) > 0:
+        raise Exception("There are duplicate productions:\n"+"\n".join(duplicate_error_string))
 
     parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     tokens = parser.scan(expr)
@@ -280,13 +285,26 @@ def SLR_strict_SI_parsing(expr):
     rules += [( "V", "V(V)", join ), ( "V", "V(N)", join )]
     rules += [( "V", "NV", join ), ( "V", "VV", join )]
     rules += [( "V", "V N", join ), ( "V", " V", join )]
-    rules += [( x, " "+x, join ) for x in list(" */^")]
-    rules += [( x, x+" ", join ) for x in list(" */^")]
-    tokens = parser.process(tokens,rules)
+    rules += [( x, " "+x, join ) for x in list(" */^")] #\TODO: Try to rewrite as error handling
+    rules += [( x, x+" ", join ) for x in list(" */^")] #\TODO: Try to rewrite as error handling
+    #tokens = parser.process(tokens,rules)
+
+    #TODO: Can we use state dictionary to get right marker from production?
+    def error(stack,a,input_tokens,tokens,output,parser):
+        last_token = output.pop()
+        if last_token.label == "SPACE" and a.label in ["SPACE","PRODUCT","SOLIDUS","POWER"]:
+            a.content = last_token.content + a.content
+            output.append(a)
+            a = tokens.pop(0)
+        elif last_token.label in ["PRODUCT","SOLIDUS","POWER"] and a.label == "SPACE":
+            last_token.content += a.content
+            output.append(last_token)
+            a = tokens.pop(0)
+        return stack,a,input_tokens,tokens,output,parser
 
     #print(tokens)
     #print(parser.parsing_table_to_string())
-    quantity = parser.parse(tokens,verbose=False,restart_on_error=False)
+    quantity = parser.parse(tokens,verbose=False,error_handler=error)
 
     if len(quantity) > 1:
         print(quantity)
