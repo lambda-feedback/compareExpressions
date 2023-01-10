@@ -3,6 +3,7 @@
 # -------
 
 from enum import Enum
+import re
 try:
     from expression_utilities import substitute
     from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
@@ -94,16 +95,24 @@ class PhysicalQuantity:
         self.ast_root = ast_root
         self.value = None
         self.unit = None
-        self._rotations_performed = []
+        #self._rotations_performed = []
+        print('~~~~~~~~~~~~~~~~~~~~~')
+        print(ast_root.tree_string())
+        print('~~~~~~~~~~~~~~~~~~~~~')
         self._rotate_until_root_is_split()
-        if self.ast_root.label == "SPACE":
+        print('~~~~~~~~~~~~~~~~~~~~~')
+        print(ast_root.tree_string())
+        print('~~~~~~~~~~~~~~~~~~~~~')
+        if self.ast_root.label == "SPACE"\
+            and QuantityTags.U not in self.ast_root.children[0].tags\
+            and QuantityTags.U in self.ast_root.children[1].tags:
             self.value = self.ast_root.children[0]
             self.unit = self.ast_root.children[1]
         elif QuantityTags.U in self.ast_root.tags:
-            self._undo_rotations()
+        #    self._undo_rotations()
             self.unit = self.ast_root
         else:
-            self._undo_rotations()
+        #    self._undo_rotations()
             self.value = self.ast_root
         if self.value != None:
             def revert_content(node):
@@ -127,7 +136,7 @@ class PhysicalQuantity:
         # left: direction = 0
         if direction not in {0,1}:
             raise Exception("Unknown direction: "+str(direction))
-        self._rotations_performed.append(direction)
+        #self._rotations_performed.append(direction)
         old_root = self.ast_root
         new_root = old_root.children[1-direction]
         if len(new_root.children) == 1:
@@ -169,11 +178,11 @@ class PhysicalQuantity:
         return
 
     def _rotate_until_root_is_split(self):
-        if self.ast_root.label in ["SPACE","HIDDEN"] :
-            if QuantityTags.V in self.ast_root.children[1].tags:
+        if self.ast_root.label == "SPACE":
+            if QuantityTags.V in self.ast_root.children[1].tags and len(self.ast_root.children[1].children) > 0:
                 self._rotate_left()
                 self._rotate_until_root_is_split()
-            elif QuantityTags.U in self.ast_root.children[0].tags:
+            elif QuantityTags.U in self.ast_root.children[0].tags and len(self.ast_root.children[0].children) > 0:
                 self._rotate_right()
                 self._rotate_until_root_is_split()
         return
@@ -213,7 +222,11 @@ def SLR_strict_SI_parsing(expr):
     expr = expr.strip()
     unit_dictionary = SLR_generate_unit_dictionary()
     lookup_unit = lambda x: unit_dictionary.get(x,None)
-    is_number = lambda string: string if all(c.isdigit() or c in "-." for c in string) else None
+    #is_number = lambda string: string if all(c.isdigit() or c in "-." for c in string) else None
+
+    # regexp from penultimate entry in section Numbers with a Scientific Notation: Fractional numbers
+    # taken from https://slavik.meltser.info/validate-number-with-regular-expression/
+    is_number = lambda string: string if re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?$',string) != None else None
 
     start_symbol = "START"
     end_symbol = "END"
@@ -223,13 +236,13 @@ def SLR_strict_SI_parsing(expr):
         (start_symbol, "START"           ) ,\
         (end_symbol,   "END"             ) ,\
         (null_symbol,  "NULL"            ) ,\
-        (" ",          "SPACE"           ) ,\
-        ("*",          "PRODUCT"         ) ,\
-        ("/",          "SOLIDUS"         ) ,\
-        ("^",          "POWER"           ) ,\
-        ("**",         "POWER"           ) ,\
-        ("(",          "START_DELIMITER" ) ,\
-        (")",          "END_DELIMITER"   ) ,\
+        (" +",         "SPACE"           ) ,\
+        (" *\* *",     "PRODUCT"         ) ,\
+        (" */ *",      "SOLIDUS"         ) ,\
+        (" *\^ *",     "POWER"           ) ,\
+        (" *\*\* *",   "POWER"           ) ,\
+        ("\( *",       "START_DELIMITER" ) ,\
+        (" *\)",       "END_DELIMITER"   ) ,\
         ("N",          "NUMBER",         is_number) ,\
         ("U",          "UNIT",           lookup_unit) ,\
         ("V",          "NON-UNIT",       catch_undefined) ,\
@@ -260,33 +273,28 @@ def SLR_strict_SI_parsing(expr):
         return apply
 
     productions = [( start_symbol, "Q" , relabel )]
-    productions += [( "Q", "QQ" , transfer_tags_op(hidden) )]
-    productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
     productions += [( "Q", "U" , tag_node(QuantityTags.U) )]
     productions += [( "Q", "N" , tag_node(QuantityTags.N) )]
     productions += [( "Q", "V" , tag_node(QuantityTags.V) )]
     productions += [( "Q", "Q"+x+"Q", transfer_tags_infix ) for x in list(" */^")]
+    productions += [( "Q", "QQ" , transfer_tags_op(append) )]
+    productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
 
     prods = []
+    duplicate_error_string = []
     for prod in [(x[0],x[1]) for x in productions]:
         if prod in prods:
-            print(f"duplicate: {prod}")
+            duplicate_error_string.append(f"duplicate: {prod}")
         prods.append(prod)
+    if len(duplicate_error_string) > 0:
+        raise Exception("There are duplicate productions:\n"+"\n".join(duplicate_error_string))
 
     parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     tokens = parser.scan(expr)
 
-    rules = [( "N", "N"+x+"N", join ) for x in list("*/^")]
-    rules += [( "V", "V(V)", join ), ( "V", "V(N)", join )]
-    rules += [( "V", "NV", join ), ( "V", "VV", join )]
-    rules += [( "V", "V N", join ), ( "V", " V", join )]
-    rules += [( x, " "+x, join ) for x in list(" */^")]
-    rules += [( x, x+" ", join ) for x in list(" */^")]
-    tokens = parser.process(tokens,rules)
-
-    #print(tokens)
+    print(tokens)
     #print(parser.parsing_table_to_string())
-    quantity = parser.parse(tokens,verbose=False,restart_on_error=False)
+    quantity = parser.parse(tokens,verbose=False)
 
     if len(quantity) > 1:
         print(quantity)
@@ -357,7 +365,6 @@ if __name__ == "__main__":
         "10 1/s^2",
         ]
 
-
     for k, expr in enumerate(exprs):
         mid = "**  "+str(k)+": "+expr+"  **"
         print("*"*len(mid))
@@ -370,9 +377,9 @@ if __name__ == "__main__":
         print("Value:   "+str(value))
         print("Unit:    "+str(unit))
         print("LaTeX:   "+str(unit_latex))
-        messages = [x[1] for x in quantity.messages]
-        for criteria_tag in quantity.passed_dict:
-            messages += [criteria.feedbacks[criteria_tag](criteria.results[criteria_tag](quantity))]
-        print("\n".join(messages))
+        #messages = [x[1] for x in quantity.messages]
+        #for criteria_tag in quantity.passed_dict:
+        #    messages += [criteria.feedbacks[criteria_tag](criteria.results[criteria_tag](quantity))]
+        #print("\n".join(messages))
         print(quantity.ast_root.tree_string())
     print("** COMPLETE **")
