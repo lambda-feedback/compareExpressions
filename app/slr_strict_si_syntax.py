@@ -3,6 +3,7 @@
 # -------
 
 from enum import Enum
+import re
 try:
     from expression_utilities import substitute
     from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
@@ -94,18 +95,24 @@ class PhysicalQuantity:
         self.ast_root = ast_root
         self.value = None
         self.unit = None
-        self._rotations_performed = []
+        #self._rotations_performed = []
+        print('~~~~~~~~~~~~~~~~~~~~~')
+        print(ast_root.tree_string())
+        print('~~~~~~~~~~~~~~~~~~~~~')
         self._rotate_until_root_is_split()
+        print('~~~~~~~~~~~~~~~~~~~~~')
+        print(ast_root.tree_string())
+        print('~~~~~~~~~~~~~~~~~~~~~')
         if self.ast_root.label == "SPACE"\
             and QuantityTags.U not in self.ast_root.children[0].tags\
             and QuantityTags.U in self.ast_root.children[1].tags:
             self.value = self.ast_root.children[0]
             self.unit = self.ast_root.children[1]
         elif QuantityTags.U in self.ast_root.tags:
-            self._undo_rotations()
+        #    self._undo_rotations()
             self.unit = self.ast_root
         else:
-            self._undo_rotations()
+        #    self._undo_rotations()
             self.value = self.ast_root
         if self.value != None:
             def revert_content(node):
@@ -129,7 +136,7 @@ class PhysicalQuantity:
         # left: direction = 0
         if direction not in {0,1}:
             raise Exception("Unknown direction: "+str(direction))
-        self._rotations_performed.append(direction)
+        #self._rotations_performed.append(direction)
         old_root = self.ast_root
         new_root = old_root.children[1-direction]
         if len(new_root.children) == 1:
@@ -174,11 +181,9 @@ class PhysicalQuantity:
         if self.ast_root.label == "SPACE":
             if QuantityTags.V in self.ast_root.children[1].tags and len(self.ast_root.children[1].children) > 0:
                 self._rotate_left()
-                print(self.ast_root.tree_string())
                 self._rotate_until_root_is_split()
             elif QuantityTags.U in self.ast_root.children[0].tags and len(self.ast_root.children[0].children) > 0:
                 self._rotate_right()
-                print(self.ast_root.tree_string())
                 self._rotate_until_root_is_split()
         return
 
@@ -217,7 +222,11 @@ def SLR_strict_SI_parsing(expr):
     expr = expr.strip()
     unit_dictionary = SLR_generate_unit_dictionary()
     lookup_unit = lambda x: unit_dictionary.get(x,None)
-    is_number = lambda string: string if all(c.isdigit() or c in "-." for c in string) else None
+    #is_number = lambda string: string if all(c.isdigit() or c in "-." for c in string) else None
+
+    # regexp from penultimate entry in section Numbers with a Scientific Notation: Fractional numbers
+    # taken from https://slavik.meltser.info/validate-number-with-regular-expression/
+    is_number = lambda string: string if re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?$',string) != None else None
 
     start_symbol = "START"
     end_symbol = "END"
@@ -283,7 +292,7 @@ def SLR_strict_SI_parsing(expr):
     parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     tokens = parser.scan(expr)
 
-    #print(tokens)
+    print(tokens)
     #print(parser.parsing_table_to_string())
     quantity = parser.parse(tokens,verbose=False)
 
@@ -356,7 +365,6 @@ if __name__ == "__main__":
         "10 1/s^2",
         ]
 
-
     for k, expr in enumerate(exprs):
         mid = "**  "+str(k)+": "+expr+"  **"
         print("*"*len(mid))
@@ -369,9 +377,9 @@ if __name__ == "__main__":
         print("Value:   "+str(value))
         print("Unit:    "+str(unit))
         print("LaTeX:   "+str(unit_latex))
-        messages = [x[1] for x in quantity.messages]
-        for criteria_tag in quantity.passed_dict:
-            messages += [criteria.feedbacks[criteria_tag](criteria.results[criteria_tag](quantity))]
-        print("\n".join(messages))
+        #messages = [x[1] for x in quantity.messages]
+        #for criteria_tag in quantity.passed_dict:
+        #    messages += [criteria.feedbacks[criteria_tag](criteria.results[criteria_tag](quantity))]
+        #print("\n".join(messages))
         print(quantity.ast_root.tree_string())
     print("** COMPLETE **")
