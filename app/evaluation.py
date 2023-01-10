@@ -1,29 +1,33 @@
-# Added this to make it possible to run both the file directly both from the main directory and from the app directory
-import sys
-sys.path.append(".")
 
-from static_unit_conversion_arrays import (
-    names_of_prefixes_units_and_dimensions,
-    conversion_to_base_si_units_dictionary,
-    list_of_SI_base_unit_dimensions,
-)
-from expression_utilities import (
-    preprocess_expression,
-    parse_expression,
-    create_sympy_parsing_params,
-    substitute,
-)
-from evaluation_response_utilities import EvaluationResponse
-from symbolic_equal import evaluation_function as symbolicEqual
-#from strict_si_syntax import strict_SI_parsing
-from slr_strict_si_syntax import SLR_strict_SI_parsing as strict_SI_parsing
-from slr_strict_si_syntax import criteria as strict_SI_criteria
 
 def parse_error_warning(x):
     return f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct notation is used, that the expression is unambiguous and that all parentheses are closed."
 
 def evaluation_function(response, answer, params, include_test_data = False) -> dict:
+
     try:
+
+        # Added this to make it possible to run both the file directly both from the main directory and from the app directory
+        import sys
+        sys.path.append(".")
+        
+        from static_unit_conversion_arrays import (
+            names_of_prefixes_units_and_dimensions,
+            conversion_to_base_si_units_dictionary,
+            list_of_SI_base_unit_dimensions,
+        )
+        from expression_utilities import (
+            preprocess_expression,
+            parse_expression,
+            create_sympy_parsing_params,
+            substitute,
+        )
+        from evaluation_response_utilities import EvaluationResponse
+        from symbolic_equal import evaluation_function as symbolicEqual
+        #from strict_si_syntax import strict_SI_parsing
+        from slr_strict_si_syntax import SLR_strict_SI_parsing as strict_SI_parsing
+        from slr_strict_si_syntax import criteria as strict_SI_criteria
+
         """
         Function that allows for various types of comparison of various kinds of expressions.
         Supported input parameters:
