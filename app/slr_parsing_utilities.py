@@ -4,6 +4,8 @@
 
 # Scanner utilities
 
+import re
+
 def catch_undefined(label,content,original,start,end):
     return Token(label,content,original,start,end)
 
@@ -138,28 +140,6 @@ def traverse_group(expr_node,action):
         out += [(False,x)]
     return out+[(True,action(expr_node)[1])]
 
-def token_print_prefix(expr_node):
-    out = [expr_node.content]
-    for x in expr_node.children:
-        out += x._print_rule(x)
-    return out
-
-def token_print_postfix(expr_node):
-    out = []
-    for x in expr_node.children:
-        out += x._print_rule(x)
-    return out+[expr_node.content]
-
-def token_print_infix(expr_node):
-    return expr_node.children[0]._print_rule(expr_node.children[0])+[expr_node.content]+expr_node.children[1]._print_rule(expr_node.children[1])
-
-def token_print_group(expr_node):
-    out = [expr_node.content[0]]
-    for x in expr_node.children:
-        out += x._print_rule(x)
-    out += [expr_node.content[1]]
-    return out
-
 # -------
 # CLASSES
 # -------
@@ -254,7 +234,20 @@ class ExprNode(Token):
 
 class SLR_Parser:
 
-    def __init__(self,token_list,productions,start_symbol,end_symbol,null_symbol):
+    def default_error_handler(parser,stack,a,input_tokens,tokens,output):
+        m = 70
+        raise Exception(\
+            f"\n{'-'*m}\n"+\
+            f"ERROR:\n{'-'*m}\n"+\
+            f"accepted: {input_tokens[:-len(tokens)]}\n"+\
+            f"current: {a}, {parser._symbols_index[a]}\n"+\
+            f"remaining: {tokens}\n"+\
+            f"stack: {stack}\n"+\
+            f"output: {output}\n"+\
+            f"state: {parser.state_string(parser._states_index[stack[-1]])}\n"+\
+            f"{'-'*m}")
+
+    def __init__(self,token_list,productions,start_symbol,end_symbol,null_symbol,error_handler=[]):
         self.token_list = token_list
         self.token_list.sort(key=lambda x: -len(x[0]))
         self.productions = productions
@@ -267,6 +260,7 @@ class SLR_Parser:
         start_token = self.start_token
         end_token = self.end_token
         null_token = self.null_token
+        self.error_handler = error_handler
 
         # Tokenize productions
         productions_token = [
@@ -399,7 +393,14 @@ class SLR_Parser:
             for j in range(0,len(symbols)):
                 table_entry = parsing_table[i][j]
                 if len(table_entry) == 0:
+                    #parsing_table[i][j] = -1
+                    items_token = [(productions_token[x[0]][1][0:x[1]],productions_token[x[0]][1][x[1]:]) for x in states_index[i]]
+                    next_symbol = symbols_index[j]
                     parsing_table[i][j] = -1
+                    for (index,condition) in enumerate([x[0] for x in self.error_handler],2):
+                        if condition(items_token,next_symbol):
+                            parsing_table[i][j] = -index
+                            break
                 elif len(table_entry) == 1:
                     parsing_table[i][j] = table_entry[0][1]
                 else:
@@ -457,11 +458,18 @@ class SLR_Parser:
         added_token = False
         while index-len(string) < len(expr):
             end_token = None
-            for (content,label) in token_symbols:
-                if expr.startswith(content,index):
-                    end_token = new_token(label,content,index,index+len(content)-1)
-                    index += len(content)
-                    break
+            content = ""
+            label = None
+            for (re_content,current_label) in token_symbols:
+                match_content = re.match(re_content,expr[index:])
+                if match_content != None:
+                    current_content = match_content.group()
+                    if len(current_content) > len(content):
+                        content = current_content
+                        label = current_label
+            if label != None:
+                end_token = new_token(label,content,index,index+len(content)-1)
+                index += len(content)
             if (end_token != None or index >= len(expr)) and len(string) > 0:
                 end_token_length = 0 if end_token == None else len(end_token.content)
                 added_token = False
@@ -576,7 +584,7 @@ class SLR_Parser:
             parsing_table_string += [str(i)+"\t"]
             for j in range(0,len(parsing_table[i])):
                 if parsing_table[i][j] < 0:
-                    parsing_table_string += ['x']
+                    parsing_table_string += ['e'+str(-parsing_table[i][j])]
                 elif parsing_table[i][j] < len(states):
                     parsing_table_string += ['s'+str(parsing_table[i][j])]
                 else:
@@ -609,7 +617,7 @@ class SLR_Parser:
     def parsing_action(self,s,a):
         return self.parsing_table[s][self._symbols_index[a]]
 
-    def parse(self,input_tokens,verbose=False,restart_on_error=False):
+    def parse(self,input_tokens,verbose=False):
         productions_token = self.productions_token
         tokens = list(input_tokens)+[self.end_token]
         a = tokens.pop(0)
@@ -617,17 +625,24 @@ class SLR_Parser:
         output = []
         while True:
             parse_action = self.parsing_action(stack[-1],a)
-            if parse_action < 0:
-                if restart_on_error:
-                    stack.append(0)
-                    if a == self.end_token:
-                        break
-                    output.append(a)
-                    a = tokens.pop(0)
-                    continue
+            while parse_action < 0:
+                #stack,a,input_tokens,tokens,output,parser = error_handler(stack,a,input_tokens,tokens,output,self)
+                #m = 70
+                #raise Exception(
+                #    f"{'-'*m}\n"+\
+                #    f"ERROR:\n{'-'*m}\n"+\
+                #    f"accepted: {input_tokens[:-len(tokens)]}\n"+\
+                #    f"current: {a}, {self._symbols_index[a]}\n"+\
+                #    f"remaining: {tokens}\n"+\
+                #    f"stack: {stack}\n"+\
+                #    f"output: {output}\n"+\
+                #    f"state: {self.state_string(self._states_index[stack[-1]])}\n"+\
+                #    f"{'-'*m}")
+                if parse_action == -1:
+                    self.default_error_handler(stack,a,input_tokens,tokens,output)
                 else:
-                    m = 70
-                    raise Exception(f"{'-'*m}\nERROR:\n{'-'*m}\naccepted: {input_tokens[:-len(tokens)]}\ncurrent: {a}, {self._symbols_index[a]}\nremaining: {tokens}\nstack: {stack}\noutput: {output}\n{'-'*m}")
+                    stack,a,input_tokens,tokens,output = self.error_handler[-2-parse_action][1](self,stack,a,input_tokens,tokens,output)
+                parse_action = self.parsing_action(stack[-1],a)
             if parse_action < len(self.states):
                 stack.append(parse_action)
                 output.append(a)
