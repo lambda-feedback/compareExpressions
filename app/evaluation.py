@@ -4,8 +4,8 @@ def parse_error_warning(x):
     return f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct notation is used, that the expression is unambiguous and that all parentheses are closed."
 
 def evaluation_function(response, answer, params, include_test_data = False) -> dict:
+    return {"is_correct": False, "feedback": "Test"}
     try:
-
         # Added this to make it possible to run both the file directly both from the main directory and from the app directory
         import sys
         sys.path.append(".")
