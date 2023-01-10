@@ -96,7 +96,9 @@ class PhysicalQuantity:
         self.unit = None
         self._rotations_performed = []
         self._rotate_until_root_is_split()
-        if self.ast_root.label == "SPACE":
+        if self.ast_root.label == "SPACE"\
+            and QuantityTags.U not in self.ast_root.children[0].tags\
+            and QuantityTags.U in self.ast_root.children[1].tags:
             self.value = self.ast_root.children[0]
             self.unit = self.ast_root.children[1]
         elif QuantityTags.U in self.ast_root.tags:
@@ -169,12 +171,14 @@ class PhysicalQuantity:
         return
 
     def _rotate_until_root_is_split(self):
-        if self.ast_root.label in ["SPACE","HIDDEN"] :
-            if QuantityTags.V in self.ast_root.children[1].tags:
+        if self.ast_root.label == "SPACE":
+            if QuantityTags.V in self.ast_root.children[1].tags and len(self.ast_root.children[1].children) > 0:
                 self._rotate_left()
+                print(self.ast_root.tree_string())
                 self._rotate_until_root_is_split()
-            elif QuantityTags.U in self.ast_root.children[0].tags:
+            elif QuantityTags.U in self.ast_root.children[0].tags and len(self.ast_root.children[0].children) > 0:
                 self._rotate_right()
+                print(self.ast_root.tree_string())
                 self._rotate_until_root_is_split()
         return
 
@@ -223,13 +227,13 @@ def SLR_strict_SI_parsing(expr):
         (start_symbol, "START"           ) ,\
         (end_symbol,   "END"             ) ,\
         (null_symbol,  "NULL"            ) ,\
-        (" ",          "SPACE"           ) ,\
-        ("*",          "PRODUCT"         ) ,\
-        ("/",          "SOLIDUS"         ) ,\
-        ("^",          "POWER"           ) ,\
-        ("**",         "POWER"           ) ,\
-        ("(",          "START_DELIMITER" ) ,\
-        (")",          "END_DELIMITER"   ) ,\
+        (" +",         "SPACE"           ) ,\
+        (" *\* *",     "PRODUCT"         ) ,\
+        (" */ *",      "SOLIDUS"         ) ,\
+        (" *\^ *",     "POWER"           ) ,\
+        (" *\*\* *",   "POWER"           ) ,\
+        ("\( *",       "START_DELIMITER" ) ,\
+        (" *\)",       "END_DELIMITER"   ) ,\
         ("N",          "NUMBER",         is_number) ,\
         ("U",          "UNIT",           lookup_unit) ,\
         ("V",          "NON-UNIT",       catch_undefined) ,\
@@ -260,15 +264,13 @@ def SLR_strict_SI_parsing(expr):
         return apply
 
     productions = [( start_symbol, "Q" , relabel )]
-    #productions += [( "Q", "QQ" , transfer_tags_op(hidden) )]
-    productions += [( "Q", "QQ" , transfer_tags_op(append) )]
-    productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
     productions += [( "Q", "U" , tag_node(QuantityTags.U) )]
     productions += [( "Q", "N" , tag_node(QuantityTags.N) )]
     productions += [( "Q", "V" , tag_node(QuantityTags.V) )]
     productions += [( "Q", "Q"+x+"Q", transfer_tags_infix ) for x in list(" */^")]
+    productions += [( "Q", "QQ" , transfer_tags_op(append) )]
+    productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
 
-    #TODO: Change this so duplicate productions give an error instead of just being printed
     prods = []
     duplicate_error_string = []
     for prod in [(x[0],x[1]) for x in productions]:
@@ -281,30 +283,9 @@ def SLR_strict_SI_parsing(expr):
     parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     tokens = parser.scan(expr)
 
-    rules = [( "N", "N"+x+"N", join ) for x in list("*/^")]
-    rules += [( "V", "V(V)", join ), ( "V", "V(N)", join )]
-    rules += [( "V", "NV", join ), ( "V", "VV", join )]
-    rules += [( "V", "V N", join ), ( "V", " V", join )]
-    rules += [( x, " "+x, join ) for x in list(" */^")] #\TODO: Try to rewrite as error handling
-    rules += [( x, x+" ", join ) for x in list(" */^")] #\TODO: Try to rewrite as error handling
-    #tokens = parser.process(tokens,rules)
-
-    #TODO: Can we use state dictionary to get right marker from production?
-    def error(stack,a,input_tokens,tokens,output,parser):
-        last_token = output.pop()
-        if last_token.label == "SPACE" and a.label in ["SPACE","PRODUCT","SOLIDUS","POWER"]:
-            a.content = last_token.content + a.content
-            output.append(a)
-            a = tokens.pop(0)
-        elif last_token.label in ["PRODUCT","SOLIDUS","POWER"] and a.label == "SPACE":
-            last_token.content += a.content
-            output.append(last_token)
-            a = tokens.pop(0)
-        return stack,a,input_tokens,tokens,output,parser
-
     #print(tokens)
     #print(parser.parsing_table_to_string())
-    quantity = parser.parse(tokens,verbose=False,error_handler=error)
+    quantity = parser.parse(tokens,verbose=False)
 
     if len(quantity) > 1:
         print(quantity)
