@@ -96,13 +96,7 @@ class PhysicalQuantity:
         self.value = None
         self.unit = None
         #self._rotations_performed = []
-        print('~~~~~~~~~~~~~~~~~~~~~')
-        print(ast_root.tree_string())
-        print('~~~~~~~~~~~~~~~~~~~~~')
         self._rotate_until_root_is_split()
-        print('~~~~~~~~~~~~~~~~~~~~~')
-        print(ast_root.tree_string())
-        print('~~~~~~~~~~~~~~~~~~~~~')
         if self.ast_root.label == "SPACE"\
             and QuantityTags.U not in self.ast_root.children[0].tags\
             and QuantityTags.U in self.ast_root.children[1].tags:
@@ -292,7 +286,7 @@ def SLR_strict_SI_parsing(expr):
     parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
     tokens = parser.scan(expr)
 
-    print(tokens)
+    #print(tokens)
     #print(parser.parsing_table_to_string())
     quantity = parser.parse(tokens,verbose=False)
 
@@ -335,34 +329,34 @@ def SLR_strict_SI_parsing(expr):
 # -----
 if __name__ == "__main__":
     exprs = [
-        "q",
-        "10",
-        "-10.5*4",
-        "pi*5",
-        "5*pi",
-        "sin(-10.5*4)",
-        "kilogram/(metre second^2)",
-        "10 kilogram/(metre second^2)",
-        "10 kilogram*metre/second**2",
+        #"q",
+        #"10",
+        #"-10.5*4",
+        #"pi*5",
+        #"5*pi",
+        #"sin(-10.5*4)",
+        #"kilogram/(metre second^2)",
+        #"10 kilogram/(metre second^2)",
+        #"10 kilogram*metre/second**2",
         "-10.5 kg m/s^2",
-        "10 kilogram*metre*second**(-2)",
-        "10*pi kilogram*metre/second^2",
-        "(5.27*pi/sqrt(11) + 5*7)^(4.3)",
-        "(kilogram megametre^2)/(fs^4 daA)",
-        "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
-        "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
-        "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
-        "(pi+10) kg*m/s^2",
-        "10 kilogram*metre/second^2",
-        "10 kg*m/s^2",
-        " 10 kg m/s^2 ",
-        "10 gram/metresecond",
-        "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
-        "10 second/gram * 7 ms * 5 gram/second",
-        "pi+metre second+pi",
-        "1/s^2",
-        "5/s^2",
-        "10 1/s^2",
+        #"10 kilogram*metre*second**(-2)",
+        #"10*pi kilogram*metre/second^2",
+        #"(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+        #"(kilogram megametre^2)/(fs^4 daA)",
+        #"(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
+        #"(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
+        #"(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
+        #"(pi+10) kg*m/s^2",
+        #"10 kilogram*metre/second^2",
+        #"10 kg*m/s^2",
+        #" 10 kg m/s^2 ",
+        #"10 gram/metresecond",
+        #"10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
+        #"10 second/gram * 7 ms * 5 gram/second",
+        #"pi+metre second+pi",
+        #"1/s^2",
+        #"5/s^2",
+        #"10 1/s^2",
         ]
 
     for k, expr in enumerate(exprs):

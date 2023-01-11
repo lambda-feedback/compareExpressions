@@ -31,8 +31,7 @@ class TestEvaluationFunction():
     https://docs.python.org/3/library/unittest.html
     https://docs.pytest.org/en/7.2.x/
 
-    Use evaluation_function() to check your algorithm works
-    as it should.
+    Use evaluation_function() to call the evaluation function.
     """
 
     @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria",slr_strict_si_syntax_test_cases)
@@ -41,6 +40,50 @@ class TestEvaluationFunction():
         answer = string
         response = string
         result = evaluation_function(answer,response,params)
+        assert result["is_correct"]
+
+    @pytest.mark.parametrize("value,unit,small_diff,large_diff",\
+        [
+            ("10.5","kg m/s^2",0.04,0.06),\
+            ("10.55","kg m/s^2",0.004,0.006),\
+            ("0.105","kg m/s^2",0.0004,0.0006),\
+            ("0.0010","kg m/s^2",0.00004,0.00006),\
+            ("100","kg m/s^2",0.4,0.6),\
+            ("100e10","kg m/s^2",4e9,6e9)
+        ]
+    )
+    def test_compute_relative_tolerance_from_significant_decimals(self,value,unit,small_diff,large_diff):
+        ans = value
+        res_correct_under   = str(float(value)-small_diff)
+        res_correct_over    = str(float(value)+small_diff)
+        res_incorrect_under = str(float(value)-large_diff)
+        res_incorrect_over  = str(float(value)+large_diff)
+        params = {"strict_syntax": False, "strict_SI_syntax": True}
+        assert evaluation_function(res_correct_under,ans,params)["is_correct"]   == True
+        assert evaluation_function(res_correct_over,ans,params)["is_correct"]    == True
+        assert evaluation_function(res_incorrect_under,ans,params)["is_correct"] == False
+        assert evaluation_function(res_incorrect_over,ans,params)["is_correct"]  == False
+
+    def test_convert_units(self):
+        ans = "-10500 g m/s^2"
+        res = "-10.5 kg m/s^2"
+        params = {"strict_syntax": False, "strict_SI_syntax": True}
+        result = evaluation_function(res,ans,params)
+        assert result["is_correct"]
+
+    @pytest.mark.parametrize("ans,res,tag",\
+        [
+            ("-10.5 kg m/s^2","kg m/s^2",      "MISSING_VALUE"),\
+            ("-10.5 kg m/s^2","-10.5",         "MISSING_UNIT"),\
+            ("kg m/s^2",      "-10.5 kg m/s^2","UNEXPECTED_VALUE"),\
+            ("-10.5",         "-10.5 kg m/s^2","UNEXPECTED_UNIT")
+        ]
+    )
+    def test_check_tag(self,ans,res,tag):
+        params = {"strict_syntax": False, "strict_SI_syntax": True}
+        result = evaluation_function(res,ans,params)
+        assert tag in result["tags"].keys()
+        assert result["is_correct"] == False
 
 if __name__ == "__main__":
-    pytest.main(["-x", "--tb=line",os.path.basename(__file__)])
+    pytest.main(["-x", "--tb=auto",os.path.basename(__file__)])
