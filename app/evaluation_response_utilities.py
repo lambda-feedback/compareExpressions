@@ -8,8 +8,7 @@ class EvaluationResponse:
     def get_feedback(self, tag):
         return self._feedback_tags.get(tag,None)
 
-    #def add_feedback(self, feedback_item: tuple[str, str] | str):
-    def add_feedback(self, feedback_item):
+    def add_feedback(self, feedback_item: tuple[str, str] | str):
         if isinstance(feedback_item,tuple):
             self._feedback.append(feedback_item[1])
             self._feedback_tags.update({feedback_item[0]: len(self._feedback)-1})

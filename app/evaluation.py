@@ -1,5 +1,5 @@
 # Added this to make it possible to run both the file directly both from the main directory and from the app directory
-import sys
+#import sys
 #sys.path.append(".")
 
 try:
@@ -18,6 +18,7 @@ try:
     from symbolic_equal import evaluation_function as symbolicEqual
     from slr_strict_si_syntax import SLR_strict_SI_parsing as strict_SI_parsing
     from slr_strict_si_syntax import criteria as strict_SI_criteria
+    from slr_strict_si_syntax import criteria as strict_SI_criteria
 except ImportError:
     from .static_unit_conversion_arrays import (
         names_of_prefixes_units_and_dimensions,
@@ -33,6 +34,7 @@ except ImportError:
     from .evaluation_response_utilities import EvaluationResponse
     from .symbolic_equal import evaluation_function as symbolicEqual
     from .slr_strict_si_syntax import SLR_strict_SI_parsing as strict_SI_parsing
+    from .slr_strict_si_syntax import criteria as strict_SI_criteria
     from .slr_strict_si_syntax import criteria as strict_SI_criteria
 
 def evaluation_function(response, answer, params, include_test_data = False) -> dict:
