@@ -6,10 +6,12 @@ from enum import Enum
 import re
 try:
     from expression_utilities import substitute
+    from criteria_utilities import CriterionCollection
     from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
     from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
 except ImportError:
     from .expression_utilities import substitute
+    from .criteria_utilities import CriterionCollection
     from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
     from .static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
 
@@ -19,34 +21,6 @@ except ImportError:
 # -------
 
 QuantityTags = Enum("QuantityTags",{v:i for i,v in enumerate("UVN",1)})
-
-class CriterionCollection:
-
-    def __init__(self):
-        self.tags = set()
-        self.checks = dict()
-        self.results = dict()
-        self.feedbacks = dict()
-        return
-
-    def add_criterion(self,tag,check,result,feedback):
-        if tag in self.tags:
-            raise Exception("Criterion with tag: '"+str(tag)+"' already defined, use update_criterion to change criterion or choose a unique tag")
-        else:
-            self.tags.add(tag)
-            self.checks.update({tag:check})
-            self.results.update({tag:result})
-            self.feedbacks.update({tag:feedback})
-        return
-
-    def update_criterion(self,tag,check,result,feedback):
-        if tag not in self.tags:
-            raise Exception("No criterion with tag: '"+str(tag)+"' defined.")
-        else:
-            self.checks.update({tag:check})
-            self.results.update({tag:result})
-            self.feedbacks.update({tag:feedback})
-        return
 
 criteria = CriterionCollection()
 

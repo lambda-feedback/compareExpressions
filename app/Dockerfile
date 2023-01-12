@@ -15,6 +15,7 @@ COPY evaluation_response_utilities.py ./app/
 COPY expression_utilities.py ./app/
 COPY static_unit_conversion_arrays.py ./app/
 COPY slr_strict_si_syntax.py ./app/
+COPY slr_strict_si_syntax_tests.py ./app/
 COPY slr_parsing_utilities.py ./app/
 COPY symbolic_equal.py ./app/
 
