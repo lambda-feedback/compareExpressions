@@ -13,6 +13,7 @@ COPY evaluation.py ./app/
 COPY evaluation_tests.py ./app/
 COPY evaluation_response_utilities.py ./app/
 COPY expression_utilities.py ./app/
+COPY criteria_utilities.py ./app/
 COPY static_unit_conversion_arrays.py ./app/
 COPY slr_strict_si_syntax.py ./app/
 COPY slr_strict_si_syntax_tests.py ./app/
