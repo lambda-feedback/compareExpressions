@@ -1,14 +1,14 @@
 import unittest, pytest, sys, os
-sys.path.append(".")
 
-try:
-    from slr_strict_si_syntax_tests import TestClass as TestStrictSLRSyntax
-    from slr_strict_si_syntax_tests import slr_strict_si_syntax_test_cases
-    from evaluation import evaluation_function
-except ImportError:
-    from .slr_strict_si_syntax_tests import TestClass as TestStrictSLRSyntax
-    from .slr_strict_si_syntax_tests import slr_strict_si_syntax_test_cases
-    from .evaluation import evaluation_function
+for k in range(0,2):
+    try:
+        from slr_strict_si_syntax_tests import TestClass as TestStrictSLRSyntax
+        from slr_strict_si_syntax_tests import slr_strict_si_syntax_test_cases
+        from evaluation import evaluation_function
+    except ImportError:
+        sys.path.append(".")
+        continue
+    break
 
 # If evaluation_tests is run with the command line argument 'skip_resource_intensive_tests'
 # then tests marked with @unittest.skipIf(skip_resource_intensive_tests,message_on_skip)
