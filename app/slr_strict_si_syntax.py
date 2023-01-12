@@ -4,17 +4,18 @@
 
 from enum import Enum
 import re
-try:
-    from expression_utilities import substitute
-    from criteria_utilities import CriterionCollection
-    from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
-    from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
-except ImportError:
-    from .expression_utilities import substitute
-    from .criteria_utilities import CriterionCollection
-    from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
-    from .static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
 
+import sys
+for k in range(0,2):
+    try:
+        from expression_utilities import substitute
+        from criteria_utilities import CriterionCollection
+        from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
+        from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
+    except ImportError:
+        sys.path.append(".")
+        continue
+    break
 
 # -------
 # CLASSES
