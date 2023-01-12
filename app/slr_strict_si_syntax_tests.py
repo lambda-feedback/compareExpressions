@@ -1,8 +1,8 @@
 import pytest
-try:
-    from .slr_strict_si_syntax import SLR_strict_SI_parsing
-except ImportError:
-    from slr_strict_si_syntax import SLR_strict_SI_parsing
+import sys
+sys.path.append(".")
+
+from slr_strict_si_syntax import SLR_strict_SI_parsing
 
 slr_strict_si_syntax_test_cases = [
     ("q",\
