@@ -116,33 +116,35 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
                 response_latex += [res_latex]
             eval_response.response_latex = " ".join(response_latex)
     
-            # Compare answer and response value
-            if ans_parsed.passed("HAS_VALUE") and res_parsed.passed("HAS_VALUE"):
+            def compare_response_and_answer(comp_tag,action,not_res_tag,not_res_message,not_ans_tag,not_ans_message):
+                if res_parsed.passed(comp_tag) and ans_parsed.passed(comp_tag):
+                    eval_response.is_correct = eval_response.is_correct and action()
+                elif not res_parsed.passed(comp_tag) and ans_parsed.passed(comp_tag):
+                    eval_response.add_feedback((not_res_tag,not_res_message))
+                    eval_response.is_correct = False
+                elif res_parsed.passed(comp_tag) and not ans_parsed.passed(comp_tag):
+                    eval_response.add_feedback((not_ans_tag,not_ans_message))
+                    eval_response.is_correct = False
+
+            def action_HAS_VALUE():
                 value_comparison_response = symbolicEqual(res_converted_value,ans_converted_value,parameters)
-                eval_response.is_correct = eval_response.is_correct and value_comparison_response["is_correct"]
-                #TODO Update symbolicEqual to use new evaluationResponse system
-                #response_latex += [value_comparison_response.response_latex]
-                response_latex += value_comparison_response.get("response_latex","")
-            elif ans_parsed.passed("HAS_VALUE") and not res_parsed.passed("HAS_VALUE"):
-                eval_response.add_feedback(("MISSING_VALUE","The response is missing a value."))
-                eval_response.is_correct = False
-            elif not ans_parsed.passed("HAS_VALUE") and res_parsed.passed("HAS_VALUE"):
-                eval_response.add_feedback(("UNEXPECTED_VALUE","The response is expected only have unit(s), no value."))
-                eval_response.is_correct = False
-    
-            # Compare answer and response unit
-            if ans_parsed.passed("HAS_UNIT") and res_parsed.passed("HAS_UNIT"):
-                is_correct = bool((res_converted_unit - ans_converted_unit).simplify() == 0)
-                eval_response.is_correct = eval_response.is_correct and is_correct
-            elif ans_parsed.passed("HAS_UNIT") and not res_parsed.passed("HAS_UNIT"):
-                eval_response.add_feedback(("MISSING_UNIT","The response is missing unit(s)."))
-                eval_response.is_correct = False
-            elif not ans_parsed.passed("HAS_UNIT") and res_parsed.passed("HAS_UNIT"):
-                eval_response.add_feedback(("UNEXPECTED_UNIT","The response is expected only have unit(s), no value."))
-                eval_response.is_correct = False
-    
+                eval_response.response_latex += value_comparison_response.get("response_latex","")
+                return value_comparison_response["is_correct"]
+
+            compare_response_and_answer(\
+                "HAS_VALUE", action_HAS_VALUE,\
+                "MISSING_VALUE", "The response is missing a value.",\
+                "UNEXPECTED_VALUE","The response is expected only have unit(s), no value."
+            )
+
+            compare_response_and_answer(\
+                "HAS_UNIT", lambda: bool((res_converted_unit - ans_converted_unit).simplify() == 0),\
+                "MISSING_UNIT", "The response is missing unit(s).",\
+                "UNEXPECTED_UNIT","The response is expected only have unit(s), no value."
+            )
+
             #TODO: Comparison of units in way that allows for constructive feedback
-    
+
             # Check some of the criteria and creates corresponding feedback
             tested_criteria = [
                 "FULL_QUANTITY",
