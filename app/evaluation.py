@@ -1,5 +1,6 @@
 # Added this to make it possible to run both the file directly both from the main directory and from the app directory
 import sys
+
 for k in range(0,2):
     try:
         from static_unit_conversion_arrays import (
