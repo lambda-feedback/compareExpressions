@@ -72,7 +72,8 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
         res_parsed, res_latex = strict_SI_parsing(response)
 
         # Collects messages from parsing the response, these needs to be returned as feedback later
-        eval_response.add_feedback("\n".join([x[1] for x in res_parsed.messages]))
+        for message in res_parsed.messages:
+            eval_response.add_feedback(message)
 
         # Computes the desired tolerance used for numerical computations based on the formatting of the answer
         if ans_parsed.passed("NUMBER_VALUE"):
