@@ -87,7 +87,7 @@ class PhysicalQuantity:
                 if node.label != "GROUP":
                     node.content = node.original[node.start:node.end+1]
                 if node.label == "UNIT":
-                    self.messages += [("REVERTED_UNIT","WARNING: Possible ambiguity: '<mark>"+node.content+"</mark>' was not interpreted as a unit in `"+node.original[:node.start]+"<mark>"+node.content+"</mark>"+node.original[node.end+1:]+"`")]
+                    self.messages += [("REVERTED_UNIT","WARNING: Possible ambiguity: <strong>`"+node.content+"`</strong> was not interpreted as a unit in `"+node.original[:node.start]+"`<strong>`"+node.content+"`</strong>`"+node.original[node.end+1:]+"`")]
                 return ["",""]
             self.value.traverse(revert_content)
         self.passed_dict = dict()
