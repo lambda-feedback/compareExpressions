@@ -120,6 +120,11 @@ slr_strict_si_syntax_test_cases = [
     "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",\
     r"\frac{\mathrm{gram}}{\mathrm{second}^{3}}",\
     ["FULL_QUANTITY","EXPR_VALUE"]),
+    ("10 kg m/s^2 + 10 kg m/s^2",\
+    "10 kg m/s^2 + 10","kg m/s^2",\
+    "10 kg m/s^2 + 10 kilogram metre/second^2",\
+    r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
+    ["FULL_QUANTITY","EXPR_VALUE"]),
     ("10 second/gram * 7 ms * 5 gram/second",\
     "10 second/gram * 7 ms * 5","gram/second",\
     "10 second/gram * 7 ms * 5 gram/second",\

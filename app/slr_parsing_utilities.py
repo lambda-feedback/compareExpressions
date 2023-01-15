@@ -40,7 +40,7 @@ def join(production,output):
     output[-1].end = joined_end
     return output
 
-def node(production,output):
+def create_node(production,output):
     a = output.pop()
     output.append(ExprNode(a,[]))
     return output
@@ -66,22 +66,7 @@ def group(production,output):
         )
     return output
 
-def hidden(production,output):
-    right = output.pop()
-    left = output.pop()
-    output.append(\
-        ExprNode(\
-            Token(\
-                "HIDDEN",\
-                "",\
-                right.original,\
-                0,-1
-                ),
-            [left,right],traverse_step=traverse_infix)
-        )
-    return output
-
-def infix(handle,output):
+def infix(production,output):
     right = output.pop()
     operator = output.pop()
     left = output.pop()
@@ -96,26 +81,24 @@ def tag_rule_union(x,y):
 def tag_rule_intersection(x,y):
     return x & y
 
-def tag_transfer(production,output,rule=tag_rule_union):
-    node = output[-1]
+def tag_transfer(node,rule=tag_rule_union):
     tags = node.children[0].tags
     for child in node.children[1:]:
         tags = rule(tags,child.tags)
-    output[-1].tags.update(tags)
-    return output
+    return node
 
-def tag_removal(production,output,tag,rule=lambda x: True):
-    if rule(output[-1].tags) and tag in output[-1].tags:
-        output[-1].tags.remove(tag)
-    return output
+def tag_removal(node,tag,rule=lambda x: True):
+    if rule(node.tags) and tag in node.tags:
+        node.tags.remove(tag)
+    return node
 
-def tag(production,output,tag=None,rule=lambda x: True):
+def tag(node,tag=None,rule=lambda x: True):
     if tag != None:
-        if output[-1].tags == None:
-            output[-1].tags = set()
-        if rule(output[-1].tags):
-            output[-1].tags.add(tag)
-    return output
+        if node.tags == None:
+            node.tags = set()
+        if rule(node.tags):
+            node.tags.add(tag)
+    return node
 
 # Node traversal utilities
 
@@ -247,7 +230,7 @@ class SLR_Parser:
             f"state: {parser.state_string(parser._states_index[stack[-1]])}\n"+\
             f"{'-'*m}")
 
-    def __init__(self,token_list,productions,start_symbol,end_symbol,null_symbol,error_handler=[]):
+    def __init__(self,token_list,productions,start_symbol,end_symbol,null_symbol,error_handler=[],tag_handler = tag_transfer):
         self.token_list = token_list
         self.token_list.sort(key=lambda x: -len(x[0]))
         self.productions = productions
@@ -261,6 +244,7 @@ class SLR_Parser:
         end_token = self.end_token
         null_token = self.null_token
         self.error_handler = error_handler
+        self.tag_handler = tag_handler
 
         # Tokenize productions
         productions_token = [
@@ -657,6 +641,11 @@ class SLR_Parser:
                 production = productions_token[parse_action-len(self.states)]
                 reduction = self.reductions[tuple(production[1])]
                 output = reduction(production,output)
+                node = self.tag_handler(output.pop())
+                output.append(node)
+                #print("-----------------------")
+                #print(output[0].tree_string())
+                #print("-----------------------")
                 stack = stack[0:-len(production[1])]
                 stack.append(self.parsing_action(stack[-1],production[0]))
                 if verbose:
@@ -676,12 +665,12 @@ class SLR_Parser:
 if __name__ == "__main__":
 
     productions = [\
-        ( "S", "E"  , node    ),
-        ( "E", "E+E", infix   ),
-        ( "E", "E*E", infix   ),
-        ( "E", "(E)", group   ),
-        ( "E", "I"  , relabel )
-        ]
+        ( "S", "E"  , create_node),
+        ( "E", "E+E", infix      ),
+        ( "E", "E*E", infix      ),
+        ( "E", "(E)", group      ),
+        ( "E", "I"  , relabel    )
+    ]
 
     start_symbol = "S"
     end_symbol = "$"

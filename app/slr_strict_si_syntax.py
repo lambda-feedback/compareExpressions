@@ -7,12 +7,12 @@ import re
 try:
     from expression_utilities import substitute
     from criteria_utilities import CriterionCollection
-    from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
+    from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, create_node, append
     from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
 except ImportError:
     from .expression_utilities import substitute
     from .criteria_utilities import CriterionCollection
-    from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, node, append, hidden
+    from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, create_node, append
     from .static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
 
 
@@ -27,7 +27,7 @@ criteria = CriterionCollection()
 criteria.add_criterion("FULL_QUANTITY",\
     lambda x: x.value != None and x.unit != None,\
     lambda x: (x.value.content_string(),x.unit.content_string()),\
-    lambda result: "Quantity has both value and unit.\nUnit: "+result[1]+"\nValue: "+result[0])
+    lambda result: "Quantity has both value and unit.<br>Value: "+result[0]+"<br>Unit: "+result[1])
 criteria.add_criterion("HAS_UNIT",\
     lambda x: x.unit != None,\
     lambda x: x.unit.content_string(),\
@@ -64,12 +64,12 @@ criteria.add_criterion("REVERTED_UNIT",\
 
 class PhysicalQuantity:
 
-    def __init__(self,ast_root,messages):
+    def __init__(self,ast_root,messages=[],tag_handler=lambda x: x):
         self.messages = messages
         self.ast_root = ast_root
+        self.tag_handler = tag_handler
         self.value = None
         self.unit = None
-        #self._rotations_performed = []
         self._rotate_until_root_is_split()
         if self.ast_root.label == "SPACE"\
             and QuantityTags.U not in self.ast_root.children[0].tags\
@@ -77,17 +77,15 @@ class PhysicalQuantity:
             self.value = self.ast_root.children[0]
             self.unit = self.ast_root.children[1]
         elif QuantityTags.U in self.ast_root.tags:
-        #    self._undo_rotations()
             self.unit = self.ast_root
         else:
-        #    self._undo_rotations()
             self.value = self.ast_root
         if self.value != None:
             def revert_content(node):
                 if node.label != "GROUP":
                     node.content = node.original[node.start:node.end+1]
                 if node.label == "UNIT":
-                    self.messages += [("REVERTED_UNIT","WARNING: Possible ambiguity: <strong>`"+node.content+"`</strong> was not interpreted as a unit in `"+node.original[:node.start]+"`<strong>`"+node.content+"`</strong>`"+node.original[node.end+1:]+"`")]
+                    self.messages += [("REVERTED_UNIT","WARNING: Possible ambiguity: <strong>`"+node.content+"`</strong> was not interpreted as a unit in<br>`"+node.original[:node.start]+"`<strong>`"+node.content+"`</strong>`"+node.original[node.end+1:]+"`")]
                 return ["",""]
             self.value.traverse(revert_content)
         self.passed_dict = dict()
@@ -104,7 +102,6 @@ class PhysicalQuantity:
         # left: direction = 0
         if direction not in {0,1}:
             raise Exception("Unknown direction: "+str(direction))
-        #self._rotations_performed.append(direction)
         old_root = self.ast_root
         new_root = old_root.children[1-direction]
         if len(new_root.children) == 1:
@@ -119,15 +116,8 @@ class PhysicalQuantity:
         else:
             direction_string = "right" if direction == 1 else "left"
             raise Exception("Cannot rotate "+direction_string+".")
-        # TODO: Use user defined operations for tag transfer instead
-        for child in old_root.children:
-            old_root.tags = old_root.tags | child.tags
-            if QuantityTags.V in old_root.tags and QuantityTags.U in old_root.tags:
-                old_root.tags.remove(QuantityTags.U)
-        for child in old_root.children:
-            new_root.tags = new_root.tags | child.tags
-            if QuantityTags.V in new_root.tags and QuantityTags.U in new_root.tags:
-                new_root.tags.remove(QuantityTags.U)
+        old_root = self.tag_handler(old_root)
+        new_root = self.tag_handler(new_root)
         self.ast_root = new_root
         return
 
@@ -147,18 +137,12 @@ class PhysicalQuantity:
 
     def _rotate_until_root_is_split(self):
         if self.ast_root.label == "SPACE":
-            if QuantityTags.V in self.ast_root.children[1].tags and len(self.ast_root.children[1].children) > 0:
+            if QuantityTags.U not in self.ast_root.tags and len(self.ast_root.children[1].children) > 0:
                 self._rotate_left()
                 self._rotate_until_root_is_split()
             elif QuantityTags.U in self.ast_root.children[0].tags and len(self.ast_root.children[0].children) > 0:
                 self._rotate_right()
                 self._rotate_until_root_is_split()
-        return
-
-    def _undo_rotations(self):
-        while len(self._rotations_performed) > 0:
-            self._rotate((self._rotations_performed[-1]+1) % 2)
-            self._rotations_performed = self._rotations_performed[0:-2]
         return
 
 # ---------
@@ -190,10 +174,9 @@ def SLR_strict_SI_parsing(expr):
     expr = expr.strip()
     unit_dictionary = SLR_generate_unit_dictionary()
     lookup_unit = lambda x: unit_dictionary.get(x,None)
-    #is_number = lambda string: string if all(c.isdigit() or c in "-." for c in string) else None
 
-    # regexp from penultimate entry in section Numbers with a Scientific Notation: Fractional numbers
-    # taken from https://slavik.meltser.info/validate-number-with-regular-expression/
+    # regexp from https://slavik.meltser.info/validate-number-with-regular-expression/
+    # see penultimate entry in section "Numbers with a Scientific Notation: Fractional numbers"
     is_number = lambda string: string if re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?$',string) != None else None
 
     start_symbol = "START"
@@ -217,36 +200,34 @@ def SLR_strict_SI_parsing(expr):
         ("Q",          "QUANTITY_NODE",  None) ,\
         ]
 
-    def transfer_tags_op(op):
-        def apply(prod,out):
-            return tag_removal(prod,tag_transfer(prod,op(prod,out)),QuantityTags.U,lambda x: QuantityTags.V in x)
-        return apply
-
-    def transfer_tags_infix(prod,out):
-        out = tag_transfer(prod,infix(prod,out))
-        node = out[-1]
-        if node.label == "POWER" and QuantityTags.U in node.children[0].tags and node.children[1].tags == {QuantityTags.N}:
-            out = tag_removal(prod,out,QuantityTags.N)
+    def set_tags(node):
+        node.tags = set()
+        for child in node.children:
+            node.tags = node.tags.union(child.tags)
+        if node.label == "UNIT":
+            node.tags.add(QuantityTags.U)
+        elif node.label == "NUMBER":
+            node.tags.add(QuantityTags.N)
+        elif node.label == "NON-UNIT":
+            node.tags.add(QuantityTags.V)
+        elif node.label == "POWER" and QuantityTags.U in node.children[0].tags and node.children[1].tags == {QuantityTags.N}:
+            node = tag_removal(node,QuantityTags.N)
         elif node.label == "SOLIDUS" and node.children[0].content == "1" and node.children[1].tags == {QuantityTags.U}:
-            out = tag_removal(prod,out,QuantityTags.N)
-        elif node.label != "SPACE":
-            out = tag_removal(prod,out,QuantityTags.U,lambda x: QuantityTags.N in x)
-            out = tag(prod,out,QuantityTags.V,lambda x: QuantityTags.N in x)
-        out = tag_removal(prod,out,QuantityTags.U,lambda x: QuantityTags.V in x)
-        return out
-
-    def tag_node(tag_value):
-        def apply(prod,out):
-            return tag(prod,node(prod,out),tag_value)
-        return apply
+            node = tag_removal(node,QuantityTags.N)
+        elif node.label in ["PRODUCT","SOLIDUS","POWER"]:
+            node = tag_removal(node,QuantityTags.U,lambda x: QuantityTags.N in x)
+            node = tag(node,QuantityTags.V,lambda x: QuantityTags.N in x)
+        elif node.label == "SPACE" and QuantityTags.V in node.children[1].tags:
+            node = tag_removal(node,QuantityTags.U)
+        return node
 
     productions = [( start_symbol, "Q" , relabel )]
-    productions += [( "Q", "U" , tag_node(QuantityTags.U) )]
-    productions += [( "Q", "N" , tag_node(QuantityTags.N) )]
-    productions += [( "Q", "V" , tag_node(QuantityTags.V) )]
-    productions += [( "Q", "Q"+x+"Q", transfer_tags_infix ) for x in list(" */^")]
-    productions += [( "Q", "QQ" , transfer_tags_op(append) )]
-    productions += [( "Q", "(Q)" , transfer_tags_op(group) )]
+    productions += [( "Q", "U" , create_node )]
+    productions += [( "Q", "N" , create_node )]
+    productions += [( "Q", "V" , create_node )]
+    productions += [( "Q", "Q"+x+"Q", infix ) for x in list(" */^")]
+    productions += [( "Q", "QQ" , append )]
+    productions += [( "Q", "(Q)" , group )]
 
     prods = []
     duplicate_error_string = []
@@ -257,7 +238,7 @@ def SLR_strict_SI_parsing(expr):
     if len(duplicate_error_string) > 0:
         raise Exception("There are duplicate productions:\n"+"\n".join(duplicate_error_string))
 
-    parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol)
+    parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol,tag_handler = set_tags)
     tokens = parser.scan(expr)
 
     #print(tokens)
@@ -268,7 +249,7 @@ def SLR_strict_SI_parsing(expr):
         print(quantity)
         raise Exception("Parsed quantity does not have a single root.")
 
-    quantity = PhysicalQuantity(quantity[0],[])
+    quantity = PhysicalQuantity(quantity[0],tag_handler=set_tags)
 
     def unit_latex(node):
         # TODO: skip unnecessary parenthesis (i.e. chech for GROUP children for powers and fraction and inside groups)
@@ -303,34 +284,35 @@ def SLR_strict_SI_parsing(expr):
 # -----
 if __name__ == "__main__":
     exprs = [
-        #"q",
-        #"10",
-        #"-10.5*4",
-        #"pi*5",
-        #"5*pi",
-        #"sin(-10.5*4)",
-        #"kilogram/(metre second^2)",
-        #"10 kilogram/(metre second^2)",
-        #"10 kilogram*metre/second**2",
+        "q",
+        "10",
+        "-10.5*4",
+        "pi*5",
+        "5*pi",
+        "sin(-10.5*4)",
+        "kilogram/(metre second^2)",
+        "10 kilogram/(metre second^2)",
+        "10 kilogram*metre/second**2",
         "-10.5 kg m/s^2",
-        #"10 kilogram*metre*second**(-2)",
-        #"10*pi kilogram*metre/second^2",
-        #"(5.27*pi/sqrt(11) + 5*7)^(4.3)",
-        #"(kilogram megametre^2)/(fs^4 daA)",
-        #"(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
-        #"(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
-        #"(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
-        #"(pi+10) kg*m/s^2",
-        #"10 kilogram*metre/second^2",
-        #"10 kg*m/s^2",
-        #" 10 kg m/s^2 ",
-        #"10 gram/metresecond",
-        #"10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
-        #"10 second/gram * 7 ms * 5 gram/second",
-        #"pi+metre second+pi",
-        #"1/s^2",
-        #"5/s^2",
-        #"10 1/s^2",
+        "1 kg m/s^2 + 2 kg m/s^2",
+        "10 kilogram*metre*second**(-2)",
+        "10*pi kilogram*metre/second^2",
+        "(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+        "(kilogram megametre^2)/(fs^4 daA)",
+        "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
+        "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
+        "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
+        "(pi+10) kg*m/s^2",
+        "10 kilogram*metre/second^2",
+        "10 kg*m/s^2",
+        " 10 kg m/s^2 ",
+        "10 gram/metresecond",
+        "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
+        "10 second/gram * 7 ms * 5 gram/second",
+        "pi+metre second+pi",
+        "1/s^2",
+        "5/s^2",
+        "10 1/s^2",
         ]
 
     for k, expr in enumerate(exprs):
