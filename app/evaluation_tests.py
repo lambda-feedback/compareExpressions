@@ -111,18 +111,18 @@ class TestEvaluationFunction():
         assert tag in result["tags"].keys()
         assert result["is_correct"] == is_correct
 
-    @pytest.mark.parametrize("res,ans,is_correct,tag",\
+    @pytest.mark.parametrize("res,ans,is_correct,tag,latex",\
         [
-            ("-10.5",         "-10.5",   True, "NUMBER_VALUE"),\
-            ("-10.5 kg m/s^2","-10.5",   False,"UNEXPECTED_UNIT"),\
-            ("kg m/s^2",      "kg m/s^2",True, "ONLY_UNIT"),\
-            ("-10.5 kg m/s^2","kg m/s^2",False,"UNEXPECTED_VALUE"),\
+            ("-10.5",         "-10.5",   True, "NUMBER_VALUE",    r"-10.5"),\
+            ("-10.5 kg m/s^2","-10.5",   False,"UNEXPECTED_UNIT", r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),\
+            ("kg m/s^2",      "kg m/s^2",True, "ONLY_UNIT",       r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),\
+            ("-10.5 kg m/s^2","kg m/s^2",False,"UNEXPECTED_VALUE",r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),\
         ]
     )
-    def test_demo_si_units_demo_b(self,res,ans,is_correct,tag):
+    def test_demo_si_units_demo_b(self,res,ans,is_correct,tag,latex):
         params = {"strict_syntax": False, "strict_SI_syntax": True}
         result = evaluation_function(res,ans,params)
-        assert result[""]
+        assert result["response_latex"] == latex
         assert tag in result["tags"].keys()
         assert result["is_correct"] == is_correct
 

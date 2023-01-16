@@ -107,13 +107,15 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
 
         if res_parsed.passed("HAS_VALUE"):
             #TODO redesign symbolicEqual so that it can easily return latex version of input
-            value_comparison_response = symbolicEqual(res_converted_value,"0",parameters)
+            value_comparison_response = symbolicEqual(res_parsed.value.original_string(),"0",parameters)
             #TODO Update symbolicEqual to use new evaluationResponse system
             #response_latex += [value_comparison_response.response_latex]
-            response_latex += value_comparison_response.get("response_latex","")
+            response_latex += [value_comparison_response.get("response_latex","")]
         if res_latex != None and len(res_latex) > 0:
+            if len(response_latex) > 0:
+                response_latex += ["~"]
             response_latex += [res_latex]
-        eval_response.response_latex = " ".join(response_latex)
+        eval_response.latex = "".join(response_latex)
 
         def compare_response_and_answer(comp_tag,action,not_res_tag,not_res_message,not_ans_tag,not_ans_message):
             if res_parsed.passed(comp_tag) and ans_parsed.passed(comp_tag):
@@ -127,7 +129,6 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
 
         def action_HAS_VALUE():
             value_comparison_response = symbolicEqual(res_converted_value,ans_converted_value,parameters)
-            eval_response.response_latex += value_comparison_response.get("response_latex","")
             return value_comparison_response["is_correct"]
 
         compare_response_and_answer(\
