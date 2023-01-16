@@ -72,23 +72,23 @@ slr_strict_si_syntax_test_cases = [
     ["NO_UNIT","EXPR_VALUE"]),
     ("(kilogram megametre^2)/(fs^4 daA)",\
     None,"(kilogram megametre^2)/(fs^4 daA)",\
-    "(kilogram megametre^2)/(femtosecond^4 dekaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{dekaampere})}",\
+    "(kilogram megametre^2)/(femtosecond^4 decaampere)",\
+    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
     ["NO_VALUE"]),
     ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",\
     "(5.27*pi/sqrt(11) + 5*7)^(4.3)","(kilogram megametre^2)/(fs^4 daA)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(femtosecond^4 dekaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{dekaampere})}",\
+    "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",\
+    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
     ["FULL_QUANTITY","EXPR_VALUE"]),
     ("(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",\
     "(5.27*pi/sqrt(11) + 5*7)^(2+2.3)","(kilogram megametre^2)/(fs^4 daA)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(femtosecond^4 dekaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{dekaampere})}",\
+    "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",\
+    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
     ["FULL_QUANTITY","EXPR_VALUE"]),
     ("(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",\
     "(5*27/11 + 5*7)^(2*3)","(kilogram megametre^2)/(fs^4 daA)",\
-    "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(femtosecond^4 dekaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{dekaampere})}",\
+    "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(femtosecond^4 decaampere)",\
+    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
     ["FULL_QUANTITY","EXPR_VALUE"]),
     ("(pi+10) kg*m/s^2",\
     "(pi+10)","kg*m/s^2",\
