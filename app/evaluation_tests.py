@@ -27,7 +27,7 @@ class TestEvaluationFunction():
     Tests are used here to check that the algorithm written
     is working as it should.
 
-    These tests are organised in classes to enusre that the same
+    These tests are organised in classes to ensure that the same
     calling conventions can be used for tests using unittest and
     tests using pytest.
 
@@ -56,7 +56,7 @@ class TestEvaluationFunction():
             ("100e10","kg m/s^2",4e9,6e9)
         ]
     )
-    def test_compute_relative_tolerance_from_significant_decimals(self,value,unit,small_diff,large_diff):
+    def test_compute_relative_tolerance_from_significant_digits(self,value,unit,small_diff,large_diff):
         ans = value
         res_correct_under   = str(float(value)-small_diff)
         res_correct_over    = str(float(value)+small_diff)
@@ -122,6 +122,7 @@ class TestEvaluationFunction():
     def test_demo_si_units_demo_b(self,res,ans,is_correct,tag):
         params = {"strict_syntax": False, "strict_SI_syntax": True}
         result = evaluation_function(res,ans,params)
+        assert result[""]
         assert tag in result["tags"].keys()
         assert result["is_correct"] == is_correct
 
