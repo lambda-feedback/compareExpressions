@@ -89,5 +89,41 @@ class TestEvaluationFunction():
         assert tag in result["tags"].keys()
         assert result["is_correct"] == False
 
+    @pytest.mark.parametrize("res,is_correct,tag",\
+        [
+            ("-10.5 kilogram m/s^2",                   True, "FULL_QUANTITY"),\
+            ("-10.5 kg m/s^2",                         True, "FULL_QUANTITY"),\
+            ("-0.5 kg m/s^2-10 kg m/s^2",              False,"REVERTED_UNIT"),\
+            ("-10500 g m/s^2",                         True, "FULL_QUANTITY"),\
+            ("-10.46 kg m/s^2",                        True, "FULL_QUANTITY"),\
+            ("-10.54 kg m/s^2",                        True, "FULL_QUANTITY"),\
+            ("-10.44 kg m/s^2",                        False,"FULL_QUANTITY"),\
+            ("-10.56 kg m/s^2",                        False,"FULL_QUANTITY"),\
+            ("-10.5",                                  False,"MISSING_UNIT"),\
+            ("kg m/s^2",                               False,"MISSING_VALUE"),\
+            ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2",True, "FULL_QUANTITY"),\
+        ]
+    )
+    def test_demo_si_units_demo_a(self,res,is_correct,tag):
+        ans = "-10.5 kilogram metre/second^2"
+        params = {"strict_syntax": False, "strict_SI_syntax": True}
+        result = evaluation_function(res,ans,params)
+        assert tag in result["tags"].keys()
+        assert result["is_correct"] == is_correct
+
+    @pytest.mark.parametrize("res,ans,is_correct,tag",\
+        [
+            ("-10.5",         "-10.5",   True, "NUMBER_VALUE"),\
+            ("-10.5 kg m/s^2","-10.5",   False,"UNEXPECTED_UNIT"),\
+            ("kg m/s^2",      "kg m/s^2",True, "ONLY_UNIT"),\
+            ("-10.5 kg m/s^2","kg m/s^2",False,"UNEXPECTED_VALUE"),\
+        ]
+    )
+    def test_demo_si_units_demo_b(self,res,ans,is_correct,tag):
+        params = {"strict_syntax": False, "strict_SI_syntax": True}
+        result = evaluation_function(res,ans,params)
+        assert tag in result["tags"].keys()
+        assert result["is_correct"] == is_correct
+
 if __name__ == "__main__":
     pytest.main(["-x", "--tb=auto",os.path.basename(__file__)])
