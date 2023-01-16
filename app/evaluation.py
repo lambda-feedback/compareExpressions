@@ -157,7 +157,6 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
             if res_parsed.passed(criterion) != None:
                 eval_response.add_feedback((criterion,res_parsed.passed(criterion)))
 
-    eval_response.latex = res_latex
     return eval_response.serialise(include_test_data)
 
 def compute_relative_tolerance_from_significant_decimals(string):
