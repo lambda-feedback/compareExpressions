@@ -4,6 +4,7 @@ class EvaluationResponse:
         self.latex = None
         self._feedback = []
         self._feedback_tags = {}
+        self.latex = ""
 
     def get_feedback(self, tag):
         return self._feedback_tags.get(tag,None)
