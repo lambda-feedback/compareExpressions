@@ -104,7 +104,12 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
 
         if res_parsed.passed("HAS_VALUE"):
             #TODO redesign symbolicEqual so that it can easily return latex version of input
-            value_comparison_response = symbolicEqual(res_parsed.value.original_string(),"0",parameters)
+            if ans_parsed.passed("NUMBER_VALUE") and not res_parsed.passed("NUMBER_VALUE"):
+                preview_parameters = {**parameters}
+                del preview_parameters["rtol"]
+                value_comparison_response = symbolicEqual(res_parsed.value.original_string(),"0",preview_parameters)
+            else:
+                value_comparison_response = symbolicEqual(res_parsed.value.original_string(),"0",parameters)
             #TODO Update symbolicEqual to use new evaluationResponse system
             #response_latex += [value_comparison_response.response_latex]
             response_latex += [value_comparison_response.get("response_latex","")]
