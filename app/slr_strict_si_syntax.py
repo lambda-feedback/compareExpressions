@@ -249,7 +249,7 @@ def SLR_strict_SI_parsing(expr):
         print(quantity)
         raise Exception("Parsed quantity does not have a single root.")
 
-    quantity = PhysicalQuantity(quantity[0],tag_handler=set_tags)
+    quantity = PhysicalQuantity(quantity[0],messages=[],tag_handler=set_tags)
 
     def unit_latex(node):
         # TODO: skip unnecessary parenthesis (i.e. chech for GROUP children for powers and fraction and inside groups)

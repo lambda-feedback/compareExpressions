@@ -1,6 +1,3 @@
-# Added this to make it possible to run both the file directly both from the main directory and from the app directory
-import sys
-
 try:
     from static_unit_conversion_arrays import (
         names_of_prefixes_units_and_dimensions,
