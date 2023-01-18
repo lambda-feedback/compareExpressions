@@ -184,9 +184,9 @@ def SLR_strict_SI_parsing(expr):
     null_symbol = "NULL"
 
     token_list = [
-        (start_symbol, "START"           ) ,\
-        (end_symbol,   "END"             ) ,\
-        (null_symbol,  "NULL"            ) ,\
+        (start_symbol, start_symbol      ) ,\
+        (end_symbol,   end_symbol        ) ,\
+        (null_symbol,  null_symbol       ) ,\
         (" +",         "SPACE"           ) ,\
         (" *\* *",     "PRODUCT"         ) ,\
         (" */ *",      "SOLIDUS"         ) ,\
