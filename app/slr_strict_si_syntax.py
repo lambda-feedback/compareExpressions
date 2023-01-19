@@ -184,9 +184,9 @@ def SLR_strict_SI_parsing(expr):
     null_symbol = "NULL"
 
     token_list = [
-        (start_symbol, "START"           ) ,\
-        (end_symbol,   "END"             ) ,\
-        (null_symbol,  "NULL"            ) ,\
+        (start_symbol, start_symbol      ) ,\
+        (end_symbol,   end_symbol        ) ,\
+        (null_symbol,  null_symbol       ) ,\
         (" +",         "SPACE"           ) ,\
         (" *\* *",     "PRODUCT"         ) ,\
         (" */ *",      "SOLIDUS"         ) ,\
@@ -229,6 +229,7 @@ def SLR_strict_SI_parsing(expr):
     productions += [( "Q", "QQ" , append )]
     productions += [( "Q", "(Q)" , group )]
 
+    # TODO: Move this to SLR_parser _init_
     prods = []
     duplicate_error_string = []
     for prod in [(x[0],x[1]) for x in productions]:
@@ -238,10 +239,43 @@ def SLR_strict_SI_parsing(expr):
     if len(duplicate_error_string) > 0:
         raise Exception("There are duplicate productions:\n"+"\n".join(duplicate_error_string))
 
-    parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol,tag_handler = set_tags)
+    def error_action_null(p,s,a,i,t,o):
+        raise Exception("Parser reached impossible state, no 'NULL' token should exists in token list.")
+
+    def error_action_start(p,s,a,i,t,o):
+        raise Exception("Parser reached impossible state, 'START' should only be found once in token list.")
+
+    def error_condition_incomplete_expression(items_token,next_symbol):
+        if next_symbol.label == "END":
+            return True
+        else:
+            return False
+
+    def error_action_incomplete_expression(p,s,a,i,t,o):
+        raise Exception("Input ended before expression was completed.")
+
+    def error_condition_infix_missing_argument(items_token,next_symbol):
+        if next_symbol.label in ["PRODUCT","SOLIDUS","POWER"]:
+            return True
+        else:
+            return False
+
+    def error_action_infix_missing_argument(p,s,a,i,t,o):
+        raise Exception("Infix operator requires an argument on either side.")
+
+    error_handler = [
+        (lambda items_token,next_symbol: next_symbol.label == "NULL", error_action_null),
+        (lambda items_token,next_symbol: next_symbol.label == "START", error_action_start),
+        (error_condition_incomplete_expression, error_condition_incomplete_expression),
+        (error_condition_infix_missing_argument, error_action_infix_missing_argument),
+    ]
+
+    parser = SLR_Parser(token_list,productions,start_symbol,end_symbol,null_symbol,tag_handler=set_tags,error_handler=error_handler)
     tokens = parser.scan(expr)
 
     #print(tokens)
+    #for k in range(0,17):
+    #    print(str(k)+": "+str(parser._states_index[k])+"\n")
     #print(parser.parsing_table_to_string())
     quantity = parser.parse(tokens,verbose=False)
 
@@ -284,35 +318,35 @@ def SLR_strict_SI_parsing(expr):
 # -----
 if __name__ == "__main__":
     exprs = [
-        "q",
-        "10",
-        "-10.5*4",
-        "pi*5",
-        "5*pi",
-        "sin(-10.5*4)",
-        "kilogram/(metre second^2)",
-        "10 kilogram/(metre second^2)",
-        "10 kilogram*metre/second**2",
-        "-10.5 kg m/s^2",
-        "1 kg m/s^2 + 2 kg m/s^2",
-        "10 kilogram*metre*second**(-2)",
-        "10*pi kilogram*metre/second^2",
-        "(5.27*pi/sqrt(11) + 5*7)^(4.3)",
-        "(kilogram megametre^2)/(fs^4 daA)",
-        "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
-        "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
-        "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
-        "(pi+10) kg*m/s^2",
-        "10 kilogram*metre/second^2",
+        #"q",
+        #"10",
+        #"-10.5*4",
+        #"pi*5",
+        #"5*pi",
+        #"sin(-10.5*4)",
+        #"kilogram/(metre second^2)",
+        #"10 kilogram/(metre second^2)",
+        #"10 kilogram*metre/second**2",
+        #"-10.5 kg m/s^2",
+        #"1 kg m/s^2 + 2 kg m/s^2",
+        #"10 kilogram*metre*second**(-2)",
+        #"10*pi kilogram*metre/second^2",
+        #"(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+        #"(kilogram megametre^2)/(fs^4 daA)",
+        #"(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
+        #"(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
+        #"(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
+        #"(pi+10) kg*m/s^2",
+        #"10 kilogram*metre/second^2",
         "10 kg*m/s^2",
-        " 10 kg m/s^2 ",
-        "10 gram/metresecond",
-        "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
-        "10 second/gram * 7 ms * 5 gram/second",
-        "pi+metre second+pi",
-        "1/s^2",
-        "5/s^2",
-        "10 1/s^2",
+        #" 10 kg m/s^2 ",
+        #"10 gram/metresecond",
+        #"10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
+        #"10 second/gram * 7 ms * 5 gram/second",
+        #"pi+metre second+pi",
+        #"1/s^2",
+        #"5/s^2",
+        #"10 1/s^2",
         ]
 
     for k, expr in enumerate(exprs):

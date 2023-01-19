@@ -65,8 +65,17 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
         #       MATHEMATICAL_EXPRESSION UNIT_EXPRESSION
         # strict_SI_parsing returns a Quantity object.
         # For this file the relevant content of the quantity object is the messages and the passed criteria.
-        ans_parsed, ans_latex = strict_SI_parsing(answer)
-        res_parsed, res_latex = strict_SI_parsing(response)
+        try:
+            ans_parsed, ans_latex = strict_SI_parsing(answer)
+        except Exception as e:
+            raise Exception("Could not parse quantity expression") from e
+
+        try:
+            res_parsed, res_latex = strict_SI_parsing(response)
+        except Exception as e:
+            eval_response.add_feedback(("PARSE_EXCEPTION",str(e)))
+            eval_response.is_correct = False
+            return eval_response.serialise(include_test_data)
 
         # Collects messages from parsing the response, these needs to be returned as feedback later
         for message in res_parsed.messages:
