@@ -266,7 +266,7 @@ def SLR_strict_SI_parsing(expr):
     error_handler = [
         (lambda items_token,next_symbol: next_symbol.label == "NULL", error_action_null),
         (lambda items_token,next_symbol: next_symbol.label == "START", error_action_start),
-        (error_condition_incomplete_expression, error_condition_incomplete_expression),
+        (error_condition_incomplete_expression, error_action_incomplete_expression),
         (error_condition_infix_missing_argument, error_action_infix_missing_argument),
     ]
 
