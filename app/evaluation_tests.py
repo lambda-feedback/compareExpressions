@@ -126,5 +126,13 @@ class TestEvaluationFunction():
         assert tag in result["tags"].keys()
         assert result["is_correct"] == is_correct
 
+    def test_parse_error(self):
+        ans = "-10.5 kg m/s^2"
+        res = "-10.5 kg m/s^"
+        params = {"strict_syntax": False, "strict_SI_syntax": True}
+        result = evaluation_function(res,ans,params)
+        assert "PARSE_EXCEPTION" in result["tags"].keys()
+        assert result["is_correct"] == False
+
 if __name__ == "__main__":
     pytest.main(["-x", "--tb=auto",os.path.basename(__file__)])

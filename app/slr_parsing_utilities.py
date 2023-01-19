@@ -217,7 +217,7 @@ class ExprNode(Token):
 
 class SLR_Parser:
 
-    def default_error_handler(parser,stack,a,input_tokens,tokens,output):
+    def default_error_action(parser,stack,a,input_tokens,tokens,output):
         m = 70
         raise Exception(\
             f"\n{'-'*m}\n"+\
@@ -377,7 +377,7 @@ class SLR_Parser:
             for j in range(0,len(symbols)):
                 table_entry = parsing_table[i][j]
                 if len(table_entry) == 0:
-                    #parsing_table[i][j] = -1
+                    # items_token gives a list of pairs that contain the parts of the production before and after the current point
                     items_token = [(productions_token[x[0]][1][0:x[1]],productions_token[x[0]][1][x[1]:]) for x in states_index[i]]
                     next_symbol = symbols_index[j]
                     parsing_table[i][j] = -1
@@ -610,20 +610,8 @@ class SLR_Parser:
         while True:
             parse_action = self.parsing_action(stack[-1],a)
             while parse_action < 0:
-                #stack,a,input_tokens,tokens,output,parser = error_handler(stack,a,input_tokens,tokens,output,self)
-                #m = 70
-                #raise Exception(
-                #    f"{'-'*m}\n"+\
-                #    f"ERROR:\n{'-'*m}\n"+\
-                #    f"accepted: {input_tokens[:-len(tokens)]}\n"+\
-                #    f"current: {a}, {self._symbols_index[a]}\n"+\
-                #    f"remaining: {tokens}\n"+\
-                #    f"stack: {stack}\n"+\
-                #    f"output: {output}\n"+\
-                #    f"state: {self.state_string(self._states_index[stack[-1]])}\n"+\
-                #    f"{'-'*m}")
                 if parse_action == -1:
-                    self.default_error_handler(stack,a,input_tokens,tokens,output)
+                    self.default_error_action(stack,a,input_tokens,tokens,output)
                 else:
                     stack,a,input_tokens,tokens,output = self.error_handler[-2-parse_action][1](self,stack,a,input_tokens,tokens,output)
                 parse_action = self.parsing_action(stack[-1],a)
