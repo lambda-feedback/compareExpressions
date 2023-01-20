@@ -134,20 +134,20 @@ class TestEvaluationFunction():
         assert tag in result["tags"].keys()
         assert result["is_correct"] == is_correct
 
-    @pytest.mark.parametrize("res,ans,is_correct,tags",\
+    @pytest.mark.parametrize("res,ans,is_correct,tags,x_values",\
         [
-            ("x+2","x+2",True,[]),
-            ("x+1","x+2",False,["WRONG_POLYNOMIAL"]),
-            ("2-x","2-x",True,[]),
-            ("x-2","x-2",True,[]),
-            ("x^2+1","x^2+1",True,[]),
-            ("x^2+x+1","x^2+x+1",True,[]),
-            ("x^3-3*x^2+1","x^3-3*x^2+1",True,[]),
-            ("x*(x-1)","x**2-x",False,[]),
+            ("x+2","x+2",True,[],['0','1']),
+            ("x+1","x+2",False,["WRONG_POLYNOMIAL"],['0','1']),
+            ("2-x","2-x",True,[],['0','1']),
+            ("x-2","x-2",True,[],['0','1']),
+            ("x^2+1","x^2+1",True,[],['0','1','2']),
+            ("x^2+x+1","x^2+x+1",True,[],['0','1','2']),
+            ("x^3-3*x^2+1","x^3-3*x^2+1",True,[],['0','1','2','3']),
+            ("x*(x-1)","x**2-x",False,[],['0','1','2']),
         ]
     )
-    def test_demo_polynomial(self,res,ans,is_correct,tags):
-        params = {"strict_syntax": False, "demo_stuff": "polynomial", "x_values": ['0','1','2','3','4','5','6']}
+    def test_demo_polynomial(self,res,ans,is_correct,tags,x_values):
+        params = {"strict_syntax": False, "demo_stuff": "polynomial", "x_values": x_values}
         result = evaluation_function(res,ans,params)
         for tag in tags:
             assert tag in result["tags"].keys()
