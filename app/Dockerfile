@@ -19,6 +19,7 @@ COPY slr_strict_si_syntax.py ./app/
 COPY slr_strict_si_syntax_tests.py ./app/
 COPY slr_parsing_utilities.py ./app/
 COPY symbolic_equal.py ./app/
+COPY demo_stuff.py ./app/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
