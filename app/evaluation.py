@@ -59,6 +59,8 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
         parameters, unsplittable_symbols=unsplittable_symbols
     )
 
+    debugging_messages = []
+
     if parameters.get(
         "strict_SI_syntax", False
     ):  # NOTE: this is the only mode that is supported right now
@@ -205,9 +207,8 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
             x_values = parameters.get("x_values",None)
             if x_values != None:
                 for val in x_values:
-                    test_res = res_parsed.content_string().replace('x','('+val+')')
+                    debugging_messages.append(res_parsed.content_string().replace('x','('+val+')'))
                     res_val = parse_expression(res_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
-                    ans_val = parse_expression(ans_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
                     if bool((res_val - ans_val).simplify() != 0):
                         missed_points.append((val,str(ans_val)))
             else:
@@ -217,7 +218,7 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
                 eval_response.add_feedback(("WRONG_POLYNOMIAL","The polynomial given in the response does not pass through the following points: "+", ".join([str(p) for p in missed_points])))
                 return eval_response.serialise(include_test_data)
         except Exception as e:
-            raise Exception("Error on line: "+str(sys.exc_info()[-1].tb_lineno)) from e
+            raise Exception("Error on line: "+str(sys.exc_info()[-1].tb_lineno)+" : "+debugging_messages) from e
 
     return eval_response.serialise(include_test_data)
 
