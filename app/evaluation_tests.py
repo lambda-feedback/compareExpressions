@@ -83,10 +83,18 @@ class TestEvaluationFunction():
             ("-10.5",         "-10.5 kg m/s^2","UNEXPECTED_UNIT")
         ]
     )
-    def test_check_tag(self,ans,res,tag):
+    def test_si_units_check_tag(self,ans,res,tag):
         params = {"strict_syntax": False, "strict_SI_syntax": True}
         result = evaluation_function(res,ans,params)
         assert tag in result["tags"].keys()
+        assert result["is_correct"] == False
+
+    def test_si_units_parse_error(self):
+        ans = "-10.5 kg m/s^2"
+        res = "-10.5 kg m/s^"
+        params = {"strict_syntax": False, "strict_SI_syntax": True}
+        result = evaluation_function(res,ans,params)
+        assert "PARSE_EXCEPTION" in result["tags"].keys()
         assert result["is_correct"] == False
 
     @pytest.mark.parametrize("res,is_correct,tag",\
@@ -126,13 +134,24 @@ class TestEvaluationFunction():
         assert tag in result["tags"].keys()
         assert result["is_correct"] == is_correct
 
-    def test_parse_error(self):
-        ans = "-10.5 kg m/s^2"
-        res = "-10.5 kg m/s^"
-        params = {"strict_syntax": False, "strict_SI_syntax": True}
+    @pytest.mark.parametrize("res,ans,is_correct,tags",\
+        [
+            ("x+2","x+2",True,[]),
+            ("x+1","x+2",False,["WRONG_POLYNOMIAL"]),
+            ("2-x","2-x",True,[]),
+            ("x-2","x-2",True,[]),
+            ("x^2+1","x^2+1",True,[]),
+            ("x^2+x+1","x^2+x+1",True,[]),
+            ("x^3-3*x^2+1","x^3-3*x^2+1",True,[]),
+            ("x*(x-1)","x**2-x",False,[]),
+        ]
+    )
+    def test_demo_polynomial(self,res,ans,is_correct,tags):
+        params = {"strict_syntax": False, "demo_stuff": "polynomial", "x_values": ['0','1','2','3','4','5','6']}
         result = evaluation_function(res,ans,params)
-        assert "PARSE_EXCEPTION" in result["tags"].keys()
-        assert result["is_correct"] == False
+        for tag in tags:
+            assert tag in result["tags"].keys()
+        assert result["is_correct"] == is_correct
 
 if __name__ == "__main__":
     pytest.main(["-x", "--tb=auto",os.path.basename(__file__)])

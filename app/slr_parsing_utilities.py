@@ -82,9 +82,10 @@ def tag_rule_intersection(x,y):
     return x & y
 
 def tag_transfer(node,rule=tag_rule_union):
-    tags = node.children[0].tags
-    for child in node.children[1:]:
-        tags = rule(tags,child.tags)
+    if len(node.children) > 0:
+        tags = node.children[0].tags
+        for child in node.children[1:]:
+            tags = rule(tags,child.tags)
     return node
 
 def tag_removal(node,tag,rule=lambda x: True):
@@ -245,6 +246,16 @@ class SLR_Parser:
         null_token = self.null_token
         self.error_handler = error_handler
         self.tag_handler = tag_handler
+
+        # Check if there are any duplicate productions
+        checked_productions = []
+        duplicate_error_string = []
+        for prod in [(x[0],x[1]) for x in productions]:
+            if prod in checked_productions:
+                duplicate_error_string.append(f"duplicate: {prod}")
+            checked_productions.append(prod)
+        if len(duplicate_error_string) > 0:
+            raise Exception("There are duplicate productions:\n"+"\n".join(duplicate_error_string))
 
         # Tokenize productions
         productions_token = [
