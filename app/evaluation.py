@@ -31,7 +31,7 @@ except ImportError:
     from .symbolic_equal import evaluation_function as symbolicEqual
     from .slr_strict_si_syntax import SLR_strict_SI_parsing as strict_SI_parsing
     from .slr_strict_si_syntax import criteria as strict_SI_criteria
-    from demo_stuff import SLR_polynomial_parsing as polynomial_parsing
+    from .demo_stuff import SLR_polynomial_parsing as polynomial_parsing
 
 def evaluation_function(response, answer, params, include_test_data = False) -> dict:
     """
