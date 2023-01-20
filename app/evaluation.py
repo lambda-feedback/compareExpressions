@@ -206,6 +206,8 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
                 ans_val = parse_expression(ans_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
                 if bool((res_val - ans_val).simplify() != 0):
                     missed_points.append((val,str(ans_val)))
+        else:
+            raise Exception("Missing values for x.")
         if len(missed_points) > 0:
             eval_response.is_correct = False
             eval_response.add_feedback(("WRONG_POLYNOMIAL","The polynomial given in the response does not pass through the following points: "+", ".join([str(p) for p in missed_points])))
