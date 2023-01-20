@@ -229,16 +229,6 @@ def SLR_strict_SI_parsing(expr):
     productions += [( "Q", "QQ" , append )]
     productions += [( "Q", "(Q)" , group )]
 
-    # TODO: Move this to SLR_parser _init_
-    prods = []
-    duplicate_error_string = []
-    for prod in [(x[0],x[1]) for x in productions]:
-        if prod in prods:
-            duplicate_error_string.append(f"duplicate: {prod}")
-        prods.append(prod)
-    if len(duplicate_error_string) > 0:
-        raise Exception("There are duplicate productions:\n"+"\n".join(duplicate_error_string))
-
     def error_action_null(p,s,a,i,t,o):
         raise Exception("Parser reached impossible state, no 'NULL' token should exists in token list.")
 
