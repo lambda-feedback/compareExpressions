@@ -136,14 +136,17 @@ class TestEvaluationFunction():
 
     @pytest.mark.parametrize("res,ans,is_correct,tags,x_values",\
         [
-            ("x+2",        "x+2",        True, [],                  ['0','1']),
-            ("x+1",        "x+2",        False,["WRONG_POLYNOMIAL"],['0','1']),
-            ("2-x",        "2-x",        True, [],                  ['0','1']),
-            ("x-2",        "x-2",        True, [],                  ['0','1']),
-            ("x^2+1",      "x^2+1",      True, [],                  ['0','1','2']),
-            ("x^2+x+1",    "x^2+x+1",    True, [],                  ['0','1','2']),
-            ("x^3-3*x^2+1","x^3-3*x^2+1",True, [],                  ['0','1','2','3']),
-            ("x*(x-1)",    "x**2-x",     False,[],                  ['0','1','2']),
+            ("x+2",                  "x+2",        True, [],                                 ['0','1']),
+            ("x+1",                  "x+2",        False,["WRONG_POLYNOMIAL"],               ['0','1']),
+            ("x^3-x^2-x+1",          "x+2",        False,["WRONG_DEGREE"],                   ['0','1']),
+            ("2-x",                  "2-x",        True, [],                                 ['0','1']),
+            ("x-2",                  "x-2",        True, [],                                 ['0','1']),
+            ("x^2+1",                "x^2+1",      True, [],                                 ['0','1','2']),
+            ("x^2+1",                "x+1",        False,["WRONG_POLYNOMIAL","WRONG_DEGREE"],['0','1','2']),
+            ("x^2+x+1",              "x^2+x+1",    True, [],                                 ['0','1','2']),
+            ("x^3-3*x^2+1",          "x^3-3*x^2+1",True, [],                                 ['0','1','2','3']),
+            ("x^4-5*x^3+8*x^2-6*x+1","x^3-3*x^2+1",False,["WRONG_DEGREE"],                   ['0','1','2','3']),
+            ("x*(x-1)",              "x**2-x",     False,[],                                 ['0','1','2']),
         ]
     )
     def test_demo_polynomial(self,res,ans,is_correct,tags,x_values):

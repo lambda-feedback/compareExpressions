@@ -112,7 +112,7 @@ def SLR_polynomial_parsing(expr):
 
     coeffs = get_polynomial_coefficient_list(polynomial)
 
-    return polynomial
+    return polynomial, coeffs
 
 # -----
 # TESTS

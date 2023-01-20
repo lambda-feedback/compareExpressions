@@ -170,16 +170,23 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
                 eval_response.add_feedback((criterion,res_parsed.passed(criterion)))
     elif parameters.get("demo_stuff", "") == "polynomial":
         try:
-            ans_parsed = polynomial_parsing(answer)
+            ans_parsed, ans_coeffs = polynomial_parsing(answer)
         except Exception as e:
             raise Exception("Answer is not a polynomial") from e
 
         try:
-            res_parsed = polynomial_parsing(response)
+            res_parsed, res_coeffs = polynomial_parsing(response)
         except Exception as e:
             eval_response.add_feedback(("PARSE_EXCEPTION","Response could not be parsed as a polynomial written on standard form."))
             eval_response.is_correct = False
             return eval_response.serialise(include_test_data)
+
+        if len(res_coeffs) > len(ans_coeffs):
+            eval_response.add_feedback(("WRONG_DEGREE","Polynomial has higher degree then necessary."))
+            eval_response.is_correct = False
+        elif len(res_coeffs) < len(ans_coeffs):
+            eval_response.add_feedback(("WRONG_DEGREE","Polynomial has lower degree then necessary."))
+            eval_response.is_correct = False
 
         # Safely try to parse answer and response into symbolic expressions
         try:
@@ -211,7 +218,6 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
         if len(missed_points) > 0:
             eval_response.is_correct = False
             eval_response.add_feedback(("WRONG_POLYNOMIAL","The polynomial given in the response does not pass through the following points: "+", ".join([str(p) for p in missed_points])))
-            return eval_response.serialise(include_test_data)
 
     return eval_response.serialise(include_test_data)
 
