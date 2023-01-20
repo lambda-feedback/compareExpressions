@@ -219,7 +219,7 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
                 eval_response.add_feedback(("WRONG_POLYNOMIAL","The polynomial given in the response does not pass through the following points: "+", ".join([str(p) for p in missed_points])))
                 return eval_response.serialise(include_test_data)
         except Exception as e:
-            raise Exception("Error on line: "+str(sys.exc_info()[-1].tb_lineno)+" : "+debugging_messages) from e
+            raise Exception("Error on line: "+str(sys.exc_info()[-1].tb_lineno)+" : "+" ".join(debugging_messages)) from e
 
     return eval_response.serialise(include_test_data)
 
