@@ -205,6 +205,7 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
             x_values = parameters.get("x_values",None)
             if x_values != None:
                 for val in x_values:
+                    test_res = res_parsed.content_string().replace('x','('+val+')')
                     res_val = parse_expression(res_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
                     ans_val = parse_expression(ans_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
                     if bool((res_val - ans_val).simplify() != 0):
