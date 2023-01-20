@@ -1,3 +1,5 @@
+import sys
+
 try:
     from static_unit_conversion_arrays import (
         names_of_prefixes_units_and_dimensions,
@@ -170,48 +172,51 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
                 eval_response.add_feedback((criterion,res_parsed.passed(criterion)))
     elif parameters.get("demo_stuff", "") == "polynomial":
         try:
-            ans_parsed = polynomial_parsing(answer)
-        except Exception as e:
-            raise Exception("Answer is not a polynomial") from e
-
-        try:
-            res_parsed = polynomial_parsing(response)
-        except Exception as e:
-            eval_response.add_feedback(("PARSE_EXCEPTION","Response could not be parsed as a polynomial written on standard form."))
-            eval_response.is_correct = False
-            return eval_response.serialise(include_test_data)
-
-        # Safely try to parse answer and response into symbolic expressions
-        try:
-            res = parse_expression(res_parsed.content_string(), parsing_params)
-        except Exception as e:
-            eval_response.add_feedback(("PARSE_EXCEPTION","Sympy could not parse response."))
-            eval_response.is_correct = False
-            return eval_response.serialise(include_test_data)
-
-        try:
-            ans = parse_expression(answer, parsing_params)
-        except Exception as e:
-            raise Exception("SymPy was unable to parse the answer.",) from e
-
-        # Add how res was interpreted to the response
-        from sympy import latex
-        eval_response.latex = latex(res)
-
-        missed_points = []
-        x_values = parameters.get("x_values",None)
-        if x_values != None:
-            for val in x_values:
-                res_val = parse_expression(res_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
-                ans_val = parse_expression(ans_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
-                if bool((res_val - ans_val).simplify() != 0):
-                    missed_points.append((val,str(ans_val)))
-        else:
-            raise Exception("Missing values for x.")
-        if len(missed_points) > 0:
-            eval_response.is_correct = False
-            eval_response.add_feedback(("WRONG_POLYNOMIAL","The polynomial given in the response does not pass through the following points: "+", ".join([str(p) for p in missed_points])))
-            return eval_response.serialise(include_test_data)
+            try:
+                ans_parsed = polynomial_parsing(answer)
+            except Exception as e:
+                raise Exception("Answer is not a polynomial") from e
+    
+            try:
+                res_parsed = polynomial_parsing(response)
+            except Exception as e:
+                eval_response.add_feedback(("PARSE_EXCEPTION","Response could not be parsed as a polynomial written on standard form."))
+                eval_response.is_correct = False
+                return eval_response.serialise(include_test_data)
+    
+            # Safely try to parse answer and response into symbolic expressions
+            try:
+                res = parse_expression(res_parsed.content_string(), parsing_params)
+            except Exception as e:
+                eval_response.add_feedback(("PARSE_EXCEPTION","Sympy could not parse response."))
+                eval_response.is_correct = False
+                return eval_response.serialise(include_test_data)
+    
+            try:
+                ans = parse_expression(answer, parsing_params)
+            except Exception as e:
+                raise Exception("SymPy was unable to parse the answer.",) from e
+    
+            # Add how res was interpreted to the response
+            from sympy import latex
+            eval_response.latex = latex(res)
+    
+            missed_points = []
+            x_values = parameters.get("x_values",None)
+            if x_values != None:
+                for val in x_values:
+                    res_val = parse_expression(res_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
+                    ans_val = parse_expression(ans_parsed.content_string().replace('x','('+val+')'), parsing_params).simplify()
+                    if bool((res_val - ans_val).simplify() != 0):
+                        missed_points.append((val,str(ans_val)))
+            else:
+                raise Exception("Missing values for x.")
+            if len(missed_points) > 0:
+                eval_response.is_correct = False
+                eval_response.add_feedback(("WRONG_POLYNOMIAL","The polynomial given in the response does not pass through the following points: "+", ".join([str(p) for p in missed_points])))
+                return eval_response.serialise(include_test_data)
+        except Exception() as e:
+            raise Exception("Error on line: "+str(sys.exc_info()[-1].tb_lineno)) from e
 
     return eval_response.serialise(include_test_data)
 
