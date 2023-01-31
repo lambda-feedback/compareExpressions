@@ -57,9 +57,8 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
         parameters, unsplittable_symbols=unsplittable_symbols
     )
 
-    if parameters.get(
-        "strict_SI_syntax", False
-    ):  # NOTE: this is the only mode that is supported right now
+    if parameters.get("strict_SI_syntax", False):
+        # NOTE: this is the only mode that is supported right now
         # The expected forms of the response are:
         #       NUMBER UNIT_EXPRESSION
         #       MATHEMATICAL_EXPRESSION UNIT_EXPRESSION
@@ -182,10 +181,10 @@ def evaluation_function(response, answer, params, include_test_data = False) -> 
             return eval_response.serialise(include_test_data)
 
         if len(res_coeffs) > len(ans_coeffs):
-            eval_response.add_feedback(("WRONG_DEGREE","Polynomial has higher degree then necessary."))
+            eval_response.add_feedback(("WRONG_DEGREE","Polynomial has higher degree than necessary."))
             eval_response.is_correct = False
         elif len(res_coeffs) < len(ans_coeffs):
-            eval_response.add_feedback(("WRONG_DEGREE","Polynomial has lower degree then necessary."))
+            eval_response.add_feedback(("WRONG_DEGREE","Polynomial has lower degree than necessary."))
             eval_response.is_correct = False
 
         # Safely try to parse answer and response into symbolic expressions
