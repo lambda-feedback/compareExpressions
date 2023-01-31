@@ -1,13 +1,14 @@
 import unittest, pytest, sys, os
-sys.path.append(".")
 
 try:
     from slr_strict_si_syntax_tests import TestClass as TestStrictSLRSyntax
     from slr_strict_si_syntax_tests import slr_strict_si_syntax_test_cases
+    from demo_stuff_tests import TestClass as TestDemoStuff
     from evaluation import evaluation_function
 except ImportError:
     from .slr_strict_si_syntax_tests import TestClass as TestStrictSLRSyntax
     from .slr_strict_si_syntax_tests import slr_strict_si_syntax_test_cases
+    from .demo_stuff_tests import TestClass as TestDemoStuff
     from .evaluation import evaluation_function
 
 # If evaluation_tests is run with the command line argument 'skip_resource_intensive_tests'
@@ -146,7 +147,7 @@ class TestEvaluationFunction():
             ("x^2+x+1",              "x^2+x+1",    True, [],                                 ['0','1','2']),
             ("x^3-3*x^2+1",          "x^3-3*x^2+1",True, [],                                 ['0','1','2','3']),
             ("x^4-5*x^3+8*x^2-6*x+1","x^3-3*x^2+1",False,["WRONG_DEGREE"],                   ['0','1','2','3']),
-            ("x*(x-1)",              "x**2-x",     False,[],                                 ['0','1','2']),
+            ("x*(x-1)",              "x^2-x",     False,["PARSE_EXCEPTION"],                ['0','1','2']),
         ]
     )
     def test_demo_polynomial(self,res,ans,is_correct,tags,x_values):
@@ -157,4 +158,4 @@ class TestEvaluationFunction():
         assert result["is_correct"] == is_correct
 
 if __name__ == "__main__":
-    pytest.main(["-x", "--tb=auto",os.path.basename(__file__)])
+    pytest.main(["-xs", "--tb=line",os.path.basename(__file__)])

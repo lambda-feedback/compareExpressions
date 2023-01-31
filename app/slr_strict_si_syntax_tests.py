@@ -168,4 +168,4 @@ class TestClass:
 
 if __name__ == "__main__":
     import os 
-    pytest.main(["-x", "--tb=line",os.path.basename(__file__)])
+    pytest.main(["-xs", "--tb=line",os.path.basename(__file__)])

@@ -276,7 +276,7 @@ def SLR_strict_SI_parsing(expr):
     quantity = PhysicalQuantity(quantity[0],messages=[],tag_handler=set_tags)
 
     def unit_latex(node):
-        # TODO: skip unnecessary parenthesis (i.e. chech for GROUP children for powers and fraction and inside groups)
+        # TODO: skip unnecessary parenthesis (i.e. check for GROUP children for powers and fraction and inside groups)
         content = node.content
         children = node.children
         if node.label == "PRODUCT":
@@ -328,11 +328,11 @@ if __name__ == "__main__":
         #"(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
         #"(pi+10) kg*m/s^2",
         #"10 kilogram*metre/second^2",
-        "10 kg*m/s^2",
+        #"10 kg*m/s^2",
         #" 10 kg m/s^2 ",
         #"10 gram/metresecond",
         #"10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
-        #"10 second/gram * 7 ms * 5 gram/second",
+        "10 second/gram * 7 ms * 5 gram/second",
         #"pi+metre second+pi",
         #"1/s^2",
         #"5/s^2",

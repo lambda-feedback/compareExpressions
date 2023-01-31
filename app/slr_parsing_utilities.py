@@ -145,12 +145,12 @@ class Token:
         return hash(self.label)
 
     def __str__(self):
-        return self.label+": "+str(self.content)
+        return str(self.label)+": "+str(self.content)
 
     def __repr__(self):
         # REMARK(KarlLundengaard): This is not a good repr function, but it means that the most
         # relevant info is printed in the watch window of my preferred debugger
-        return self.label+": "+str(self.content)
+        return str(self.label)+": "+str(self.content)
 
 class ExprNode(Token):
 
@@ -209,12 +209,12 @@ class ExprNode(Token):
         return self.original[start:end+1]
 
     def __str__(self):
-        return self.label+": "+str(self.content)+" tags: "+str(self.tags)
+        return str(self.label)+": "+str(self.content)+" tags: "+str(self.tags)
 
     def __repr__(self):
         # REMARK(KarlLundengaard): This is not a good repr function, but it means that the most
         # relevant info is printed in the watch window of my preferred debugger
-        return self.label+": "+str(self.content)+" tags: "+str(self.tags)
+        return str(self.label)+": "+str(self.content)+" tags: "+str(self.tags)
 
 class SLR_Parser:
 
@@ -264,21 +264,21 @@ class SLR_Parser:
         self.productions_token = productions_token
 
         # Analyse productions to find terminals and non-terminals
-        non_terminals = []
-        terminals = []
-        for token in [prod[0] for prod in productions]:
-            if token not in non_terminals:
-                non_terminals.append(token)
-        for production in productions:
+        non_terminals_token = []
+        terminals_token = [self.end_token,self.null_token]
+        for token in [prod[0] for prod in productions_token]:
+            if token not in non_terminals_token:
+                non_terminals_token.append(token)
+        for production in productions_token:
             for token in production[1]:
-                if token not in terminals and token not in non_terminals:
-                    terminals.append(token)
-        terminals += [end_symbol,null_symbol]
-        self.terminals = terminals
-        self.non_terminals = non_terminals
-        self.symbols = terminals+non_terminals
-        terminals_token = [self.scan(x,mode="bnf")[0] for x in terminals]
-        non_terminals_token = [self.scan(x,mode="bnf")[0] for x in non_terminals]
+                if token not in terminals_token and token not in non_terminals_token:
+                    terminals_token.append(token)
+        #terminals += [end_symbol,null_symbol]
+        #self.terminals = terminals
+        #self.non_terminals = non_terminals
+        self.symbols = terminals_token+non_terminals_token
+        #terminals_token = [self.scan(x,mode="bnf")[0] for x in terminals]
+        #non_terminals_token = [self.scan(x,mode="bnf")[0] for x in non_terminals]
         self.terminals_token = terminals_token
         self.non_terminals_token = non_terminals_token
 
@@ -287,7 +287,7 @@ class SLR_Parser:
 
         # Compute dictionary with FIRST for all single tokens
         first_dict = {**{x: [x] for x in terminals_token},**{x: [] for x in non_terminals_token}}
-        lengths = [-1]*len(non_terminals)
+        lengths = [-1]*len(non_terminals_token)
         any_first_changed = True
         while any_first_changed:
             any_first_changed = False
@@ -310,7 +310,7 @@ class SLR_Parser:
         first = self.first
         follow = {x: [] for x in non_terminals_token}
         follow[start_token].append(end_token)
-        lengths = [-1]*len(non_terminals)
+        lengths = [-1]*len(non_terminals_token)
         while lengths != [len(follow[x]) for x in non_terminals_token]:
             lengths = [len(follow[x]) for x in non_terminals_token]
             for (head,body) in productions_token:
@@ -510,8 +510,8 @@ class SLR_Parser:
         return output
 
     def closure(self,item_set):
-        non_terminals = self.non_terminals
-        productions = self.productions
+        non_terminals = self.non_terminals_token
+        productions = self.productions_token
         # Items are represented as (i,j) where i indicates index
         # in production list and j position of inserted dot
         closure_set = []
@@ -691,7 +691,7 @@ if __name__ == "__main__":
         print(" ***************************************\n * WARNING: test parsing table changed *\n ***************************************")
 
     test_tokens = test_parser.scan("(I+I)*I+I")
-    print([token.label for token in test_tokens])
+    print([str(token.label) for token in test_tokens])
 
     output = test_parser.parse(test_tokens)
     print(output)
