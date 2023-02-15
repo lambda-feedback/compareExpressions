@@ -8,12 +8,16 @@ try:
     from expression_utilities import substitute
     from criteria_utilities import CriterionCollection
     from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, create_node, append
-    from static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
+    from unit_system_conversions import\
+        set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
+        set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 except ImportError:
     from .expression_utilities import substitute
     from .criteria_utilities import CriterionCollection
     from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, group, tag, tag_transfer, tag_removal, create_node, append
-    from .static_unit_conversion_arrays import list_of_SI_base_unit_dimensions, list_of_SI_prefixes, conversion_to_base_si_units_dictionary
+    from .unit_system_conversions import\
+        set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
+        set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 
 
 # -------
@@ -149,16 +153,27 @@ class PhysicalQuantity:
 # FUNCTIONS
 # ---------
 
-def SLR_generate_unit_dictionary():
-    base_units = {x[0]: x[0] for x in list_of_SI_base_unit_dimensions}
-    base_units_short_to_long = {x[1]: x[0] for x in list_of_SI_base_unit_dimensions}
-    base_units_long_to_short = {x[0]: x[1] for x in list_of_SI_base_unit_dimensions}
-    prefixes = {x[0]: x[0] for x in list_of_SI_prefixes}
-    prefixes_short_to_long = {x[1]: x[0] for x in list_of_SI_prefixes}
-    prefixes_long_to_short = {x[0]: x[1] for x in list_of_SI_prefixes}
-    units = base_units
-    units_short_to_long = base_units_short_to_long
-    units_long_to_short = base_units_long_to_short
+def SLR_generate_unit_dictionary(units_string="SI common imperial",strictness="natural"):
+
+    units_sets_dictionary = {
+        "SI": set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units,
+        "common": set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units|set_of_common_units_in_SI|set_of_very_common_units_in_SI,
+        "imperial": set_of_imperial_units,
+    }
+
+    units_tuples = set()
+    for key in units_sets_dictionary.keys():
+        if key in units_string:
+            units_tuples |= units_sets_dictionary[key]
+
+    units = {x[0]: x[0] for x in units_tuples}
+    units_short_to_long = {x[1]: x[0] for x in units_tuples}
+    units_long_to_short = {x[0]: x[1] for x in units_tuples}
+
+    prefixes = {x[0]: x[0] for x in set_of_SI_prefixes}
+    prefixes_short_to_long = {x[1]: x[0] for x in set_of_SI_prefixes}
+    prefixes_long_to_short = {x[0]: x[1] for x in set_of_SI_prefixes}
+
     prefixed_units = {**units}
     for unit in units.keys():
         for prefix in prefixes.keys():
@@ -170,9 +185,9 @@ def SLR_generate_unit_dictionary():
             )
     return {**prefixed_units, **units, **units_short_to_long}
 
-def SLR_strict_SI_parsing(expr):
+def SLR_quantity_parsing(expr,units_string,strictness):
     expr = expr.strip()
-    unit_dictionary = SLR_generate_unit_dictionary()
+    unit_dictionary = SLR_generate_unit_dictionary(units_string,strictness)
     lookup_unit = lambda x: unit_dictionary.get(x,None)
 
     # regexp from https://slavik.meltser.info/validate-number-with-regular-expression/
@@ -344,7 +359,7 @@ if __name__ == "__main__":
         print("*"*len(mid))
         print(mid)
         print("*"*len(mid))
-        quantity, unit_latex = SLR_strict_SI_parsing(expr)
+        quantity, unit_latex = SLR_quantity_parsing(expr,"SI","strict")
         value = quantity.value.original_string() if quantity.value != None else None
         unit = quantity.unit.original_string() if quantity.unit != None else None
         print("Content: "+quantity.ast_root.content_string())

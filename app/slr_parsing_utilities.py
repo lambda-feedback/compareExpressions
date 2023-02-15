@@ -169,6 +169,20 @@ class ExprNode(Token):
         else:
             self.tags = tags
         self._traverse_step = lambda action: traverse_step(self,action)
+        if len(self.children) == 0:
+            self.width = 1
+            self.displacement = self.width/2
+        elif len(self.children) == 1:
+            self.width = self.children[0].width
+            self.displacement = self.children[0].displacement
+        else:
+            self.width = 0
+            k = int(len(self.children)/2)
+            for i in range(0,k):
+                self.width += self.children[i].width
+            self.displacement = self.width
+            for i in range(k,len(self.children)):
+                self.width += self.children[i].width
         return
 
     def tree_string(self):
@@ -209,7 +223,8 @@ class ExprNode(Token):
         return self.original[start:end+1]
 
     def __str__(self):
-        return str(self.label)+": "+str(self.content)+" tags: "+str(self.tags)
+        tags = " tags: "+str(self.tags) if len(self.tags) > 1 else ""
+        return str(self.label)+": "+str(self.content)+tags
 
     def __repr__(self):
         # REMARK(KarlLundengaard): This is not a good repr function, but it means that the most
@@ -273,12 +288,7 @@ class SLR_Parser:
             for token in production[1]:
                 if token not in terminals_token and token not in non_terminals_token:
                     terminals_token.append(token)
-        #terminals += [end_symbol,null_symbol]
-        #self.terminals = terminals
-        #self.non_terminals = non_terminals
         self.symbols = terminals_token+non_terminals_token
-        #terminals_token = [self.scan(x,mode="bnf")[0] for x in terminals]
-        #non_terminals_token = [self.scan(x,mode="bnf")[0] for x in non_terminals]
         self.terminals_token = terminals_token
         self.non_terminals_token = non_terminals_token
 

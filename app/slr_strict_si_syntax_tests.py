@@ -1,8 +1,14 @@
 import pytest
 try:
-    from .slr_strict_si_syntax import SLR_strict_SI_parsing
+    from .slr_strict_si_syntax import SLR_quantity_parsing
+    from .unit_system_conversions import\
+        set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
+        set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 except ImportError:
-    from slr_strict_si_syntax import SLR_strict_SI_parsing
+    from slr_strict_si_syntax import SLR_quantity_parsing
+    from unit_system_conversions import\
+        set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
+        set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 
 slr_strict_si_syntax_test_cases = [
     ("q",\
@@ -155,7 +161,7 @@ slr_strict_si_syntax_test_cases = [
 class TestClass:
     @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria",slr_strict_si_syntax_test_cases)
     def test_responses(self,string,value,unit,content,unit_latex,criteria):
-        quantity, parsed_unit_latex = SLR_strict_SI_parsing(string)
+        quantity, parsed_unit_latex = SLR_quantity_parsing(string,"SI","strict")
         parsed_value = quantity.value.original_string() if quantity.value != None else None
         parsed_unit = quantity.unit.original_string() if quantity.unit != None else None
         parsed_content = quantity.ast_root.content_string()
@@ -165,6 +171,42 @@ class TestClass:
         assert parsed_unit_latex == unit_latex
         for criterion in criteria:
             assert criterion in quantity.passed_dict
+
+    @pytest.mark.parametrize(
+        "long_form,short_form",
+        [(x[0],x[1]) for x in set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units]
+    )
+    def test_short_forms_strict_SI(self,long_form,short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form,"SI","strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form,"SI","strict")
+        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
+
+    @pytest.mark.parametrize(
+        "long_form,short_form",
+        [(x[0],x[1]) for x in set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units|set_of_common_units_in_SI|set_of_very_common_units_in_SI]
+    )
+    def test_short_forms_common_SI(self,long_form,short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form,"common","strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form,"common","strict")
+        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
+
+    @pytest.mark.parametrize(
+        "long_form,short_form",
+        [(x[0],x[1]) for x in set_of_imperial_units]
+    )
+    def test_short_forms_imperial(self,long_form,short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form,"imperial","strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form,"imperial","strict")
+        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
+
+    @pytest.mark.parametrize(
+        "long_form,short_form",
+        [(x[0],x[1]) for x in set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units|set_of_common_units_in_SI|set_of_very_common_units_in_SI|set_of_imperial_units]
+    )
+    def test_short_forms_all(self,long_form,short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form,"SI common imperial","strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form,"SI common imperial","strict")
+        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
 if __name__ == "__main__":
     import os 
