@@ -50,27 +50,62 @@ def relabel(production,output):
     output.append(Token(production[0].label,a.content,a.original,a.start,a.end))
     return output
 
-def group(production,output):
-    end_delim = output.pop()
-    content = output.pop()
-    start_delim = output.pop()
-    output.append(\
-        ExprNode(\
-            Token(\
-                "GROUP",\
-                [start_delim.content,end_delim.content],\
-                content.original,\
-                start_delim.start,end_delim.end
-                ),
-            [content],traverse_step=traverse_group)
-        )
-    return output
+def group(number_of_elements,empty=False):
+    if number_of_elements < 0:
+        raise Exception("Groups must have at least one element.")
+    def wrap(production,output):
+        if empty:
+            content = output[-number_of_elements:]
+            output = output[0:-number_of_elements]
+            end_delim = Token("START_DELIMITER","",content[0].original,content[0].start,content[0].end)
+            start_delim = Token("END_DELIMITER","",content[0].original,content[0].start,content[0].end)
+        else:
+            end_delim = output.pop()
+            content = output[-number_of_elements:]
+            output = output[0:-number_of_elements]
+            start_delim = output.pop()
+        output.append(\
+            ExprNode(\
+                Token(\
+                    "GROUP",\
+                    [start_delim.content,end_delim.content],\
+                    content[0].original,\
+                    start_delim.start,end_delim.end
+                    ),
+                content,traverse_step=traverse_group)
+            )
+        return output
+    return wrap
 
 def infix(production,output):
     right = output.pop()
     operator = output.pop()
     left = output.pop()
     output.append(ExprNode(operator,[left,right],traverse_step=traverse_infix))
+    return output
+
+def insert_infix(content,label):
+    def apply(production,output):
+        operator_token = Token(label,content,output[-1].original,len(output[-1].original),-1)
+        return infix(production,output[0:-1]+[operator_token]+[output[-1]])
+    return apply
+
+def compose(*funcs):
+    def composed_functions(production,output):
+        for f in reversed(funcs):
+            output = f(production,output)
+        return output
+    return composed_functions
+
+def flatten(production,output):
+    node = output[-1]
+    flattened_children = []
+    for child in node.children:
+        if node.label == child.label and node.content == child.content:
+            flattened_children += child.children
+        else:
+            flattened_children.append(child)
+    node.children = flattened_children
     return output
 
 ## Tag management utilities
@@ -101,6 +136,12 @@ def tag(node,tag=None,rule=lambda x: True):
             node.tags.add(tag)
     return node
 
+def tag_replace(node,old_tag,new_tag):
+    if old_tag in node.tags:
+        node = tag(node,new_tag)
+        node = tag_removal(node,old_tag)
+    return node
+
 # Node traversal utilities
 
 def traverse_prefix(expr_node,action):
@@ -123,6 +164,19 @@ def traverse_group(expr_node,action):
     for x in expr_node.children:
         out += [(False,x)]
     return out+[(True,action(expr_node)[1])]
+
+# error handling utilities
+def new_root_on_error(parser,stack,a,input_tokens,tokens,output):
+    a = parser.end_token
+    return stack,a,input_tokens,tokens,output
+
+def discard_output_until_on_error(condition):
+    def error(parser,stack,a,input_tokens,tokens,output):
+        while not condition(output[-1]):
+            output.pop()
+        a = parser.end_token
+        return stack,a,input_tokens,tokens,output
+    return error
 
 # -------
 # CLASSES
@@ -223,7 +277,8 @@ class ExprNode(Token):
         return self.original[start:end+1]
 
     def __str__(self):
-        tags = " tags: "+str(self.tags) if len(self.tags) > 1 else ""
+        tags = " tags: "
+        tags += str(self.tags) if len(self.tags) > 1 else " {}"
         return str(self.label)+": "+str(self.content)+tags
 
     def __repr__(self):
@@ -463,61 +518,40 @@ class SLR_Parser:
         added_token = False
         while index-len(string) < len(expr):
             end_token = None
+            end_token_length = 0
             content = ""
             label = None
             for (re_content,current_label) in token_symbols:
                 match_content = re.match(re_content,expr[index:])
                 if match_content != None:
                     current_content = match_content.group()
-                    if len(current_content) > len(content):
+                    if len(current_content) > end_token_length:
                         content = current_content
+                        end_token_length = len(content)
                         label = current_label
-            if label != None:
-                end_token = new_token(label,content,index,index+len(content)-1)
-                index += len(content)
-            if (end_token != None or index >= len(expr)) and len(string) > 0:
-                end_token_length = 0 if end_token == None else len(end_token.content)
-                added_token = False
-                for token in token_rules:
-                    content = token[2](string)
-                    if content != None:
-                        tokens.append(new_token(token[1],content,index-len(string)-end_token_length,index-end_token_length-1))
-                        added_token = True
-                        break
-                if not added_token:
-                    if token_catch_undefined != None:
-                        tokens.append(token_catch_undefined[2](token_catch_undefined[1],string,expr,index-len(string)-end_token_length,index-end_token_length-1))
-                    else:
-                        raise Exception(f"Undefined input: {string}")
-                string = ""
-            elif end_token == None and index < len(expr):
+            for token in token_rules:
+                current_label = token[1]
+                match_rule, match_content = token[2](expr[index:])
+                if match_rule != None:
+                    if len(match_rule) > end_token_length:
+                        content = match_content
+                        end_token_length = len(match_rule)
+                        label = current_label
+            if label == None:
                 string = string+expr[index]
                 index += 1
+            else:
+                end_token = new_token(label,content,index,index+end_token_length-1)
+            if len(string) > 0 and (end_token != None or index >= len(expr)):
+                if token_catch_undefined != None:
+                    tokens.append(token_catch_undefined[2](token_catch_undefined[1],string,expr,index-len(string),index-1))
+                else:
+                    raise Exception(f"Undefined input: {string}")
+                string = ""
             if end_token != None:
                 tokens.append(end_token)
+                index += end_token_length
         return tokens
-
-    def process(self,tokens,rules):
-        rules_token = [(self.scan(x[0],mode="bnf")[0],self.scan(x[1],mode="bnf"),x[2]) for x in rules]
-        rules_token.sort(key=lambda x: -len(x[1]))
-        index = 0
-        output = list(tokens)
-        output_changed = True
-        k = 0
-        while index < len(output) or output_changed:
-            k += 1
-            output_changed = False
-            for (head,body,action) in rules_token:
-                if output[index:index+len(body)] == body:
-                    handle = output[index:index+len(body)]
-                    pre = output[0:index]
-                    post = output[index+len(body):]
-                    output = pre + action((head,tuple(body)),handle) + post
-                    output_changed = True
-                    index = 0
-            if not output_changed:
-                index += 1
-        return output
 
     def closure(self,item_set):
         non_terminals = self.non_terminals_token
@@ -624,7 +658,9 @@ class SLR_Parser:
 
     def parse(self,input_tokens,verbose=False):
         productions_token = self.productions_token
-        tokens = list(input_tokens)+[self.end_token]
+        tokens = list(input_tokens)
+        if tokens[-1] != self.end_token:
+            tokens += [self.end_token]
         a = tokens.pop(0)
         stack = [0]
         output = []
@@ -645,6 +681,8 @@ class SLR_Parser:
             elif parse_action == len(self.states):
                 if verbose:
                     print("ACCEPT")
+                if len(tokens) > 0 and tokens != [self.end_token]:
+                    output += self.parse(tokens)
                 break
             elif parse_action <= len(self.states)+len(self.productions_token):
                 production = productions_token[parse_action-len(self.states)]

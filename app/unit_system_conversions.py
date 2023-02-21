@@ -56,7 +56,7 @@ set_of_derived_SI_units_in_SI_base_units = {
     ('coulomb',   'C',   '(second*ampere)',                                     ('coulombs','Coulomb','Coulombs')),
     ('volt',      'V',   '(metre**2*kilo*gram*second**(-3)*ampere**(-1))',      ('volts','Volt','Volts')),
     ('farad',     'F',   '(metre**(-2)*(kilo*gram)**(-1)*second**4*ampere**2)', ('farads','Farad','Farads')),
-    ('ohm',       'O', '(metre**2*kilo*gram*second**(-3)*ampere**(-2))',        ('ohms','Ohm','Ohms')),
+    ('ohm',       'O',   '(metre**2*kilo*gram*second**(-3)*ampere**(-2))',      ('ohms','Ohm','Ohms')),
     ('siemens',   'S',   '(metre**(-2)*kilo*gram**(-1)*second**3*ampere**2)',   ('Siemens')),
     ('weber',     'Wb',  '(metre**2*kilo*gram*second**(-2)*ampere**(-1))',      ('webers','Weber','Webers')),
     ('tesla',     'T',   '(kilo*gram*second**(-2)*ampere**(-1))',               ('teslas','Tesla','Teslas')),
