@@ -12,24 +12,24 @@ def catch_undefined(label,content,original,start,end):
 # Parser utilities
 
 ## Syntax tree building utilities
-def package(production,output):
+def package(production,output,tag_handler):
     label = production[0].label
     handle = production[1]
     children = output[-len(handle):]
     output = output[0:(-len(handle))]
     package_content = "".join(str(children))
-    new_package = ExprNode(Token(label,package_content,children[0].original,children[0].start,children[0].end),children)
+    new_package = ExprNode(Token(label,package_content,children[0].original,children[0].start,children[0].end),children,tag_handler=tag_handler)
     output.append(new_package)
     return output
 
-def append(production,output):
+def append(production,output,tag_handler):
     handle = production[1]
     children = output[1-len(handle):]
     output = output[0:(1-len(handle))]
     output[-1].children += children
     return output
 
-def join(production,output):
+def join(production,output,tag_handler):
     label = production[0].label
     handle = production[1]
     joined_content = "".join([node.content for node in output[-len(handle):]])
@@ -40,12 +40,13 @@ def join(production,output):
     output[-1].end = joined_end
     return output
 
-def create_node(production,output):
+def create_node(production,output,tag_handler):
     a = output.pop()
-    output.append(ExprNode(a,[]))
+    node = ExprNode(a,[],tag_handler=tag_handler)
+    output.append(node)
     return output
 
-def relabel(production,output):
+def relabel(production,output,tag_handler):
     a = output.pop()
     output.append(Token(production[0].label,a.content,a.original,a.start,a.end))
     return output
@@ -53,7 +54,7 @@ def relabel(production,output):
 def group(number_of_elements,empty=False):
     if number_of_elements < 0:
         raise Exception("Groups must have at least one element.")
-    def wrap(production,output):
+    def wrap(production,output,tag_handler):
         if empty:
             content = output[-number_of_elements:]
             output = output[0:-number_of_elements]
@@ -64,6 +65,9 @@ def group(number_of_elements,empty=False):
             content = output[-number_of_elements:]
             output = output[0:-number_of_elements]
             start_delim = output.pop()
+        for k,elem in enumerate(content):
+            if isinstance(elem,Token) and not isinstance(elem,ExprNode):
+                content[k] = ExprNode(elem,[],tag_handler)
         output.append(\
             ExprNode(\
                 Token(\
@@ -72,32 +76,59 @@ def group(number_of_elements,empty=False):
                     content[0].original,\
                     start_delim.start,end_delim.end
                     ),
-                content,traverse_step=traverse_group)
+                content,traverse_step=traverse_group,tag_handler=tag_handler)
             )
         return output
     return wrap
 
-def infix(production,output):
+#def group(production,output):
+#    head = production[0]
+#    body = production[1]
+#    number_of_elements = len(body)
+#    if body[0].label == "START_DELIMITER" and body[-1].label == "END_DELIMITER":
+#        number_of_elements -= 2
+#        end_delim = output.pop()
+#        content = output[-number_of_elements:]
+#        output = output[0:-number_of_elements]
+#        start_delim = output.pop()
+#    else:
+#        content = output[-number_of_elements:]
+#        output = output[0:-number_of_elements]
+#        end_delim = Token("START_DELIMITER","",content[0].original,content[0].start,content[0].end)
+#        start_delim = Token("END_DELIMITER","",content[0].original,content[0].start,content[0].end)
+#    output.append(\
+#        ExprNode(\
+#            Token(\
+#                "GROUP",\
+#                [start_delim.content,end_delim.content],\
+#                content[0].original,\
+#                start_delim.start,end_delim.end
+#                ),
+#            content,traverse_step=traverse_group)
+#        )
+#    return output
+
+def infix(production,output,tag_handler):
     right = output.pop()
     operator = output.pop()
     left = output.pop()
-    output.append(ExprNode(operator,[left,right],traverse_step=traverse_infix))
+    output.append(ExprNode(operator,[left,right],traverse_step=traverse_infix,tag_handler=tag_handler))
     return output
 
 def insert_infix(content,label):
-    def apply(production,output):
+    def apply(production,output,tag_handler):
         operator_token = Token(label,content,output[-1].original,len(output[-1].original),-1)
-        return infix(production,output[0:-1]+[operator_token]+[output[-1]])
+        return infix(production,output[0:-1]+[operator_token]+[output[-1]],tag_handler=tag_handler)
     return apply
 
 def compose(*funcs):
-    def composed_functions(production,output):
+    def composed_functions(production,output,tag_handler):
         for f in reversed(funcs):
-            output = f(production,output)
+            output = f(production,output,tag_handler)
         return output
     return composed_functions
 
-def flatten(production,output):
+def flatten(production,output,tag_handler):
     node = output[-1]
     flattened_children = []
     for child in node.children:
@@ -208,8 +239,9 @@ class Token:
 
 class ExprNode(Token):
 
-    def __init__(self,token,children,tags=None,traverse_step=traverse_prefix):
+    def __init__(self,token,children,tag_handler=None,traverse_step=traverse_prefix):
         super().__init__(token.label,token.content,token.original,token.start,token.end)
+        self.tags = set()
         self.children = []
         for child in children:
             if isinstance(child,ExprNode):
@@ -218,25 +250,9 @@ class ExprNode(Token):
                 self.children.append(ExprNode(child,[]))
             else:
                 raise Exception(f"Invalid child {str(child)}")
-        if tags == None:
-            self.tags = set()
-        else:
-            self.tags = tags
         self._traverse_step = lambda action: traverse_step(self,action)
-        if len(self.children) == 0:
-            self.width = 1
-            self.displacement = self.width/2
-        elif len(self.children) == 1:
-            self.width = self.children[0].width
-            self.displacement = self.children[0].displacement
-        else:
-            self.width = 0
-            k = int(len(self.children)/2)
-            for i in range(0,k):
-                self.width += self.children[i].width
-            self.displacement = self.width
-            for i in range(k,len(self.children)):
-                self.width += self.children[i].width
+        if tag_handler != None:
+            self.tags = tag_handler(self)
         return
 
     def tree_string(self):
@@ -687,9 +703,7 @@ class SLR_Parser:
             elif parse_action <= len(self.states)+len(self.productions_token):
                 production = productions_token[parse_action-len(self.states)]
                 reduction = self.reductions[tuple(production[1])]
-                output = reduction(production,output)
-                node = self.tag_handler(output.pop())
-                output.append(node)
+                output = reduction(production,output,tag_handler=self.tag_handler)
                 #print("-----------------------")
                 #print(output[0].tree_string())
                 #print("-----------------------")

@@ -7,14 +7,14 @@ import re
 try:
     from expression_utilities import substitute
     from criteria_utilities import CriterionCollection
-    from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, insert_infix, group, tag, tag_transfer, tag_removal, tag_replace, create_node, flatten
+    from slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, insert_infix, group, tag, tag_transfer, tag_removal, tag_replace, create_node, flatten, ExprNode
     from unit_system_conversions import\
         set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
         set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 except ImportError:
     from .expression_utilities import substitute
     from .criteria_utilities import CriterionCollection
-    from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, insert_infix, group, tag, tag_transfer, tag_removal, tag_replace, create_node, flatten
+    from .slr_parsing_utilities import SLR_Parser, relabel, join, catch_undefined, infix, insert_infix, group, tag, tag_transfer, tag_removal, tag_replace, create_node, flatten, ExprNode
     from .unit_system_conversions import\
         set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
         set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
@@ -120,8 +120,8 @@ class PhysicalQuantity:
         else:
             direction_string = "right" if direction == 1 else "left"
             raise Exception("Cannot rotate "+direction_string+".")
-        old_root = self.tag_handler(old_root)
-        new_root = self.tag_handler(new_root)
+        old_root.tags = self.tag_handler(old_root)
+        new_root.tags = self.tag_handler(new_root)
         self.ast_root = new_root
         return
 
@@ -187,42 +187,48 @@ def SLR_generate_unit_dictionary(units_string="SI common imperial",strictness="n
 
 def set_tags(strictness):
     def tag_handler(node):
-        node.tags = set()
+        tags = set()
         for child in node.children:
-            node.tags = node.tags.union(child.tags)
+            tags = tags.union(child.tags)
         if node.label == "UNIT":
-            node.tags.add(QuantityTags.U)
+            tags.add(QuantityTags.U)
         elif node.label == "NUMBER":
-            node.tags.add(QuantityTags.N)
+            tags.add(QuantityTags.N)
         elif node.label == "NON-UNIT":
-            node.tags.add(QuantityTags.V)
+            tags.add(QuantityTags.V)
         elif node.label == "POWER" and QuantityTags.U in node.children[0].tags and node.children[1].tags == {QuantityTags.N}:
-            node = tag_removal(node,QuantityTags.N)
+            tags.remove(QuantityTags.N)
         elif node.label == "SOLIDUS" and node.children[0].content == "1" and node.children[1].tags == {QuantityTags.U}:
-            node = tag_removal(node,QuantityTags.N)
+            tags.remove(QuantityTags.N)
         elif node.label in ["PRODUCT","SOLIDUS","POWER"]:
-            node = tag_removal(node,QuantityTags.U,lambda x: any(y in x for y in [QuantityTags.N, QuantityTags.V, QuantityTags.R]))
-            node = tag(node,QuantityTags.V,lambda x: QuantityTags.N in x)
+            if any(x in tags for x in [QuantityTags.N, QuantityTags.V, QuantityTags.R]):
+                if QuantityTags.U in tags:
+                    tags.remove(QuantityTags.U)
+                if QuantityTags.N in tags:
+                    tags.add(QuantityTags.V)
         elif node.label in "SPACE" and QuantityTags.V in node.children[1].tags:
-            node = tag_removal(node,QuantityTags.U)
+            if QuantityTags.U in tags:
+                tags.remove(QuantityTags.U)
         elif node.label == "GROUP" and len(node.content[0]+node.content[1]) == 0:
             if strictness == "strict":
                 for (k,child) in enumerate(node.children):
                     node.children[k] = tag_removal(child,QuantityTags.U)
-                node = tag_replace(node,QuantityTags.U,QuantityTags.R)
-            if strictness == "natural":
+                if QuantityTags.U in tags:
+                    tags.remove(QuantityTags.U)
+                    tags.add(QuantityTags.R)
+            elif strictness == "natural":
                 for child in node.children:
-                    if QuantityTags.V in child.tags:
-                        node = tag_removal(node,QuantityTags.U)
+                    if QuantityTags.V in child.tags and QuantityTags.U in tags:
+                        tags.remove(QuantityTags.U)
                         break
-        return node
+        return tags
     return tag_handler
 
 def SLR_quantity_parser(units_string="SI common imperial",strictness="natural"):
     unit_dictionary = SLR_generate_unit_dictionary(units_string,strictness)
     max_unit_name_length = max(len(x) for x in unit_dictionary.keys())
 
-    def matches_unit(string):
+    def starts_with_unit(string):
         token = None
         unit = None
         for k in range(max_unit_name_length,-1,-1):
@@ -253,7 +259,7 @@ def SLR_quantity_parser(units_string="SI common imperial",strictness="natural"):
         ("\( *",       "START_DELIMITER" ) ,\
         (" *\)",       "END_DELIMITER"   ) ,\
         ("N",          "NUMBER",         starts_with_number) ,\
-        ("U",          "UNIT",           matches_unit) ,\
+        ("U",          "UNIT",           starts_with_unit) ,\
         ("V",          "NON-UNIT",       catch_undefined) ,\
         ("Q",          "QUANTITY_NODE",  None) ,\
         ]
@@ -261,23 +267,18 @@ def SLR_quantity_parser(units_string="SI common imperial",strictness="natural"):
     if strictness == "strict":
         juxtaposition = group(2,empty=True)
     elif strictness == "natural":
-        def handle_special_cases(production,output):
-            second = output[-1]
-            first = output[-2]
-            if QuantityTags.U in first.tags and QuantityTags.U in second.tags:
-                output = insert_infix(" ","SPACE")(production,output)
-                node = set_tags(strictness)(output.pop())
-                output.append(node)
-                output = group(1,empty=True)(production,output)
-                node = set_tags(strictness)(output.pop())
-                output.append(node)
+        def juxtaposition_natural(production,output,tag_handler):
+            is_unit = [False,False]
+            for k,elem in enumerate(output[-2:],-2):
+                if isinstance(elem,ExprNode):
+                    is_unit[k] = QuantityTags.U in elem.tags
+                else:
+                    is_unit[k] = elem.label == "UNIT"
+            if all(is_unit):
+                return insert_infix(" ","SPACE")(production,output,tag_handler)
             else:
-                output = group(2,empty=True)(production,output)
-                node = set_tags(strictness)(output.pop())
-                output.append(node)
-            #output = flatten(production,output)
-            return output
-        juxtaposition = handle_special_cases
+                return group(2,empty=True)(production,output,tag_handler)
+        juxtaposition = juxtaposition_natural
 
     productions = [( start_symbol, "Q" , relabel )]
     productions += [( "Q", "Q"+x+"Q", infix ) for x in list(" */")]
@@ -329,14 +330,9 @@ def SLR_quantity_parsing(expr,units_string="SI",strictness="strict"):
     expr = expr.strip()
     tokens = parser.scan(expr)
 
-    #print(tokens)
-    #for k in range(0,17):
-    #    print(str(k)+": "+str(parser._states_index[k])+"\n")
-    #print(parser.parsing_table_to_string())
     quantity = parser.parse(tokens,verbose=False)
 
     if len(quantity) > 1:
-        print("\n===============\n".join([x.tree_string() for x in quantity]))
         raise Exception("Parsed quantity does not have a single root.")
 
     quantity = PhysicalQuantity(quantity[0],messages=[],tag_handler=set_tags(strictness))
@@ -381,6 +377,7 @@ if __name__ == "__main__":
         #"5*pi",
         #"sin(-10.5*4)",
         #"kilogram/(metre second^2)",
+        #"kilogram/(metresecond^2)",
         #"10 kilogram/(metre second^2)",
         #"10 kilogram/(metresecond^2)",
         #"10 kilogram*metre/second**2",
@@ -388,7 +385,7 @@ if __name__ == "__main__":
         #"-10.5 kg m/s^2",
         #"1 kg m/s^2 + 2 kg m/s^2",
         #"10 kilogram*metre*second**(-2)",
-        #"10 kilogrammetresecond**(-2)",
+        "10 kilogrammetresecond**(-2)",
         #"10*pi kilogram*metre/second^2",
         #"(5.27*pi/sqrt(11) + 5*7)^(4.3)",
         #"(kilogram megametre^2)/(fs^4 daA)",
@@ -399,8 +396,8 @@ if __name__ == "__main__":
         #"10 kilogram*metre/second^2",
         #"10 kg*m/s^2",
         #" 10 kg m/s^2 ",
-        "10 gram/metresecond",
-        "10 g/sm",
+        #"10 gram/metresecond",
+        #"10 g/sm",
         #"10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
         #"10 second/gram * 7 ms * 5 gram/second",
         #"pi+metre second+pi",
@@ -414,7 +411,7 @@ if __name__ == "__main__":
         print("*"*len(mid))
         print(mid)
         print("*"*len(mid))
-        quantity, unit_latex = SLR_quantity_parsing(expr,units_string="SI",strictness="strict")
+        quantity, unit_latex = SLR_quantity_parsing(expr,units_string="SI",strictness="natural")
         value = quantity.value.original_string() if quantity.value != None else None
         unit = quantity.unit.original_string() if quantity.unit != None else None
         content = quantity.ast_root.content_string()
