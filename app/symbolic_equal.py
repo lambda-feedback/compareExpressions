@@ -2,10 +2,8 @@ from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom
 from sympy import Equality
 
-try:
-    from .expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
-except ImportError:
-    from expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
+from app.expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
+from app.parsers import SLR_implicit_multiplication_convention_parser
 
 parse_error_warning = lambda x: f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct codes for input symbols are used, correct notation is used, that the expression is unambiguous and that all parentheses are closed."
 
@@ -21,27 +19,27 @@ def evaluation_function(response, answer, params) -> dict:
         params.update({"multiple_answers_criteria": "all"})
 
     if "plus_minus" in params.keys():
-        answer = answer.replace(params["plus_minus"],"plus_minus")
-        response = response.replace(params["plus_minus"],"plus_minus")
+        answer = answer.replace(params["plus_minus"], "plus_minus")
+        response = response.replace(params["plus_minus"], "plus_minus")
 
     if "minus_plus" in params.keys():
-        answer = answer.replace(params["minus_plus"],"minus_plus")
-        response = response.replace(params["minus_plus"],"minus_plus")
+        answer = answer.replace(params["minus_plus"], "minus_plus")
+        response = response.replace(params["minus_plus"], "minus_plus")
 
     if ("plus_minus" not in response+answer) and ("minus_plus" not in response+answer):
         return check_equality(response, answer, params)
     else:
         response_set = set()
         if ("plus_minus" in response) or ("minus_plus" in response):
-            response_set.add(response.replace("plus_minus","+").replace("minus_plus","-"))
-            response_set.add(response.replace("plus_minus","-").replace("minus_plus","+"))
+            response_set.add(response.replace("plus_minus", "+").replace("minus_plus", "-"))
+            response_set.add(response.replace("plus_minus", "-").replace("minus_plus", "+"))
         else:
             response_set.add(response)
         response_list = list(response_set)
         answer_set = set()
         if ("plus_minus" in answer) or ("minus_plus" in answer):
-            answer_set.add(answer.replace("plus_minus","+").replace("minus_plus","-"))
-            answer_set.add(answer.replace("plus_minus","-").replace("minus_plus","+"))
+            answer_set.add(answer.replace("plus_minus", "+").replace("minus_plus", "-"))
+            answer_set.add(answer.replace("plus_minus", "-").replace("minus_plus", "+"))
         else:
             answer_set.add(answer)
         answer_list = list(answer_set)
@@ -292,6 +290,10 @@ def check_equality(response, answer, params) -> dict:
 
     # Dealing with special cases that aren't accepted by SymPy
     response, answer, remark = Absolute(response, answer)
+
+    parser = SLR_implicit_multiplication_convention_parser(params.get("implicit_multiplication_convention", "equal_precedence"))
+    answer = parser.parse(parser.scan(answer))[0].content_string()
+    response = parser.parse(parser.scan(response))[0].content_string()
 
     if params.get("strict_syntax",True):
         if "^" in response:

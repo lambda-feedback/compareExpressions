@@ -1,10 +1,19 @@
+from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
+from sympy.parsing.sympy_parser import T as parser_transformations
+from sympy import Symbol
+
 elementary_functions_names = [
-    ('sin',[]), ('sinc',[]), ('csc',['cosec']), ('cos',[]), ('sec',[]), ('tan',[]), ('cot',['cotan']), ('asin',['arcsin']), ('acsc',['arccsc','arccosec']), ('acos',['arccos']), ('asec',['arcsec']), ('atan',['arctan']), ('acot',['arccot','arccotan']), ('atan2',['arctan2']),\
-    ('sinh',[]), ('cosh',[]), ('tanh',[]), ('csch',['cosech']), ('sech',[]), ('asinh',['arcsinh']), ('acosh',['arccosh']), ('atanh',['arctanh']), ('acsch',['arccsch','arccosech']), ('asech',['arcsech']),\
-    ('exp',['Exp']), ('E',['e']),('log',[]),\
-    ('sqrt',[]), ('sign',[]), ('Abs',['abs']), ('Max',['max']), ('Min',['min']), ('arg',[]), ('ceiling',['ceil']), ('floor',[])\
+    ('sin', []), ('sinc', []), ('csc', ['cosec']), ('cos', []), ('sec', []), ('tan', []), ('cot', ['cotan']),
+    ('asin', ['arcsin']), ('acsc', ['arccsc', 'arccosec']), ('acos', ['arccos']), ('asec', ['arcsec']),
+    ('atan', ['arctan']), ('acot', ['arccot', 'arccotan']), ('atan2', ['arctan2']),
+    ('sinh', []), ('cosh', []), ('tanh', []), ('csch', ['cosech']), ('sech', []),
+    ('asinh', ['arcsinh']), ('acosh', ['arccosh']), ('atanh', ['arctanh']),
+    ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
+    ('exp', ['Exp']), ('E', ['e']), ('log', []),
+    ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', [])
 ]
 elementary_functions_names.sort(key=lambda x: -len(x))
+
 
 # -------- String Manipulation Utilities
 def preprocess_expression(exprs, params):
@@ -18,40 +27,41 @@ def preprocess_expression(exprs, params):
     Remark:
         Alternatives are sorted before substitution so that longer alternatives takes precedence.
     '''
-    if isinstance(exprs,str):
+    if isinstance(exprs, str):
         exprs = [exprs]
 
     if "input_symbols" in params.keys():
         input_symbols = params["input_symbols"]
         input_symbols_to_remove = []
         alternatives_to_remove = []
-        for k in range(0,len(input_symbols)):
+        for k in range(0, len(input_symbols)):
             if len(input_symbols[k]) > 0:
                 input_symbols[k][0].strip()
                 if len(input_symbols[k][0]) == 0:
                     input_symbols_to_remove += [k]
             else:
-                for i in range(0,len(input_symbols[k][1])):
+                for i in range(0, len(input_symbols[k][1])):
                     if len(input_symbols[k][1][i]) > 0:
                         input_symbols[k][1][i].strip()
                     if len(input_symbols[k][1][i]) == 0:
-                        alternatives_to_remove += [(k,i)]
-        for (k,i) in alternatives_to_remove:
+                        alternatives_to_remove += [(k, i)]
+        for (k, i) in alternatives_to_remove:
             del input_symbols[k][1][i]
         for k in input_symbols_to_remove:
             del input_symbols[k]
         substitutions = []
         for input_symbol in params["input_symbols"]:
-            substitutions.append((input_symbol[0],input_symbol[0]))
+            substitutions.append((input_symbol[0], input_symbol[0]))
             for alternative in input_symbol[1]:
                 if len(alternative) > 0:
-                    substitutions.append((alternative,input_symbol[0]))
+                    substitutions.append((alternative, input_symbol[0]))
         substitutions.sort(key=lambda x: -len(x[0]))
 
-        for k in range(0,len(exprs)):
+        for k in range(0, len(exprs)):
             exprs[k] = substitute(exprs[k], substitutions)
 
     return exprs
+
 
 def substitute(string, substitutions):
     '''
@@ -60,7 +70,7 @@ def substitute(string, substitutions):
         substitutions (required) : a list with elements of the form (string,string)
                                    or ((string,list of strings),string)
     Output:
-        A string that is the input string where any occurence of the left element 
+        A string that is the input string where any occurence of the left element
         of each pair in substitutions have been replaced with the corresponding right element.
         If the first element in the substitution is of the form (string,list of strings) then the substitution will only happen if the first element followed by one of the strings in the list in the second element.
     Remarks:
@@ -78,7 +88,7 @@ def substitute(string, substitutions):
             substitute("p bc c", [("c","r"), ("bc","q"), ("p","abc")])
             returns: "abc br r"
     '''
-    if isinstance(string,str):
+    if isinstance(string, str):
         string = [string]
 
     # Perform substitutions
@@ -91,16 +101,16 @@ def substitute(string, substitutions):
             string_buffer = ""
             while index < len(part):
                 matched_start = False
-                for k,pair in enumerate(substitutions):
+                for k, pair in enumerate(substitutions):
                     if isinstance(pair[0], tuple):
                         match = False
                         for look_ahead in pair[0][1]:
-                            if part.startswith(pair[0][0]+look_ahead,index):
+                            if part.startswith(pair[0][0]+look_ahead, index):
                                 match = True
                                 break
                         substitution_length = len(pair[0][0])
                     else:
-                        match = part.startswith(pair[0],index)
+                        match = part.startswith(pair[0], index)
                         substitution_length = len(pair[0])
                     if match:
                         matched_start = True
@@ -117,17 +127,13 @@ def substitute(string, substitutions):
                 new_string.append(string_buffer)
 
     for k, elem in enumerate(new_string):
-        if isinstance(elem,int):
+        if isinstance(elem, int):
             new_string[k] = substitutions[elem][1]
 
     return "".join(new_string)
 
+
 # -------- (Sympy) Expression Parsing Utilities
-
-from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
-from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Symbol
-
 def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
     '''
     Input:
@@ -146,17 +152,17 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
                 to_keep.append(symbol)
         unsplittable_symbols += tuple(to_keep)
 
-    if params.get("specialFunctions", False) == True:
+    if params.get("specialFunctions", False) is True:
         from sympy import beta, gamma, zeta
     else:
         beta = Symbol("beta")
         gamma = Symbol("gamma")
         zeta = Symbol("zeta")
-    if params.get("complexNumbers", False) == True:
+    if params.get("complexNumbers", False) is True:
         from sympy import I
     else:
         I = Symbol("I")
-    if params.get("elementary_functions", False) == True:
+    if params.get("elementary_functions", False) is True:
         from sympy import E
         e = E
     else:
@@ -180,11 +186,12 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
     for symbol in unsplittable_symbols:
         symbol_dict.update({symbol: Symbol(symbol)})
 
-    strict_syntax = params.get("strict_syntax",True)
+    strict_syntax = params.get("strict_syntax", True)
 
-    parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple(), "elementary_functions": params.get("elementary_functions",False)}
+    parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple(), "elementary_functions": params.get("elementary_functions", False)}
 
     return parsing_params
+
 
 def parse_expression(expr, parsing_params):
     '''
@@ -196,24 +203,24 @@ def parse_expression(expr, parsing_params):
         to the parameters in parsing_params
     '''
 
-    strict_syntax = parsing_params.get("strict_syntax",False)
-    extra_transformations = parsing_params.get("extra_transformations",())
-    unsplittable_symbols = parsing_params.get("unsplittable_symbols",())
-    symbol_dict = parsing_params.get("symbol_dict",{})
-    separate_unsplittable_symbols = [(x," "+x+" ") for x in unsplittable_symbols]
-    if parsing_params["elementary_functions"] == True:
+    strict_syntax = parsing_params.get("strict_syntax", False)
+    extra_transformations = parsing_params.get("extra_transformations", ())
+    unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
+    symbol_dict = parsing_params.get("symbol_dict", {})
+    separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
+    if parsing_params["elementary_functions"] is True:
         alias_substitutions = []
-        for (name,alias) in elementary_functions_names:
-            alias_substitutions += [(name,name)] + [(x,name) for x in alias]
+        for (name, alias) in elementary_functions_names:
+            alias_substitutions += [(name, name)] + [(x, name) for x in alias]
         alias_substitutions.sort(key=lambda x: -len(x[0]))
-        expr = substitute(expr,alias_substitutions)
-        separate_unsplittable_symbols = [(x[0]," "+x[0]) for x in elementary_functions_names] + separate_unsplittable_symbols
+        expr = substitute(expr, alias_substitutions)
+        separate_unsplittable_symbols = [(x[0], " "+x[0]) for x in elementary_functions_names] + separate_unsplittable_symbols
         separate_unsplittable_symbols.sort(key=lambda x: -len(x[0]))
-    expr = substitute(expr,separate_unsplittable_symbols)
+    expr = substitute(expr, separate_unsplittable_symbols)
     can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
     if strict_syntax:
         transformations = parser_transformations[0:4]+extra_transformations
     else:
-        transformations = parser_transformations[0:4,6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
-    parsed_expr = parse_expr(expr,transformations=transformations,local_dict=symbol_dict)
+        transformations = parser_transformations[0:4, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
+    parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
     return parsed_expr

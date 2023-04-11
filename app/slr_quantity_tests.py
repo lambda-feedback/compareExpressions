@@ -1,312 +1,384 @@
 import pytest
-try:
-    from .slr_quantity import SLR_quantity_parsing
-    from .unit_system_conversions import\
-        set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
-        set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
-except ImportError:
-    from slr_quantity import SLR_quantity_parsing
-    from unit_system_conversions import\
-        set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
-        set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
+import os
+
+from app.slr_quantity import SLR_quantity_parsing
+from app.unit_system_conversions import\
+    set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
+    set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 
 slr_strict_si_syntax_test_cases = [
-    ("q",\
-    "q",None,\
-    "q",\
-    None,\
-    ["NO_UNIT"]),
-    ("10",\
-    "10",None,\
-    "10",\
-    None,\
-    ["NO_UNIT"]),
-    ("-10.5*4",\
-    "-10.5*4",None,\
-    "-10.5*4",\
-    None,\
-    ["NO_UNIT"]),
-    ("pi*5",\
-    "pi*5",None,\
-    "pi*5",\
-    None,\
-    ["NO_UNIT"]),
-    ("5*pi",\
-    "5*pi",None,\
-    "5*pi",\
-    None,\
-    ["NO_UNIT"]),
-    ("sin(-10.5*4)",\
-    "sin(-10.5*4)",None,\
-    "sin(-10.5*4)",\
-    None,\
-    ["NO_UNIT"]),
-    ("kilogram/(metre second^2)",\
-    None,"kilogram/(metre second^2)",\
-    "kilogram/(metre second^2)",\
-    r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",\
-    ["NO_VALUE"]),
-    ("10 kilogram/(metre second^2)",\
-    "10","kilogram/(metre second^2)",\
-    "10 kilogram/(metre second^2)",\
-    r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 kilogram*metre/second**2",\
-    "10","kilogram*metre/second**2",\
-    "10 kilogram*metre/second**2",\
-    r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("-10.5 kg m/s^2",\
-    "-10.5","kg m/s^2",\
-    "-10.5 kilogram metre/second^2",\
-    r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 kilogram*metre*second**(-2)",\
-    "10","kilogram*metre*second**(-2)",\
-    "10 kilogram*metre*second**(-2)",
-    r"\mathrm{kilogram}\cdot\mathrm{metre}\cdot\mathrm{second}^{(-2)}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10*pi kilogram*metre/second^2",\
-    "10*pi","kilogram*metre/second^2",\
-    "10*pi kilogram*metre/second^2",
-    r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("(5.27*pi/sqrt(11) + 5*7)^(4.3)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3)",None,\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3)",\
-    None,\
-    ["NO_UNIT","EXPR_VALUE"]),
-    ("(kilogram megametre^2)/(fs^4 daA)",\
-    None,"(kilogram megametre^2)/(fs^4 daA)",\
-    "(kilogram megametre^2)/(femtosecond^4 decaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
-    ["NO_VALUE"]),
-    ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3)","(kilogram megametre^2)/(fs^4 daA)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(2+2.3)","(kilogram megametre^2)/(fs^4 daA)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",\
-    "(5*27/11 + 5*7)^(2*3)","(kilogram megametre^2)/(fs^4 daA)",\
-    "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(femtosecond^4 decaampere)",\
-    r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("(pi+10) kg*m/s^2",\
-    "(pi+10)","kg*m/s^2",\
-    "(pi+10) kilogram*metre/second^2",\
-    r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("10 kilogram*metre/second^2",\
-    "10","kilogram*metre/second^2",\
-    "10 kilogram*metre/second^2",\
-    r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 kg*m/s^2",\
-    "10","kg*m/s^2",\
-    "10 kilogram*metre/second^2",\
-    r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    (" 10 kg m/s^2 ",\
-    "10","kg m/s^2",\
-    "10 kilogram metre/second^2",\
-    r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 gram/metresecond",\
-    "10 gram/metresecond",None,\
-    "10 gram/metresecond",\
-    None,\
-    ["NO_UNIT","EXPR_VALUE"]),
-    ("10 g/sm",\
-    "10 g/sm",None,\
-    "10 g/sm",\
-    None,\
-    ["NO_UNIT","EXPR_VALUE"]),
-    ("10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",\
-    "10 s/g + 5 gram*second^2 + 7 ms + 5","gram/second^3",\
-    "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",\
-    r"\frac{\mathrm{gram}}{\mathrm{second}^{3}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("10 kg m/s^2 + 10 kg m/s^2",\
-    "10 kg m/s^2 + 10","kg m/s^2",\
-    "10 kg m/s^2 + 10 kilogram metre/second^2",\
-    r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("10 second/gram * 7 ms * 5 gram/second",\
-    "10 second/gram * 7 ms * 5","gram/second",\
-    "10 second/gram * 7 ms * 5 gram/second",\
-    r"\frac{\mathrm{gram}}{\mathrm{second}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("pi+metre second+pi",\
-    "pi+metre second+pi",None,\
-    "pi+metre second+pi",\
-    None,\
-    ["EXPR_VALUE","NO_UNIT"]),
-    ("1/s^2",\
-    None,"1/s^2",\
-    "1/second^2",\
-    r"\frac{1}{\mathrm{second}^{2}}",\
-    ["NO_VALUE","HAS_UNIT"]),
-    ("5/s^2",\
-    "5/s^2",None,\
-    "5/s^2",\
-    None,\
-    ["NO_UNIT","EXPR_VALUE"]),
-    ("10 1/s^2",\
-    "10","1/s^2",\
-    "10 1/second^2",\
-    r"\frac{1}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
+    ("q",
+     "q",
+     None,
+     "q",
+     None,
+     ["NO_UNIT"]),
+    ("10",
+     "10",
+     None,
+     "10",
+     None,
+     ["NO_UNIT"]),
+    ("-10.5*4",
+     "-10.5*4",
+     None,
+     "-10.5*4",
+     None,
+     ["NO_UNIT"]),
+    ("pi*5",
+     "pi*5",
+     None,
+     "pi*5",
+     None,
+     ["NO_UNIT"]),
+    ("5*pi",
+     "5*pi",
+     None,
+     "5*pi",
+     None,
+     ["NO_UNIT"]),
+    ("sin(-10.5*4)",
+     "sin(-10.5*4)",
+     None,
+     "sin(-10.5*4)",
+     None,
+     ["NO_UNIT"]),
+    ("kilogram/(metre second^2)",
+     None,
+     "kilogram/(metre second^2)",
+     "kilogram/(metre second^2)",
+     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     ["NO_VALUE"]),
+    ("10 kilogram/(metre second^2)",
+     "10",
+     "kilogram/(metre second^2)",
+     "10 kilogram/(metre second^2)",
+     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 kilogram*metre/second**2",
+     "10",
+     "kilogram*metre/second**2",
+     "10 kilogram*metre/second**2",
+     r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("-10.5 kg m/s^2",
+     "-10.5",
+     "kg m/s^2",
+     "-10.5 kilogram metre/second^2",
+     r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 kilogram*metre*second**(-2)",
+     "10",
+     "kilogram*metre*second**(-2)",
+     "10 kilogram*metre*second**(-2)",
+     r"\mathrm{kilogram}\cdot\mathrm{metre}\cdot\mathrm{second}^{(-2)}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10*pi kilogram*metre/second^2",
+     "10*pi",
+     "kilogram*metre/second^2",
+     "10*pi kilogram*metre/second^2",
+     r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "EXPR_VALUE"]),
+    ("(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3)", None,
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+     None,
+     ["NO_UNIT", "EXPR_VALUE"]),
+    ("(kilogram megametre^2)/(fs^4 daA)",
+     None,
+     "(kilogram megametre^2)/(fs^4 daA)",
+     "(kilogram megametre^2)/(femtosecond^4 decaampere)",
+     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     ["NO_VALUE"]),
+    ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3)", "(kilogram megametre^2)/(fs^4 daA)",
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",
+     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     ["FULL_QUANTITY", "EXPR_VALUE"]),
+    ("(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
+     "(5.27*pi/sqrt(11) + 5*7)^(2+2.3)", "(kilogram megametre^2)/(fs^4 daA)",
+     "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",
+     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     ["FULL_QUANTITY", "EXPR_VALUE"]),
+    ("(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
+     "(5*27/11 + 5*7)^(2*3)",
+     "(kilogram megametre^2)/(fs^4 daA)",
+     "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(femtosecond^4 decaampere)",
+     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     ["FULL_QUANTITY", "EXPR_VALUE"]),
+    ("(pi+10) kg*m/s^2",
+     "(pi+10)",
+     "kg*m/s^2",
+     "(pi+10) kilogram*metre/second^2",
+     r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "EXPR_VALUE"]),
+    ("10 kilogram*metre/second^2",
+     "10",
+     "kilogram*metre/second^2",
+     "10 kilogram*metre/second^2",
+     r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 kg*m/s^2",
+     "10",
+     "kg*m/s^2",
+     "10 kilogram*metre/second^2",
+     r"\mathrm{kilogram}\cdot\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    (" 10 kg m/s^2 ",
+     "10",
+     "kg m/s^2",
+     "10 kilogram metre/second^2",
+     r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 gram/metresecond",
+     "10 gram/metresecond",
+     None,
+     "10 gram/metresecond",
+     None,
+     ["NO_UNIT", "EXPR_VALUE"]),
+    ("10 g/sm",
+     "10 g/sm",
+     None,
+     "10 g/sm",
+     None,
+     ["NO_UNIT", "EXPR_VALUE"]),
+    ("10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
+     "10 s/g + 5 gram*second^2 + 7 ms + 5", "gram/second^3",
+     "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
+     r"\frac{\mathrm{gram}}{\mathrm{second}^{3}}",
+     ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
+    ("10 kg m/s^2 + 10 kg m/s^2",
+     "10 kg m/s^2 + 10",
+     "kg m/s^2",
+     "10 kg m/s^2 + 10 kilogram metre/second^2",
+     r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
+    #("-0.5 kg m/s^2-10 kg m/s^2",
+    # "-0.5 kg m/s^2-10",
+    # "kg m/s^2",
+    # "-0.5 kg m/s^2-10 kilogram metre/second^2",
+    # r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
+    # ["FULL_QUANTITY", "EXPR_VALUE","REVERTED_UNIT"]),
+    ("10 second/gram * 7 ms * 5 gram/second",
+     "10 second/gram * 7 ms * 5",
+     "gram/second",
+     "10 second/gram * 7 ms * 5 gram/second",
+     r"\frac{\mathrm{gram}}{\mathrm{second}}",
+     ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
+    ("pi+metre second+pi",
+     "pi+metre second+pi",
+     None,
+     "pi+metre second+pi",
+     None,
+     ["EXPR_VALUE", "NO_UNIT", "REVERTED_UNIT"]),
+    ("1/s^2",
+     None,
+     "1/s^2",
+     "1/second^2",
+     r"\frac{1}{\mathrm{second}^{2}}",
+     ["NO_VALUE", "HAS_UNIT"]),
+    ("5/s^2",
+     "5/s^2",
+     None,
+     "5/s^2",
+     None,
+     ["NO_UNIT", "EXPR_VALUE", "REVERTED_UNIT"]),
+    ("10 1/s^2",
+     "10",
+     "1/s^2",
+     "10 1/second^2",
+     r"\frac{1}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
 ]
 
 slr_natural_si_syntax_test_cases = [
-    ("q",\
-    "q",None,\
-    "q",\
-    None,\
-    ["NO_UNIT"]),
-    ("10",\
-    "10",None,\
-    "10",\
-    None,\
-    ["NO_UNIT"]),
-    ("-10.5*4",\
-    "-10.5*4",None,\
-    "-10.5*4",\
-    None,\
-    ["NO_UNIT"]),
-    ("pi*5",\
-    "pi*5",None,\
-    "pi*5",\
-    None,\
-    ["NO_UNIT"]),
-    ("5*pi",\
-    "5*pi",None,\
-    "5*pi",\
-    None,\
-    ["NO_UNIT"]),
-    ("sin(-10.5*4)",\
-    "sin(-10.5*4)",None,\
-    "sin(-10.5*4)",\
-    None,\
-    ["NO_UNIT"]),
-    ("kilogram/(metresecond^2)",\
-    None,"kilogram/(metresecond^2)",\
-    "kilogram/(metre second^2)",\
-    r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",\
-    ["NO_VALUE"]),
-    ("10 kilogram/(metresecond^2)",\
-    "10","kilogram/(metresecond^2)",\
-    "10 kilogram/(metre second^2)",\
-    r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 kilogrammetre/second**2",\
-    "10","kilogrammetre/second**2",\
-    "10 kilogram metre/second**2",\
-    r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 kilogrammetre/second^2",\
-    "10","kilogrammetre/second^2",\
-    "10 kilogram metre/second^2",\
-    r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 kgm/s^2",\
-    "10","kgm/s^2",\
-    "10 kilogram metre/second^2",\
-    r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("-10.5 kgm/s^2",\
-    "-10.5","kgm/s^2",\
-    "-10.5 kilogram metre/second^2",\
-    r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 kilogrammetresecond**(-2)",\
-    "10","kilogrammetresecond**(-2)",\
-    "10 kilogram metre second**(-2)",
-    r"\mathrm{kilogram}~\mathrm{metre}~\mathrm{second}^{(-2)}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10*pi kilogrammetre/second^2",\
-    "10*pi","kilogrammetre/second^2",\
-    "10*pi kilogram metre/second^2",
-    r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("(5.27*pi/sqrt(11) + 5*7)^(4.3)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3)",None,\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3)",\
-    None,\
-    ["NO_UNIT","EXPR_VALUE"]),
-    ("(kilogrammegametre^2)/(fs^4daA)",\
-    "(kilogrammegametre^2)/(fs^4daA)",None,\
-    "(kilogrammegametre^2)/(fs^4daA)",\
-    None,\
-    ["NO_UNIT"]),
-    ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",None,\
-    "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",\
-    None,\
-    ["NO_UNIT"]),
-    ("(pi+10) kgm/s^2",\
-    "(pi+10)","kgm/s^2",\
-    "(pi+10) kilogram metre/second^2",\
-    r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("10 gram/metresecond",\
-    "10","gram/metresecond",\
-    "10 gram/metre second",\
-    r"\frac{\mathrm{gram}}{\mathrm{metre}~\mathrm{second}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 g/sm",\
-    "10","g/sm",\
-    "10 gram/second metre",\
-    r"\frac{\mathrm{gram}}{\mathrm{second}~\mathrm{metre}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
-    ("10 s/g + 5 gramsecond^2 + 7 ms + 5 gram/second^3",\
-    "10 s/g + 5 gramsecond^2 + 7 ms + 5","gram/second^3",\
-    "10 s/g + 5 gramsecond^2 + 7 ms + 5 gram/second^3",\
-    r"\frac{\mathrm{gram}}{\mathrm{second}^{3}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("10 kgm/s^2 + 10 kgm/s^2",\
-    "10 kgm/s^2 + 10","kgm/s^2",\
-    "10 kgm/s^2 + 10 kilogram metre/second^2",\
-    r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("10 second/gram * 7 ms * 5 gram/second",\
-    "10 second/gram * 7 ms * 5","gram/second",\
-    "10 second/gram * 7 ms * 5 gram/second",\
-    r"\frac{\mathrm{gram}}{\mathrm{second}}",\
-    ["FULL_QUANTITY","EXPR_VALUE"]),
-    ("pi+metresecond+pi",\
-    "pi+metresecond+pi",None,\
-    "pi+metresecond+pi",\
-    None,\
-    ["EXPR_VALUE","NO_UNIT"]),
-    ("1/s^2",\
-    None,"1/s^2",\
-    "1/second^2",\
-    r"\frac{1}{\mathrm{second}^{2}}",\
-    ["NO_VALUE","HAS_UNIT"]),
-    ("5/s^2",\
-    "5/s^2",None,\
-    "5/s^2",\
-    None,\
-    ["NO_UNIT","EXPR_VALUE"]),
-    ("10 1/s^2",\
-    "10","1/s^2",\
-    "10 1/second^2",\
-    r"\frac{1}{\mathrm{second}^{2}}",\
-    ["FULL_QUANTITY","NUMBER_VALUE"]),
+    ("mmPas",
+     None,
+     "mmPas",
+     "millimetre pascal second",
+     r"\mathrm{millimetre}~\mathrm{pascal}~\mathrm{second}",
+     ["NO_VALUE", "HAS_UNIT"]),
+    ("q",
+     "q",
+     None,
+     "q",
+     None,
+     ["NO_UNIT"]),
+    ("10",
+     "10",
+     None,
+     "10",
+     None,
+     ["NO_UNIT"]),
+    ("-10.5*4",
+     "-10.5*4",
+     None,
+     "-10.5*4",
+     None,
+     ["NO_UNIT"]),
+    ("pi*5",
+     "pi*5",
+     None,
+     "pi*5",
+     None,
+     ["NO_UNIT"]),
+    ("5*pi",
+     "5*pi",
+     None,
+     "5*pi",
+     None,
+     ["NO_UNIT"]),
+    ("sin(-10.5*4)",
+     "sin(-10.5*4)",
+     None,
+     "sin(-10.5*4)",
+     None,
+     ["NO_UNIT"]),
+    ("kilogrammetersecondAmperes",
+     None,
+     "kilogrammetersecondAmperes",
+     "kilogram metre second ampere",
+     r"\mathrm{kilogram}~\mathrm{metre}~\mathrm{second}~\mathrm{ampere}",
+     ["NO_VALUE"]),
+    ("kilogram/(metresecond^2)",
+     None,
+     "kilogram/(metresecond^2)",
+     "kilogram/(metre second^2)",
+     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     ["NO_VALUE"]),
+    ("10 kilogram/(metresecond^2)",
+     "10",
+     "kilogram/(metresecond^2)",
+     "10 kilogram/(metre second^2)",
+     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 kilogrammetre/second**2",
+     "10",
+     "kilogrammetre/second**2",
+     "10 kilogram metre/second**2",
+     r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 kilogrammetre/second^2",
+     "10",
+     "kilogrammetre/second^2",
+     "10 kilogram metre/second^2",
+     r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 kgm/s^2",
+     "10",
+     "kgm/s^2",
+     "10 kilogram metre/second^2",
+     r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("-10.5 kgm/s^2",
+     "-10.5",
+     "kgm/s^2",
+     "-10.5 kilogram metre/second^2",
+     r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 kilogrammetresecond**(-2)",
+     "10",
+     "kilogrammetresecond**(-2)",
+     "10 kilogram metre second**(-2)",
+     r"\mathrm{kilogram}~\mathrm{metre}~\mathrm{second}^{(-2)}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10*pi kilogrammetre/second^2",
+     "10*pi",
+     "kilogrammetre/second^2",
+     "10*pi kilogram metre/second^2",
+     r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "EXPR_VALUE"]),
+    ("(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+     None,
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3)",
+     None,
+     ["NO_UNIT", "EXPR_VALUE"]),
+    ("(kilogrammegametre^2)/(fs^4daA)",
+     "(kilogrammegametre^2)/(fs^4daA)",
+     None,
+     "(kilogrammegametre^2)/(fs^4daA)",
+     None,
+     ["NO_UNIT"]),
+    ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",
+     None,
+     "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",
+     None,
+     ["NO_UNIT"]),
+    ("mmg",
+     None,
+     "mmg",
+     "millimetre gram",
+     r"\mathrm{millimetre}~\mathrm{gram}",
+     ["ONLY_UNIT"]),
+    ("(pi+10) kgm/s^2",
+     "(pi+10)",
+     "kgm/s^2",
+     "(pi+10) kilogram metre/second^2",
+     r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "EXPR_VALUE"]),
+    ("10 gram/metresecond",
+     "10",
+     "gram/metresecond",
+     "10 gram/metre second",
+     r"\frac{\mathrm{gram}}{\mathrm{metre}~\mathrm{second}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 g/sm",
+     "10",
+     "g/sm",
+     "10 gram/second metre",
+     r"\frac{\mathrm{gram}}{\mathrm{second}~\mathrm{metre}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
+    ("10 s/g + 5 gramsecond^2 + 7 ms + 5 gram/second^3",
+     "10 s/g + 5 gramsecond^2 + 7 ms + 5", "gram/second^3",
+     "10 s/g + 5 gramsecond^2 + 7 ms + 5 gram/second^3",
+     r"\frac{\mathrm{gram}}{\mathrm{second}^{3}}",
+     ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
+    ("10 kgm/s^2 + 10 kgm/s^2",
+     "10 kgm/s^2 + 10",
+     "kgm/s^2",
+     "10 kgm/s^2 + 10 kilogram metre/second^2",
+     r"\frac{\mathrm{kilogram}~\mathrm{metre}}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
+    ("10 second/gram * 7 ms * 5 gram/second",
+     "10 second/gram * 7 ms * 5", "gram/second",
+     "10 second/gram * 7 ms * 5 gram/second",
+     r"\frac{\mathrm{gram}}{\mathrm{second}}",
+     ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
+    ("pi+metresecond+pi",
+     "pi+metresecond+pi",
+     None,
+     "pi+metresecond+pi",
+     None,
+     ["EXPR_VALUE", "NO_UNIT", "REVERTED_UNIT"]),
+    ("1/s^2",
+     None,
+     "1/s^2",
+     "1/second^2",
+     r"\frac{1}{\mathrm{second}^{2}}",
+     ["NO_VALUE", "HAS_UNIT"]),
+    ("5/s^2",
+     "5/s^2",
+     None,
+     "5/s^2",
+     None,
+     ["NO_UNIT", "EXPR_VALUE", "REVERTED_UNIT"]),
+    ("10 1/s^2",
+     "10",
+     "1/s^2",
+     "10 1/second^2",
+     r"\frac{1}{\mathrm{second}^{2}}",
+     ["FULL_QUANTITY", "NUMBER_VALUE"]),
 ]
 
-class TestClass:
-    @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria",slr_strict_si_syntax_test_cases)
-    def test_strict_si_syntax(self,string,value,unit,content,unit_latex,criteria):
-        quantity, parsed_unit_latex = SLR_quantity_parsing(string,units_string="SI",strictness="strict")
-        parsed_value = quantity.value.original_string() if quantity.value != None else None
-        parsed_unit = quantity.unit.original_string() if quantity.unit != None else None
+
+class TestEvaluationFunction():
+    @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria", slr_strict_si_syntax_test_cases)
+    def test_strict_si_syntax(self, string, value, unit, content, unit_latex, criteria):
+        quantity, parsed_unit_latex = SLR_quantity_parsing(string, units_string="SI", strictness="strict")
+        parsed_value = quantity.value.original_string() if quantity.value is not None else None
+        parsed_unit = quantity.unit.original_string() if quantity.unit is not None else None
         parsed_content = quantity.ast_root.content_string()
         assert parsed_value == value
         assert parsed_unit == unit
@@ -317,45 +389,45 @@ class TestClass:
 
     @pytest.mark.parametrize(
         "long_form,short_form",
-        [(x[0],x[1]) for x in set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units]
+        [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units]
     )
-    def test_short_forms_strict_SI(self,long_form,short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form,units_string="SI",strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form,units_string="SI",strictness="strict")
+    def test_short_forms_strict_SI(self, long_form, short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="SI", strictness="strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="SI", strictness="strict")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
     @pytest.mark.parametrize(
         "long_form,short_form",
-        [(x[0],x[1]) for x in set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units|set_of_common_units_in_SI|set_of_very_common_units_in_SI]
+        [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI]
     )
-    def test_short_forms_common_SI(self,long_form,short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form,units_string="common",strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form,units_string="common",strictness="strict")
+    def test_short_forms_common_SI(self, long_form, short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="common", strictness="strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="common", strictness="strict")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
     @pytest.mark.parametrize(
         "long_form,short_form",
-        [(x[0],x[1]) for x in set_of_imperial_units]
+        [(x[0], x[1]) for x in set_of_imperial_units]
     )
-    def test_short_forms_imperial(self,long_form,short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form,units_string="imperial",strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form,units_string="imperial",strictness="strict")
+    def test_short_forms_imperial(self, long_form, short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="imperial", strictness="strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="imperial", strictness="strict")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
     @pytest.mark.parametrize(
         "long_form,short_form",
-        [(x[0],x[1]) for x in set_of_SI_base_unit_dimensions|set_of_derived_SI_units_in_SI_base_units|set_of_common_units_in_SI|set_of_very_common_units_in_SI|set_of_imperial_units]
+        [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI | set_of_imperial_units]
     )
-    def test_short_forms_all(self,long_form,short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form,units_string="SI common imperial",strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form,units_string="SI common imperial",strictness="strict")
+    def test_short_forms_all(self, long_form, short_form):
+        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="SI common imperial", strictness="strict")
+        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="SI common imperial", strictness="strict")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
-    @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria",slr_natural_si_syntax_test_cases)
-    def test_natural_si_syntax(self,string,value,unit,content,unit_latex,criteria):
-        quantity, parsed_unit_latex = SLR_quantity_parsing(string,units_string="SI",strictness="natural")
-        parsed_value = quantity.value.original_string() if quantity.value != None else None
-        parsed_unit = quantity.unit.original_string() if quantity.unit != None else None
+    @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria", slr_natural_si_syntax_test_cases)
+    def test_natural_si_syntax(self, string, value, unit, content, unit_latex, criteria):
+        quantity, parsed_unit_latex = SLR_quantity_parsing(string, units_string="SI", strictness="natural")
+        parsed_value = quantity.value.original_string() if quantity.value is not None else None
+        parsed_unit = quantity.unit.original_string() if quantity.unit is not None else None
         parsed_content = quantity.ast_root.content_string()
         assert parsed_value == value
         assert parsed_unit == unit
@@ -363,7 +435,7 @@ class TestClass:
         assert parsed_unit_latex == unit_latex
         for criterion in criteria:
             assert criterion in quantity.passed_dict
+
 
 if __name__ == "__main__":
-    import os 
-    pytest.main(["-xs", "--tb=auto",os.path.basename(__file__)])
+    pytest.main(["-xs", "--tb=line", os.path.abspath(__file__)])
