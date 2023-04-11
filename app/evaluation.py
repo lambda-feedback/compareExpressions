@@ -1,8 +1,7 @@
 from app.expression_utilities import (
     preprocess_expression,
     parse_expression,
-    create_sympy_parsing_params,
-    substitute,
+    create_sympy_parsing_params
 )
 from app.evaluation_response_utilities import EvaluationResponse
 from app.symbolic_equal import evaluation_function as symbolicEqual
@@ -73,7 +72,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             )
 
         def expand_units(node):
-            parser = quantity_parser(units_string,strictness)
+            parser = quantity_parser(units_string, strictness)
             if node.label == "UNIT" and len(node.children) == 0:
                 expanded_unit_content = conversion_to_base_si_units[node.content]
                 node = parser.parse(parser.scan(expanded_unit_content))[0]
@@ -160,7 +159,6 @@ def symbolic_comparison(response, answer, parameters):
         answer = parser.parse(parser.scan(answer))[0].content_string()
     value_comparison_response = symbolicEqual(response, answer, parameters)
     return value_comparison_response
-
 
 
 def compute_relative_tolerance_from_significant_decimals(string):

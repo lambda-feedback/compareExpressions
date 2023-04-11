@@ -1,6 +1,5 @@
 import pytest
 import os
-import sys
 # from app.slr_quantity_tests import TestEvaluationFunction as TestStrictSLRSyntax
 # from app.slr_quantity_tests import slr_strict_si_syntax_test_cases
 # from app.evaluation import evaluation_function
@@ -9,6 +8,7 @@ import sys
 from app.slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from app.evaluation import evaluation_function
 from app.unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units, set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
+
 
 class TestEvaluationFunction():
     """
@@ -30,7 +30,7 @@ class TestEvaluationFunction():
 
     log_details = False
 
-    def log_details_to_file(details,file_name):
+    def log_details_to_file(self, details, filename):
         if self.log_details:
             f = open(filename, "w")
             f.write(details)
@@ -84,8 +84,9 @@ class TestEvaluationFunction():
                                     k += 1000
         m = len(errors)+len(incorrect)
         details = "Total: "+str(m)+"/"+str(n)+"\nIncorrect:\n"+"".join([str(x)+"\n" for x in incorrect])+"\nErrors:\n"+"".join([str(x)+"\n" for x in errors])
-        self.log_details_to_file(details,"test_quantity_alternative_names_natural_syntax_log.txt")
-        assert len(errors)+len(incorrect) <= 120 # Current number of collisions caused by concatenating two units, e.g. "barnewton" has "barn" as substring, "aremole" has "rem" as substring etc.
+        self.log_details_to_file(details, "test_quantity_alternative_names_natural_syntax_log.txt")
+        # Current number of collisions caused by concatenating two units, e.g. "barnewton" has "barn" as substring, "aremole" has "rem" as substring etc.
+        assert len(errors)+len(incorrect) <= 120
 
     def test_slow_quantity_short_forms_natural_syntax(self):
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI common imperial", "strictness": "natural"}
@@ -114,8 +115,9 @@ class TestEvaluationFunction():
                             k += 1000
         m = len(errors)+len(incorrect)
         details = "Total: "+str(m)+"/"+str(n)+"\nIncorrect:\n"+"".join([str(x)+"\n" for x in incorrect])+"\nErrors:\n"+"".join([str(x)+"\n" for x in errors])
-        self.log_details_to_file(details,"test_quantity_short_forms_natural_syntax_units_log.txt")
-        assert len(errors)+len(incorrect) <= 489 # All found cases where the concatenation of short forms gives a longer name for another unit than intended
+        self.log_details_to_file(details, "test_quantity_short_forms_natural_syntax_units_log.txt")
+        # Not more than currently known found cases where the concatenation of short forms gives a longer name for another unit than intended
+        assert len(errors)+len(incorrect) <= 489
 
     @pytest.mark.parametrize(
         "value,unit,small_diff,large_diff",
@@ -149,7 +151,7 @@ class TestEvaluationFunction():
             ("10 pint", "5682.6 centimetre^3")
         ]
     )
-    def test_convert_units(self,ans,res):
+    def test_convert_units(self, ans, res):
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI common imperial", "strictness": "strict"}
         result = evaluation_function(res, ans, params)
         assert result["is_correct"]

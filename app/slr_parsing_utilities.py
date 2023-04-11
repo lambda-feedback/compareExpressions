@@ -1,18 +1,24 @@
 # -----------------
+# -----------------
 # UTILITY FUNCTIONS
 # -----------------
+# -----------------
 
+# -----------------
 # Scanner utilities
+# -----------------
 import re
 
 
 def catch_undefined(label, content, original, start, end):
     return Token(label, content, original, start, end)
 
-
+# -----------------
 # Parser utilities
+# -----------------
 
-## Syntax tree building utilities
+
+# Syntax tree building utilities
 def package(production, output, tag_handler):
     label = production[0].label
     handle = production[1]
@@ -57,7 +63,7 @@ def relabel(production, output, tag_handler):
     return output
 
 
-def group(number_of_elements, empty=False, delimiters=["",""]):
+def group(number_of_elements, empty=False, delimiters=["", ""]):
     if number_of_elements < 1:
         raise Exception("Groups must have at least one element.")
 
@@ -88,6 +94,7 @@ def group(number_of_elements, empty=False, delimiters=["",""]):
         return output
 
     return wrap
+
 
 def operate(number_of_elements, empty=False):
     if number_of_elements < 0:
@@ -151,7 +158,7 @@ def flatten(production, output, tag_handler):
     return output
 
 
-## Tag management utilities
+# Tag management utilities
 
 def tag_rule_union(x, y):
     return x | y
@@ -191,8 +198,10 @@ def tag_replace(node, old_tag, new_tag):
         node = tag_removal(node, old_tag)
     return node
 
-
+# ------------------------
 # Node traversal utilities
+# ------------------------
+
 
 def traverse_prefix(expr_node, action):
     out = [(True, action(expr_node))]
@@ -233,68 +242,73 @@ def discard_output_until_on_error(condition):
         return stack, a, input_tokens, tokens, output
     return error
 
-
+# --------------------------
 # Parser generator utilities
+# --------------------------
 
-def SLR_expression_parser(nodes=[],infix_operators=[],delimiters=[],undefined=None,costum_tokens=[],costum_productions=[],group_node=None,expression_node=None,start=None,null=None,end=None,error_handler=[]):
+
+def SLR_expression_parser(nodes=[], infix_operators=[], delimiters=[], undefined=None, costum_tokens=[], costum_productions=[], group_node=None, expression_node=None, start=None, null=None, end=None, error_handler=[]):
     infix_operators_dictionary = dict()
     unique_infix_operator_symbols = []
-    for (symbol,label) in infix_operators:
+    for (symbol, label) in infix_operators:
         if label in infix_operators_dictionary.keys():
             infix_operators_dictionary[label] += [symbol]
         else:
             unique_infix_operator_symbols += [symbol]
             infix_operators_dictionary.update({label: [symbol]})
     infix_operators_token = []
-    for (label,symbols) in infix_operators_dictionary.items():
-        infix_operators_token.append(((" *("+"|".join([re.escape(s) for s in symbols])+") *"),label))
+    for (label, symbols) in infix_operators_dictionary.items():
+        infix_operators_token.append(((" *("+"|".join([re.escape(s) for s in symbols])+") *"), label))
 
-    if undefined == None:
-        undefined_symbol="UNDEFINED"
+    if undefined is None:
+        undefined_symbol = "UNDEFINED"
         undefined = (undefined_symbol, undefined_symbol, catch_undefined)
     else:
         undefined += (catch_undefined,)
 
-    if expression_node == None:
-        expression_node_symbol="EXPRESSION_NODE"
+    if expression_node is None:
+        expression_node_symbol = "EXPRESSION_NODE"
         expression_node = (expression_node_symbol, expression_node_symbol, None)
     else:
         undefined += (None,)
 
-    if group_node == None:
-        group_node_symbol="GROUP_NODE"
+    if group_node is None:
+        group_node_symbol = "GROUP_NODE"
         group_node = (group_node_symbol, group_node_symbol, None)
 
-    if start == None:
+    if start is None:
         start_symbol = "START"
         start = (start_symbol, start_symbol)
 
-    if end == None:
+    if end is None:
         end_symbol = "END"
         end = (end_symbol, end_symbol)
 
-    if null == None:
+    if null is None:
         null_symbol = "NULL"
         null = (null_symbol, null_symbol)
 
-    token_list = [undefined,null,expression_node,start,end]+nodes+infix_operators_token+costum_tokens
+    token_list = [undefined, null, expression_node, start, end]+nodes+infix_operators_token+costum_tokens
 
-    productions = [( start[0], expression_node[0], relabel )]
-    productions += [( expression_node[0], n[0], create_node ) for n in nodes]
-    productions += [( expression_node[0], undefined[0], create_node )]
-    productions += [( expression_node[0], expression_node[0]+operator+expression_node[0], infix ) for operator in [op[0] for op in unique_infix_operator_symbols]]
+    productions = [(start[0], expression_node[0], relabel)]
+    productions += [(expression_node[0], n[0], create_node) for n in nodes]
+    productions += [(expression_node[0], undefined[0], create_node)]
+    productions += [(expression_node[0], expression_node[0]+operator+expression_node[0], infix) for operator in [op[0] for op in unique_infix_operator_symbols]]
 
-    for (delims,action) in delimiters:
-        token_list += [(re.escape(delims[0])+" *","START_DELIMITER"),(" *"+re.escape(delims[1]),"END_DELIMITER")]
+    for (delims, action) in delimiters:
+        token_list += [(re.escape(delims[0])+" *", "START_DELIMITER"), (" *"+re.escape(delims[1]), "END_DELIMITER")]
         productions += [( expression_node[0], delims[0]+expression_node[0]+delims[1], action)]
 
     productions += costum_productions
 
-    return SLR_Parser(token_list,productions,start[1],end[1],null[1],error_handler=error_handler)
+    return SLR_Parser(token_list, productions, start[1], end[1], null[1], error_handler=error_handler)
 
+# -------
 # -------
 # CLASSES
 # -------
+# -------
+
 
 class Token:
 
@@ -346,7 +360,7 @@ class ExprNode(Token):
         children = []
         for child in self.children:
             children.append(child.copy())
-        return ExprNode(token,children,tags=self.tags,traverse_step=self._traverse_step)
+        return ExprNode(token, children, tags=self.tags, traverse_step=self._traverse_step)
 
     def tree_string(self):
         s = str(self)
@@ -360,7 +374,7 @@ class ExprNode(Token):
         return "".join(output)
 
     def traverse(self, action, max_depth=None):
-        stack = [x+(0,) for x in self._traverse_step(self,action)[::-1]]
+        stack = [x+(0,) for x in self._traverse_step(self, action)[::-1]]
         output = []
         while len(stack) > 0:
             (is_output, elem, depth) = stack.pop()
@@ -368,7 +382,7 @@ class ExprNode(Token):
                 if is_output:
                     output.append(elem)
                 else:
-                    stack += [x+(depth+1,) for x in elem._traverse_step(elem,action)[::-1]]
+                    stack += [x+(depth+1,) for x in elem._traverse_step(elem, action)[::-1]]
         return output
 
     def original_string(self):
@@ -808,10 +822,12 @@ class SLR_Parser:
                 break
         return output
 
-
+# -------
 # -------
 # TESTING
 # -------
+# -------
+
 
 if __name__ == "__main__":
 
