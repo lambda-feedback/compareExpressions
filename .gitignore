@@ -132,3 +132,5 @@ dmypy.json
 .*.swp
 app/benchmark.py
 *.prof
+*.wpr
+*.wpu
