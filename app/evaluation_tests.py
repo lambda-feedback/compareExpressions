@@ -122,7 +122,7 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "value,unit,small_diff,large_diff",
         [
-            ("10.5",   "kg m/s^2", 0.04,    1),
+            ("10.5",   "kg m/s^2", 0.04,    0.06),
             ("10.55",  "kg m/s^2", 0.004,   0.006),
             ("0.105",  "kg m/s^2", 0.0004,  0.0006),
             ("0.0010", "kg m/s^2", 0.00004, 0.00006),
@@ -233,4 +233,5 @@ class TestEvaluationFunction():
 
 
 if __name__ == "__main__":
-    pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xsk not slow', "--tb=auto", os.path.abspath(__file__)])
+    #pytest.main(['-s', "--tb=line", os.path.abspath(__file__)])

@@ -130,3 +130,5 @@ dmypy.json
 
 # Swap files
 .*.swp
+app/benchmark.py
+*.prof

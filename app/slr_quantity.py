@@ -3,15 +3,16 @@
 # -------
 
 import re
+from app.expression_utilities import parse_expression
+from app.symbolic_equal import evaluation_function as symbolicEqual
+from app.comparison_utilities import symbolic_comparison, compute_relative_tolerance_from_significant_decimals
 from app.criteria_utilities import CriterionCollection
 from app.feedback.physical_quantities import internal as physical_quantities_messages
-from app.feedback.physical_quantities import productions as criteria_productions
-from app.feedback.physical_quantities import operations as criteria_operations
 from app.feedback.physical_quantities import QuantityTags
 from app.slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode
 from app.unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
-    set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
+    set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
 
 
 # -------
@@ -81,6 +82,16 @@ def criteria_parser():
     end_symbol = "END"
     null_symbol = "NULL"
 
+    operations = {
+        "and":           lambda x, y: x and y,
+        "not":           lambda x: not x,
+        "has":           lambda x: x is not None,
+        "unit":          lambda x: x.unit,
+        "value":         lambda x: x.value,
+        "is_number":     lambda x: x.value is not None and x.value.tags == {QuantityTags.N},
+        "is_expression": lambda x: x.value is not None and QuantityTags.V in x.value.tags,
+    }
+
     token_list = [
         (start_symbol,   start_symbol),
         (end_symbol,     end_symbol),
@@ -93,9 +104,27 @@ def criteria_parser():
         (" *\)",         "END_DELIMITER"),
         ("INPUT",        "INPUT", catch_undefined),
     ]
-    token_list += [(x[0], x[0], x[1]) for x in criteria_operations]
+    token_list += [(x[0], x[0], x[1]) for x in operations]
 
-    parser = SLR_Parser(token_list, criteria_productions, start_symbol, end_symbol, null_symbol)
+    productions = [
+        ("START",    "BOOL"),
+        ("BOOL",     "BOOL and BOOL"),
+        ("BOOL",     "UNIT matches UNIT"),
+        ("BOOL",     "VALUE matches VALUE"),
+        ("BOOL",     "QUANTITY matches QUANTITY"),
+        ("BOOL",     "not(BOOL)"),
+        ("BOOL",     "has(UNIT)"),
+        ("BOOL",     "has(VALUE)"),
+        ("BOOL",     "is_number(VALUE)"),
+        ("BOOL",     "is_expression(VALUE)"),
+        ("UNIT",     "unit(QUANTITY)"),
+        ("VALUE",    "value(QUANTITY)"),
+        ("QUANTITY", "INPUT"),
+        ("QUANTITY", "response"),
+        ("QUANTITY", "answer"),
+    ]
+
+    parser = SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
 
     return parser
 
@@ -466,6 +495,115 @@ def SLR_quantity_parsing(expr, units_string="SI", strictness="strict"):
 
     return quantity, unit_latex_string
 
+def quantity_comparison(response, answer, parameters, parsing_params, eval_response):
+    # Removing SLR from parsing to clarify that the implementation of the parser should not matter here
+    quantity_parser = SLR_quantity_parser
+    quantity_parsing = SLR_quantity_parsing
+    # Routine for comparing quantities starts here
+    eval_response.is_correct = True
+    units_string = parameters.get("units_string", "SI")
+    strictness = parameters.get("strictness", "strict")
+    try:
+        ans_parsed, ans_latex = quantity_parsing(answer, units_string=units_string, strictness=strictness)
+    except Exception as e:
+        raise Exception("Could not parse quantity expression") from e
+
+    try:
+        res_parsed, res_latex = quantity_parsing(response, units_string=units_string, strictness=strictness)
+    except Exception as e:
+        eval_response.add_feedback(("PARSE_EXCEPTION", str(e)))
+        eval_response.is_correct = False
+        return eval_response
+
+    # Collects messages from parsing the response, these needs to be returned as feedback later
+    for message in res_parsed.messages:
+        eval_response.add_feedback(message)
+
+    # Computes the desired tolerance used for numerical computations based on the formatting of the answer
+    if ans_parsed.passed("NUMBER_VALUE"):
+        parameters["rtol"] = parameters.get(
+            "rtol",
+            compute_relative_tolerance_from_significant_decimals(
+                ans_parsed.value.content_string()
+            ),
+        )
+
+    def expand_units(node):
+        parser = quantity_parser(units_string, strictness)
+        if node.label == "UNIT" and len(node.children) == 0 and node.content not in [x[0] for x in set_of_SI_base_unit_dimensions]:
+            expanded_unit_content = conversion_to_base_si_units[node.content]
+            node = parser.parse(parser.scan(expanded_unit_content))[0]
+        for k, child in enumerate(node.children):
+            node.children[k] = expand_units(child)
+        return node
+
+    def convert_to_standard_unit(q):
+        q_converted_value = q.value.content_string() if q.value is not None else None
+        q_converted_unit = None
+        if q.unit is not None:
+            q_converted_unit = q.unit.copy()
+            q_converted_unit = expand_units(q_converted_unit)
+            q_converted_unit = q_converted_unit.content_string()
+            q_converted_unit = parse_expression(q_converted_unit, parsing_params)
+        if q.passed("FULL_QUANTITY"):
+            try:
+                q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
+                q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify()
+            except Exception as e:
+                raise Exception("SymPy was unable to parse the answer unit") from e
+            q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
+        return q_converted_value, q_converted_unit
+
+    ans_converted_value, ans_converted_unit = convert_to_standard_unit(ans_parsed)
+    res_converted_value, res_converted_unit = convert_to_standard_unit(res_parsed)
+
+    response_latex = []
+
+    if res_parsed.passed("HAS_VALUE"):
+        # TODO redesign symbolicEqual so that it can easily return latex version of input
+        if ans_parsed.passed("NUMBER_VALUE") and not res_parsed.passed("NUMBER_VALUE"):
+            preview_parameters = {**parameters}
+            del preview_parameters["rtol"]
+            value_comparison_response = symbolicEqual(res_parsed.value.original_string(), "0", preview_parameters)
+        else:
+            value_comparison_response = symbolicEqual(res_parsed.value.original_string(), "0", parameters)
+        # TODO Update symbolicEqual to use new evaluationResponse system
+        # response_latex += [value_comparison_response.response_latex]
+        response_latex += [value_comparison_response.get("response_latex", "")]
+    if res_latex is not None and len(res_latex) > 0:
+        if len(response_latex) > 0:
+            response_latex += ["~"]
+        response_latex += [res_latex]
+    eval_response.latex = "".join(response_latex)
+
+    def compare_response_and_answer(comp_tag, action, not_res_tag, not_res_message, not_ans_tag, not_ans_message):
+        if res_parsed.passed(comp_tag) and ans_parsed.passed(comp_tag):
+            eval_response.is_correct = eval_response.is_correct and action()
+        elif not res_parsed.passed(comp_tag) and ans_parsed.passed(comp_tag):
+            eval_response.add_feedback((not_res_tag, not_res_message))
+            eval_response.is_correct = False
+        elif res_parsed.passed(comp_tag) and not ans_parsed.passed(comp_tag):
+            eval_response.add_feedback((not_ans_tag, not_ans_message))
+            eval_response.is_correct = False
+
+    compare_response_and_answer(
+        "HAS_VALUE", lambda: symbolic_comparison(res_converted_value, ans_converted_value, parameters)["is_correct"],
+        "MISSING_VALUE", "The response is missing a value.",
+        "UNEXPECTED_VALUE", "The response is expected only have unit(s), no value."
+    )
+
+    compare_response_and_answer(
+        "HAS_UNIT", lambda: bool((res_converted_unit - ans_converted_unit).simplify() == 0),
+        "MISSING_UNIT", "The response is missing unit(s).",
+        "UNEXPECTED_UNIT", "The response is expected only have unit(s), no value."
+    )
+
+    # TODO: Comparison of units in way that allows for constructive feedback
+
+    for criterion in res_parsed.passed_dict.keys():
+        eval_response.add_feedback((criterion,  res_parsed.passed(criterion)))
+
+    return eval_response
 
 # -----
 # TESTS
