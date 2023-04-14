@@ -511,10 +511,10 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     eval_response.is_correct = True
     units_string = parameters.get("units_string", "SI")
     strictness = parameters.get("strictness", "strict")
-    try:
-        ans_parsed, ans_latex = quantity_parsing(answer, units_string=units_string, strictness=strictness)
-    except Exception as e:
-        raise Exception("Could not parse quantity expression in answer: "+str(e)) from e
+    #try:
+    ans_parsed, ans_latex = quantity_parsing(answer, units_string=units_string, strictness=strictness)
+    #except Exception as e:
+    #    raise Exception("Could not parse quantity expression in answer: "+str(e)) from e
 
     try:
         res_parsed, res_latex = quantity_parsing(response, units_string=units_string, strictness=strictness)
