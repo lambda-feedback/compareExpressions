@@ -3,7 +3,6 @@ from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom
 from sympy import Equality
 
 from app.expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
-from app.parsers import SLR_implicit_multiplication_convention_parser
 
 parse_error_warning = lambda x: f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct codes for input symbols are used, correct notation is used, that the expression is unambiguous and that all parentheses are closed."
 
@@ -291,9 +290,9 @@ def check_equality(response, answer, params) -> dict:
     # Dealing with special cases that aren't accepted by SymPy
     response, answer, remark = Absolute(response, answer)
 
-    parser = SLR_implicit_multiplication_convention_parser(params.get("implicit_multiplication_convention", "equal_precedence"))
-    answer = parser.parse(parser.scan(answer))[0].content_string()
-    response = parser.parse(parser.scan(response))[0].content_string()
+#    parser = SLR_implicit_multiplication_convention_parser(params.get("implicit_multiplication_convention", "equal_precedence"))
+#    answer = parser.parse(parser.scan(answer))[0].content_string()
+#    response = parser.parse(parser.scan(response))[0].content_string()
 
     if params.get("strict_syntax",True):
         if "^" in response:

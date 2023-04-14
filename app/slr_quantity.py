@@ -7,9 +7,11 @@ from app.expression_utilities import parse_expression
 from app.symbolic_equal import evaluation_function as symbolicEqual
 from app.comparison_utilities import symbolic_comparison, compute_relative_tolerance_from_significant_decimals
 from app.criteria_utilities import CriterionCollection
+from app.feedback.physical_quantities import criteria as physical_quantities_criteria
 from app.feedback.physical_quantities import internal as physical_quantities_messages
 from app.feedback.physical_quantities import QuantityTags
-from app.slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode
+#from app.physical_quantities_criteria_functions import check_criterion
+from app.slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
 from app.unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
@@ -76,62 +78,14 @@ criteria.add_criterion(
         lambda result: "There were parsing ambiguities:\n"+result
     )
 
-
-def criteria_parser():
-    start_symbol = "START"
-    end_symbol = "END"
-    null_symbol = "NULL"
-
-    operations = {
-        "and":           lambda x, y: x and y,
-        "not":           lambda x: not x,
-        "has":           lambda x: x is not None,
-        "unit":          lambda x: x.unit,
-        "value":         lambda x: x.value,
-        "is_number":     lambda x: x.value is not None and x.value.tags == {QuantityTags.N},
-        "is_expression": lambda x: x.value is not None and QuantityTags.V in x.value.tags,
-    }
-
-    token_list = [
-        (start_symbol,   start_symbol),
-        (end_symbol,     end_symbol),
-        (null_symbol,    null_symbol),
-        (" *BOOL *",     "BOOL"),
-        (" *UNIT *",     "UNIT"),
-        (" *VALUE *",    "VALUE"),
-        (" *QUANTITY *", "QUANTITY"),
-        ("\( *",         "START_DELIMITER"),
-        (" *\)",         "END_DELIMITER"),
-        ("INPUT",        "INPUT", catch_undefined),
-    ]
-    token_list += [(x[0], x[0], x[1]) for x in operations]
-
-    productions = [
-        ("START",    "BOOL"),
-        ("BOOL",     "BOOL and BOOL"),
-        ("BOOL",     "UNIT matches UNIT"),
-        ("BOOL",     "VALUE matches VALUE"),
-        ("BOOL",     "QUANTITY matches QUANTITY"),
-        ("BOOL",     "not(BOOL)"),
-        ("BOOL",     "has(UNIT)"),
-        ("BOOL",     "has(VALUE)"),
-        ("BOOL",     "is_number(VALUE)"),
-        ("BOOL",     "is_expression(VALUE)"),
-        ("UNIT",     "unit(QUANTITY)"),
-        ("VALUE",    "value(QUANTITY)"),
-        ("QUANTITY", "INPUT"),
-        ("QUANTITY", "response"),
-        ("QUANTITY", "answer"),
-    ]
-
-    parser = SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
-
-    return parser
+# -----------------
+# QUANTITY HANDLING
+# -----------------
 
 
 class PhysicalQuantity:
 
-    def __init__(self, ast_root, messages=[], tag_handler=lambda x: x):
+    def __init__(self, ast_root, criteria, messages=[], tag_handler=lambda x: x):
         self.messages = messages
         self.ast_root = ast_root
         self.tag_handler = tag_handler
@@ -211,11 +165,6 @@ class PhysicalQuantity:
                 self._rotate_right()
                 self._rotate_until_root_is_split()
         return
-
-
-# ---------
-# FUNCTIONS
-# ---------
 
 def SLR_generate_unit_dictionaries(units_string, strictness):
 
@@ -465,7 +414,7 @@ def SLR_quantity_parsing(expr, units_string="SI", strictness="strict"):
         raise Exception("Parsed quantity does not have a single root.")
 
     tag_handler = set_tags(strictness)
-    quantity = PhysicalQuantity(quantity[0], messages=[], tag_handler=tag_handler)
+    quantity = PhysicalQuantity(quantity[0], messages=[], criteria=criteria, tag_handler=tag_handler)
 
     def unit_latex(node):
         # TODO: skip unnecessary parenthesis (i.e. check for GROUP children for powers and fraction and inside groups)
@@ -495,8 +444,67 @@ def SLR_quantity_parsing(expr, units_string="SI", strictness="strict"):
 
     return quantity, unit_latex_string
 
+# -----------------
+# CRITERIA HANDLING
+# -----------------
+
+criteria_operations = {
+    "and":           lambda x: x[0] and x[1],
+    "not":           lambda x: not x[0],
+    "has":           lambda x: x[0] is not None,
+    "unit":          lambda quantity: quantity[0].unit,
+    "value":         lambda quantity: quantity[0].value,
+    "is_number":     lambda value: value[0] is not None and value[0].tags == {QuantityTags.N},
+    "is_expression": lambda value: value[0] is not None and QuantityTags.V in value[0].tags,
+}
+
+def generate_criteria_parser():
+    start_symbol = "START"
+    end_symbol = "END"
+    null_symbol = "NULL"
+
+    token_list = [
+        (start_symbol,   start_symbol),
+        (end_symbol,     end_symbol),
+        (null_symbol,    null_symbol),
+        (" *BOOL *",     "BOOL"),
+        (" *UNIT *",     "UNIT"),
+        (" *VALUE *",    "VALUE"),
+        (" *QUANTITY *", "QUANTITY"),
+        ("\( *",         "START_DELIMITER"),
+        (" *\)",         "END_DELIMITER"),
+        ("response",     "QUANTITY"),
+        ("answer",       "QUANTITY"),
+        ("INPUT",        "INPUT", catch_undefined),
+    ]
+    token_list += [(" *"+x+" *"," "+x+" ") for x in criteria_operations.keys()]
+
+    productions = [
+        ("START",    "BOOL", create_node),
+        ("BOOL",     "BOOL and BOOL", infix),
+        ("BOOL",     "UNIT matches UNIT", infix),
+        ("BOOL",     "VALUE matches VALUE", infix),
+        ("BOOL",     "QUANTITY matches QUANTITY", infix),
+        ("BOOL",     "not(BOOL)", operate(1)),
+        ("BOOL",     "has(UNIT)", operate(1)),
+        ("BOOL",     "has(VALUE)", operate(1)),
+        ("BOOL",     "is_number(VALUE)", operate(1)),
+        ("BOOL",     "is_expression(VALUE)", operate(1)),
+        ("UNIT",     "unit(QUANTITY)", operate(1)),
+        ("VALUE",    "value(QUANTITY)", operate(1)),
+        ("QUANTITY", "INPUT", create_node),
+    ]
+
+    return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
+
+criteria_parser = generate_criteria_parser()
+
+# -------------------
+# QUANTITY COMPARISON
+# -------------------
+
 def quantity_comparison(response, answer, parameters, parsing_params, eval_response):
-    # Removing SLR from parsing to clarify that the implementation of the parser should not matter here
+    # Removing SLR from function names since the implementation of the parser should not matter here
     quantity_parser = SLR_quantity_parser
     quantity_parsing = SLR_quantity_parsing
     # Routine for comparing quantities starts here
@@ -506,7 +514,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     try:
         ans_parsed, ans_latex = quantity_parsing(answer, units_string=units_string, strictness=strictness)
     except Exception as e:
-        raise Exception("Could not parse quantity expression") from e
+        raise Exception("Could not parse quantity expression in answer") from e
 
     try:
         res_parsed, res_latex = quantity_parsing(response, units_string=units_string, strictness=strictness)
@@ -600,8 +608,40 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
 
     # TODO: Comparison of units in way that allows for constructive feedback
 
-    for criterion in res_parsed.passed_dict.keys():
-        eval_response.add_feedback((criterion,  res_parsed.passed(criterion)))
+    def check_criterion(criterion):
+        criterion_tokens = criteria_parser.scan(criterion[0])
+        criteria_args = []
+        for token in criterion_tokens:
+            if token.label == "QUANTITY":
+                key = token.content.strip().lower()
+                if key == "response":
+                    token.content = res_parsed
+                elif key == "answer":
+                    token.content = ans_parsed
+                else:
+                    try:
+                        quantity_parsed, _ = quantity_parsing(answer, units_string=units_string, strictness=strictness)
+                    except Exception as e:
+                        raise Exception("Could not parse quantity expression in criteria") from e
+                    token.content = quantity_parsed
+                criteria_args.append(token.content)
+        criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+        def execute(node):
+            key = node.label.strip()
+            if key in criteria_operations.keys():
+                executed_children = [execute(c) for c in node.children]
+                return criteria_operations[key](executed_children)
+            elif key == "QUANTITY":
+                return node.content
+        result = execute(criterion_parsed)
+        feedback_dictionary = criterion[1]
+        tag = feedback_dictionary[result][0]
+        feedback = feedback_dictionary[result][1](criteria_args)
+        return tag, feedback 
+
+    for criterion in physical_quantities_criteria.items():
+        tag, feedback = check_criterion(criterion)
+        eval_response.add_feedback((tag,feedback))
 
     return eval_response
 
