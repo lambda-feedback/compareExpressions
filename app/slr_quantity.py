@@ -290,8 +290,8 @@ def SLR_quantity_parser(units_string="SI common imperial", strictness="natural")
                 chars_in_keys.add(c)
 
         def starts_with_unit(string):
-            units_end = prefixed_units_end_dictionary | units_end_dictionary
-            units = prefixed_units_dictionary | units_dictionary
+            units_end = {**prefixed_units_end_dictionary, **units_end_dictionary}
+            units = {**prefixed_units_dictionary, **units_dictionary}
             token = None
             unit = None
             end_point = len(string)
