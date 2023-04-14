@@ -514,7 +514,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     try:
         ans_parsed, ans_latex = quantity_parsing(answer, units_string=units_string, strictness=strictness)
     except Exception as e:
-        raise Exception("Could not parse quantity expression in answer") from e
+        raise Exception("Could not parse quantity expression in answer: "+str(e)) from e
 
     try:
         res_parsed, res_latex = quantity_parsing(response, units_string=units_string, strictness=strictness)
@@ -622,7 +622,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                     try:
                         quantity_parsed, _ = quantity_parsing(answer, units_string=units_string, strictness=strictness)
                     except Exception as e:
-                        raise Exception("Could not parse quantity expression in criteria") from e
+                        raise Exception("Could not parse quantity expression in criteria: "+str(e)) from e
                     token.content = quantity_parsed
                 criteria_args.append(token.content)
         criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
