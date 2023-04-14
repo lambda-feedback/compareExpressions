@@ -9,17 +9,18 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 # Copy the evaluation and testing scripts
-COPY evaluation.py ./app/
-COPY evaluation_tests.py ./app/
-COPY evaluation_response_utilities.py ./app/
-COPY expression_utilities.py ./app/
+COPY comparison_utilities.py ./app/
 COPY criteria_utilities.py ./app/
-COPY static_unit_conversion_arrays.py ./app/
-COPY slr_strict_si_syntax.py ./app/
-COPY slr_strict_si_syntax_tests.py ./app/
+COPY evaluation.py ./app/
+COPY evaluation_response_utilities.py ./app/
+COPY evaluation_tests.py ./app/
+COPY expression_utilities.py ./app/
+COPY feedback/physical_quantities.py ./app/feedback/
 COPY slr_parsing_utilities.py ./app/
+COPY slr_quantity.py ./app/
+COPY slr_quantity_tests.py ./app/
 COPY symbolic_equal.py ./app/
-COPY demo_stuff.py ./app/
+COPY unit_system_conversions.py ./app/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
