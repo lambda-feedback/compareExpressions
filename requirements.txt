@@ -1,3 +1,0 @@
-mpmath==1.2.1
-sympy==1.10.1
-pytest==7.2.0
