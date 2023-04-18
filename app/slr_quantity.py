@@ -18,6 +18,7 @@ from app.unit_system_conversions import\
 # QUANTITY HANDLING
 # -----------------
 
+
 def expand_units(node, parser):
     if node.label == "UNIT" and len(node.children) == 0 and node.content not in [x[0] for x in set_of_SI_base_unit_dimensions]:
         expanded_unit_content = conversion_to_base_si_units[node.content]
@@ -25,6 +26,7 @@ def expand_units(node, parser):
     for k, child in enumerate(node.children):
         node.children[k] = expand_units(child, parser)
     return node
+
 
 class PhysicalQuantity:
 
@@ -36,8 +38,6 @@ class PhysicalQuantity:
         self.tag_handler = tag_handler
         self.value = None
         self.unit = None
-        self._converted_ast_root = None
-        self._converted = False
         self._rotate_until_root_is_split()
         if self.ast_root.label == "SPACE"\
             and QuantityTags.U not in self.ast_root.children[0].tags\
@@ -57,19 +57,6 @@ class PhysicalQuantity:
                 return ["", ""]
             self.value.traverse(revert_content)
         return
-
-    def convert(self):
-        if self._converted == False:
-            self.converted_ast_root = self.ast_root.copy()
-            self.converted_ast_root = expand_units(self.converted_ast_root, self.parser)
-            self._converted = True
-        return self.converted_ast_root
-
-    def convert_unit(self):
-        if self._converted == False:
-            self._converted_value, self._converted_value = convert_to_standard_unit(self)
-            self._converted = True
-        return self.converted_value
 
     def _rotate(self, direction):
         # right: direction = 1
@@ -118,6 +105,7 @@ class PhysicalQuantity:
                 self._rotate_right()
                 self._rotate_until_root_is_split()
         return
+
 
 def SLR_generate_unit_dictionaries(units_string, strictness):
 
@@ -267,7 +255,6 @@ def SLR_quantity_parser(units_string="SI common imperial", strictness="natural")
                             break
             return token, unit
 
-
     def starts_with_number(string):
         match_content = re.match('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
         match_content = match_content.group() if match_content is not None else None
@@ -395,6 +382,7 @@ def SLR_quantity_parsing(expr, parser, strictness, name):
 
     return quantity, unit_latex_string
 
+
 def quantity_comparison(response, answer, parameters, parsing_params, eval_response):
     eval_response.is_correct = False
     units_string = parameters.get("units_string", "SI")
@@ -411,7 +399,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     evaluated_criteria = dict()
     criteria = physical_quantities_criteria
 
-    def check_criterion(tag, arg_names = None):
+    def check_criterion(tag, arg_names=None):
         if arg_names is None:
             collect_args = True
             args = []
