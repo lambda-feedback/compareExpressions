@@ -33,7 +33,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         parameters, unsplittable_symbols=unsplittable_symbols
     )
 
-    if parameters.get("physical_quantity", False):
+    if parameters.get("physical_quantity", False) is True:
         eval_response = quantity_comparison(response, answer, parameters, parsing_params, eval_response)
     else:
         eval_response.is_correct = symbolic_comparison(response, answer, parameters)["is_correct"]
