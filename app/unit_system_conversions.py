@@ -1,6 +1,6 @@
 # Remarks:
 #   only K, no other temperature scales included
-#   angles measures, bel an neper are all treated as identical dimensionless units
+#   angle measures, bel and neper are all treated as identical dimensionless units
 
 """
 Prefixes taken from Table 5 https://physics.nist.gov/cuu/Units/prefixes.html and https://www.bipm.org/en/cgpm-2022/resolution-3

@@ -3,14 +3,14 @@
 # -------
 
 import re
-from app.expression_utilities import parse_expression
-from app.symbolic_equal import evaluation_function as symbolicEqual
-from app.comparison_utilities import symbolic_comparison, compute_relative_tolerance_from_significant_decimals
-from app.feedback.physical_quantities import criteria as physical_quantities_criteria
-from app.feedback.physical_quantities import internal as physical_quantities_messages
-from app.feedback.physical_quantities import QuantityTags
-from app.slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
-from app.unit_system_conversions import\
+from expression_utilities import parse_expression
+from symbolic_equal import evaluation_function as symbolicEqual
+from comparison_utilities import symbolic_comparison, compute_relative_tolerance_from_significant_decimals
+from feedback.physical_quantities import criteria as physical_quantities_criteria
+from feedback.physical_quantities import internal as physical_quantities_messages
+from feedback.physical_quantities import QuantityTags
+from slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
+from unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
 
@@ -421,6 +421,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                         token.content = args[number_of_args]
                         number_of_args += 1
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+
             def execute(node):
                 key = node.label.strip()
                 if key in criteria_operations.keys():
