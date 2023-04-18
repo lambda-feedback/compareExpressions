@@ -1,8 +1,8 @@
 import pytest
 import os
 
-from app.slr_quantity import SLR_quantity_parsing
-from app.unit_system_conversions import\
+from slr_quantity import SLR_quantity_parsing
+from unit_system_conversions import\
     set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 
