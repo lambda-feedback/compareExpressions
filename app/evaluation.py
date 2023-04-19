@@ -1,11 +1,11 @@
-from expression_utilities import (
+from app.expression_utilities import (
     preprocess_expression,
     create_sympy_parsing_params
 )
-from evaluation_response_utilities import EvaluationResponse
-from comparison_utilities import symbolic_comparison
-from slr_quantity import quantity_comparison
-from unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
+from app.evaluation_response_utilities import EvaluationResponse
+from app.comparison_utilities import symbolic_comparison
+from app.slr_quantity import quantity_comparison
+from app.unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
 
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
