@@ -49,7 +49,9 @@ jobs:
 
       - name: Test Evaluation Function
         run: |
-          python -m pytest -v evaluation_tests.py::TestEvaluationFunction
+          cd ..
+          python -m pytest -v app/evaluation_tests.py::TestEvaluationFunction
+          cd app
 
   deploy-staging:
     name: Deploy Staging
