@@ -20,6 +20,7 @@ COPY slr_quantity.py ./app/
 COPY slr_quantity_tests.py ./app/
 COPY symbolic_equal.py ./app/
 COPY unit_system_conversions.py ./app/
+COPY benchmark.py ./app/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
