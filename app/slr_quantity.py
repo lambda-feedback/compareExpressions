@@ -595,9 +595,9 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
 
     for (tag, result) in evaluated_criteria.items():
         if result[0] is True:
-            eval_response.add_feedback((tag[0], "\u1F7E2 "+result[1]))
+            eval_response.add_feedback((tag[0], "<div style='color:green'>&#9679;</div>"+result[1]))
         elif result[0] is False:
-            eval_response.add_feedback((tag[0], "\u1F7E5 "+result[1]))
+            eval_response.add_feedback((tag[0], "<div style='color:red'>&#9632;</div>"+result[1]))
 
     # TODO: Comparison of units in way that allows for constructive feedback
 
