@@ -12,9 +12,9 @@ def no_feedback(inputs):
 
 class Criterion:
 
-    def __init__(self, check, feedback=dict(), feedback_for_undefined_key=undefined_key):
+    def __init__(self, check, feedback_for_undefined_key=undefined_key):
         self.check = check
-        self.feedback = feedback
+        self.feedback = dict()
         self.feedback_for_undefined_key = feedback_for_undefined_key
         return
 
@@ -24,7 +24,7 @@ class Criterion:
         return self.feedback_for_undefined_key
 
     def __setitem__(self, key, value):
-        self.feedback[key] = value
+        self.feedback.update({key: value})
         return
 
 
@@ -35,7 +35,7 @@ criteria["HAS_UNIT"][True] = lambda inputs: f"{inputs[0].name} has unit: {inputs
 criteria["HAS_UNIT"][False] = lambda inputs: f"{inputs[0].name} has no unit."
 
 criteria["HAS_VALUE"] = Criterion("has(value(QUANTITY))")
-criteria["HAS_VALUE"][True] = lambda inputs: f"{inputs[0].name} has value: {inputs[0].unit.content_string()}"
+criteria["HAS_VALUE"][True] = lambda inputs: f"{inputs[0].name} has value: {inputs[0].value.content_string()}"
 criteria["HAS_VALUE"][False] = lambda inputs: f"{inputs[0].name} has no value."
 
 criteria["ONLY_VALUE"] = Criterion("has(value(QUANTITY)) and not(has(unit(QUANTITY)))")
@@ -59,8 +59,8 @@ criteria["EXPR_VALUE"][True] = lambda inputs: f"{inputs[0].name} value is an exp
 criteria["EXPR_VALUE"][False] = lambda inputs: f"{inputs[0].name} value is not an expression."
 
 criteria["QUANTITY_MATCH"] = Criterion("QUANTITY matches QUANTITY")
-criteria["QUANTITY_MATCH"][True] = lambda inputs: f"{inputs[0].content_string()} matches {inputs[1].content_string()}"
-criteria["QUANTITY_MATCH"][False] = lambda inputs: f"{inputs[0].content_string()} does not match {inputs[1].content_string()}"
+criteria["QUANTITY_MATCH"][True] = lambda inputs: f"{inputs[0].ast_root.content_string()} matches {inputs[1].ast_root.content_string()}"
+criteria["QUANTITY_MATCH"][False] = lambda inputs: f"{inputs[0].ast_root.content_string()} does not match {inputs[1].ast_root.content_string()}"
 
 criteria["MISSING_VALUE"] = Criterion("not(has(value(response))) and has(value(answer))")
 criteria["MISSING_VALUE"][True] = lambda inputs: "The response is missing a value."
