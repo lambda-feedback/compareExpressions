@@ -63,8 +63,8 @@ class PhysicalQuantity:
         separator = ""
         if self.value_latex_string is not None and self.unit_latex_string is not None:
             separator = "~"
-        value_latex = self.value_latex_string if self.value_latex_string is not None else None
-        unit_latex = self.unit_latex_string if self.unit_latex_string is not None else None
+        value_latex = self.value_latex_string if self.value_latex_string is not None else ""
+        unit_latex = self.unit_latex_string if self.unit_latex_string is not None else ""
         self.latex_string = value_latex+separator+unit_latex
         return
 
