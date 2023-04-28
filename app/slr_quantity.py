@@ -61,9 +61,11 @@ class PhysicalQuantity:
         if self.unit is not None:
             self.unit_latex_string = "".join(self._unit_latex(self.unit))
         separator = ""
-        if len(str(self.value_latex_string)) > 0 and  len(str(self.unit_latex_string)) > 0:
-            separator = " "
-        self.latex_string = str(self.value_latex_string)+separator+str(self.unit_latex_string)
+        if self.value_latex_string is not None and self.unit_latex_string is not None:
+            separator = "~"
+        value_latex = self.value_latex_string if self.value_latex_string is not None else None
+        unit_latex = self.unit_latex_string if self.unit_latex_string is not None else None
+        self.latex_string = value_latex+separator+unit_latex
         return
 
     def _rotate(self, direction):
