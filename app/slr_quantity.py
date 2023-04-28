@@ -583,24 +583,11 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     response_latex = []
 
     if check_criterion("HAS_VALUE", arg_names=("response",)):
-        # TODO redesign symbolicEqual so that it can easily return latex version of input
         response_number_value = check_criterion("NUMBER_VALUE", ("response",))
         answer_number_value = check_criterion("NUMBER_VALUE", ("answer",))
-        if answer_number_value and not response_number_value:
-            preview_parameters = {**parameters}
-            del preview_parameters["rtol"]
-            value_comparison_response = symbolicEqual(quantities["response"].value.original_string(), "0", preview_parameters)
-        else:
-            value_comparison_response = symbolicEqual(quantities["response"].value.original_string(), "0", parameters)
-        # TODO Update symbolicEqual to use new evaluationResponse system
-        # response_latex += [value_comparison_response.response_latex]
-        response_latex += [value_comparison_response.get("response_latex", "")]
-    res_latex = quantities["response"].unit_latex_string
-    if res_latex is not None and len(res_latex) > 0:
-        if len(response_latex) > 0:
-            response_latex += ["~"]
-        response_latex += [res_latex]
-    eval_response.latex = "".join(response_latex)
+
+    # TODO redesign symbolicEqual so that it can easily return latex version of input
+    eval_response.latex = quantities["response"].latex_string
 
     for criterion in ["MISSING_VALUE", "MISSING_UNIT", "UNEXPECTED_VALUE", "UNEXPECTED_UNIT"]:
         check_criterion(criterion)
