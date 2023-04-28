@@ -30,7 +30,7 @@ def expand_units(node, parser):
 
 class PhysicalQuantity:
 
-    def __init__(self, name, ast_root, parser, messages=[], tag_handler=lambda x: x):
+    def __init__(self, name, parameters, ast_root, parser, messages=[], tag_handler=lambda x: x):
         self.name = name
         self.messages = messages
         self.ast_root = ast_root
@@ -56,6 +56,14 @@ class PhysicalQuantity:
                     self.messages += [("REVERTED_UNIT", physical_quantities_messages["REVERTED_UNIT"](node.original[:node.start], node.content, node.original[node.end+1:]))]
                 return ["", ""]
             self.value.traverse(revert_content)
+        self.value_latex_string = self._value_latex(parameters)
+        self.unit_latex_string = None
+        if self.unit is not None:
+            self.unit_latex_string = "".join(self._unit_latex(self.unit))
+        separator = ""
+        if len(str(self.value_latex_string)) > 0 and  len(str(self.unit_latex_string)) > 0:
+            separator = " "
+        self.latex_string = str(self.value_latex_string)+separator+str(self.unit_latex_string)
         return
 
     def _rotate(self, direction):
@@ -106,6 +114,38 @@ class PhysicalQuantity:
                 self._rotate_until_root_is_split()
         return
 
+    def _value_latex(self, parameters):
+        if self.value is not None:
+            preview_parameters = {**parameters}
+            if "rtol" in parameters.keys():
+                del parameters["rtol"]
+            value_comparison_response = symbolicEqual(self.value.original_string(), "0", parameters)
+            return value_comparison_response.get("response_latex", "")
+        return None
+
+    def _unit_latex(self, node):
+        # TODO: skip unnecessary parenthesis (i.e. check for GROUP children for powers and fraction and inside groups)
+        content = node.content
+        children = node.children
+        if node.label == "PRODUCT":
+            return self._unit_latex(children[0])+["\\cdot"]+self._unit_latex(children[1])
+        elif node.label == "NUMBER":
+            return [content]
+        elif node.label == "SPACE":
+            return self._unit_latex(children[0])+["~"]+self._unit_latex(children[1])
+        elif node.label == "UNIT":
+            return ["\\mathrm{"]+[content]+["}"]
+        elif node.label == "GROUP":
+            out = [content[0]]
+            for child in children:
+                out += self._unit_latex(child)
+            return out+[content[1]]
+        elif node.label == "POWER":
+            return self._unit_latex(children[0])+["^{"]+self._unit_latex(children[1])+["}"]
+        elif node.label == "SOLIDUS":
+            return ["\\frac{"]+self._unit_latex(children[0])+["}{"]+self._unit_latex(children[1])+["}"]
+        else:
+            return [content]
 
 def SLR_generate_unit_dictionaries(units_string, strictness):
 
@@ -202,7 +242,9 @@ def set_tags(strictness):
     return tag_handler
 
 
-def SLR_quantity_parser(units_string="SI common imperial", strictness="natural"):
+def SLR_quantity_parser(parameters):
+    units_string = parameters.get("units_string","SI common imperial")
+    strictness = parameters.get("strictness","natural")
     units_dictionary, prefixed_units_dictionary, units_end_dictionary, prefixed_units_end_dictionary = \
         SLR_generate_unit_dictionaries(units_string, strictness)
     max_unit_name_length = max(len(x) for x in [units_dictionary.keys()]+[units_end_dictionary.keys()])
@@ -341,7 +383,7 @@ def SLR_quantity_parser(units_string="SI common imperial", strictness="natural")
     return parser
 
 
-def SLR_quantity_parsing(expr, parser, strictness, name):
+def SLR_quantity_parsing(expr, parameters, parser, name):
 
     expr = expr.strip()
     tokens = parser.scan(expr)
@@ -351,36 +393,8 @@ def SLR_quantity_parsing(expr, parser, strictness, name):
     if len(quantity) > 1:
         raise Exception("Parsed quantity does not have a single root.")
 
-    tag_handler = set_tags(strictness)
-    quantity = PhysicalQuantity(name, quantity[0], parser, messages=[], tag_handler=tag_handler)
-
-    def unit_latex(node):
-        # TODO: skip unnecessary parenthesis (i.e. check for GROUP children for powers and fraction and inside groups)
-        content = node.content
-        children = node.children
-        if node.label == "PRODUCT":
-            return unit_latex(children[0])+["\\cdot"]+unit_latex(children[1])
-        elif node.label == "NUMBER":
-            return [content]
-        elif node.label == "SPACE":
-            return unit_latex(children[0])+["~"]+unit_latex(children[1])
-        elif node.label == "UNIT":
-            return ["\\mathrm{"]+[content]+["}"]
-        elif node.label == "GROUP":
-            out = [content[0]]
-            for child in children:
-                out += unit_latex(child)
-            return out+[content[1]]
-        elif node.label == "POWER":
-            return unit_latex(children[0])+["^{"]+unit_latex(children[1])+["}"]
-        elif node.label == "SOLIDUS":
-            return ["\\frac{"]+unit_latex(children[0])+["}{"]+unit_latex(children[1])+["}"]
-        else:
-            return [content]
-
-    unit_latex_string = "".join(unit_latex(quantity.unit)) if quantity.unit is not None else None
-
-    return quantity, unit_latex_string
+    tag_handler = set_tags(parameters.get("strictness","strict"))
+    return PhysicalQuantity(name, parameters, quantity[0], parser, messages=[], tag_handler=tag_handler)
 
 
 def quantity_comparison(response, answer, parameters, parsing_params, eval_response):
@@ -388,7 +402,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     units_string = parameters.get("units_string", "SI")
     strictness = parameters.get("strictness", "strict")
 
-    quantity_parser = SLR_quantity_parser(units_string=units_string, strictness=strictness)
+    quantity_parser = SLR_quantity_parser(parameters)
     quantity_parsing = SLR_quantity_parsing
 
     # -----------------
@@ -521,7 +535,6 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     # QUANTITY COMPARISON
     # -------------------
 
-    quantities_latex = dict()
     for criterion in criteria.values():
         criterion_tokens = criteria_parser.scan(criterion.check)
         relevant_quantities = set()
@@ -534,20 +547,18 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                     if content not in quantities.keys():
                         if content == "answer":
                             try:
-                                ans_parsed, ans_latex = quantity_parsing(answer, quantity_parser, strictness, "answer")
+                                ans_parsed = quantity_parsing(answer, parameters, quantity_parser, "answer")
                             except Exception as e:
                                 raise Exception("Could not parse quantity expression in answer: "+str(e)) from e
                             quantities.update({"answer": ans_parsed})
-                            quantities_latex.update({"answer": ans_latex})
                         elif content == "response":
                             try:
-                                res_parsed, res_latex = quantity_parsing(response, quantity_parser, strictness, "response")
+                                res_parsed = quantity_parsing(response, parameters, quantity_parser, "response")
                             except Exception as e:
                                 eval_response.add_feedback(("PARSE_EXCEPTION", str(e)))
                                 eval_response.is_correct = False
                                 return eval_response
                             quantities.update({"response": res_parsed})
-                            quantities_latex.update({"response": res_latex})
                         else:
                             relevant_quantities.update({token.content.strip(): token.content.strip()})
             elif token.label.strip() in criteria_operations.keys():
@@ -582,6 +593,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
         # TODO Update symbolicEqual to use new evaluationResponse system
         # response_latex += [value_comparison_response.response_latex]
         response_latex += [value_comparison_response.get("response_latex", "")]
+    res_latex = quantities["response"].unit_latex_string
     if res_latex is not None and len(res_latex) > 0:
         if len(response_latex) > 0:
             response_latex += ["~"]
@@ -595,9 +607,9 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
 
     for (tag, result) in evaluated_criteria.items():
         if result[0] is True:
-            eval_response.add_feedback((tag[0], "<div style='color:green'>\u25CF</div>"+result[1]))
+            eval_response.add_feedback((tag[0], "<span style='color:green'>\u2B24</span>"+result[1]))
         elif result[0] is False and len(result[1].strip()) > 0:
-            eval_response.add_feedback((tag[0], "<div style='color:red'>\u25A0</div>"+result[1]))
+            eval_response.add_feedback((tag[0], "<span style='color:red'>\u25A0</span>"+result[1]))
 
     # TODO: Comparison of units in way that allows for constructive feedback
 

@@ -1,6 +1,6 @@
 import pytest
 import os
-# from app.slr_quantity_tests import TestEvaluationFunction as TestStrictSLRSyntax
+from .slr_quantity_tests import TestEvaluationFunction as TestStrictSLRSyntax
 # from app.slr_quantity_tests import slr_strict_si_syntax_test_cases
 # from app.evaluation import evaluation_function
 
