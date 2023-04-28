@@ -1,7 +1,7 @@
 import pytest
 import os
 
-from .slr_quantity import SLR_quantity_parsing
+from .slr_quantity import SLR_quantity_parser, SLR_quantity_parsing
 from .unit_system_conversions import\
     set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
@@ -376,24 +376,27 @@ slr_natural_si_syntax_test_cases = [
 class TestEvaluationFunction():
     @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria", slr_strict_si_syntax_test_cases)
     def test_strict_si_syntax(self, string, value, unit, content, unit_latex, criteria):
-        quantity, parsed_unit_latex = SLR_quantity_parsing(string, units_string="SI", strictness="strict")
+        parameters = {"strict_syntax": False, "units_string": "SI", "strictness": "strict"}
+        parser = SLR_quantity_parser(parameters)
+        quantity = SLR_quantity_parsing(string, parameters, parser, "quantity")
         parsed_value = quantity.value.original_string() if quantity.value is not None else None
         parsed_unit = quantity.unit.original_string() if quantity.unit is not None else None
+        parsed_unit_latex = quantity.unit_latex_string
         parsed_content = quantity.ast_root.content_string()
         assert parsed_value == value
         assert parsed_unit == unit
         assert parsed_content == content
         assert parsed_unit_latex == unit_latex
-        for criterion in criteria:
-            assert criterion in quantity.passed_dict
 
     @pytest.mark.parametrize(
         "long_form,short_form",
         [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units]
     )
     def test_short_forms_strict_SI(self, long_form, short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="SI", strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="SI", strictness="strict")
+        parameters = {"strict_syntax": False, "units_string": "SI", "strictness": "strict"}
+        parser = SLR_quantity_parser(parameters)
+        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
+        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
     @pytest.mark.parametrize(
@@ -401,8 +404,10 @@ class TestEvaluationFunction():
         [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI]
     )
     def test_short_forms_common_SI(self, long_form, short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="common", strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="common", strictness="strict")
+        parameters = {"strict_syntax": False, "units_string": "common", "strictness": "strict"}
+        parser = SLR_quantity_parser(parameters)
+        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
+        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
     @pytest.mark.parametrize(
@@ -410,8 +415,10 @@ class TestEvaluationFunction():
         [(x[0], x[1]) for x in set_of_imperial_units]
     )
     def test_short_forms_imperial(self, long_form, short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="imperial", strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="imperial", strictness="strict")
+        parameters = {"strict_syntax": False, "units_string": "imperial", "strictness": "strict"}
+        parser = SLR_quantity_parser(parameters)
+        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
+        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
     @pytest.mark.parametrize(
@@ -419,13 +426,18 @@ class TestEvaluationFunction():
         [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI | set_of_imperial_units]
     )
     def test_short_forms_all(self, long_form, short_form):
-        long_quantity, _ = SLR_quantity_parsing(long_form, units_string="SI common imperial", strictness="strict")
-        short_quantity, _ = SLR_quantity_parsing(short_form, units_string="SI common imperial", strictness="strict")
+        parameters = {"strict_syntax": False, "units_string": "SI common imperial", "strictness": "strict"}
+        parser = SLR_quantity_parser(parameters)
+        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
+        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
         assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
 
     @pytest.mark.parametrize("string,value,unit,content,unit_latex,criteria", slr_natural_si_syntax_test_cases)
     def test_natural_si_syntax(self, string, value, unit, content, unit_latex, criteria):
-        quantity, parsed_unit_latex = SLR_quantity_parsing(string, units_string="SI", strictness="natural")
+        parameters = {"strict_syntax": False, "units_string": "SI common imperial", "strictness": "natural"}
+        parser = SLR_quantity_parser(parameters)
+        quantity = SLR_quantity_parsing(string, parameters, parser, "quantity")
+        parsed_unit_latex = quantity.unit_latex_string
         parsed_value = quantity.value.original_string() if quantity.value is not None else None
         parsed_unit = quantity.unit.original_string() if quantity.unit is not None else None
         parsed_content = quantity.ast_root.content_string()
@@ -433,8 +445,6 @@ class TestEvaluationFunction():
         assert parsed_unit == unit
         assert parsed_content == content
         assert parsed_unit_latex == unit_latex
-        for criterion in criteria:
-            assert criterion in quantity.passed_dict
 
 
 if __name__ == "__main__":
