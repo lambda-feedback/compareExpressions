@@ -584,9 +584,11 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
 
     if check_criterion("HAS_VALUE", arg_names=("response",)):
         response_number_value = check_criterion("NUMBER_VALUE", ("response",))
-        answer_number_value = check_criterion("NUMBER_VALUE", ("answer",))
+        response_number_value = check_criterion("EXPR_VALUE", ("response",))
+    if check_criterion("HAS_VALUE", arg_names=("answer",)):
+        response_number_value = check_criterion("NUMBER_VALUE", ("answer",))
+        response_number_value = check_criterion("EXPR_VALUE", ("answer",))
 
-    # TODO redesign symbolicEqual so that it can easily return latex version of input
     eval_response.latex = quantities["response"].latex_string
 
     for criterion in ["MISSING_VALUE", "MISSING_UNIT", "UNEXPECTED_VALUE", "UNEXPECTED_UNIT"]:
