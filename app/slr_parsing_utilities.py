@@ -297,7 +297,7 @@ def SLR_expression_parser(nodes=[], infix_operators=[], delimiters=[], undefined
 
     for (delims, action) in delimiters:
         token_list += [(re.escape(delims[0])+" *", "START_DELIMITER"), (" *"+re.escape(delims[1]), "END_DELIMITER")]
-        productions += [( expression_node[0], delims[0]+expression_node[0]+delims[1], action)]
+        productions += [(expression_node[0], delims[0]+expression_node[0]+delims[1], action)]
 
     productions += costum_productions
 

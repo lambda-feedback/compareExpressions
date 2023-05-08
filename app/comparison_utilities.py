@@ -1,5 +1,5 @@
-from app.symbolic_equal import evaluation_function as symbolicEqual
-from app.slr_parsing_utilities import SLR_expression_parser, compose, group, infix
+from .symbolic_equal import evaluation_function as symbolicEqual
+from .slr_parsing_utilities import SLR_expression_parser, compose, group, infix
 
 
 def SLR_implicit_multiplication_convention_parser(convention):

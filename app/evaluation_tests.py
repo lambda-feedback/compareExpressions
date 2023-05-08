@@ -1,13 +1,13 @@
 import pytest
 import os
-# from app.slr_quantity_tests import TestEvaluationFunction as TestStrictSLRSyntax
+from .slr_quantity_tests import TestEvaluationFunction as TestStrictSLRSyntax
 # from app.slr_quantity_tests import slr_strict_si_syntax_test_cases
 # from app.evaluation import evaluation_function
 
 # from slr_quantity_tests import TestClass as TestStrictSLRSyntax
-from app.slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
-from app.evaluation import evaluation_function
-from app.unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units, set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
+from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
+from .evaluation import evaluation_function
+from .unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units, set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
 
 
 class TestEvaluationFunction():
@@ -184,17 +184,18 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "res,is_correct,tag",
         [
-            ("-10.5 kilogram m/s^2",                    True,  "RESPONSE_FULL_QUANTITY"),
-            ("-10.5 kg m/s^2",                          True,  "RESPONSE_FULL_QUANTITY"),
+            ("-10.5 kilogram metre/second^2",           True,  "QUANTITY_MATCH"),
+            ("-10.5 kilogram m/s^2",                    True,  "QUANTITY_MATCH"),
+            ("-10.5 kg m/s^2",                          True,  "QUANTITY_MATCH"),
             ("-0.5 kg m/s^2+10 kg m/s^2",               False, "REVERTED_UNIT"),
-            ("-10500 g m/s^2",                          True,  "RESPONSE_FULL_QUANTITY"),
-            ("-10.46 kg m/s^2",                         True,  "RESPONSE_FULL_QUANTITY"),
-            ("-10.54 kg m/s^2",                         True,  "RESPONSE_FULL_QUANTITY"),
-            ("-10.44 kg m/s^2",                         False, "RESPONSE_FULL_QUANTITY"),
-            ("-10.56 kg m/s^2",                         False, "RESPONSE_FULL_QUANTITY"),
+            ("-10500 g m/s^2",                          True,  "QUANTITY_MATCH"),
+            ("-10.46 kg m/s^2",                         True,  "QUANTITY_MATCH"),
+            ("-10.54 kg m/s^2",                         True,  "QUANTITY_MATCH"),
+            ("-10.44 kg m/s^2",                         False, "HAS_VALUE"),
+            ("-10.56 kg m/s^2",                         False, "HAS_VALUE"),
             ("-10.5",                                   False, "MISSING_UNIT"),
             ("kg m/s^2",                                False, "MISSING_VALUE"),
-            ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "RESPONSE_FULL_QUANTITY"),
+            ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "QUANTITY_MATCH"),
         ]
     )
     def test_demo_si_units_demo_a(self, res, is_correct, tag):
@@ -207,9 +208,9 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "res,ans,is_correct,tag,latex",
         [
-            ("-10.5",          "-10.5",    True,  "RESPONSE_NUMBER_VALUE",     r"-10.5"),
+            ("-10.5",          "-10.5",    True,  "NUMBER_VALUE",     r"-10.5"),
             ("-10.5 kg m/s^2", "-10.5",    False, "UNEXPECTED_UNIT",  r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
-            ("kg m/s^2",       "kg m/s^2", True,  "RESPONSE_ONLY_UNIT",        r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
+            ("kg m/s^2",       "kg m/s^2", True,  "QUANTITY_MATCH",   r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
             ("-10.5 kg m/s^2", "kg m/s^2", False, "UNEXPECTED_VALUE", r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
         ]
     )
@@ -235,5 +236,4 @@ class TestEvaluationFunction():
 
 
 if __name__ == "__main__":
-    pytest.main(['-xsk not slow', "--tb=auto", os.path.abspath(__file__)])
-    #pytest.main(['-s', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])

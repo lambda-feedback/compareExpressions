@@ -10,7 +10,6 @@ RUN pip3 install -r requirements.txt
 
 # Copy the evaluation and testing scripts
 COPY comparison_utilities.py ./app/
-COPY criteria_utilities.py ./app/
 COPY evaluation.py ./app/
 COPY evaluation_response_utilities.py ./app/
 COPY evaluation_tests.py ./app/
