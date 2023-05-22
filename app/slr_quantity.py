@@ -3,9 +3,9 @@
 # -------
 
 import re
-from .expression_utilities import parse_expression
-from .symbolic_equal import evaluation_function as symbolicEqual
-from .comparison_utilities import symbolic_comparison, compute_relative_tolerance_from_significant_decimals
+from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals
+from .symbolic_equal import evaluation_function as symbolic_comparison
+from .symbolic_equal_preview import preview_function as symbolic_preview
 from .feedback.physical_quantities import criteria as physical_quantities_criteria
 from .feedback.physical_quantities import internal as physical_quantities_messages
 from .feedback.physical_quantities import QuantityTags
@@ -119,10 +119,13 @@ class PhysicalQuantity:
     def _value_latex(self, parameters):
         if self.value is not None:
             preview_parameters = {**parameters}
-            if "rtol" in parameters.keys():
-                del parameters["rtol"]
-            value_comparison_response = symbolicEqual(self.value.original_string(), "0", parameters)
-            return value_comparison_response.get("response_latex", "")
+#            if "rtol" in preview_parameters.keys():
+#                del preview_parameters["rtol"]
+            if "rtol" not in preview_parameters.keys():
+                preview_parameters.update({"rtol": 1e-12})
+            value_latex = symbolic_preview(self.value.original_string(), preview_parameters)
+            value_latex = symbolic_preview(self.value.original_string(), preview_parameters)["preview"]["latex"]
+            return value_latex
         return None
 
     def _unit_latex(self, node):
@@ -401,8 +404,6 @@ def SLR_quantity_parsing(expr, parameters, parser, name):
 
 def quantity_comparison(response, answer, parameters, parsing_params, eval_response):
     eval_response.is_correct = False
-    units_string = parameters.get("units_string", "SI")
-    strictness = parameters.get("strictness", "strict")
 
     quantity_parser = SLR_quantity_parser(parameters)
     quantity_parsing = SLR_quantity_parsing
@@ -580,14 +581,12 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ),
         )
 
-    response_latex = []
-
     if check_criterion("HAS_VALUE", arg_names=("response",)):
-        response_number_value = check_criterion("NUMBER_VALUE", ("response",))
-        response_number_value = check_criterion("EXPR_VALUE", ("response",))
+        check_criterion("NUMBER_VALUE", ("response",))
+        check_criterion("EXPR_VALUE", ("response",))
     if check_criterion("HAS_VALUE", arg_names=("answer",)):
-        response_number_value = check_criterion("NUMBER_VALUE", ("answer",))
-        response_number_value = check_criterion("EXPR_VALUE", ("answer",))
+        check_criterion("NUMBER_VALUE", ("answer",))
+        check_criterion("EXPR_VALUE", ("answer",))
 
     eval_response.latex = quantities["response"].latex_string
 
