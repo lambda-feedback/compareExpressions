@@ -98,7 +98,7 @@ def check_equality(response, answer, params, eval_response) -> dict:
 
     answer, response = substitute_input_symbols([answer, response],params)
     parsing_params = create_sympy_parsing_params(params)
-    parsing_params.update({"rationalise": True})
+    parsing_params.update({"rationalise": True, "simplify": True})
     parsing_params["extra_transformations"] = parser_transformations[9] # Add conversion of equal signs
 
     if "symbol_assumptions" in params.keys():
@@ -147,7 +147,6 @@ def check_equality(response, answer, params, eval_response) -> dict:
 
     # Add how res was interpreted to the response
     eval_response.latex = latex(res)
-    res = res.simplify()
     eval_response.simplified = str(res)
 
     if (not isinstance(res,Equality)) and isinstance(ans,Equality):

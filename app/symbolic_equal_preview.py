@@ -232,8 +232,6 @@ def preview_function(response: str, params: Params) -> Result:
         latex_out = []
         sympy_out = []
         for expression in expression_list:
-            if params.get("simplify", False):
-                expression = sympy.simplify(expression)
             latex_out.append(
                 LatexPrinter({"symbol_names": latex_symbols(symbols)}).doprint(expression)
             )

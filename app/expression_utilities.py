@@ -13,8 +13,8 @@ from .feedback.symbolic_comparison import internal as symbolic_comparison_intern
 
 elementary_functions_names = [
     ('sin', []), ('sinc', []), ('csc', ['cosec']), ('cos', []), ('sec', []), ('tan', []), ('cot', ['cotan']),
-    ('asin', ['arcsin']), ('acsc', ['arccsc', 'arccosec']), ('acos', ['arccos']), ('asec', ['arcsec']),
-    ('atan', ['arctan']), ('acot', ['arccot', 'arccotan']), ('atan2', ['arctan2']),
+    ('asin', ['arcsin']), ('acsc', ['arccsc', 'arccosec', 'acosec']), ('acos', ['arccos']), ('asec', ['arcsec']),
+    ('atan', ['arctan']), ('acot', ['arccot', 'arccotan', 'acotan']), ('atan2', ['arctan2']),
     ('sinh', []), ('cosh', []), ('tanh', []), ('csch', ['cosech']), ('sech', []),
     ('asinh', ['arcsinh']), ('acosh', ['arccosh']), ('atanh', ['arctanh']),
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
@@ -392,8 +392,12 @@ def parse_expression(expr, parsing_params):
     separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
     if parsing_params["elementary_functions"] is True:
         alias_substitutions = []
-        for (name, alias) in elementary_functions_names:
-            alias_substitutions += [(name, name)] + [(x, name) for x in alias]
+        for (name, alias_list) in elementary_functions_names:
+            if name in expr:
+                    alias_substitutions += [(name, name)]
+            for alias in alias_list:
+                if alias in expr:
+                    alias_substitutions += [(alias, name)]
         alias_substitutions.sort(key=lambda x: -len(x[0]))
         expr = substitute(expr, alias_substitutions)
         separate_unsplittable_symbols = [(x[0], " "+x[0]) for x in elementary_functions_names] + separate_unsplittable_symbols
@@ -406,9 +410,10 @@ def parse_expression(expr, parsing_params):
         transformations = parser_transformations[0:4, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
     if parsing_params.get("rationalise",False):
         transformations += parser_transformations[11]
-    parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-    if not isinstance(parsed_expr, Expr):
+    if parsing_params.get("simplify",False):
+        parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+    else:
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
-        if not isinstance(parsed_expr, Basic):
-            raise ValueError(f"Failed to parse Sympy expression `{expr}`")
+    if not isinstance(parsed_expr, Basic):
+        raise ValueError(f"Failed to parse Sympy expression `{expr}`")
     return parsed_expr
