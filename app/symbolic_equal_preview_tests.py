@@ -39,14 +39,6 @@ class TestPreviewFunction(unittest.TestCase):
     as it should.
     """
 
-    def test_simple_polynomial(self):
-        response = "3*x**2 + 3*x +  5"
-        answer = "2+3+x+2*x + x*x*3"
-        params = {"strict_syntax": False}
-        for res in generate_input_variations(response):
-            (preview_latex, evaluation_latex) = preview_and_evaluation_latex(res, answer, params)
-            self.assertEqual(preview_latex, evaluation_latex)
-
     def test_empty_latex_expression(self):
         response = ""
         params = Params(is_latex=True)
@@ -97,14 +89,14 @@ class TestPreviewFunction(unittest.TestCase):
 
         self.assertEqual(preview.get("sympy"), "(x**2 + x + x)/x")
 
-#    def test_doesnt_simplify_sympy_by_default(self):
-#        response = "(x + x**2 + x)/x"
-#        params = Params(is_latex=False)
-#        result = preview_function(response, params)
-#        self.assertNotIn("error", result)
-#        preview = result["preview"]
-#
-#        self.assertEqual(preview.get("latex"), "\\frac{x^{2} + x + x}{x}")
+    def test_doesnt_simplify_sympy_by_default(self):
+        response = "(x + x**2 + x)/x"
+        params = Params(is_latex=False)
+        result = preview_function(response, params)
+        self.assertNotIn("error", result)
+        preview = result["preview"]
+
+        self.assertEqual(preview.get("latex"), "\\frac{x^{2} + x + x}{x}")
 
     def test_simplifies_latex_on_param(self):
         response = "\\frac{x + x^2 + x}{x}"

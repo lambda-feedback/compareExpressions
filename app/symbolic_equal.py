@@ -192,7 +192,5 @@ def check_equality(response, answer, params, eval_response) -> dict:
             return eval_response
 
     is_correct = bool((res - ans).simplify() == 0)
-#    if is_correct is False:
-#        is_correct = bool(res.simplify() == ans.simplify()) # This sometimes work when the first one doesn't
     eval_response.is_correct = is_correct
     return eval_response

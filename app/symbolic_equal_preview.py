@@ -143,7 +143,6 @@ def parse_latex(response: str, symbols: SymbolDict) -> str:
 def parse_symbolic(response: str, params):
     response_list = create_expression_set(response, params)
     result_sympy_expression = []
-    result_latex = []
     feedback = []
     for response in response_list:
         response = response.strip()

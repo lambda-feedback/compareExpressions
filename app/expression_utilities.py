@@ -368,7 +368,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
 
     strict_syntax = params.get("strict_syntax", True)
 
-    parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple(), "elementary_functions": params.get("elementary_functions", False), "convention": params.get("convention", None)}
+    parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple(), "elementary_functions": params.get("elementary_functions", False), "convention": params.get("convention", None), "simplify": params.get("simplify", False)}
 
     return parsing_params
 
@@ -411,9 +411,10 @@ def parse_expression(expr, parsing_params):
     if parsing_params.get("rationalise",False):
         transformations += parser_transformations[11]
     if parsing_params.get("simplify",False):
-        parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-    else:
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
+        parsed_expr = parsed_expr.simplify()
+    else:
+        parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
     if not isinstance(parsed_expr, Basic):
         raise ValueError(f"Failed to parse Sympy expression `{expr}`")
     return parsed_expr
