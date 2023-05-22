@@ -1,7 +1,7 @@
 import pytest
 import os
 
-from .symbolic_equal import evaluation_function
+from .evaluation import evaluation_function
 from .expression_utilities import elementary_functions_names, substitute
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
@@ -130,7 +130,7 @@ class TestEvaluationFunction():
     def test_invalid_user_expression(self):
         response = "a*(b+c"
         answer = "a*(b+c)"
-        result = evaluation_function(response,answer,{})
+        result = evaluation_function(response, answer, {}, include_test_data=True)
         assert "PARSE_ERROR" in result["tags"]
 
     def test_invalid_author_expression(self):
@@ -174,20 +174,16 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize("response,answer", input_variations)
     def test_absolute_ambiguity(self, response, answer):
         params = {"strict_syntax": False, "elementary_functions": True}
-        result = evaluation_function(response, answer, params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is True
         assert "ABSOLUTE_VALUE_NOTATION_AMBIGUITY" in result["tags"]
 
-    response = "|x+|y||"
-    answer = "Abs(x+Abs(y))"
-    input_variations = generate_input_variations(response, answer)
-    response = "a*|x+b*|y||"
-    answer = "a*Abs(x+b*Abs(y))"
-    input_variations += generate_input_variations(response, answer)
-    @pytest.mark.parametrize("response,answer", input_variations)
+    @pytest.mark.parametrize("response,answer", generate_input_variations("a*|x+b*|y||", "a*Abs(x+b*Abs(y))"))
     def test_nested_absolute_response(self, response, answer):
+        response = "a|x+b|y||"
+        answer = "a*Abs(x+b*Abs(y))"
         params = {"strict_syntax": False, "elementary_functions": True}
-        result = evaluation_function(response, answer, params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is True
         assert "ABSOLUTE_VALUE_NOTATION_AMBIGUITY" in result["tags"]
 
@@ -210,7 +206,7 @@ class TestEvaluationFunction():
     def test_absolute_ambiguity_response(self):
         response = "|a+b|c+d|e+f|"
         answer = "|a+b|*c+d*|e+f|"
-        result = evaluation_function(response, answer, {})
+        result = evaluation_function(response, answer, {}, include_test_data=True)
         assert "ABSOLUTE_VALUE_NOTATION_AMBIGUITY" in result["tags"]
 
     def test_absolute_ambiguity_answer(self):
@@ -354,7 +350,7 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize("response,answer", generate_input_variations(response, answer))
     def test_equality_sign_in_answer_not_response(self, response, answer):
         params = {"strict_syntax": False}
-        result = evaluation_function(response, answer, params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
         assert "EXPRESSION_NOT_EQUALITY" in result["tags"]
 
@@ -363,7 +359,7 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize("response,answer", generate_input_variations(response, answer))
     def test_equality_sign_in_response_not_answer(self, response, answer):
         params = {"strict_syntax": False}
-        result = evaluation_function(response, answer, params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
         assert "EQUALITY_NOT_EXPRESSION" in result["tags"]
 
@@ -447,7 +443,7 @@ class TestEvaluationFunction():
         answer = '2**4'
         response = '2^4'
         params = {'strict_syntax': True }
-        result = evaluation_function(response, answer, params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
         assert "NOTATION_WARNING" in result["tags"]
 
@@ -474,7 +470,7 @@ class TestEvaluationFunction():
     )
     def test_error_inappropriate_symbol(self, response, answer):
         params = {'strict_syntax': True }
-        result = evaluation_function(response, answer, params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
         assert "PARSE_ERROR" in result["tags"]
 
@@ -493,7 +489,7 @@ class TestEvaluationFunction():
     )
     def test_empty_response(self, description, response):
         answer = "5*x"
-        result = evaluation_function(response, answer, {})
+        result = evaluation_function(response, answer, {}, include_test_data=True)
         assert "NO_RESPONSE" in result["tags"]
 
     @pytest.mark.parametrize(

@@ -127,7 +127,7 @@ class TestEvaluationFunction():
         m = len(errors)+len(incorrect)
         details = "Total: "+str(m)+"/"+str(n)+"\nIncorrect:\n"+"".join([str(x)+"\n" for x in incorrect])+"\nErrors:\n"+"".join([str(x)+"\n" for x in errors])
         self.log_details_to_file(details, "test_quantity_short_forms_natural_syntax_units_log.txt")
-        # Not more than currently known found cases where the concatenation of short forms gives a longer name for another unit than intended
+        # Current number of collisions caused by concatenating short forms for units, e.g. 'femtometre inch' and 'femtominute' both have short form 'fmin'
         assert len(errors)+len(incorrect) <= 551
 
     @pytest.mark.parametrize(

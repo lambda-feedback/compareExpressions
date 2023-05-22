@@ -147,6 +147,7 @@ def check_equality(response, answer, params, eval_response) -> dict:
 
     # Add how res was interpreted to the response
     eval_response.latex = latex(res)
+    res = res.simplify()
     eval_response.simplified = str(res)
 
     if (not isinstance(res,Equality)) and isinstance(ans,Equality):
