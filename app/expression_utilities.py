@@ -21,8 +21,9 @@ elementary_functions_names = [
     ('exp', ['Exp']), ('E', ['e']), ('log', []),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', [])
 ]
-elementary_functions_names.sort(key=lambda x: -len(x))
 
+greek_letters = ["Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta", "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda", "lambda", "Mu", "mu", "Nu", "nu", "Xi", "xi", "Omicron", "omicron", "Pi", "pi", "Rho", "rho", "Sigma", "sigma", "Tau", "tau", "Upsilon", "upsilon", "Phi", "phi", "Chi", "chi", "Psi", "psi", "Omega", "omega"]
+special_symbols_names = [(x, []) for x in greek_letters]
 
 # -------- String Manipulation Utilities
 def create_expression_set(expr, params):
@@ -410,7 +411,7 @@ def parse_expression(expr, parsing_params):
     separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
     if parsing_params["elementary_functions"] is True:
         alias_substitutions = []
-        for (name, alias_list) in elementary_functions_names:
+        for (name, alias_list) in elementary_functions_names+special_symbols_names:
             if name in expr:
                     alias_substitutions += [(name, name)]
             for alias in alias_list:

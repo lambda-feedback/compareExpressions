@@ -2,23 +2,48 @@ import unittest
 
 from .symbolic_equal_preview import Params, extract_latex, preview_function
 from .symbolic_equal import evaluation_function
-from .symbolic_equal_tests import generate_input_variations
+from .symbolic_equal_tests import generate_input_variations #, elementary_function_test_cases
 
-def generate_input_variations(expression):
-    input_variations = [expression]
-    variation_definitions = [lambda x : x.replace('**','^'),
-                             lambda x : x.replace('**','^').replace('*',' '),
-                             lambda x : x.replace('**','^').replace('*','')]
-    for variation in variation_definitions:
-        variation = variation(expression)
-        if (variation != expression):
-            input_variations.append(variation)
-    return input_variations
+# REMARK: If a case is marked with an alternative output, this means that it is difficult in this case to prevent sympy from simplifying for that particular case
+elementary_function_test_cases = [
+    ("sin", "Bsin(pi)", "0", r"B \sin{\left(\pi \right)}"),
+    ("sinc", "Bsinc(0)", "B", r"B 1"), # r"B \sinc{\left(0 \right)}"
+    ("csc", "Bcsc(pi/2)", "B", r"B \csc{\left(\frac{\pi}{2} \right)}"),
+    ("cos", "Bcos(pi/2)", "0", r"B \cos{\left(\frac{\pi}{2} \right)}"),
+    ("sec", "Bsec(0)", "B", r"B \sec{\left(0 \right)}"),
+    ("tan", "Btan(pi/4)", "B", r"B \tan{\left(\frac{\pi}{4} \right)}"),
+    ("cot", "Bcot(pi/4)", "B", r"B \cot{\left(\frac{\pi}{4} \right)}"),
+    ("asin", "Basin(1)", "B*pi/2", r"B \operatorname{asin}{\left(1 \right)}"),
+    ("acsc", "Bacsc(1)", "B*pi/2", r"B \operatorname{acsc}{\left(1 \right)}"),
+    ("acos", "Bacos(1)", "0", r"B \operatorname{acos}{\left(1 \right)}"),
+    ("asec", "Basec(1)", "0", r"B \operatorname{asec}{\left(1 \right)}"),
+    ("atan", "Batan(1)", "B*pi/4", r"B \operatorname{atan}{\left(1 \right)}"),
+    ("acot", "Bacot(1)", "B*pi/4", r"B \operatorname{acot}{\left(1 \right)}"),
+    ("atan2", "Batan2(1,1)","B*pi/4", r"\frac{\pi}{4} B"), # r"B \operatorname{atan2}{\left(1,1 \right)}"
+    ("sinh", "Bsinh(x)+Bcosh(x)", "B*exp(x)", r"B \sinh{\left(x \right)} + B \cosh{\left(x \right)}"),
+    ("cosh", "Bcosh(1)", "B*cosh(-1)", r"B \cosh{\left(1 \right)}"),
+    ("tanh", "2Btanh(x)/(1+tanh(x)^2)", "B*tanh(2*x)", r"\frac{2 B \tanh{\left(x \right)}}{\tanh^{2}{\left(x \right)} + 1}"), # Ideally this case should print tanh(x)^2 instead of tanh^2(x)
+    ("csch", "Bcsch(x)", "B/sinh(x)", r"B \operatorname{csch}{\left(x \right)}"),
+    ("sech", "Bsech(x)", "B/cosh(x)", r"B \operatorname{sech}{\left(x \right)}"),
+    ("asinh", "Basinh(sinh(1))", "B", r"B \operatorname{asinh}{\left(\sinh{\left(1 \right)} \right)}"),
+    ("acosh", "Bacosh(cosh(1))", "B", r"B \operatorname{acosh}{\left(\cosh{\left(1 \right)} \right)}"),
+    ("atanh", "Batanh(tanh(1))", "B", r"B \operatorname{atanh}{\left(\tanh{\left(1 \right)} \right)}"),
+    ("asech", "Bsech(asech(1))", "B", r"B \operatorname{sech}{\left(\operatorname{asech}{\left(1 \right)} \right)}"),
+    ("exp", "Bexp(x)exp(x)", "B*exp(2*x)", r"B e^{x} e^{x}"),
+    ("exp2", "a+b*E^2", "a+b*exp(2)", r"a + b e^{2}"),
+    ("exp3", "a+b*e^2", "a+b*exp(2)", r"a + b e^{2}"),
+    ("log", "Bexp(log(10))", "10B", r"B e^{\log{\left(10 \right)}}"),
+    ("sqrt", "Bsqrt(4)", "2B", r"\sqrt{4} B"),
+    ("sign", "Bsign(1)", "B", r"B \operatorname{sign}{\left(1 \right)}"),
+    ("abs", "BAbs(-2)", "2B", r"B \left|{-2}\right|"),
+    ("Max", "BMax(0,1)", "B", r"B 1"), # r"B \max{\left(0,1 \right)}"
+    ("Min", "BMin(1,2)", "B", "B 1"), # r"B \min{\left(1,2 \right)}"
+    ("arg", "Barg(1)", "0", r"B \arg{\left(1 \right)}"),
+    ("ceiling", "Bceiling(0.6)", "B", r"B 1"), # r"B \left\lceil 0.6 \right\rceil"),
+    ("floor", "Bfloor(0.6)", "0", r"B 0"), # r"B \left\lfloor 0.6 \right\rfloor"),
+    ("MECH50001_7.2", "fs/(1-Mcos(theta))", "fs/(1-M*cos(theta))", r"\frac{f s}{1 - M \cos{\left(\theta \right)}}"),
+]
 
-def preview_and_evaluation_latex(answer, response, params):
-    eval_latex = evaluation_function(response, answer, params).latex
-    preview_latex = preview_function(response, params)["preview"]["latex"]
-    return (preview_latex, eval_latex)
 
 class TestPreviewFunction(unittest.TestCase):
     """
@@ -264,6 +289,13 @@ class TestPreviewFunction(unittest.TestCase):
         self.assertEqual(extract_latex(dollars), " x ** 2 + 1 ")
         self.assertEqual(extract_latex(mixture), " x ** 2 - 1 ")
 
+    def test_elementary_functions_preview(self):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        for case in elementary_function_test_cases:
+            print(case[0])
+            response = case[1]
+            result = preview_function(response, params)
+            self.assertEqual(result["preview"]["latex"], case[3])
 
 if __name__ == "__main__":
     unittest.main()
