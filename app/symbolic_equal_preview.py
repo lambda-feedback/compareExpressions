@@ -150,25 +150,6 @@ def parse_symbolic(response: str, params):
     parsing_params = create_sympy_parsing_params(params)
     parsing_params["extra_transformations"] = parser_transformations[9] # Add conversion of equal signs
 
-    if "symbol_assumptions" in params.keys():
-        symbol_assumptions_strings = params["symbol_assumptions"]
-        symbol_assumptions = []
-        index = symbol_assumptions_strings.find("(")
-        while index > -1:
-            index_match = find_matching_parenthesis(symbol_assumptions_strings,index)
-            try:
-                symbol_assumption = eval(symbol_assumptions_strings[index+1:index_match])
-                symbol_assumptions.append(symbol_assumption)
-            except (SyntaxError, TypeError) as e:
-                raise Exception("List of symbol assumptions not written correctly.")
-            index = symbol_assumptions_strings.find('(',index_match+1)
-        for sym, ass in symbol_assumptions:
-            try:
-                parsing_params["symbol_dict"].update({sym: eval("Symbol('"+sym+"',"+ass+"=True)")})
-            except Exception as e:
-               raise Exception(f"Assumption {ass} for symbol {sym} caused a problem.")
-
-
     # Converting absolute value notation to a form that SymPy accepts
     response, response_feedback = convert_absolute_notation(response, "response")
     if response_feedback is not None:

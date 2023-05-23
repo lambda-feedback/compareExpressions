@@ -370,6 +370,24 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
 
     parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple(), "elementary_functions": params.get("elementary_functions", False), "convention": params.get("convention", None), "simplify": params.get("simplify", False)}
 
+    if "symbol_assumptions" in params.keys():
+        symbol_assumptions_strings = params["symbol_assumptions"]
+        symbol_assumptions = []
+        index = symbol_assumptions_strings.find("(")
+        while index > -1:
+            index_match = find_matching_parenthesis(symbol_assumptions_strings,index)
+            try:
+                symbol_assumption = eval(symbol_assumptions_strings[index+1:index_match])
+                symbol_assumptions.append(symbol_assumption)
+            except (SyntaxError, TypeError) as e:
+                raise Exception("List of symbol assumptions not written correctly.")
+            index = symbol_assumptions_strings.find('(',index_match+1)
+        for sym, ass in symbol_assumptions:
+            try:
+                parsing_params["symbol_dict"].update({sym: eval("Symbol('"+sym+"',"+ass+"=True)")})
+            except Exception as e:
+               raise Exception(f"Assumption {ass} for symbol {sym} caused a problem.")
+
     return parsing_params
 
 

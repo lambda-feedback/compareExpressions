@@ -140,7 +140,7 @@ class TestPreviewFunction(unittest.TestCase):
 #        preview = result["preview"]
 #
 #        self.assertEqual(preview.get("sympy"), "Eq((x**2 + x + x)/x, y)")
-#
+
 #    def test_sympy_with_equality_symbol(self):
 #        response = "Eq((x + x**2 + x)/x, 1)"
 #        params = Params(is_latex=False, simplify=False)
