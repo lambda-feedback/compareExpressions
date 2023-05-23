@@ -6,6 +6,46 @@ from .expression_utilities import elementary_functions_names, substitute
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 
+# REMARK: If a case is marked with an alternative output, this means that it is difficult in this case to prevent sympy from simplifying for that particular case
+elementary_function_test_cases = [
+    ("sin", "Bsin(pi)", "0", r"B \sin{\left(\pi \right)}"),
+    ("sinc", "Bsinc(0)", "B", r"B 1"), # r"B \sinc{\left(0 \right)}"
+    ("csc", "Bcsc(pi/2)", "B", r"B \csc{\left(\frac{\pi}{2} \right)}"),
+    ("cos", "Bcos(pi/2)", "0", r"B \cos{\left(\frac{\pi}{2} \right)}"),
+    ("sec", "Bsec(0)", "B", r"B \sec{\left(0 \right)}"),
+    ("tan", "Btan(pi/4)", "B", r"B \tan{\left(\frac{\pi}{4} \right)}"),
+    ("cot", "Bcot(pi/4)", "B", r"B \cot{\left(\frac{\pi}{4} \right)}"),
+    ("asin", "Basin(1)", "B*pi/2", r"B \operatorname{asin}{\left(1 \right)}"),
+    ("acsc", "Bacsc(1)", "B*pi/2", r"B \operatorname{acsc}{\left(1 \right)}"),
+    ("acos", "Bacos(1)", "0", r"B \operatorname{acos}{\left(1 \right)}"),
+    ("asec", "Basec(1)", "0", r"B \operatorname{asec}{\left(1 \right)}"),
+    ("atan", "Batan(1)", "B*pi/4", r"B \operatorname{atan}{\left(1 \right)}"),
+    ("acot", "Bacot(1)", "B*pi/4", r"B \operatorname{acot}{\left(1 \right)}"),
+    ("atan2", "Batan2(1,1)","B*pi/4", r"\frac{\pi}{4} B"), # r"B \operatorname{atan2}{\left(1,1 \right)}"
+    ("sinh", "Bsinh(x)+Bcosh(x)", "B*exp(x)", r"B \sinh{\left(x \right)} + B \cosh{\left(x \right)}"),
+    ("cosh", "Bcosh(1)", "B*cosh(-1)", r"B \cosh{\left(1 \right)}"),
+    ("tanh", "2Btanh(x)/(1+tanh(x)^2)", "B*tanh(2*x)", r"\frac{2 B \tanh{\left(x \right)}}{\tanh^{2}{\left(x \right)} + 1}"), # Ideally this case should print tanh(x)^2 instead of tanh^2(x)
+    ("csch", "Bcsch(x)", "B/sinh(x)", r"B \operatorname{csch}{\left(x \right)}"),
+    ("sech", "Bsech(x)", "B/cosh(x)", r"B \operatorname{sech}{\left(x \right)}"),
+    ("asinh", "Basinh(sinh(1))", "B", r"B \operatorname{asinh}{\left(\sinh{\left(1 \right)} \right)}"),
+    ("acosh", "Bacosh(cosh(1))", "B", r"B \operatorname{acosh}{\left(\cosh{\left(1 \right)} \right)}"),
+    ("atanh", "Batanh(tanh(1))", "B", r"B \operatorname{atanh}{\left(\tanh{\left(1 \right)} \right)}"),
+    ("asech", "Bsech(asech(1))", "B", r"B \operatorname{sech}{\left(\operatorname{asech}{\left(1 \right)} \right)}"),
+    ("exp", "Bexp(x)exp(x)", "B*exp(2*x)", r"B e^{x} e^{x}"),
+    ("exp2", "a+b*E^2", "a+b*exp(2)", r"a + b e^{2}"),
+    ("exp3", "a+b*e^2", "a+b*exp(2)", r"a + b e^{2}"),
+    ("log", "Bexp(log(10))", "10B", r"B e^{\log{\left(10 \right)}}"),
+    ("sqrt", "Bsqrt(4)", "2B", r"\sqrt{4} B"),
+    ("sign", "Bsign(1)", "B", r"B \operatorname{sign}{\left(1 \right)}"),
+    ("abs", "BAbs(-2)", "2B", r"B \left|{-2}\right|"),
+    ("Max", "BMax(0,1)", "B", r"B 1"), # r"B \max{\left(0,1 \right)}"
+    ("Min", "BMin(1,2)", "B", "B 1"), # r"B \min{\left(1,2 \right)}"
+    ("arg", "Barg(1)", "0", r"B \arg{\left(1 \right)}"),
+    ("ceiling", "Bceiling(0.6)", "B", r"B 1"), # r"B \left\lceil 0.6 \right\rceil"),
+    ("floor", "Bfloor(0.6)", "0", r"B 0"), # r"B \left\lfloor 0.6 \right\rfloor"),
+    ("MECH50001_7.2", "fs/(1-Mcos(theta))", "fs/(1-M*cos(theta))", r"\frac{f s}{1 - M \cos{\left(\theta \right)}}"),
+]
+
 def generate_input_variations(response, answer):
     input_variations = [(response, answer)]
     variation_definitions = [lambda x : x.replace('**','^'),
@@ -602,46 +642,22 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is outcome
 
-    params = {"strict_syntax": False, "elementary_functions": True}
     @pytest.mark.parametrize(
         "description,response,answer",
-        []
-        + [("sin",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsin(pi)", "0", params)]
-        + [("sinc",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsinc(0)", "B", params)]
-        + [("csc",)+var for var in generate_input_variations_from_elementary_function_aliases("Bcsc(pi/2)", "B", params)]
-        + [("cos",)+var for var in generate_input_variations_from_elementary_function_aliases("Bcos(pi/2)", "0", params)]
-        + [("sec",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsec(0)", "B", params)]
-        + [("tan",)+var for var in generate_input_variations_from_elementary_function_aliases("Btan(pi/4)", "B", params)]
-        + [("cot",)+var for var in generate_input_variations_from_elementary_function_aliases("Bcot(pi/4)", "B", params)]
-        + [("asin",)+var for var in generate_input_variations_from_elementary_function_aliases("Basin(1)", "B*pi/2", params)]
-        + [("acsc",)+var for var in generate_input_variations_from_elementary_function_aliases("Bacsc(1)", "B*pi/2", params)]
-        + [("acos",)+var for var in generate_input_variations_from_elementary_function_aliases("Bacos(1)", "0", params)]
-        + [("asec",)+var for var in generate_input_variations_from_elementary_function_aliases("Basec(1)", "0", params)]
-        + [("atan",)+var for var in generate_input_variations_from_elementary_function_aliases("Batan(1)", "B*pi/4", params)]
-        + [("acot",)+var for var in generate_input_variations_from_elementary_function_aliases("Bacot(1)", "B*pi/4", params)]
-        + [("atan2",)+var for var in generate_input_variations_from_elementary_function_aliases("Batan2(1,1)","B*pi/4", params)]
-        + [("sinh",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsinh(x)+Bcosh(x)", "B*exp(x)", params)]
-        + [("cosh",)+var for var in generate_input_variations_from_elementary_function_aliases("Bcosh(1)", "B*cosh(-1)", params)]
-        + [("tanh",)+var for var in generate_input_variations_from_elementary_function_aliases("2Btanh(x)/(1+tanh(x)^2)", "B*tanh(2*x)", params)]
-        + [("csch",)+var for var in generate_input_variations_from_elementary_function_aliases("Bcsch(x)", "B/sinh(x)", params)]
-        + [("sech",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsech(x)", "B/cosh(x)", params)]
-        + [("asinh",)+var for var in generate_input_variations_from_elementary_function_aliases("Basinh(sinh(1))", "B", params)]
-        + [("acosh",)+var for var in generate_input_variations_from_elementary_function_aliases("Bacosh(cosh(1))", "B", params)]
-        + [("atanh",)+var for var in generate_input_variations_from_elementary_function_aliases("Batanh(tanh(1))", "B", params)]
-        + [("asech",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsech(asech(1))", "B", params)]
-        + [("exp",)+var for var in generate_input_variations_from_elementary_function_aliases("Bexp(x)exp(x)", "B*exp(2*x)", params)]
-        + [("exp2",)+var for var in generate_input_variations_from_elementary_function_aliases("a+b*E^2", "a+b*exp(2)", params)]
-        + [("exp3",)+var for var in generate_input_variations_from_elementary_function_aliases("a+b*e^2", "a+b*exp(2)", params)]
-        + [("log",)+var for var in generate_input_variations_from_elementary_function_aliases("Bexp(log(10))", "10B", params)]
-        + [("sqrt",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsqrt(4)", "2B", params)]
-        + [("sign",)+var for var in generate_input_variations_from_elementary_function_aliases("Bsign(1)", "B", params)]
-        + [("abs",)+var for var in generate_input_variations_from_elementary_function_aliases("BAbs(-2)", "2B", params)]
-        + [("Max",)+var for var in generate_input_variations_from_elementary_function_aliases("BMax(0,1)", "B", params)]
-        + [("Min",)+var for var in generate_input_variations_from_elementary_function_aliases("BMin(1,2)", "B", params)]
-        + [("arg",)+var for var in generate_input_variations_from_elementary_function_aliases("Barg(1)", "0", params)]
-        + [("ceiling",)+var for var in generate_input_variations_from_elementary_function_aliases("Bceiling(0.6)", "B", params)]
-        + [("floor",)+var for var in generate_input_variations_from_elementary_function_aliases("Bfloor(0.6)", "0", params)]
-        + [("MECH50001_7.2",)+var for var in generate_input_variations_from_elementary_function_aliases("fs/(1-Mcos(theta))", "fs/(1-M*cos(theta))", params)]
+        sum(
+            [
+                [
+                    (case[0],)+var
+                        for var in generate_input_variations_from_elementary_function_aliases(
+                            case[1],
+                            case[2],
+                            {"strict_syntax": False, "elementary_functions": True}
+                        )
+                ]
+                for case in elementary_function_test_cases
+            ],
+            []
+        )
     )
     def test_elementary_functions(self, description, response, answer):
         params = {"strict_syntax": False, "elementary_functions": True}
