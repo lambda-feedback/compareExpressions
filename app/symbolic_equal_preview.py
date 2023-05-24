@@ -149,6 +149,7 @@ def parse_symbolic(response: str, params):
         response = substitute_input_symbols([response],params)
     parsing_params = create_sympy_parsing_params(params)
     parsing_params["extra_transformations"] = parser_transformations[9] # Add conversion of equal signs
+    parsing_params["symbol_dict"].update(sympy_symbols(params.get("symbols", {})))
 
     # Converting absolute value notation to a form that SymPy accepts
     response, response_feedback = convert_absolute_notation(response, "response")
@@ -198,13 +199,6 @@ def preview_function(response: str, params: Params) -> Result:
     try:
         if params.get("is_latex", False):
             response = parse_latex(response, symbols)
-
-#            equation = parse_expr(
-#                response,
-#                evaluate=False,
-#                local_dict=sympy_symbols(symbols),
-#                transformations="all",
-#            )
 
         params.update({"rationalise": False})
         expression_list, _ = parse_symbolic(response, params)

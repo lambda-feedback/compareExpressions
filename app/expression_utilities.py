@@ -22,7 +22,12 @@ elementary_functions_names = [
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', [])
 ]
 
-greek_letters = ["Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta", "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda", "lambda", "Mu", "mu", "Nu", "nu", "Xi", "xi", "Omicron", "omicron", "Pi", "pi", "Rho", "rho", "Sigma", "sigma", "Tau", "tau", "Upsilon", "upsilon", "Phi", "phi", "Chi", "chi", "Psi", "psi", "Omega", "omega"]
+greek_letters = [
+    "Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta",
+    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda", "lambda", "Mu", "mu", "Nu", "nu",
+    "Xi", "xi", "Omicron", "omicron", "Pi", "pi", "Rho", "rho", "Sigma", "sigma", "Tau", "tau", "Upsilon", "upsilon",
+    "Phi", "phi", "Chi", "chi", "Psi", "psi", "Omega", "omega"
+]
 special_symbols_names = [(x, []) for x in greek_letters]
 
 # -------- String Manipulation Utilities
@@ -329,6 +334,14 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
     if "input_symbols" in params.keys():
         to_keep = []
         for symbol in [x[0] for x in params["input_symbols"]]:
+            if len(symbol) > 1:
+                to_keep.append(symbol)
+        unsplittable_symbols += tuple(to_keep)
+
+    # Duplicated code while waiting for some clarification on how input symbols are handled
+    if "symbols" in params.keys():
+        to_keep = []
+        for symbol in [x[0] for x in params["symbols"]]:
             if len(symbol) > 1:
                 to_keep.append(symbol)
         unsplittable_symbols += tuple(to_keep)
