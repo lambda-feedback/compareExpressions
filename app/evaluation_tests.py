@@ -245,5 +245,4 @@ class TestEvaluationFunction():
 
 
 if __name__ == "__main__":
-    #pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])
-    pytest.main(['-xs', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])

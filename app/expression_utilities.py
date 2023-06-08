@@ -184,6 +184,37 @@ def substitute_input_symbols(exprs, params):
     if isinstance(exprs, str):
         exprs = [exprs]
 
+    substitutions = []
+
+    if "symbols" in params.keys():
+        input_symbols = params["symbols"]
+        input_symbols_to_remove = []
+        aliases_to_remove = []
+        for (code, symbol_data) in input_symbols.items():
+            if len(code) == 0:
+                input_symbols_to_remove += [code]
+            else:
+                if len(code.strip()) == 0:
+                    input_symbols_to_remove += [code]
+                else:
+                    aliases = symbol_data["aliases"]
+                    for i in range(0,len(aliases)):
+                        if len(aliases[i]) > 0:
+                            aliases[i].strip()
+                        if len(aliases[i]) == 0:
+                            aliases_to_remove += [(code,i)]
+        for (code,i) in aliases_to_remove:
+            del input_symbols[code]["aliases"][i]
+        for code in input_symbols_to_remove:
+            del input_symbols[code]
+        for (code, symbol_data) in input_symbols.items():
+            substitutions.append((code,code))
+            for alias in symbol_data["aliases"]:
+                if len(alias) > 0:
+                    substitutions.append((alias,code))
+
+    # REMARK: This is to ensure capability with response areas that use the old formatting
+    # for input_symbols. Should be removed when all response areas are updated.
     if "input_symbols" in params.keys():
         input_symbols = params["input_symbols"]
         input_symbols_to_remove = []
@@ -203,15 +234,15 @@ def substitute_input_symbols(exprs, params):
             del input_symbols[k][1][i]
         for k in input_symbols_to_remove:
             del input_symbols[k]
-        substitutions = []
         for input_symbol in params["input_symbols"]:
             substitutions.append((input_symbol[0], input_symbol[0]))
             for alternative in input_symbol[1]:
                 if len(alternative) > 0:
                     substitutions.append((alternative, input_symbol[0]))
-        substitutions.sort(key=lambda x: -len(x[0]))
 
-        for k in range(0, len(exprs)):
+    if len(substitutions) > 0:
+        substitutions.sort(key=lambda x: -len(x[0]))
+        for k in range(0,len(exprs)):
             exprs[k] = substitute(exprs[k], substitutions)
 
     return exprs
@@ -320,6 +351,82 @@ def compute_relative_tolerance_from_significant_decimals(string):
     return rtol
 
 # -------- (Sympy) Expression Parsing Utilities
+
+from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
+from sympy.parsing.sympy_parser import T as parser_transformations
+from sympy.printing.latex import LatexPrinter
+from sympy import Symbol
+import re
+from typing import Dict, List, TypedDict
+
+class SymbolData(TypedDict):
+    latex: str
+    aliases: List[str]
+
+
+SymbolDict = Dict[str, SymbolData]
+
+symbol_latex_re = re.compile(
+    r"(?P<start>\\\(|\$\$|\$)(?P<latex>.*?)(?P<end>\\\)|\$\$|\$)"
+)
+
+def sympy_symbols(symbols):
+    """Create a mapping of local variables for parsing sympy expressions.
+
+    Args:
+        symbols (SymbolDict): A dictionary of sympy symbol strings to LaTeX
+        symbol strings.
+
+    Note:
+        Only the sympy string is used in this function.
+
+    Returns:
+        Dict[str, Symbol]: A dictionary of sympy symbol strings to sympy
+        Symbol objects.
+    """
+    return {k: Symbol(k) for k in symbols}
+
+def extract_latex(symbol):
+    """Returns the latex portion of a symbol string.
+
+    Note:
+        Only the first matched expression is returned.
+
+    Args:
+        symbol (str): The string to extract latex from.
+
+    Returns:
+        str: The latex string.
+    """
+    if (match := symbol_latex_re.search(symbol)) is None:
+        return symbol
+
+    return match.group("latex")
+
+def latex_symbols(symbols):
+    """Create a mapping between custom Symbol objects and LaTeX symbol strings.
+    Used when parsing a sympy Expression to a LaTeX string.
+
+    Args:
+        symbols (SymbolDict): A dictionary of sympy symbol strings to LaTeX
+        symbol strings.
+
+    Returns:
+        Dict[Symbol, str]: A dictionary of sympy Symbol objects to LaTeX
+        strings.
+    """
+    symbol_dict = {
+        Symbol(k): extract_latex(v["latex"])
+        for (k, v) in symbols.items()
+    }
+    return symbol_dict
+
+def sympy_to_latex(equation, symbols):
+    latex_out = LatexPrinter(
+        {"symbol_names": latex_symbols(symbols)}
+    ).doprint(equation)
+    return latex_out
+
 def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
     '''
     Input:
@@ -331,17 +438,9 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
                         parse_expression function.
     '''
 
-    if "input_symbols" in params.keys():
-        to_keep = []
-        for symbol in [x[0] for x in params["input_symbols"]]:
-            if len(symbol) > 1:
-                to_keep.append(symbol)
-        unsplittable_symbols += tuple(to_keep)
-
-    # Duplicated code while waiting for some clarification on how input symbols are handled
     if "symbols" in params.keys():
         to_keep = []
-        for symbol in [x[0] for x in params["symbols"]]:
+        for symbol in params["symbols"].keys():
             if len(symbol) > 1:
                 to_keep.append(symbol)
         unsplittable_symbols += tuple(to_keep)
@@ -379,6 +478,8 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
 
     for symbol in unsplittable_symbols:
         symbol_dict.update({symbol: Symbol(symbol)})
+
+    symbol_dict.update(sympy_symbols(params.get("symbols", {})))
 
     strict_syntax = params.get("strict_syntax", True)
 

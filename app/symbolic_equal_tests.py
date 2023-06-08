@@ -106,14 +106,20 @@ class TestEvaluationFunction():
     answer = "2+3+longName+2*longName + 3*longName * longName"
     @pytest.mark.parametrize("response,answer", generate_input_variations(response, answer))
     def test_simple_polynomial_with_input_symbols_correct(self, response, answer):
-        params = {"strict_syntax": False, "input_symbols": [["longName",[]]]}
+        params = {"strict_syntax": False, "symbols": {"longName": {"aliases": [], "latex": "\\(\\mathrm\{longName\}\\)"}}}
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
     def test_simple_polynomial_with_input_symbols_implicit_correct(self):
         response = "abcxyz"
         answer = "abc*xyz"
-        params = {"strict_syntax": False, "input_symbols": [["abc",[]],["xyz",[]]]}
+        params = {
+            "strict_syntax": False, 
+            "symbols": {
+                "abc": {"aliases": [], "latex": "\\(abc\\)"},
+                "xyz": {"aliases": [], "latex": "\\(xyz\\)"}
+            }
+        }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
@@ -401,7 +407,22 @@ class TestEvaluationFunction():
         assert result["is_correct"] is False
         assert "EQUALITY_NOT_EXPRESSION" in result["tags"]
 
-    def test_empty_input_symbols_codes_and_alternatives(self):
+    def test_empty_input_symbols_codes_and_aliases(self):
+        answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
+        response = '(1+(gamma-1)/2)((-1)/(gamma-1))'
+        params = {
+            'strict_syntax': False,
+            'symbols': {
+                'gamma': {'aliases': [''], 'latex': '\\(\\gamma\\)'},
+                '': {'aliases': ['A'], 'latex': '\\(A\\)'},
+                ' ': {'aliases': ['B'], 'latex': '\\(B\\)'},
+                'C': {'aliases': ['  '], 'latex': '\\(C\\)'}
+            }
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_old_format_empty_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
         response = '(1+(gamma-1)/2)((-1)/(gamma-1))'
         params = {'strict_syntax': False,
@@ -575,6 +596,44 @@ class TestEvaluationFunction():
         ]
     )
     def test_slow_response(self, description, response, answer, outcome):
+        params = {
+            "strict_syntax": False,
+            "symbols": {
+                "fx": {"aliases": ["f","f_x","fofx"], "latex": "\\(f(x)\\)"},
+                "C": {"aliases": ["c","k","K"], "latex": "\\(C\\)"},
+                "A": {"aliases": ["a"], "latex": "\\(A\\)"},
+                "B": {"aliases": ["b"], "latex": "\\(B\\)"},
+                "x": {"aliases": ["X"], "latex": "\\(x\\)"},
+                "y": {"aliases": ["Y"], "latex": "\\(y\\)"},
+            }
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    @pytest.mark.parametrize(
+        "description,response,answer,outcome",
+        [
+            (
+                "With `fx` in response",
+                "-A*exp(x/b)*sin(y/b)+fx+C",
+                "-A*exp(x/b)*sin(y/b)+fx+C",
+                True
+            ),
+            (
+                "Without `-` in response",
+                "-A*exp(x/b)*sin(y/b)+fx+C",
+                "A*exp(x/b)*sin(y/b)+fx+C",
+                False
+            ),
+            (
+                "With `f(x)` in response",
+                "A*exp(x/b)*sin(y/b)+f(x)+C",
+                "-A*exp(x/b)*sin(y/b)+f(x)+C",
+                False
+            ),
+        ]
+    )
+    def test_slow_response_old_input_symbols_format(self, description, response, answer, outcome):
         params = {"strict_syntax": False,
                   "input_symbols": [["fx",["f","f_x","fofx"]],\
                                     ["C",["c","k","K"]],\
@@ -588,9 +647,13 @@ class TestEvaluationFunction():
     def test_pi_with_rtol(self):
         answer = "pi"
         response = "3.14"
-        params = {"strict_syntax": False,
-                  "rtol": 0.05,
-                  "input_symbols": [["pi",["Pi","PI","π"]]]}
+        params = {
+            "strict_syntax": False,
+            "rtol": 0.05,
+            "symbols": {
+                "pi": {"aliases": ["Pi","PI","π"], "latex": "\\(\pi\\)"},
+            }
+        }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 

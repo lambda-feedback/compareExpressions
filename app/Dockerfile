@@ -2,24 +2,34 @@
 # FROM base-eval-tmp
 FROM rabidsheep55/python-base-eval-layer
 
+RUN yum install -y git
+
 WORKDIR /app
 
 # Copy and install any packages/modules needed for your evaluation script.
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-# Copy the evaluation and testing scripts
+# Copy scripts
 COPY comparison_utilities.py ./app/
+COPY criteria_utilities.py ./app/
 COPY evaluation.py ./app/
 COPY evaluation_response_utilities.py ./app/
 COPY evaluation_tests.py ./app/
+COPY symbolic_equal_preview.py ./app/
+COPY symbolic_equal_preview_tests.py ./app/
 COPY expression_utilities.py ./app/
 COPY feedback/physical_quantities.py ./app/feedback/
 COPY slr_parsing_utilities.py ./app/
 COPY slr_quantity.py ./app/
 COPY slr_quantity_tests.py ./app/
 COPY symbolic_equal.py ./app/
+COPY symbolic_equal_tests.py ./app/
 COPY unit_system_conversions.py ./app/
+
+# Copy feedback messages
+COPY feedback/physical_quantities.py ./app/feedback/
+COPY feedback/symbolic_comparison.py ./app/feedback/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
