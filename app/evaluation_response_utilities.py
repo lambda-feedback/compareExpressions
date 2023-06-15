@@ -30,4 +30,4 @@ class EvaluationResponse:
         return out
 
     def __getitem__(self, key):
-        return self.serialise(include_test_data = True)[key]
+        return self.serialise(include_test_data=True)[key]

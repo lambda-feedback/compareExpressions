@@ -152,6 +152,7 @@ class PhysicalQuantity:
         else:
             return [content]
 
+
 def SLR_generate_unit_dictionaries(units_string, strictness):
 
     units_sets_dictionary = {
@@ -248,8 +249,8 @@ def set_tags(strictness):
 
 
 def SLR_quantity_parser(parameters):
-    units_string = parameters.get("units_string","SI common imperial")
-    strictness = parameters.get("strictness","natural")
+    units_string = parameters.get("units_string", "SI common imperial")
+    strictness = parameters.get("strictness", "natural")
     units_dictionary, prefixed_units_dictionary, units_end_dictionary, prefixed_units_end_dictionary = \
         SLR_generate_unit_dictionaries(units_string, strictness)
     max_unit_name_length = max(len(x) for x in [units_dictionary.keys()]+[units_end_dictionary.keys()])
@@ -398,7 +399,7 @@ def SLR_quantity_parsing(expr, parameters, parser, name):
     if len(quantity) > 1:
         raise Exception("Parsed quantity does not have a single root.")
 
-    tag_handler = set_tags(parameters.get("strictness","strict"))
+    tag_handler = set_tags(parameters.get("strictness", "strict"))
     return PhysicalQuantity(name, parameters, quantity[0], parser, messages=[], tag_handler=tag_handler)
 
 
@@ -438,6 +439,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                         token.content = args[number_of_args]
                         number_of_args += 1
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+
             def execute(node):
                 key = node.label.strip()
                 if key in criteria_operations.keys():
@@ -512,7 +514,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ("answer",       "QUANTITY"),
             ("INPUT",        "INPUT", catch_undefined),
         ]
-        token_list += [(" *"+x+" *"," "+x+" ") for x in criteria_operations.keys()]
+        token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations.keys()]
 
         productions = [
             ("START",    "BOOL", create_node),
@@ -593,7 +595,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     for criterion in ["MISSING_VALUE", "MISSING_UNIT", "UNEXPECTED_VALUE", "UNEXPECTED_UNIT"]:
         check_criterion(criterion)
 
-    eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response","answer"))
+    eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response", "answer"))
 
     for (tag, result) in evaluated_criteria.items():
         if result[0] is True:

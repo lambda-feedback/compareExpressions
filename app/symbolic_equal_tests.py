@@ -422,7 +422,7 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-    def test_old_format_empty_input_symbols_codes_and_alternatives(self):
+    def test_empty_old_format_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
         response = '(1+(gamma-1)/2)((-1)/(gamma-1))'
         params = {'strict_syntax': False,

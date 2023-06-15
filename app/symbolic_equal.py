@@ -1,20 +1,19 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom
-from sympy import Equality, simplify, latex, pi, Symbol
+from sympy import Equality, latex, pi, Symbol
 
 
 from .expression_utilities import (
     substitute_input_symbols,
     parse_expression,
     create_sympy_parsing_params,
-    substitute,
     create_expression_set,
     convert_absolute_notation
 )
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 
-def evaluation_function(response, answer, params, eval_response = EvaluationResponse()) -> dict:
+
+def evaluation_function(response, answer, params, eval_response=EvaluationResponse()) -> dict:
 
     """
     Function used to symbolically compare two expressions.
@@ -31,7 +30,7 @@ def evaluation_function(response, answer, params, eval_response = EvaluationResp
     if len(response_list) == 1 and len(answer_list) == 1:
         return check_equality(response, answer, params, eval_response)
     else:
-        matches = { "responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
+        matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         interp = []
         for i, response in enumerate(response_list):
             result = None
@@ -66,9 +65,10 @@ def evaluation_function(response, answer, params, eval_response = EvaluationResp
         eval_response.latex = response_latex
         return eval_response
 
-def find_matching_parenthesis(string,index):
+
+def find_matching_parenthesis(string, index):
     depth = 0
-    for k in range(index,len(string)):
+    for k in range(index, len(string)):
         if string[k] == '(':
             depth += 1
             continue
@@ -78,13 +78,14 @@ def find_matching_parenthesis(string,index):
                 return k
     return -1
 
+
 def check_equality(response, answer, params, eval_response) -> dict:
 
-    if not isinstance(answer,str):
+    if not isinstance(answer, str):
         raise Exception("No answer was given.")
-    if not isinstance(response,str):
+    if not isinstance(response, str):
         eval_response.is_correct = False
-        eval_response.add_feedback(("NO_RESPONSE",symbolic_comparison_internal_messages["NO_RESPONSE"]))
+        eval_response.add_feedback(("NO_RESPONSE", symbolic_comparison_internal_messages["NO_RESPONSE"]))
         return eval_response
 
     answer = answer.strip()
@@ -93,13 +94,13 @@ def check_equality(response, answer, params, eval_response) -> dict:
         raise Exception("No answer was given.")
     if len(response) == 0:
         eval_response.is_correct = False
-        eval_response.add_feedback(("NO_RESPONSE",symbolic_comparison_internal_messages["NO_RESPONSE"]))
+        eval_response.add_feedback(("NO_RESPONSE", symbolic_comparison_internal_messages["NO_RESPONSE"]))
         return eval_response
 
-    answer, response = substitute_input_symbols([answer, response],params)
+    answer, response = substitute_input_symbols([answer, response], params)
     parsing_params = create_sympy_parsing_params(params)
     parsing_params.update({"rationalise": True, "simplify": True})
-    parsing_params["extra_transformations"] = parser_transformations[9] # Add conversion of equal signs
+    parsing_params["extra_transformations"] = parser_transformations[9]  # Add conversion of equal signs
 
     # Converting absolute value notation to a form that SymPy accepts
     response, response_feedback = convert_absolute_notation(response, "response")
@@ -107,18 +108,18 @@ def check_equality(response, answer, params, eval_response) -> dict:
         eval_response.add_feedback(response_feedback)
     answer, answer_feedback = convert_absolute_notation(answer, "answer")
     if answer_feedback is not None:
-        raise SyntaxWarning(answer_feedback[1],answer_feedback[0])
+        raise SyntaxWarning(answer_feedback[1], answer_feedback[0])
 
-    if params.get("strict_syntax",True):
+    if params.get("strict_syntax", True):
         if "^" in response:
-            eval_response.add_feedback(("NOTATION_WARNING",symbolic_comparison_internal_messages["NOTATION_WARNING"]))
+            eval_response.add_feedback(("NOTATION_WARNING", symbolic_comparison_internal_messages["NOTATION_WARNING"]))
 
     # Safely try to parse answer and response into symbolic expressions
     try:
         res = parse_expression(response, parsing_params)
-    except Exception as e:
+    except Exception:
         eval_response.is_correct = False
-        eval_response.add_feedback(("PARSE_ERROR",symbolic_comparison_internal_messages["PARSE_ERROR"](response)))
+        eval_response.add_feedback(("PARSE_ERROR", symbolic_comparison_internal_messages["PARSE_ERROR"](response)))
         return eval_response
 
     try:
@@ -130,33 +131,33 @@ def check_equality(response, answer, params, eval_response) -> dict:
     eval_response.latex = latex(res)
     eval_response.simplified = str(res)
 
-    if (not isinstance(res,Equality)) and isinstance(ans,Equality):
+    if (not isinstance(res, Equality)) and isinstance(ans, Equality):
         eval_response.is_correct = False
         tag = "EXPRESSION_NOT_EQUALITY"
-        eval_response.add_feedback((tag,symbolic_comparison_internal_messages[tag]))
+        eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
         return eval_response
 
-    if isinstance(res,Equality) and (not isinstance(ans,Equality)):
+    if isinstance(res, Equality) and (not isinstance(ans, Equality)):
         eval_response.is_correct = False
         tag = "EQUALITY_NOT_EXPRESSION"
-        eval_response.add_feedback((tag,symbolic_comparison_internal_messages[tag]))
+        eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
         return eval_response
 
     # TODO: Remove when criteria for checking proportionality is implemented
-    if isinstance(res,Equality) and isinstance(ans,Equality):
+    if isinstance(res, Equality) and isinstance(ans, Equality):
         eval_response.is_correct = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().is_constant()
         return eval_response
 
     error_below_atol = False
     error_below_rtol = False
 
-    if params.get("numerical",False) or params.get("rtol",False) or params.get("atol",False):
+    if params.get("numerical", False) or params.get("rtol", False) or params.get("atol", False):
         # REMARK: 'pi' should be a reserve symbols but is sometimes not treated as one, possibly because of input symbols
         # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
         # are other reserved symbols.
-        ans = ans.subs(Symbol('pi'),float(pi))
-        res = res.subs(Symbol('pi'),float(pi))
-        if res.is_constant() and ans.is_constant(): 
+        ans = ans.subs(Symbol('pi'), float(pi))
+        res = res.subs(Symbol('pi'), float(pi))
+        if res.is_constant() and ans.is_constant():
             if "atol" in params.keys():
                 error_below_atol = bool(abs(float(ans-res)) < float(params["atol"]))
             else:
@@ -169,7 +170,7 @@ def check_equality(response, answer, params, eval_response) -> dict:
         if error_below_atol and error_below_rtol:
             eval_response.is_correct = True
             tag = "WITHIN_TOLERANCE"
-            eval_response.add_feedback((tag,symbolic_comparison_internal_messages[tag]))
+            eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
             return eval_response
 
     is_correct = bool((res - ans).simplify() == 0)

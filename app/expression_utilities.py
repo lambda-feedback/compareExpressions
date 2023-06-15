@@ -1,7 +1,4 @@
-from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
-from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Basic, Expr, Symbol
-
+# -------- String Manipulation imports
 from .slr_parsing_utilities import (
     SLR_expression_parser,
     infix,
@@ -10,6 +7,14 @@ from .slr_parsing_utilities import (
 )
 
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
+
+# (Sympy) Expression Parsing imports
+from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
+from sympy.parsing.sympy_parser import T as parser_transformations
+from sympy.printing.latex import LatexPrinter
+from sympy import Basic, Symbol
+import re
+from typing import Dict, List, TypedDict
 
 elementary_functions_names = [
     ('sin', []), ('sinc', []), ('csc', ['cosec']), ('cos', []), ('sec', []), ('tan', []), ('cot', ['cotan']),
@@ -30,6 +35,7 @@ greek_letters = [
 ]
 special_symbols_names = [(x, []) for x in greek_letters]
 
+
 # -------- String Manipulation Utilities
 def create_expression_set(expr, params):
     expr_set = set()
@@ -47,9 +53,10 @@ def create_expression_set(expr, params):
 
     return list(expr_set)
 
+
 def convert_absolute_notation(expr, name):
     """
-    Accept || as another form of writing modulus of an expression. 
+    Accept || as another form of writing modulus of an expression.
     Function makes the input parseable by SymPy, SymPy only accepts Abs()
     REMARK: this function cannot handle nested ||. It will attempt to pair
     each | with the closest | to the right and return a string with a warning
@@ -80,7 +87,7 @@ def convert_absolute_notation(expr, name):
 
         if expr[0] == "|":
             expr_start_abs_pos.append(0)
-        for i in range(1,len(expr)-1):
+        for i in range(1, len(expr)-1):
             if expr[i] == "|":
                 if (expr[i-1].isalnum() or expr[i-1] in "()[]{}") and not (expr[i+1].isalnum() or expr[i+1] in "()[]{}"):
                     expr_end_abs_pos.append(i)
@@ -110,12 +117,12 @@ def convert_absolute_notation(expr, name):
                     prev_end = j
                 else:
                     break
-            if max(prev_start,prev_end,prev_ambiguous) == prev_end:
+            if max(prev_start, prev_end, prev_ambiguous) == prev_end:
                 if expr[i-1].isalnum():
                     expr[i] = "*Abs("
                 else:
                     expr[i] = "Abs("
-            elif max(prev_start,prev_end,prev_ambiguous) == prev_ambiguous:
+            elif max(prev_start, prev_end, prev_ambiguous) == prev_ambiguous:
                 if k % 2 == 0:
                     if expr[i-1].isalnum():
                         expr[i] = "*Abs("
@@ -140,6 +147,7 @@ def convert_absolute_notation(expr, name):
 
     return expr, feedback
 
+
 def SLR_implicit_multiplication_convention_parser(convention):
     delimiters = [
         (("(", ")"), group(1))
@@ -150,7 +158,7 @@ def SLR_implicit_multiplication_convention_parser(convention):
     ]
 
     infix_operators = []
-    costum_productions = [("E", "*E", group(2, empty=True)),("E", "EE", group(2, empty=True))]
+    costum_productions = [("E", "*E", group(2, empty=True)), ("E", "EE", group(2, empty=True))]
     if convention == "equal_precedence":
         costum_productions += [("E", "E/E", infix)]
     elif convention == "implicit_higher_precedence":
@@ -169,6 +177,7 @@ def preprocess_according_to_chosen_convention(expression, parameters):
         parser = SLR_implicit_multiplication_convention_parser(convention)
         expression = parser.parse(parser.scan(expression))[0].content_string()
     return expression
+
 
 def substitute_input_symbols(exprs, params):
     '''
@@ -198,20 +207,20 @@ def substitute_input_symbols(exprs, params):
                     input_symbols_to_remove += [code]
                 else:
                     aliases = symbol_data["aliases"]
-                    for i in range(0,len(aliases)):
+                    for i in range(0, len(aliases)):
                         if len(aliases[i]) > 0:
                             aliases[i].strip()
                         if len(aliases[i]) == 0:
-                            aliases_to_remove += [(code,i)]
-        for (code,i) in aliases_to_remove:
+                            aliases_to_remove += [(code, i)]
+        for (code, i) in aliases_to_remove:
             del input_symbols[code]["aliases"][i]
         for code in input_symbols_to_remove:
             del input_symbols[code]
         for (code, symbol_data) in input_symbols.items():
-            substitutions.append((code,code))
+            substitutions.append((code, code))
             for alias in symbol_data["aliases"]:
                 if len(alias) > 0:
-                    substitutions.append((alias,code))
+                    substitutions.append((alias, code))
 
     # REMARK: This is to ensure capability with response areas that use the old formatting
     # for input_symbols. Should be removed when all response areas are updated.
@@ -242,14 +251,15 @@ def substitute_input_symbols(exprs, params):
 
     if len(substitutions) > 0:
         substitutions.sort(key=lambda x: -len(x[0]))
-        for k in range(0,len(exprs)):
+        for k in range(0, len(exprs)):
             exprs[k] = substitute(exprs[k], substitutions)
 
     return exprs
 
-def find_matching_parenthesis(string,index):
+
+def find_matching_parenthesis(string, index):
     depth = 0
-    for k in range(index,len(string)):
+    for k in range(index, len(string)):
         if string[k] == '(':
             depth += 1
             continue
@@ -258,6 +268,7 @@ def find_matching_parenthesis(string,index):
             if depth == 0:
                 return k
     return -1
+
 
 def substitute(string, substitutions):
     '''
@@ -328,6 +339,7 @@ def substitute(string, substitutions):
 
     return "".join(new_string)
 
+
 def compute_relative_tolerance_from_significant_decimals(string):
     rtol = None
     string = string.strip()
@@ -350,15 +362,8 @@ def compute_relative_tolerance_from_significant_decimals(string):
     rtol = 5*10**(-len(significant_characters))
     return rtol
 
+
 # -------- (Sympy) Expression Parsing Utilities
-
-from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
-from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy.printing.latex import LatexPrinter
-from sympy import Symbol
-import re
-from typing import Dict, List, TypedDict
-
 class SymbolData(TypedDict):
     latex: str
     aliases: List[str]
@@ -369,6 +374,7 @@ SymbolDict = Dict[str, SymbolData]
 symbol_latex_re = re.compile(
     r"(?P<start>\\\(|\$\$|\$)(?P<latex>.*?)(?P<end>\\\)|\$\$|\$)"
 )
+
 
 def sympy_symbols(symbols):
     """Create a mapping of local variables for parsing sympy expressions.
@@ -386,6 +392,7 @@ def sympy_symbols(symbols):
     """
     return {k: Symbol(k) for k in symbols}
 
+
 def extract_latex(symbol):
     """Returns the latex portion of a symbol string.
 
@@ -402,6 +409,7 @@ def extract_latex(symbol):
         return symbol
 
     return match.group("latex")
+
 
 def latex_symbols(symbols):
     """Create a mapping between custom Symbol objects and LaTeX symbol strings.
@@ -421,11 +429,13 @@ def latex_symbols(symbols):
     }
     return symbol_dict
 
+
 def sympy_to_latex(equation, symbols):
     latex_out = LatexPrinter(
         {"symbol_names": latex_symbols(symbols)}
     ).doprint(equation)
     return latex_out
+
 
 def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
     '''
@@ -483,25 +493,33 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
 
     strict_syntax = params.get("strict_syntax", True)
 
-    parsing_params = {"unsplittable_symbols": unsplittable_symbols, "strict_syntax": strict_syntax, "symbol_dict": symbol_dict, "extra_transformations": tuple(), "elementary_functions": params.get("elementary_functions", False), "convention": params.get("convention", None), "simplify": params.get("simplify", False)}
+    parsing_params = {
+        "unsplittable_symbols": unsplittable_symbols,
+        "strict_syntax": strict_syntax,
+        "symbol_dict": symbol_dict,
+        "extra_transformations": tuple(),
+        "elementary_functions": params.get("elementary_functions", False),
+        "convention": params.get("convention", None),
+        "simplify": params.get("simplify", False)
+    }
 
     if "symbol_assumptions" in params.keys():
         symbol_assumptions_strings = params["symbol_assumptions"]
         symbol_assumptions = []
         index = symbol_assumptions_strings.find("(")
         while index > -1:
-            index_match = find_matching_parenthesis(symbol_assumptions_strings,index)
+            index_match = find_matching_parenthesis(symbol_assumptions_strings, index)
             try:
                 symbol_assumption = eval(symbol_assumptions_strings[index+1:index_match])
                 symbol_assumptions.append(symbol_assumption)
             except (SyntaxError, TypeError) as e:
-                raise Exception("List of symbol assumptions not written correctly.")
-            index = symbol_assumptions_strings.find('(',index_match+1)
+                raise Exception("List of symbol assumptions not written correctly.") from e
+            index = symbol_assumptions_strings.find('(', index_match+1)
         for sym, ass in symbol_assumptions:
             try:
                 parsing_params["symbol_dict"].update({sym: eval("Symbol('"+sym+"',"+ass+"=True)")})
             except Exception as e:
-               raise Exception(f"Assumption {ass} for symbol {sym} caused a problem.")
+                raise Exception(f"Assumption {ass} for symbol {sym} caused a problem.") from e
 
     return parsing_params
 
@@ -527,7 +545,7 @@ def parse_expression(expr, parsing_params):
         alias_substitutions = []
         for (name, alias_list) in elementary_functions_names+special_symbols_names:
             if name in expr:
-                    alias_substitutions += [(name, name)]
+                alias_substitutions += [(name, name)]
             for alias in alias_list:
                 if alias in expr:
                     alias_substitutions += [(alias, name)]
@@ -541,9 +559,9 @@ def parse_expression(expr, parsing_params):
         transformations = parser_transformations[0:4]+extra_transformations
     else:
         transformations = parser_transformations[0:4, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
-    if parsing_params.get("rationalise",False):
+    if parsing_params.get("rationalise", False):
         transformations += parser_transformations[11]
-    if parsing_params.get("simplify",False):
+    if parsing_params.get("simplify", False):
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
         parsed_expr = parsed_expr.simplify()
     else:

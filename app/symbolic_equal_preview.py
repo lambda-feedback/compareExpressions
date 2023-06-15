@@ -3,11 +3,9 @@ from typing import Dict, List, TypedDict
 
 import sympy
 from latex2sympy2 import latex2sympy
-from sympy.parsing import parse_expr
 from sympy.printing.latex import LatexPrinter
 from typing_extensions import NotRequired
 
-from sympy import latex
 from sympy.parsing.sympy_parser import T as parser_transformations
 from .expression_utilities import (
     substitute_input_symbols,
@@ -15,9 +13,9 @@ from .expression_utilities import (
     create_sympy_parsing_params,
     create_expression_set,
     convert_absolute_notation,
-    find_matching_parenthesis
 )
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
+
 
 class Symbol(TypedDict):
     latex: str
@@ -140,15 +138,16 @@ def parse_latex(response: str, symbols: SymbolDict) -> str:
     except Exception as e:
         raise ValueError(str(e))
 
+
 def parse_symbolic(response: str, params):
     response_list = create_expression_set(response, params)
     result_sympy_expression = []
     feedback = []
     for response in response_list:
         response = response.strip()
-        response = substitute_input_symbols([response],params)
+        response = substitute_input_symbols([response], params)
     parsing_params = create_sympy_parsing_params(params)
-    parsing_params["extra_transformations"] = parser_transformations[9] # Add conversion of equal signs
+    parsing_params["extra_transformations"] = parser_transformations[9]  # Add conversion of equal signs
     parsing_params["symbol_dict"].update(sympy_symbols(params.get("symbols", {})))
 
     # Converting absolute value notation to a form that SymPy accepts
