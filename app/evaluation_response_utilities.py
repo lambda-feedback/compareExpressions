@@ -22,4 +22,13 @@ class EvaluationResponse:
         out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback(), tags=self._feedback_tags)
         if self.latex:
             out.update(dict(response_latex=self.latex))
+<<<<<<< Updated upstream
         return out
+=======
+        if self.simplified is not None:
+            out.update(dict(response_simplified=self.simplified))
+        return out
+
+    def __getitem__(self, key):
+        return self.serialise(include_test_data=True)[key]
+>>>>>>> Stashed changes

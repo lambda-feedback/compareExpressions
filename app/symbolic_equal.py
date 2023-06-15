@@ -1,15 +1,34 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
+<<<<<<< Updated upstream
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom
 from sympy import Equality
+=======
+from sympy import Equality, latex, pi, Symbol
+>>>>>>> Stashed changes
 
 try:
     from .expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
 except ImportError:
     from expression_utilities import preprocess_expression, parse_expression, create_sympy_parsing_params, substitute
 
+<<<<<<< Updated upstream
 parse_error_warning = lambda x: f"`{x}` could not be parsed as a valid mathematical expression. Ensure that correct codes for input symbols are used, correct notation is used, that the expression is unambiguous and that all parentheses are closed."
 
 def evaluation_function(response, answer, params) -> dict:
+=======
+from .expression_utilities import (
+    substitute_input_symbols,
+    parse_expression,
+    create_sympy_parsing_params,
+    create_expression_set,
+    convert_absolute_notation
+)
+from .evaluation_response_utilities import EvaluationResponse
+from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
+
+
+def evaluation_function(response, answer, params, eval_response=EvaluationResponse()) -> dict:
+>>>>>>> Stashed changes
 
     """
     Function used to symbolically compare two expressions.
@@ -31,6 +50,7 @@ def evaluation_function(response, answer, params) -> dict:
     if ("plus_minus" not in response+answer) and ("minus_plus" not in response+answer):
         return check_equality(response, answer, params)
     else:
+<<<<<<< Updated upstream
         response_set = set()
         if ("plus_minus" in response) or ("minus_plus" in response):
             response_set.add(response.replace("plus_minus","+").replace("minus_plus","-"))
@@ -47,6 +67,10 @@ def evaluation_function(response, answer, params) -> dict:
         answer_list = list(answer_set)
         matches = { "responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         interp = ""
+=======
+        matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
+        interp = []
+>>>>>>> Stashed changes
         for i, response in enumerate(response_list):
             result = None
             for j, answer in enumerate(answer_list):
@@ -68,6 +92,7 @@ def evaluation_function(response, answer, params) -> dict:
             raise SyntaxWarning(f"Unknown multiple_answers_criteria: {params['multiple_answers_critera']}")
         return {"is_correct": is_correct, "response_latex": interp}
 
+<<<<<<< Updated upstream
 def RecpTrig(expr):
     """
     Reciprocal Trig Functions -> Turn sec, csc, cot into sin form
@@ -254,17 +279,42 @@ def check_equality(response, answer, params) -> dict:
     from sympy import pi
 
     unsplittable_symbols = tuple()+(params.get("plus_minus","plus_minus"),params.get("minus_plus","minus_plus"))
+=======
 
-    if not isinstance(answer,str):
+def find_matching_parenthesis(string, index):
+    depth = 0
+    for k in range(index, len(string)):
+        if string[k] == '(':
+            depth += 1
+            continue
+        if string[k] == ')':
+            depth += -1
+            if depth == 0:
+                return k
+    return -1
+
+
+def check_equality(response, answer, params, eval_response) -> dict:
+>>>>>>> Stashed changes
+
+    if not isinstance(answer, str):
         raise Exception("No answer was given.")
+<<<<<<< Updated upstream
     if not isinstance(response,str):
         return {"is_correct": False, "feedback": "No response submitted."}
+=======
+    if not isinstance(response, str):
+        eval_response.is_correct = False
+        eval_response.add_feedback(("NO_RESPONSE", symbolic_comparison_internal_messages["NO_RESPONSE"]))
+        return eval_response
+>>>>>>> Stashed changes
 
     answer = answer.strip()
     response = response.strip()
     if len(answer) == 0:
         raise Exception("No answer was given.")
     if len(response) == 0:
+<<<<<<< Updated upstream
         return {"is_correct": False, "feedback": "No response submitted."}
 
     answer, response = preprocess_expression([answer, response],params)
@@ -292,18 +342,47 @@ def check_equality(response, answer, params) -> dict:
 
     # Dealing with special cases that aren't accepted by SymPy
     response, answer, remark = Absolute(response, answer)
+=======
+        eval_response.is_correct = False
+        eval_response.add_feedback(("NO_RESPONSE", symbolic_comparison_internal_messages["NO_RESPONSE"]))
+        return eval_response
 
-    if params.get("strict_syntax",True):
+    answer, response = substitute_input_symbols([answer, response], params)
+    parsing_params = create_sympy_parsing_params(params)
+    parsing_params.update({"rationalise": True, "simplify": True})
+    parsing_params["extra_transformations"] = parser_transformations[9]  # Add conversion of equal signs
+
+    # Converting absolute value notation to a form that SymPy accepts
+    response, response_feedback = convert_absolute_notation(response, "response")
+    if response_feedback is not None:
+        eval_response.add_feedback(response_feedback)
+    answer, answer_feedback = convert_absolute_notation(answer, "answer")
+    if answer_feedback is not None:
+        raise SyntaxWarning(answer_feedback[1], answer_feedback[0])
+>>>>>>> Stashed changes
+
+    if params.get("strict_syntax", True):
         if "^" in response:
+<<<<<<< Updated upstream
             separator = "" if len(remark) == 0 else "\n"
             remark += separator+"Note that `^` cannot be used to denote exponentiation, use `**` instead."
+=======
+            eval_response.add_feedback(("NOTATION_WARNING", symbolic_comparison_internal_messages["NOTATION_WARNING"]))
+>>>>>>> Stashed changes
 
     # Safely try to parse answer and response into symbolic expressions
     try:
         res = parse_expression(response, parsing_params)
+<<<<<<< Updated upstream
     except Exception as e:
         separator = "" if len(remark) == 0 else "\n"
         return {"is_correct": False, "feedback": parse_error_warning(response)+separator+remark}
+=======
+    except Exception:
+        eval_response.is_correct = False
+        eval_response.add_feedback(("PARSE_ERROR", symbolic_comparison_internal_messages["PARSE_ERROR"](response)))
+        return eval_response
+>>>>>>> Stashed changes
 
     try:
         ans = parse_expression(answer, parsing_params)
@@ -317,6 +396,7 @@ def check_equality(response, answer, params) -> dict:
 
     separator = "" if len(remark) == 0 else "\n"
 
+<<<<<<< Updated upstream
     if (not isinstance(res,Equality)) and isinstance(ans,Equality):
         return {
             "is_correct": False,
@@ -358,17 +438,35 @@ def check_equality(response, answer, params) -> dict:
     except (SyntaxError, TypeError) as e:
         raise Exception("SymPy was unable to parse the answer.") from e
 
+=======
+    if (not isinstance(res, Equality)) and isinstance(ans, Equality):
+        eval_response.is_correct = False
+        tag = "EXPRESSION_NOT_EQUALITY"
+        eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+        return eval_response
+
+    if isinstance(res, Equality) and (not isinstance(ans, Equality)):
+        eval_response.is_correct = False
+        tag = "EQUALITY_NOT_EXPRESSION"
+        eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+        return eval_response
+
+    # TODO: Remove when criteria for checking proportionality is implemented
+    if isinstance(res, Equality) and isinstance(ans, Equality):
+        eval_response.is_correct = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().is_constant()
+        return eval_response
+>>>>>>> Stashed changes
 
     error_below_atol = False
     error_below_rtol = False
 
-    if params.get("numerical",False) or params.get("rtol",False) or params.get("atol",False):
+    if params.get("numerical", False) or params.get("rtol", False) or params.get("atol", False):
         # REMARK: 'pi' should be a reserve symbols but is sometimes not treated as one, possibly because of input symbols
         # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
         # are other reserved symbols.
-        ans = ans.subs(Symbol('pi'),float(pi))
-        res = res.subs(Symbol('pi'),float(pi))
-        if res.is_constant() and ans.is_constant(): 
+        ans = ans.subs(Symbol('pi'), float(pi))
+        res = res.subs(Symbol('pi'), float(pi))
+        if res.is_constant() and ans.is_constant():
             if "atol" in params.keys():
                 error_below_atol = bool(abs(float(ans-res)) < float(params["atol"]))
             else:
@@ -379,18 +477,26 @@ def check_equality(response, answer, params) -> dict:
             else:
                 error_below_rtol = True
         if error_below_atol and error_below_rtol:
+<<<<<<< Updated upstream
             return {
                 "is_correct": True,
                 "level": "0",
                 "feedback": "The response is numerically equal to the answer."+separator+remark,
                 **interp
                 }
+=======
+            eval_response.is_correct = True
+            tag = "WITHIN_TOLERANCE"
+            eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+            return eval_response
+>>>>>>> Stashed changes
 
     # Going from the simplest to complex tranformations available in sympy, check equality
     # https://github.com/sympy/sympy/wiki/Faq#why-does-sympy-say-that-two-equal-expressions-are-unequal
 
     # General catch-all, placed first to improve performance
     is_correct = bool((res - ans).simplify() == 0)
+<<<<<<< Updated upstream
     if is_correct:
         if remark != "":
             feedback = {"feedback": remark}
@@ -450,3 +556,7 @@ def find_matching_parenthesis(string,index):
             if depth == 0:
                 return k
     return -1
+=======
+    eval_response.is_correct = is_correct
+    return eval_response
+>>>>>>> Stashed changes
