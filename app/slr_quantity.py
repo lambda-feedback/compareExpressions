@@ -3,9 +3,9 @@
 # -------
 
 import re
-from .expression_utilities import parse_expression
-from .symbolic_equal import evaluation_function as symbolicEqual
-from .comparison_utilities import symbolic_comparison, compute_relative_tolerance_from_significant_decimals
+from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals
+from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
+from .symbolic_comparison_preview import preview_function as symbolic_preview
 from .feedback.physical_quantities import criteria as physical_quantities_criteria
 from .feedback.physical_quantities import internal as physical_quantities_messages
 from .feedback.physical_quantities import QuantityTags
@@ -119,10 +119,13 @@ class PhysicalQuantity:
     def _value_latex(self, parameters):
         if self.value is not None:
             preview_parameters = {**parameters}
-            if "rtol" in parameters.keys():
-                del parameters["rtol"]
-            value_comparison_response = symbolicEqual(self.value.original_string(), "0", parameters)
-            return value_comparison_response.get("response_latex", "")
+#            if "rtol" in preview_parameters.keys():
+#                del preview_parameters["rtol"]
+            if "rtol" not in preview_parameters.keys():
+                preview_parameters.update({"rtol": 1e-12})
+            value_latex = symbolic_preview(self.value.original_string(), preview_parameters)
+            value_latex = symbolic_preview(self.value.original_string(), preview_parameters)["preview"]["latex"]
+            return value_latex
         return None
 
     def _unit_latex(self, node):
@@ -148,6 +151,7 @@ class PhysicalQuantity:
             return ["\\frac{"]+self._unit_latex(children[0])+["}{"]+self._unit_latex(children[1])+["}"]
         else:
             return [content]
+
 
 def SLR_generate_unit_dictionaries(units_string, strictness):
 
@@ -245,8 +249,8 @@ def set_tags(strictness):
 
 
 def SLR_quantity_parser(parameters):
-    units_string = parameters.get("units_string","SI common imperial")
-    strictness = parameters.get("strictness","natural")
+    units_string = parameters.get("units_string", "SI common imperial")
+    strictness = parameters.get("strictness", "natural")
     units_dictionary, prefixed_units_dictionary, units_end_dictionary, prefixed_units_end_dictionary = \
         SLR_generate_unit_dictionaries(units_string, strictness)
     max_unit_name_length = max(len(x) for x in [units_dictionary.keys()]+[units_end_dictionary.keys()])
@@ -395,14 +399,12 @@ def SLR_quantity_parsing(expr, parameters, parser, name):
     if len(quantity) > 1:
         raise Exception("Parsed quantity does not have a single root.")
 
-    tag_handler = set_tags(parameters.get("strictness","strict"))
+    tag_handler = set_tags(parameters.get("strictness", "strict"))
     return PhysicalQuantity(name, parameters, quantity[0], parser, messages=[], tag_handler=tag_handler)
 
 
 def quantity_comparison(response, answer, parameters, parsing_params, eval_response):
     eval_response.is_correct = False
-    units_string = parameters.get("units_string", "SI")
-    strictness = parameters.get("strictness", "strict")
 
     quantity_parser = SLR_quantity_parser(parameters)
     quantity_parsing = SLR_quantity_parsing
@@ -437,6 +439,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                         token.content = args[number_of_args]
                         number_of_args += 1
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+
             def execute(node):
                 key = node.label.strip()
                 if key in criteria_operations.keys():
@@ -511,7 +514,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ("answer",       "QUANTITY"),
             ("INPUT",        "INPUT", catch_undefined),
         ]
-        token_list += [(" *"+x+" *"," "+x+" ") for x in criteria_operations.keys()]
+        token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations.keys()]
 
         productions = [
             ("START",    "BOOL", create_node),
@@ -580,19 +583,19 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ),
         )
 
-    response_latex = []
-
     if check_criterion("HAS_VALUE", arg_names=("response",)):
-        response_number_value = check_criterion("NUMBER_VALUE", ("response",))
-        answer_number_value = check_criterion("NUMBER_VALUE", ("answer",))
+        check_criterion("NUMBER_VALUE", ("response",))
+        check_criterion("EXPR_VALUE", ("response",))
+    if check_criterion("HAS_VALUE", arg_names=("answer",)):
+        check_criterion("NUMBER_VALUE", ("answer",))
+        check_criterion("EXPR_VALUE", ("answer",))
 
-    # TODO redesign symbolicEqual so that it can easily return latex version of input
     eval_response.latex = quantities["response"].latex_string
 
     for criterion in ["MISSING_VALUE", "MISSING_UNIT", "UNEXPECTED_VALUE", "UNEXPECTED_UNIT"]:
         check_criterion(criterion)
 
-    eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response","answer"))
+    eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response", "answer"))
 
     for (tag, result) in evaluated_criteria.items():
         if result[0] is True:
