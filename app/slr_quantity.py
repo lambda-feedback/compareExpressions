@@ -4,8 +4,8 @@
 
 import re
 from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals
-from .symbolic_equal import evaluation_function as symbolic_comparison
-from .symbolic_equal_preview import preview_function as symbolic_preview
+from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
+from .symbolic_comparison_preview import preview_function as symbolic_preview
 from .feedback.physical_quantities import criteria as physical_quantities_criteria
 from .feedback.physical_quantities import internal as physical_quantities_messages
 from .feedback.physical_quantities import QuantityTags

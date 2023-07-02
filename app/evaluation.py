@@ -3,7 +3,7 @@ from .expression_utilities import (
     create_sympy_parsing_params
 )
 from .evaluation_response_utilities import EvaluationResponse
-from .symbolic_equal import evaluation_function as symbolic_comparison
+from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .slr_quantity import quantity_comparison
 from .unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
 

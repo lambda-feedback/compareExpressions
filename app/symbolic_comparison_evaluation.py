@@ -1,7 +1,6 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy import Equality, latex, pi, Symbol
 
-
 from .expression_utilities import (
     substitute_input_symbols,
     parse_expression,
@@ -13,11 +12,13 @@ from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 
 
-def evaluation_function(response, answer, params, eval_response=EvaluationResponse()) -> dict:
-
+def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
     Function used to symbolically compare two expressions.
     """
+
+    eval_response = EvaluationResponse()
+    eval_response.is_correct = False
 
     # This code handles the plus_minus and minus_plus operators
     # actual symbolic comparison is done in check_equality
@@ -28,7 +29,7 @@ def evaluation_function(response, answer, params, eval_response=EvaluationRespon
     answer_list = create_expression_set(answer, params)
 
     if len(response_list) == 1 and len(answer_list) == 1:
-        return check_equality(response, answer, params, eval_response)
+        eval_response = check_equality(response, answer, params, eval_response)
     else:
         matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         interp = []
@@ -41,8 +42,10 @@ def evaluation_function(response, answer, params, eval_response=EvaluationRespon
                     matches["answers"][j] = True
             if len(interp) == 0:
                 interp = result["response_latex"]
+                interp_sympy = result["response_simplified"]
             else:
                 interp += result["response_latex"]
+                interp_sympy += ", " + result["response_simplified"]
         if params["multiple_answers_criteria"] == "all":
             is_correct = all(matches["responses"]) and all(matches["answers"])
             if is_correct is False:
@@ -63,20 +66,8 @@ def evaluation_function(response, answer, params, eval_response=EvaluationRespon
         else:
             response_latex = interp
         eval_response.latex = response_latex
-        return eval_response
 
-
-def find_matching_parenthesis(string, index):
-    depth = 0
-    for k in range(index, len(string)):
-        if string[k] == '(':
-            depth += 1
-            continue
-        if string[k] == ')':
-            depth += -1
-            if depth == 0:
-                return k
-    return -1
+    return eval_response
 
 
 def check_equality(response, answer, params, eval_response) -> dict:
