@@ -25,7 +25,7 @@ class TestEvaluationFunction():
     from .symbolic_comparison_evaluation_tests import TestEvaluationFunction as TestSymbolicComparison
 
     # Import tests that makes sure that physical quantities are handled as expected
-    from .quantity_evaluation_tests import TestEvaluationFunction as TestQuantities
+    from .quantity_comparison_evaluation_tests import TestEvaluationFunction as TestQuantities
 
 
 if __name__ == "__main__":

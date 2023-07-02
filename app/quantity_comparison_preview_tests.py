@@ -2,7 +2,7 @@ import os
 import pytest
 
 from .preview_utilities import Params, extract_latex
-from .quantity_preview import preview_function
+from .quantity_comparison_preview import preview_function
 from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 
 

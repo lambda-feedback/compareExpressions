@@ -27,7 +27,7 @@ class TestPreviewFunction():
     from .symbolic_comparison_preview_tests import TestPreviewFunction as TestSymbolicComparison
 
     # Import tests that makes sure that physical quantities are handled as expected
-    from .quantity_preview_tests import TestPreviewFunction as TestQuantityComparison
+    from .quantity_comparison_preview_tests import TestPreviewFunction as TestQuantityComparison
 
     def test_empty_latex_expression(self):
         response = ""

@@ -6,9 +6,9 @@ import re
 from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals
 from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .symbolic_comparison_preview import preview_function as symbolic_preview
-from .feedback.physical_quantities import criteria as physical_quantities_criteria
-from .feedback.physical_quantities import internal as physical_quantities_messages
-from .feedback.physical_quantities import QuantityTags
+from .feedback.quantity_comparison import criteria as physical_quantities_criteria
+from .feedback.quantity_comparison import internal as physical_quantities_messages
+from .feedback.quantity_comparison import QuantityTags
 from .slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
 from .unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\

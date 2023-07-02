@@ -19,13 +19,12 @@ COPY evaluation_tests.py ./app/
 COPY symbolic_comparison_preview.py ./app/
 COPY symbolic_comparison_preview_tests.py ./app/
 COPY expression_utilities.py ./app/
-COPY feedback/physical_quantities.py ./app/feedback/
 COPY preview.py ./app/
 COPY preview_tests.py ./app/
 COPY preview_utilities.py ./app/
-COPY quantity_preview.py ./app/
-COPY quantity_preview_tests.py ./app/
-COPY quantity_evaluation_tests.py ./app/
+COPY quantity_comparison_preview.py ./app/
+COPY quantity_comparison_preview_tests.py ./app/
+COPY quantity_comparison_evaluation_tests.py ./app/
 COPY slr_parsing_utilities.py ./app/
 COPY slr_quantity.py ./app/
 COPY slr_quantity_tests.py ./app/
@@ -34,7 +33,7 @@ COPY symbolic_comparison_evaluation_tests.py ./app/
 COPY unit_system_conversions.py ./app/
 
 # Copy feedback messages
-COPY feedback/physical_quantities.py ./app/feedback/
+COPY feedback/quantity_comparison.py ./app/feedback/
 COPY feedback/symbolic_comparison.py ./app/feedback/
 
 # Copy Documentation
