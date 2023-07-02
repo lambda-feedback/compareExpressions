@@ -4,7 +4,7 @@ from .preview_utilities import (
     Result,
 )
 
-from .quantity_preview import preview_function as quantity_preview
+from .quantity_comparison_preview import preview_function as quantity_preview
 from .symbolic_comparison_preview import preview_function as symbolic_comparison_preview
 
 def preview_function(response: str, params: Params) -> Result:
