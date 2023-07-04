@@ -6,6 +6,7 @@ from .evaluation_response_utilities import EvaluationResponse
 from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .slr_quantity import quantity_comparison
 from .unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
+from .preview import preview_function
 
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
@@ -27,6 +28,13 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
 
     parameters = {"comparison": "expression", "strict_syntax": True}
     parameters.update(params)
+
+    if params.get("is_latex",False):
+        try:
+            preview_result = preview_function(response, params)["preview"]["sympy"]
+        except Exception as e:
+            preview_result = response
+        response = preview_result
 
     answer, response = substitute_input_symbols([answer, response], parameters)
     parsing_params = create_sympy_parsing_params(
