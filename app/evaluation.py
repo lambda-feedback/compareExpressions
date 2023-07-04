@@ -1,9 +1,9 @@
 from .expression_utilities import (
-    preprocess_expression,
+    substitute_input_symbols,
     create_sympy_parsing_params
 )
 from .evaluation_response_utilities import EvaluationResponse
-from .comparison_utilities import symbolic_comparison
+from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .slr_quantity import quantity_comparison
 from .unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
 
@@ -28,7 +28,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     parameters = {"comparison": "expression", "strict_syntax": True}
     parameters.update(params)
 
-    answer, response = preprocess_expression([answer, response], parameters)
+    answer, response = substitute_input_symbols([answer, response], parameters)
     parsing_params = create_sympy_parsing_params(
         parameters, unsplittable_symbols=unsplittable_symbols
     )
@@ -36,6 +36,6 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if parameters.get("physical_quantity", False) is True:
         eval_response = quantity_comparison(response, answer, parameters, parsing_params, eval_response)
     else:
-        eval_response.is_correct = symbolic_comparison(response, answer, parameters)["is_correct"]
+        eval_response = symbolic_comparison(response, answer, parameters, eval_response)
 
     return eval_response.serialise(include_test_data)
