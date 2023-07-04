@@ -30,7 +30,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     parameters.update(params)
 
     if params.get("is_latex",False):
-        preview_result = preview_function(response, params)["preview"]["sympy"]
+        response = preview_function(response, params)["preview"]["sympy"]
 
     answer, response = substitute_input_symbols([answer, response], parameters)
     parsing_params = create_sympy_parsing_params(
