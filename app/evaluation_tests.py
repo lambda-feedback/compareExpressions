@@ -32,6 +32,7 @@ class TestEvaluationFunction():
         answer = "sin(x)+x**7"
         params = {
             "strict_syntax": False,
+            "elementary_functions": True,
             "is_latex": True
         }
         result = evaluation_function(response, answer, params)
