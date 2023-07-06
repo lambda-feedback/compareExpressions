@@ -541,19 +541,19 @@ def parse_expression(expr, parsing_params):
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
     separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
+    # new approach
+    substitutions = separate_unsplittable_symbols
     if parsing_params["elementary_functions"] is True:
         alias_substitutions = []
         for (name, alias_list) in elementary_functions_names+special_symbols_names:
             if name in expr:
-                alias_substitutions += [(name, name)]
+                alias_substitutions += [(name, " "+name)]
             for alias in alias_list:
                 if alias in expr:
-                    alias_substitutions += [(alias, name)]
-        alias_substitutions.sort(key=lambda x: -len(x[0]))
-        expr = substitute(expr, alias_substitutions)
-        separate_unsplittable_symbols = [(x[0], " "+x[0]) for x in elementary_functions_names] + separate_unsplittable_symbols
-        separate_unsplittable_symbols.sort(key=lambda x: -len(x[0]))
-    expr = substitute(expr, separate_unsplittable_symbols)
+                    alias_substitutions += [(alias, " "+name)]
+        substitutions += alias_substitutions
+    substitutions.sort(key=lambda x: -len(x[0]))
+    expr = substitute(expr, substitutions)
     can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
     if strict_syntax:
         transformations = parser_transformations[0:4]+extra_transformations

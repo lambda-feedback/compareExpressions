@@ -108,7 +108,7 @@ def check_equality(response, answer, params, eval_response) -> dict:
     # Safely try to parse answer and response into symbolic expressions
     try:
         res = parse_expression(response, parsing_params)
-    except Exception:
+    except Exception as e:
         eval_response.is_correct = False
         eval_response.add_feedback(("PARSE_ERROR", symbolic_comparison_internal_messages["PARSE_ERROR"](response)))
         return eval_response

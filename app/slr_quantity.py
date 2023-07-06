@@ -465,7 +465,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                 raise Exception("SymPy was unable to parse the "+q.name+" unit") from e
         if q.unit is not None and q.value is not None:
             q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
-            q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify()
+            q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify(rational=True)
             q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
         return q_converted_value, q_converted_unit
 

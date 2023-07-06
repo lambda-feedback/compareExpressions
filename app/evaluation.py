@@ -20,11 +20,10 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     eval_response = EvaluationResponse()
     eval_response.is_correct = False
 
-    if "substitutions" in params.keys():
-        unsplittable_symbols = tuple()
-    else:
+    unsplittable_symbols = []
+    if "substitutions" not in params.keys() and params.get("physical_quantity",False):
         all_units = set_of_SI_prefixes | set_of_SI_base_unit_dimensions
-        unsplittable_symbols = [x[0] for x in all_units]
+        unsplittable_symbols += [x[0] for x in all_units]
 
     parameters = {"comparison": "expression", "strict_syntax": True}
     parameters.update(params)
