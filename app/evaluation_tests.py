@@ -27,6 +27,9 @@ class TestEvaluationFunction():
     # Import tests that makes sure that physical quantities are handled as expected
     from .quantity_comparison_evaluation_tests import TestEvaluationFunction as TestQuantities
 
+    # Import tests that corresponds to examples in documentation and examples module
+    from .example_tests import TestEvaluationFunction as TestExamples
+
     def test_eval_function_can_handle_latex_input(self):
         response = r"\sin x + x^{7}"
         answer = "sin(x)+x**7"
