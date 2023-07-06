@@ -85,25 +85,34 @@ class TestEvaluationFunction():
         assert result["is_correct"] == True
 
     @pytest.mark.parametrize(
-        "response, response_latex, value",
+        "response, answer, response_latex, value, strictness, units_string",
         [
-            ("2.00 kilometre/hour", r"2.0~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True),
-            ("2 km/h", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True),
-            ("0.56 m/s", r"0.56~\frac{\mathrm{metre}}{\mathrm{second}}", False),
-            ("0.556 m/s", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True),
-            ("2000 meter/hour", r"2000~\frac{\mathrm{metre}}{\mathrm{hour}}", True),
-            ("2 metre/millihour", r"2~\frac{\mathrm{metre}}{\mathrm{millihour}}", True),
-            ("1.243 mile/hour", r"1.243~\frac{\mathrm{mile}}{\mathrm{hour}}", True),
-            ("109.12 foot/minute", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True),
+            ("2.00 kilometre/hour", "2.00 km/h", r"2.0~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, None, None),
+            ("2 km/h", "2.00 km/h", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, None, None),
+            ("0.56 m/s", "2.00 km/h", r"0.56~\frac{\mathrm{metre}}{\mathrm{second}}", False, None, None),
+            ("0.556 m/s", "2.00 km/h", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, None, None),
+            ("2000 meter/hour", "2.00 km/h", r"2000~\frac{\mathrm{metre}}{\mathrm{hour}}", True, None, None),
+            ("2 metre/millihour", "2.00 km/h", r"2~\frac{\mathrm{metre}}{\mathrm{millihour}}", True, None, None),
+            ("1.243 mile/hour", "2.00 km/h", r"1.243~\frac{\mathrm{mile}}{\mathrm{hour}}", True, None, None),
+            ("109.12 foot/minute", "2.00 km/h", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, None, None),
+            ("0.556 m/s", "0.556 metre/second", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, "strict", "SI"),
+            ("5.56 dm/s", "0.556 metre/second", r"5.56~\frac{\mathrm{decimetre}}{\mathrm{second}}", True, "strict", "SI"),
+            ("55.6 centimetre second^(-1)", "0.556 metre/second", r"55.6~\mathrm{centimetre}~\mathrm{second}^{(-1)}", True, "strict", "SI"),
+            ("1.24 mile/hour", "1.24 mile/hour", r"1.24~\frac{\mathrm{mile}}{\mathrm{hour}}", True, "strict", "imperial common"),
+            ("2 km/h", "1.24 mile/hour", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, "strict", "imperial common"),  # This should be False, but due to SI units being used as base it still works in this case...
+            ("109.12 foot/minute", "1.24 mile/hour", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, "strict", "imperial common"),
         ]
     )
-    def test_checking_the_value_of_an_expression_or_a_physical_quantity(self, response, response_latex, value):
-        answer = "2.00 km/h"
+    def test_checking_the_value_of_an_expression_or_a_physical_quantity(self, response, answer, response_latex, value, strictness, units_string):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
             "physical_quantity": True,
         }
+        if strictness is not None:
+            params.update({"strictness": strictness})
+        if units_string is not None:
+            params.update({"units_string": units_string})
         preview = preview_function(response, params)["preview"]
         result = evaluation_function(response, answer, params)
         assert preview["latex"] == response_latex
