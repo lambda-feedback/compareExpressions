@@ -940,16 +940,11 @@ class TestEvaluationFunction():
             evaluation_function(response, answer, params)
         assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
 
-#        "answer=response",
-#        "answer-response=0",
-#        "answer=k*response",
-#        "answer/response=k",
-#        "not(answer=response)",
-
     @pytest.mark.parametrize(
         "response, answer, criteria, value",
         [
             ("a+b", "b+a", "answer=response", True),
+            ("a+b", "b+a", "not(answer=response)", False),
             ("a+b", "b+a", "answer-response=0", True),
             ("a+b", "b+a", "answer=response, answer-response=0", True),
             ("a", "3a", "answer/response=3", True),
