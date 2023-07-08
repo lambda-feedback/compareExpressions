@@ -8,9 +8,72 @@ from .expression_utilities import (
     create_expression_set,
     convert_absolute_notation
 )
+
+from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_node, operate, join
+
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 
+def generate_criteria_parser():
+    start_symbol = "START"
+    end_symbol = "END"
+    null_symbol = "NULL"
+
+    # NOTE: These are not used properly at the moment, saved here to assist in (the likely) case of future generalisation efforts
+    criteria_operations = {
+        "not": lambda x, p: not check_criterion(x[0]),
+        "=":   lambda x, p: (parse_expression(x[0].content_string(), p)) - (parse_expression(x[1].content_string(), p)),
+    }
+
+    token_list = [
+        (start_symbol,   start_symbol),
+        (end_symbol,     end_symbol),
+        (null_symbol,    null_symbol),
+        (" *BOOL *",     "BOOL"),
+        (" *\* *",       "PRODUCT"),
+        (" */ *",        "DIVISION"),
+        (" *\+ *",       "PLUS"),
+        (" *- *",        "MINUS"),
+        ("\( *",         "START_DELIMITER"),
+        (" *\)",         "END_DELIMITER"),
+        ("response",     "EXPR"),
+        ("answer",       "EXPR"),
+        ("EXPR",         "EXPR", catch_undefined),
+    ]
+    token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations.keys()]
+
+    productions = [
+        ("START",    "BOOL", create_node),
+        ("BOOL",     "not(BOOL)", operate(1)),
+        ("BOOL",     "EXPR=EXPR", infix),
+        ("EXPR",     "-EXPR", join),
+        ("EXPR",     "EXPR-EXPR", infix),
+        ("EXPR",     "EXPR+EXPR", infix),
+        ("EXPR",     "EXPR*EXPR", infix),
+        ("EXPR",     "EXPR/EXPR", infix),
+    ]
+
+    return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
+
+def create_criteria_list(criteria_string, criteria_parser, parsing_params):
+    criteria_string_list = [criterion.strip() for criterion in criteria_string.split(",")]
+    criteria_tokens = []
+    criteria_expressions = []
+    for criterion in criteria_string_list:
+        try:
+            criterion_tokens = criteria_parser.scan(criterion)
+            criteria_tokens.append(criterion_tokens)
+            criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+            criterion_expression = None
+            if criterion_parsed.label.strip() == "=":
+                lhs = criterion_parsed.children[0].content_string()
+                rhs = criterion_parsed.children[1].content_string()
+                criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
+            criteria_expressions.append(criterion_expression)
+        except Exception as e:
+            print(e)
+            raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
+    return criteria_tokens, criteria_expressions
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
@@ -29,14 +92,14 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     answer_list = create_expression_set(answer, params)
 
     if len(response_list) == 1 and len(answer_list) == 1:
-        eval_response = check_equality(response, answer, params, eval_response)
+        eval_response = symbolic_comparison(response, answer, params, eval_response)
     else:
         matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         interp = []
         for i, response in enumerate(response_list):
             result = None
             for j, answer in enumerate(answer_list):
-                result = check_equality(response, answer, params, eval_response)
+                result = symbolic_comparison(response, answer, params, eval_response)
                 if result["is_correct"]:
                     matches["responses"][i] = True
                     matches["answers"][j] = True
@@ -70,7 +133,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     return eval_response
 
 
-def check_equality(response, answer, params, eval_response) -> dict:
+def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     if not isinstance(answer, str):
         raise Exception("No answer was given.")
@@ -118,6 +181,11 @@ def check_equality(response, answer, params, eval_response) -> dict:
     except Exception as e:
         raise Exception("SymPy was unable to parse the answer.") from e
 
+    criteria_parser = generate_criteria_parser()
+    parsing_params["unsplittable_symbols"] += ("response","answer")
+    reserved_expressions = [("response", res), ("answer", ans)]
+    criteria_tokens, criteria_expressions = create_criteria_list(params.get("criteria","answer=response"), criteria_parser, parsing_params)
+
     # Add how res was interpreted to the response
     eval_response.latex = latex(res)
     eval_response.simplified = str(res)
@@ -143,7 +211,7 @@ def check_equality(response, answer, params, eval_response) -> dict:
     error_below_rtol = False
 
     if params.get("numerical", False) or params.get("rtol", False) or params.get("atol", False):
-        # REMARK: 'pi' should be a reserve symbols but is sometimes not treated as one, possibly because of input symbols
+        # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
         # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
         # are other reserved symbols.
         ans = ans.subs(Symbol('pi'), float(pi))
@@ -164,6 +232,9 @@ def check_equality(response, answer, params, eval_response) -> dict:
             eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
             return eval_response
 
-    is_correct = bool((res - ans).simplify() == 0)
+    #is_correct = bool((res - ans).simplify() == 0)
+    is_correct = True
+    for criterion_expression in criteria_expressions:
+        is_correct = is_correct and bool(criterion_expression.subs(reserved_expressions).simplify() == 0)
     eval_response.is_correct = is_correct
     return eval_response

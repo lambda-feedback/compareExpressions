@@ -940,5 +940,37 @@ class TestEvaluationFunction():
             evaluation_function(response, answer, params)
         assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
 
+#        "answer=response",
+#        "answer-response=0",
+#        "answer=k*response",
+#        "answer/response=k",
+#        "not(answer=response)",
+
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value",
+        [
+            ("a+b", "b+a", "answer=response", True),
+            ("a+b", "b+a", "answer-response=0", True),
+            ("a+b", "b+a", "answer=response, answer-response=0", True),
+            ("a", "3a", "answer/response=3", True),
+            ("a", "3a", "answer = 3*response", True),
+            ("a", "3a", "answer/3 = response", True),
+            ("a", "3a", "answer/response=3, answer = 3*response, answer/3 = response", True),
+            ("a+b", "b+a", "answer=response, answer/response=1", True),
+            ("a", "-a", "answer=-response", True),
+            ("a", "-a", "answer+response=0", True),
+            ("a", "-a", "answer/response=-1", True),
+            ("a", "-a", "answer=-response, answer+response=0, answer/response=-1", True),
+        ]
+    )
+    def test_criteria_based_comparison(self, response, answer, criteria, value):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
 if __name__ == "__main__":
     pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])
