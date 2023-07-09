@@ -1,3 +1,19 @@
+from ..criteria_utilities import Criterion, no_feedback
+
+criteria = dict()
+
+criteria["RESPONSE_EQUAL_ANSWER"] = Criterion("response=answer")
+criteria["RESPONSE_EQUAL_ANSWER"][True] = lambda inputs: "The response matches the expected answer."
+criteria["RESPONSE_EQUAL_ANSWER"][False] = lambda inputs: "The response does not match the expected answer."
+
+criteria["RESPONSE_DOUBLE_ANSWER"] = Criterion("response=2*answer")
+criteria["RESPONSE_DOUBLE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by 2."
+criteria["RESPONSE_DOUBLE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by 2."
+
+criteria["RESPONSE_NEGATIVE_ANSWER"] = Criterion("response=-answer")
+criteria["RESPONSE_NEGATIVE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by -1."
+criteria["RESPONSE_NEGATIVE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by -1."
+
 # TODO: Handle multiple answer feedback properly
 internal = {
     "ABSOLUTE_VALUE_NOTATION_AMBIGUITY": lambda name: f"Notation in {name} might be ambiguous, use `Abs(.)` instead of `|.|`",

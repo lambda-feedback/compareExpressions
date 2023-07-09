@@ -13,6 +13,7 @@ from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_no
 
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
+from .feedback.symbolic_comparison import criteria as symbolic_comparison_criteria
 
 
 criteria_operations = {
@@ -65,6 +66,11 @@ def check_criterion(criterion, parameters_dict):
         parsing_params = parameters_dict["parsing_params"]
         criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
         result = bool(criterion_expression.subs(reserved_expressions).simplify() == 0)
+        for (reference_tag, reference_criterion) in parameters_dict["reference_criteria"]:
+            reference_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
+            if (reference_expression-criterion_expression).simplify() == 0:
+                feedback = symbolic_comparison_criteria[reference_tag].feedback[result](None)
+                parameters_dict["eval_response"].add_feedback((reference_tag, feedback))
     elif label in criteria_operations.keys():
         result = criteria_operations[label](criterion.children, parameters_dict)
     return result
@@ -81,7 +87,7 @@ def create_criteria_list(criteria_string, criteria_parser, parsing_params):
         except Exception as e:
             print(e)
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
-    return criteria_tokens, criteria_parsed
+    return criteria_parsed
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
@@ -120,15 +126,15 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         if params["multiple_answers_criteria"] == "all":
             is_correct = all(matches["responses"]) and all(matches["answers"])
             if is_correct is False:
-                eval_response.add_feedback(symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ALL"])
+                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_ALL",symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ALL"]))
         elif params["multiple_answers_criteria"] == "all_responses":
             is_correct = all(matches["responses"])
             if is_correct is False:
-                eval_response.add_feedback(symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_RESPONSE"])
+                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_RESPONSE",symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_RESPONSE"]))
         elif params["multiple_answers_criteria"] == "all_answers":
             is_correct = all(matches["answers"])
             if is_correct is False:
-                eval_response.add_feedback(symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ANSWERS"])
+                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_RESPONSE",symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ANSWERS"]))
         else:
             raise SyntaxWarning(f"Unknown multiple_answers_criteria: {params['multiple_answers_critera']}")
         eval_response.is_correct = is_correct
@@ -192,7 +198,13 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     criteria_parser = generate_criteria_parser()
     parsing_params["unsplittable_symbols"] += ("response","answer")
     reserved_expressions = [("response", res), ("answer", ans)]
-    criteria_tokens, criteria_parsed = create_criteria_list(params.get("criteria","answer=response"), criteria_parser, parsing_params)
+    criteria_parsed = create_criteria_list(params.get("criteria","answer=response"), criteria_parser, parsing_params)
+    reference_criteria_tags = []
+    reference_criteria_strings = []
+    for criterion in symbolic_comparison_criteria.items():
+        reference_criteria_tags.append(criterion[0])
+        reference_criteria_strings.append(criterion[1].check)
+    reference_criteria = create_criteria_list(",".join(reference_criteria_strings), criteria_parser, parsing_params)
 
     # Add how res was interpreted to the response
     eval_response.latex = latex(res)
@@ -240,11 +252,12 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
             eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
             return eval_response
 
-    #is_correct = bool((res - ans).simplify() == 0)
     is_correct = True
     parameters_dict = {
         "parsing_params": parsing_params,
         "reserved_expressions": reserved_expressions,
+        "reference_criteria": list(zip(reference_criteria_tags, reference_criteria)),
+        "eval_response": eval_response
     }
     for criterion in criteria_parsed:
         is_correct = is_correct and check_criterion(criterion, parameters_dict)
