@@ -103,7 +103,7 @@ class TestEvaluationFunction():
             ("109.12 foot/minute", "1.24 mile/hour", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, "strict", "imperial common"),
         ]
     )
-    def test_checking_the_value_of_an_expression_or_a_physical_quantity(self, response, answer, response_latex, value, strictness, units_string):
+    def test_checking_the_value_of_a_physical_quantity(self, response, answer, response_latex, value, strictness, units_string):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -117,6 +117,56 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert preview["latex"] == response_latex
         assert result["is_correct"] == value
+
+    @pytest.mark.parametrize(
+        "answer, atol_response_true, atol_response_false, rtol_response_true, rtol_response_false",
+        [
+            (
+                "sqrt(47)+pi",
+                ["10", "5.1", "14.9"],
+                ["4.9", "15.1"],
+                ["10", "5.1", "14.9"],
+                ["4.9", "15.1"]
+            ),
+            (
+                "(13/3)^pi",
+                ["100", "96", "104"], 
+                ["94", "106"],
+                ["100", "51", "149"], 
+                ["49", "151"],
+            ),
+            (
+                "9^(e+ln(1.5305))",
+                ["1000", "996", "1004"], 
+                ["994", "1006"],
+                ["1000", "501", "1499"], 
+                ["499", "1501"],
+            )
+        ]
+    )
+    def test_setting_absolute_or_relative_tolerances_for_numerical_comparison(self, answer, atol_response_true, atol_response_false, rtol_response_true, rtol_response_false):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "atol": 5,
+        }
+        for response in atol_response_true:
+            result = evaluation_function(response, answer, params)
+            assert result["is_correct"] == True
+        for response in atol_response_false:
+            result = evaluation_function(response, answer, params)
+            assert result["is_correct"] == False
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "rtol": 0.5,
+        }
+        for response in rtol_response_true:
+            result = evaluation_function(response, answer, params)
+            assert result["is_correct"] == True
+        for response in rtol_response_false:
+            result = evaluation_function(response, answer, params)
+            assert result["is_correct"] == False
 
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])
