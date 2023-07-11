@@ -1,5 +1,5 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Equality, latex, pi, Symbol
+from sympy import Abs, Equality, latex, pi, Symbol
 
 from .expression_utilities import (
     substitute_input_symbols,
@@ -14,6 +14,7 @@ from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_no
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 from .feedback.symbolic_comparison import criteria as symbolic_comparison_criteria
+from .feedback.symbolic_comparison import equivalences as reference_criteria_strings
 
 
 criteria_operations = {
@@ -60,17 +61,20 @@ def check_criterion(criterion, parameters_dict):
     label = criterion.label.strip()
     parsing_params = parameters_dict["parsing_params"]
     reserved_expressions = parameters_dict["reserved_expressions"]
+    reference_criteria_strings = parameters_dict["reference_criteria_strings"]
+    eval_response = parameters_dict["eval_response"]
+    parsing_params = parameters_dict["parsing_params"]
+    symbolic_comparison_criteria = parameters_dict["symbolic_comparison_criteria"]
     if label == "EQUALITY":
         lhs = criterion.children[0].content_string()
         rhs = criterion.children[1].content_string()
-        parsing_params = parameters_dict["parsing_params"]
         criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
         result = bool(criterion_expression.subs(reserved_expressions).simplify() == 0)
-        for (reference_tag, reference_criterion) in parameters_dict["reference_criteria"]:
-            reference_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
-            if (reference_expression-criterion_expression).simplify() == 0:
+        for (reference_tag, reference_strings) in reference_criteria_strings.items():
+            if "".join(str(criterion_expression).split()) in reference_strings:
                 feedback = symbolic_comparison_criteria[reference_tag].feedback[result](None)
-                parameters_dict["eval_response"].add_feedback((reference_tag, feedback))
+                eval_response.add_feedback((reference_tag, feedback))
+                break
     elif label in criteria_operations.keys():
         result = criteria_operations[label](criterion.children, parameters_dict)
     return result
@@ -199,12 +203,6 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     parsing_params["unsplittable_symbols"] += ("response","answer")
     reserved_expressions = [("response", res), ("answer", ans)]
     criteria_parsed = create_criteria_list(params.get("criteria","answer=response"), criteria_parser, parsing_params)
-    reference_criteria_tags = []
-    reference_criteria_strings = []
-    for criterion in symbolic_comparison_criteria.items():
-        reference_criteria_tags.append(criterion[0])
-        reference_criteria_strings.append(criterion[1].check)
-    reference_criteria = create_criteria_list(",".join(reference_criteria_strings), criteria_parser, parsing_params)
 
     # Add how res was interpreted to the response
     eval_response.latex = latex(res)
@@ -256,8 +254,9 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     parameters_dict = {
         "parsing_params": parsing_params,
         "reserved_expressions": reserved_expressions,
-        "reference_criteria": list(zip(reference_criteria_tags, reference_criteria)),
-        "eval_response": eval_response
+        "reference_criteria_strings": reference_criteria_strings,
+        "symbolic_comparison_criteria": symbolic_comparison_criteria,
+        "eval_response": eval_response,
     }
     for criterion in criteria_parsed:
         is_correct = is_correct and check_criterion(criterion, parameters_dict)

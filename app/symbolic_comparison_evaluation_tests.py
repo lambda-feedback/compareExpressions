@@ -948,14 +948,14 @@ class TestEvaluationFunction():
             ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"]),
             ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),
             ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),
-            ("a", "2a", "answer/response=2", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("a", "2a", "answer = 2*response", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("a", "2a", "answer/2 = response", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("a", "2a", "answer/response=2, answer = 2*response, answer/2 = response", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("a", "-a", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("a", "-a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("a", "-a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("a", "-a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("2a", "a", "response/answer=2", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("2a", "a", "2*answer = response", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("2a", "a", "answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("-a", "a", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("-a", "a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("-a", "a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags):
