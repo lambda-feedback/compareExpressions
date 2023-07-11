@@ -14,6 +14,8 @@ class EvaluationResponse:
         if isinstance(feedback_item, tuple):
             self._feedback.append(feedback_item[1])
             self._feedback_tags.update({feedback_item[0]: len(self._feedback)-1})
+        else:
+            raise TypeError("Feedback must be on the form (tag, feedback).")
         self._feedback_tags
 
     def _serialise_feedback(self) -> str:

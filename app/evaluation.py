@@ -20,6 +20,22 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     eval_response = EvaluationResponse()
     eval_response.is_correct = False
 
+    input_symbols_reserved_words = list(params.get("symbols",dict()).keys())
+
+    for input_symbol in params.get("symbols",dict()).values():
+        input_symbols_reserved_words += input_symbol.get("aliases",[])
+
+    for input_symbol in params.get("input_symbols",[]):
+        input_symbols_reserved_words += [input_symbol[0]]+input_symbol[1]
+
+    reserved_keywords = ["response","answer"]
+    reserved_keywords_collisions = []
+    for keyword in reserved_keywords:
+        if keyword in input_symbols_reserved_words:
+            reserved_keywords_collisions.append(keyword)
+    if len(reserved_keywords_collisions) > 0:
+        raise Exception("`"+"`, `".join(reserved_keywords_collisions)+"` are reserved keyword and cannot be used as input symbol codes or alternatives.")
+
     unsplittable_symbols = []
     if "substitutions" not in params.keys() and params.get("physical_quantity",False):
         all_units = set_of_SI_prefixes | set_of_SI_base_unit_dimensions

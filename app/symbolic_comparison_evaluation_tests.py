@@ -37,7 +37,7 @@ elementary_function_test_cases = [
     ("sign", "Bsign(1)", "B", r"B \cdot \operatorname{sign}{\left(1 \right)}"),
     ("abs", "BAbs(-2)", "2B", r"B \cdot \left|{-2}\right|"),
     ("Max", "BMax(0,1)", "B", r"B \cdot 1"),  # r"B \max{\left(0,1 \right)}"
-    ("Min", "BMin(1,2)", "B", "B \cdot 1"),  # r"B \min{\left(1,2 \right)}"
+    ("Min", "BMin(1,2)", "B", r"B \cdot 1"),  # r"B \min{\left(1,2 \right)}"
     ("arg", "Barg(1)", "0", r"B \cdot \arg{\left(1 \right)}"),
     ("ceiling", "Bceiling(0.6)", "B", r"B \cdot 1"),  # r"B \left\lceil 0.6 \right\rceil"),
     ("floor", "Bfloor(0.6)", "0", r"B \cdot 0"),  # r"B \left\lfloor 0.6 \right\rfloor"),
@@ -122,7 +122,7 @@ class TestEvaluationFunction():
         params = {
             "strict_syntax": False,
             "symbols": {
-                "longName": {"aliases": [], "latex": "\\(\\mathrm\{longName\}\\)"}
+                "longName": {"aliases": [], "latex": r"\(\mathrm{longName}\)"}
             }
         }
         result = evaluation_function(response, answer, params)
@@ -856,6 +856,118 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params)
         assert result["is_correct"] is True
 
+    def test_no_reserved_keywords_in_input_symbol_codes(self):
+        reserved_keywords = ["response","answer"]
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        symbols = dict()
+        for keyword in reserved_keywords:
+            symbols.update(
+                {
+                    keyword: {
+                        "aliases": [],
+                        "latex": r"\mathrm{"+keyword+r"}"
+                    }
+                }
+            )
+        params.update({"symbols": symbols})
+        response = "a+b"
+        answer = "b+a"
+        with pytest.raises(Exception) as e:
+            evaluation_function(response, answer, params)
+        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+
+    def test_no_reserved_keywords_in_input_symbol_alternatives(self):
+        reserved_keywords = ["response","answer"]
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        symbols = dict()
+        labels = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        label_index = 0
+        for keyword in reserved_keywords:
+            symbols.update(
+                {
+                    labels[label_index]: {
+                        "aliases": [keyword],
+                        "latex": r"\mathrm{"+keyword+r"}"
+                    }
+                }
+            )
+            label_index += 1
+        params.update({"symbols": symbols})
+        response = "a+b"
+        answer = "b+a"
+        with pytest.raises(Exception) as e:
+            evaluation_function(response, answer, params)
+        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+
+    def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
+        reserved_keywords = ["response","answer"]
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        input_symbols = []
+        for keyword in reserved_keywords:
+            input_symbols.append([keyword,[]])
+        params.update({"input_symbols": input_symbols})
+        response = "a+b"
+        answer = "b+a"
+        with pytest.raises(Exception) as e:
+            evaluation_function(response, answer, params)
+        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+
+    def test_no_reserved_keywords_in_old_format_input_symbol_alternatives(self):
+        reserved_keywords = ["response","answer"]
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        input_symbols = []
+        labels = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        label_index = 0
+        for keyword in reserved_keywords:
+            input_symbols.append([labels[label_index],[keyword]])
+            label_index += 1
+        params.update({"input_symbols": input_symbols})
+        response = "a+b"
+        answer = "b+a"
+        with pytest.raises(Exception) as e:
+            evaluation_function(response, answer, params)
+        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value, feedback_tags",
+        [
+            ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"]),
+            ("a+b", "b+a", "not(answer=response)", False, ["RESPONSE_EQUAL_ANSWER"]),
+            ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"]),
+            ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),
+            ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),
+            ("2a", "a", "response/answer=2", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("2a", "a", "2*answer = response", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("2a", "a", "answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"]),
+            ("-a", "a", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("-a", "a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("-a", "a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+        ]
+    )
+    def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        for feedback_tag in feedback_tags:
+            assert feedback_tag in result["tags"]
 
 if __name__ == "__main__":
     pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])
