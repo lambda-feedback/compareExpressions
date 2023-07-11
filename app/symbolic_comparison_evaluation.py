@@ -52,6 +52,7 @@ def generate_criteria_parser():
         ("EXPR",     "EXPR-EXPR", infix),
         ("EXPR",     "EXPR+EXPR", infix),
         ("EXPR",     "EXPR*EXPR", infix),
+        ("EXPR",     "EXPREXPR", join),
         ("EXPR",     "EXPR/EXPR", infix),
     ]
 

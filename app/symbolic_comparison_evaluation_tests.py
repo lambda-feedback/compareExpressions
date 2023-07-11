@@ -956,6 +956,10 @@ class TestEvaluationFunction():
             ("-a", "a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"]),
             ("-a", "a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
             ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
+            ("1", "1", "response^3-6*response^2+11*response-6=0", True, []),
+            ("2", "1", "response^3-6*response^2+11*response-6=0", True, []),
+            ("3", "1", "response^3-6*response^2+11*response-6=0", True, []),
+            ("4", "1", "response^3-6*response^2+11*response-6=0", False, []),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags):
