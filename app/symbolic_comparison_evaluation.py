@@ -9,7 +9,7 @@ from .expression_utilities import (
     convert_absolute_notation
 )
 
-from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_node, operate, join
+from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_node, operate, join, group
 
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
@@ -18,7 +18,7 @@ from .feedback.symbolic_comparison import equivalences as reference_criteria_str
 
 
 criteria_operations = {
-    "not": lambda x, p: not check_criterion(x[0], p),
+    "not": lambda x, p: not check_criterion(x[0], p, generate_feedback=False),
 }
 
 def generate_criteria_parser():
@@ -35,9 +35,9 @@ def generate_criteria_parser():
         (" */ *",        "DIVISION"),
         (" *\+ *",       "PLUS"),
         (" *- *",        "MINUS"),
+        (" *= *",        "EQUALITY"),
         ("\( *",         "START_DELIMITER"),
         (" *\)",         "END_DELIMITER"),
-        (" *= *",        "EQUALITY"),
         ("response",     "EXPR"),
         ("answer",       "EXPR"),
         ("EXPR",         "EXPR", catch_undefined),
@@ -54,26 +54,30 @@ def generate_criteria_parser():
         ("EXPR",     "EXPR*EXPR", infix),
         ("EXPR",     "EXPREXPR", join),
         ("EXPR",     "EXPR/EXPR", infix),
+        ("EXPR",     "(EXPR)", join),
     ]
 
     return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
 
-def check_criterion(criterion, parameters_dict):
+def check_criterion(criterion, parameters_dict,generate_feedback=True):
     label = criterion.label.strip()
     parsing_params = parameters_dict["parsing_params"]
     reserved_expressions = parameters_dict["reserved_expressions"]
     reference_criteria_strings = parameters_dict["reference_criteria_strings"]
     eval_response = parameters_dict["eval_response"]
-    parsing_params = parameters_dict["parsing_params"]
+    parsing_params = {key: value for (key,value) in parameters_dict["parsing_params"].items()}
+    parsing_params.update({"simplify": False})
     symbolic_comparison_criteria = parameters_dict["symbolic_comparison_criteria"]
     if label == "EQUALITY":
         lhs = criterion.children[0].content_string()
         rhs = criterion.children[1].content_string()
-        criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
+        criterion_expression = (parse_expression(lhs, parsing_params).simplify(doit=False)) - (parse_expression(rhs, parsing_params).simplify(doit=False))
         result = bool(criterion_expression.subs(reserved_expressions).simplify() == 0)
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
-            if "".join(str(criterion_expression).split()) in reference_strings:
-                feedback = symbolic_comparison_criteria[reference_tag].feedback[result](None)
+            if reference_tag in eval_response.get_tags():
+                continue
+            if "".join(str(criterion_expression).split()) in reference_strings and generate_feedback is True:
+                feedback = symbolic_comparison_criteria[reference_tag].feedback[result]([])
                 eval_response.add_feedback((reference_tag, feedback))
                 break
     elif label in criteria_operations.keys():
@@ -81,7 +85,25 @@ def check_criterion(criterion, parameters_dict):
     return result
 
 def create_criteria_list(criteria_string, criteria_parser, parsing_params):
-    criteria_string_list = [criterion.strip() for criterion in criteria_string.split(",")]
+    criteria_string_list = []
+    delims = [
+        ("(", ")"),
+        ("[", "]"),
+        ("{", "}"),
+    ]
+    depth = {delim: 0 for delim in delims}
+    delim_key = {delim[0]: delim for delim in delims}
+    delim_key.update({delim[1]: delim for delim in delims})
+    criterion_start = 0
+    for n, c in enumerate(criteria_string):
+        if c in [delim[0] for delim in delims]:
+            depth[delim_key[c]] += 1
+        if c in [delim[1] for delim in delims]:
+            depth[delim_key[c]] -= 1
+        if c == "," and all([d == 0 for d in depth.values()]):
+            criteria_string_list.append(criteria_string[criterion_start:n].strip())
+            criterion_start = n+1
+    criteria_string_list.append(criteria_string[criterion_start:].strip())
     criteria_tokens = []
     criteria_parsed = []
     for criterion in criteria_string_list:
