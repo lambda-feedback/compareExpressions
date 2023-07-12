@@ -71,12 +71,16 @@ def generate_input_variations_from_elementary_function_aliases(response, answer,
     alias_substitutions = []
     for (name, alias) in elementary_functions_names:
         if name in answer or name in response:
-            alias_substitutions += [(name, x) for x in alias]
+            alias_substitutions += [(name, alias)]
     alias_substitutions.sort(key=lambda x: -len(x[0]))
-    for substitution in alias_substitutions:
-        subs_answer = substitute(answer, [substitution])
-        subs_response = substitute(response, [substitution])
-        input_variations += [(subs_response, subs_answer)]
+    for k, substitution in enumerate(alias_substitutions):
+        for alternative in substitution[1]:
+            current_substitutions = [(c, a[0]) for (c, a) in alias_substitutions[0:k]]
+            current_substitutions.append((substitution[0], alternative))
+            current_substitutions += [(c, a[0]) for (c, a) in alias_substitutions[(k+1):]]
+            subs_answer = substitute(answer, current_substitutions)
+            subs_response = substitute(response, current_substitutions)
+            input_variations += [(subs_response, subs_answer)]
     return input_variations
 
 
