@@ -945,7 +945,7 @@ class TestEvaluationFunction():
         [
             ("sin(x)+2", "sin(x)", "Derivative(response,x)=cos(x)", True, []),
             ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"]),
-            ("a+b", "b+a", "not(answer=response)", False, ["RESPONSE_EQUAL_ANSWER"]),
+            ("a+b", "b+a", "not(answer=response)", False, []),
             ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"]),
             ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),
             ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),

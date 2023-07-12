@@ -18,7 +18,7 @@ from .feedback.symbolic_comparison import equivalences as reference_criteria_str
 
 
 criteria_operations = {
-    "not": lambda x, p: not check_criterion(x[0], p),
+    "not": lambda x, p: not check_criterion(x[0], p, generate_feedback=False),
 }
 
 def generate_criteria_parser():
@@ -59,7 +59,7 @@ def generate_criteria_parser():
 
     return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
 
-def check_criterion(criterion, parameters_dict):
+def check_criterion(criterion, parameters_dict,generate_feedback=True):
     label = criterion.label.strip()
     parsing_params = parameters_dict["parsing_params"]
     reserved_expressions = parameters_dict["reserved_expressions"]
@@ -76,7 +76,7 @@ def check_criterion(criterion, parameters_dict):
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
             if reference_tag in eval_response.get_tags():
                 continue
-            if "".join(str(criterion_expression).split()) in reference_strings:
+            if "".join(str(criterion_expression).split()) in reference_strings and generate_feedback is True:
                 feedback = symbolic_comparison_criteria[reference_tag].feedback[result]([])
                 eval_response.add_feedback((reference_tag, feedback))
                 break
