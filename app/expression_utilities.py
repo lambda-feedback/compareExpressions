@@ -24,7 +24,9 @@ elementary_functions_names = [
     ('asinh', ['arcsinh']), ('acosh', ['arccosh']), ('atanh', ['arctanh']),
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
     ('exp', ['Exp']), ('E', ['e']), ('log', []),
-    ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', [])
+    ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
+    # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
+    ('sum',[]), ('diff',[]), ('Derivative',[]), 
 ]
 
 greek_letters = [

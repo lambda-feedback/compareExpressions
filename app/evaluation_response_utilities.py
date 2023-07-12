@@ -2,18 +2,24 @@ class EvaluationResponse:
     def __init__(self):
         self.is_correct = False
         self.latex = None
-        self._feedback = []
-        self._feedback_tags = {}
+        self._feedback = [] # A list that will hold all feedback items
+        self._feedback_tags = {}  # A dictionary that holds a list with indices to all feedback items with the same tag
         self.latex = ""
         self.simplified = ""
 
     def get_feedback(self, tag):
         return self._feedback_tags.get(tag, None)
 
+    def get_tags(self):
+        return list(self._feedback_tags.keys())
+
     def add_feedback(self, feedback_item):
         if isinstance(feedback_item, tuple):
             self._feedback.append(feedback_item[1])
-            self._feedback_tags.update({feedback_item[0]: len(self._feedback)-1})
+            if feedback_item[0] not in self._feedback_tags.keys():
+                self._feedback_tags.update({feedback_item[0]: [len(self._feedback)-1]})
+            else:
+                self._feedback_tags[feedback_item[0]].append(len(self._feedback)-1)
         else:
             raise TypeError("Feedback must be on the form (tag, feedback).")
         self._feedback_tags
