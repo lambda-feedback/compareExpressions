@@ -104,7 +104,6 @@ def create_criteria_list(criteria_string, criteria_parser, parsing_params):
             criteria_string_list.append(criteria_string[criterion_start:n].strip())
             criterion_start = n+1
     criteria_string_list.append(criteria_string[criterion_start:].strip())
-    #criteria_string_list = [criterion.strip() for criterion in criteria_string.split(";")]
     criteria_tokens = []
     criteria_parsed = []
     for criterion in criteria_string_list:
