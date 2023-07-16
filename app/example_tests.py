@@ -168,5 +168,23 @@ class TestEvaluationFunction():
             result = evaluation_function(response, answer, params)
             assert result["is_correct"] == False
 
+    def test_using_input_symbols_alternatives(self):
+        response = "eps_r"
+        answer = "epsilon_r"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "epsilon_r": {
+                    "latex": r"\(\epsilon_r\)",
+                    "aliases": ["eps","eps_r","e_r"],
+                },
+            },
+        }
+        preview = preview_function(response, params)["preview"]
+        result = evaluation_function(response, answer, params)
+        assert preview["latex"] == r"\epsilon_r"
+        assert result["is_correct"] == True
+
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])
