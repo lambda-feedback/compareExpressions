@@ -168,8 +168,8 @@ class TestEvaluationFunction():
             result = evaluation_function(response, answer, params)
             assert result["is_correct"] == False
 
-    def test_using_input_symbols_alternatives(self):
-        response = "eps_r"
+    @pytest.mark.parametrize("response", ["eps","eps_r","e_r"])
+    def test_using_input_symbols_alternatives(self, response):
         answer = "epsilon_r"
         params = {
             "strict_syntax": False,
