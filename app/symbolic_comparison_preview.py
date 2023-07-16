@@ -26,9 +26,8 @@ def parse_symbolic(response: str, params):
     response_list = create_expression_set(response, params)
     result_sympy_expression = []
     feedback = []
-    for response in response_list:
-        response = response.strip()
-        response = substitute_input_symbols([response], params)
+    for k, response in enumerate(response_list):
+        response_list[k] = substitute_input_symbols([response.strip()], params)
     parsing_params = create_sympy_parsing_params(params)
     parsing_params["extra_transformations"] = parser_transformations[9]  # Add conversion of equal signs
     parsing_params["symbol_dict"].update(sympy_symbols(params.get("symbols", {})))
