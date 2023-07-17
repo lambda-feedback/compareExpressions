@@ -16,6 +16,7 @@ COPY criteria_utilities.py ./app/
 COPY evaluation.py ./app/
 COPY evaluation_response_utilities.py ./app/
 COPY evaluation_tests.py ./app/
+COPY example_tests.py ./app/
 COPY symbolic_comparison_preview.py ./app/
 COPY symbolic_comparison_preview_tests.py ./app/
 COPY expression_utilities.py ./app/
