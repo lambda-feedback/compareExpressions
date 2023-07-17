@@ -947,8 +947,6 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags",
         [
-            ("sin(x)+2", "sin(x)", "Derivative(response,x)=cos(x)", True, []),
-            ("sin(x)+2", "sin(x)", "diff(response,x)=cos(x)", True, []),
             ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"]),
             ("a+b", "b+a", "not(answer=response)", False, []),
             ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"]),
@@ -966,6 +964,12 @@ class TestEvaluationFunction():
             ("2", "1", "response^3-6*response^2+11*response-6=0", True, []),
             ("3", "1", "response^3-6*response^2+11*response-6=0", True, []),
             ("4", "1", "response^3-6*response^2+11*response-6=0", False, []),
+            ("sin(x)+2", "sin(x)", "Derivative(response,x)=cos(x)", True, []),
+            ("sin(x)+2", "sin(x)", "diff(response,x)=cos(x)", True, []),
+            ("exp(lambda*x)/(1+exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
+            ("5*exp(lambda*x)/(1+5*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
+            ("6*exp(lambda*x)/(1+7*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", False, []),
+            ("c*exp(lambda*x)/(1+c*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags):
