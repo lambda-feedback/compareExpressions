@@ -14,7 +14,7 @@ criteria["RESPONSE_EQUAL_ANSWER"][True] = lambda inputs: "The response matches t
 criteria["RESPONSE_EQUAL_ANSWER"][False] = lambda inputs: "The response does not match the expected answer."
 
 criteria["RESPONSE_DOUBLE_ANSWER"] = Criterion("response=2*answer")
-equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["answer-response/2","-answer+response/2","-2*answer-response","2*answer-response","-2+answer/response","-2+response/answer"]})
+equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["answer-response/2","-answer+response/2","-2*answer-response","2*answer-response","-2+answer/response","-2+response/answer","answer-1*response/2","-answer+1*response/2","-2+1*answer/response","-2+1*response/answer"]})
 criteria["RESPONSE_DOUBLE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by 2."
 criteria["RESPONSE_DOUBLE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by 2."
 

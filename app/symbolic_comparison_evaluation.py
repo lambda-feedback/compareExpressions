@@ -71,8 +71,8 @@ def check_criterion(criterion, parameters_dict,generate_feedback=True):
     if label == "EQUALITY":
         lhs = criterion.children[0].content_string()
         rhs = criterion.children[1].content_string()
-        criterion_expression = (parse_expression(lhs, parsing_params).simplify(doit=False)) - (parse_expression(rhs, parsing_params).simplify(doit=False))
-        result = bool(criterion_expression.subs(reserved_expressions).simplify() == 0)
+        criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
+        result = bool(criterion_expression.subs(reserved_expressions).cancel().simplify().simplify() == 0)
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
             if reference_tag in eval_response.get_tags():
                 continue

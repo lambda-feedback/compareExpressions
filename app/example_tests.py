@@ -116,6 +116,7 @@ class TestEvaluationFunction():
         preview = preview_function(response, params)["preview"]
         result = evaluation_function(response, answer, params)
         assert preview["latex"] == response_latex
+        assert result["response_latex"] == response_latex
         assert result["is_correct"] == value
 
 if __name__ == "__main__":

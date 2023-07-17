@@ -41,7 +41,13 @@ def append(production, output, tag_handler):
 def join(production, output, tag_handler):
     label = production[0].label
     handle = production[1]
-    joined_content = "".join([node.content for node in output[-len(handle):]])
+    content = []
+    for node in output[-len(handle):]:
+        try:
+            content.append(node.content_string())
+        except:
+            content.append(node.content)
+    joined_content = "".join(content)
     joined_end = output[-1].end
     output = output[0:(1-len(handle))]
     output[-1].label = label
