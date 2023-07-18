@@ -202,7 +202,7 @@ def substitute_input_symbols(exprs, params):
     if isinstance(exprs, str):
         exprs = [exprs]
 
-    substitutions = []
+    substitutions = [(expr, expr) for expr in params.get("reserved_keywords",[])]
 
     input_symbols = params.get("symbols",dict())
 

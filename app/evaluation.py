@@ -41,7 +41,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         all_units = set_of_SI_prefixes | set_of_SI_base_unit_dimensions
         unsplittable_symbols += [x[0] for x in all_units]
 
-    parameters = {"comparison": "expression", "strict_syntax": True}
+    parameters = {"comparison": "expression", "strict_syntax": True, "reserved_keywords": reserved_keywords}
     parameters.update(params)
 
     if params.get("is_latex",False):
