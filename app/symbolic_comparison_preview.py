@@ -108,9 +108,9 @@ def preview_function(response: str, params: Params) -> Result:
         else:
             latex_out = latex_out[0]
 
-    except SyntaxError as e:
-        raise ValueError(f"Failed to parse Sympy expression: {original_response}") from e
-    except ValueError as e:
-        raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from e
+    except SyntaxError as exc:
+        raise ValueError(f"Failed to parse SymPy expression: {original_response}") from exc
+    except ValueError as exc:
+        raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from exc
 
     return Result(preview=Preview(latex=latex_out, sympy=sympy_out))

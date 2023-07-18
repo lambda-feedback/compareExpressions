@@ -26,7 +26,7 @@ elementary_functions_names = [
     ('exp', ['Exp']), ('E', ['e']), ('log', []),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
-    ('sum',[]), ('Derivative',['diff']), ('lamda',['lambda']), 
+    ('sum',[]), ('Derivative',['diff']), 
 ]
 for data in elementary_functions_names:
     upper_case_alternatives = [data[0].upper()]
@@ -37,7 +37,8 @@ for data in elementary_functions_names:
 
 greek_letters = [
     "Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta",
-    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda", "lambda", "Mu", "mu", "Nu", "nu",
+    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda", # "lambda" removed to avoid collision with reserved keyword in python
+    "Mu", "mu", "Nu", "nu",
     "Xi", "xi", "Omicron", "omicron", "Pi", "pi", "Rho", "rho", "Sigma", "sigma", "Tau", "tau", "Upsilon", "upsilon",
     "Phi", "phi", "Chi", "chi", "Psi", "psi", "Omega", "omega"
 ]
@@ -203,8 +204,10 @@ def substitute_input_symbols(exprs, params):
 
     substitutions = []
 
+    input_symbols = params.get("symbols",dict())
+
     if "symbols" in params.keys():
-        input_symbols = params["symbols"]
+        # Removing invalid input symbols
         input_symbols_to_remove = []
         aliases_to_remove = []
         for (code, symbol_data) in input_symbols.items():
@@ -224,11 +227,21 @@ def substitute_input_symbols(exprs, params):
             del input_symbols[code]["aliases"][i]
         for code in input_symbols_to_remove:
             del input_symbols[code]
-        for (code, symbol_data) in input_symbols.items():
-            substitutions.append((code, code))
-            for alias in symbol_data["aliases"]:
-                if len(alias) > 0:
-                    substitutions.append((alias, code))
+
+    # Since 'lambda' is a reserved keyword in python
+    # it needs to be replaced with 'lamda' for expression
+    # parsing to work properly
+    lambda_value = input_symbols.pop("lambda", {"latex": r"\lambda", "aliases": ["lambda"]})
+    if lambda_value is not None:
+        lambda_value["aliases"].append("lambda")
+    input_symbols.update({"lamda": lambda_value})
+    params.update({"symbols": input_symbols})
+
+    for (code, symbol_data) in input_symbols.items():
+        substitutions.append((code, code))
+        for alias in symbol_data["aliases"]:
+            if len(alias) > 0:
+                substitutions.append((alias, code))
 
     # REMARK: This is to ensure capability with response areas that use the old formatting
     # for input_symbols. Should be removed when all response areas are updated.
