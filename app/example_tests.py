@@ -170,33 +170,34 @@ class TestEvaluationFunction():
             assert result["is_correct"] == False
 
     @pytest.mark.parametrize(
-        "response, answer, response_latex, criteria, value, feedback_tags",
+        "response, answer, response_latex, criteria, value, feedback_tags, extra_params",
         [
-            ("5x", "5x", r"5 \cdot x", "answer-response = 0, response/answer = 1", True, ["RESPONSE_EQUAL_ANSWER"]),
-            ("x", "5x", r"x", "answer-response = 0, response/answer = 1", False, ["RESPONSE_EQUAL_ANSWER"]),
-            ("2x", "x", r"2 \cdot x", "response=2*answer", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("x", "x", "x", "response=2*answer", False, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("-x", "x", "- x", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("x", "x", "x", "response=-answer", False, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("1", "1", "1", "response^3-6*response^2+11*response-6=0", True, []),
-            ("2", "1", "2", "response^3-6*response^2+11*response-6=0", True, []),
-            ("3", "1", "3", "response^3-6*response^2+11*response-6=0", True, []),
-            ("4", "1", "4", "response^3-6*response^2+11*response-6=0", False, []),
-            ("sin(x)+2", "sin(x)", r"\sin{\left(x \right)} + 2", "Derivative(response,x)=cos(x)", True, []),
-            ("sin(x)+2", "sin(x)", r"\sin{\left(x \right)} + 2", "diff(response,x)=cos(x)", True, []),
-            ("cos(x)+2", "sin(x)", r"\cos{\left(x \right)} + 2", "diff(response,x)=cos(x)", False, []),
-            ("exp(lambda*x)/(1+exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{e^{\lambda \cdot x}}{e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", True, []),
-            ("5*exp(lambda*x)/(1+5*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{5 \cdot e^{\lambda \cdot x}}{5 \cdot e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", True, []),
-            ("6*exp(lambda*x)/(1+7*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{6 \cdot e^{\lambda \cdot x}}{7 \cdot e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", False, []),
-            ("c*exp(lambda*x)/(1+c*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{c \cdot e^{\lambda \cdot x}}{c \cdot e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", True, []),
+            ("exp(lambda*x)/(1+exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{e^{\lambda \cdot x}}{e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", True, [], {"symbols": {"lambda": {"latex": r"\(\lambda\)", "aliases": []}}}),
+            ("5*exp(lambda*x)/(1+5*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{5 \cdot e^{\lambda \cdot x}}{5 \cdot e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", True, [], {"symbols": {"lambda": {"latex": r"\(\lambda\)", "aliases": []}}}),
+            ("6*exp(lambda*x)/(1+7*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{6 \cdot e^{\lambda \cdot x}}{7 \cdot e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", False, [], {"symbols": {"lambda": {"latex": r"\(\lambda\)", "aliases": []}}}),
+            ("c*exp(lambda*x)/(1+c*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", r"\frac{c \cdot e^{\lambda \cdot x}}{c \cdot e^{\lambda \cdot x} + 1}", "diff(response,x)=lambda*response*(1-response)", True, [], {"symbols": {"lambda": {"latex": r"\(\lambda\)", "aliases": []}}}),
+            ("5x", "5x", r"5 \cdot x", "answer-response = 0, response/answer = 1", True, ["RESPONSE_EQUAL_ANSWER"], dict()),
+            ("x", "5x", r"x", "answer-response = 0, response/answer = 1", False, ["RESPONSE_EQUAL_ANSWER"], dict()),
+            ("2x", "x", r"2 \cdot x", "response=2*answer", True, ["RESPONSE_DOUBLE_ANSWER"], dict()),
+            ("x", "x", "x", "response=2*answer", False, ["RESPONSE_DOUBLE_ANSWER"], dict()),
+            ("-x", "x", "- x", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"], dict()),
+            ("x", "x", "x", "response=-answer", False, ["RESPONSE_NEGATIVE_ANSWER"], dict()),
+            ("1", "1", "1", "response^3-6*response^2+11*response-6=0", True, [], dict()),
+            ("2", "1", "2", "response^3-6*response^2+11*response-6=0", True, [], dict()),
+            ("3", "1", "3", "response^3-6*response^2+11*response-6=0", True, [], dict()),
+            ("4", "1", "4", "response^3-6*response^2+11*response-6=0", False, [], dict()),
+            ("sin(x)+2", "sin(x)", r"\sin{\left(x \right)} + 2", "Derivative(response,x)=cos(x)", True, [], dict()),
+            ("sin(x)+2", "sin(x)", r"\sin{\left(x \right)} + 2", "diff(response,x)=cos(x)", True, [], dict()),
+            ("cos(x)+2", "sin(x)", r"\cos{\left(x \right)} + 2", "diff(response,x)=cos(x)", False, [], dict()),
         ]
     )
-    def test_customizing_comparison(self, response, answer, response_latex, criteria, value, feedback_tags):
+    def test_customizing_comparison(self, response, answer, response_latex, criteria, value, feedback_tags, extra_params):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
             "criteria": criteria,
         }
+        params.update(extra_params)
         preview = preview_function(response, params)["preview"]
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert preview["latex"] == response_latex

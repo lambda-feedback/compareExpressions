@@ -227,7 +227,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     criteria_parser = generate_criteria_parser()
     parsing_params["unsplittable_symbols"] += ("response", "answer")
     reserved_expressions = [("response", res), ("answer", ans)]
-    criteria_parsed = create_criteria_list(params.get("criteria", "answer=response"), criteria_parser, parsing_params)
+    criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
+    criteria_parsed = create_criteria_list(criteria_string, criteria_parser, parsing_params)
 
     # Add how res was interpreted to the response
     # eval_response.latex = latex(res)
