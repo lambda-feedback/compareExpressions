@@ -73,6 +73,8 @@ def preview_function(response: str, params: Params) -> Result:
     The way you wish to structure you code (all in this function, or
     split into many) is entirely up to you.
     """
+    original_response = response
+
     symbols: SymbolDict = params.get("symbols", {})
 
     if not response:
@@ -106,8 +108,8 @@ def preview_function(response: str, params: Params) -> Result:
             latex_out = latex_out[0]
 
     except SyntaxError as e:
-        raise ValueError("Failed to parse Sympy expression") from e
+        raise ValueError(f"Failed to parse Sympy expression: {original_response}") from e
     except ValueError as e:
-        raise ValueError("Failed to parse LaTeX expression") from e
+        raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from e
 
     return Result(preview=Preview(latex=latex_out, sympy=sympy_out))
