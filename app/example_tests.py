@@ -103,7 +103,7 @@ class TestEvaluationFunction():
             ("109.12 foot/minute", "1.24 mile/hour", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, "strict", "imperial common"),
         ]
     )
-    def test_checking_the_value_of_an_expression_or_a_physical_quantity(self, response, answer, response_latex, value, strictness, units_string):
+    def test_checking_the_value_of_a_physical_quantity(self, response, answer, response_latex, value, strictness, units_string):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -205,6 +205,24 @@ class TestEvaluationFunction():
         assert result["is_correct"] == value
         for feedback_tag in feedback_tags:
             assert feedback_tag in result["tags"]
+
+    @pytest.mark.parametrize("response", ["eps","eps_r","e_r"])
+    def test_using_input_symbols_alternatives(self, response):
+        answer = "epsilon_r"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "epsilon_r": {
+                    "latex": r"\(\epsilon_r\)",
+                    "aliases": ["eps","eps_r","e_r"],
+                },
+            },
+        }
+        preview = preview_function(response, params)["preview"]
+        result = evaluation_function(response, answer, params)
+        assert preview["latex"] == r"\epsilon_r"
+        assert result["is_correct"] == True
 
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

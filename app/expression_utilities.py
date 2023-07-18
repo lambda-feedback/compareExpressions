@@ -28,6 +28,12 @@ elementary_functions_names = [
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
     ('sum',[]), ('Derivative',['diff']), 
 ]
+for data in elementary_functions_names:
+    upper_case_alternatives = [data[0].upper()]
+    for alternative in data[1]:
+        if alternative.upper() not in upper_case_alternatives:
+            upper_case_alternatives.append(alternative.upper())
+    data[1].extend(upper_case_alternatives)
 
 greek_letters = [
     "Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta",
