@@ -1,12 +1,14 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy import Abs, Equality, latex, pi, Symbol
+from sympy.printing.latex import LatexPrinter
 
 from .expression_utilities import (
     substitute_input_symbols,
     parse_expression,
     create_sympy_parsing_params,
     create_expression_set,
-    convert_absolute_notation
+    convert_absolute_notation,
+    latex_symbols,
 )
 
 from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_node, operate, join, group
@@ -223,12 +225,14 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         raise Exception(f"SymPy was unable to parse the answer: {answer}.") from e
 
     criteria_parser = generate_criteria_parser()
-    parsing_params["unsplittable_symbols"] += ("response","answer")
+    parsing_params["unsplittable_symbols"] += ("response", "answer")
     reserved_expressions = [("response", res), ("answer", ans)]
-    criteria_parsed = create_criteria_list(params.get("criteria","answer=response"), criteria_parser, parsing_params)
+    criteria_parsed = create_criteria_list(params.get("criteria", "answer=response"), criteria_parser, parsing_params)
 
     # Add how res was interpreted to the response
-    eval_response.latex = latex(res)
+    # eval_response.latex = latex(res)
+    symbols = params.get("symbols", {})
+    eval_response.latex = LatexPrinter({"symbol_names": latex_symbols(symbols), "mul_symbol": r" \cdot "}).doprint(res)
     eval_response.simplified = str(res)
 
     if (not isinstance(res, Equality)) and isinstance(ans, Equality):
