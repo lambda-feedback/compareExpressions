@@ -711,7 +711,7 @@ class TestEvaluationFunction():
             ),
         ]
     )
-    def test_slow_response(self, description, response, answer, outcome):
+    def test_response_takes_too_long(self, description, response, answer, outcome):
         params = {
             "strict_syntax": False,
             "symbols": {
@@ -749,7 +749,7 @@ class TestEvaluationFunction():
             ),
         ]
     )
-    def test_slow_response_old_format_input_symbols(self, description, response, answer, outcome):
+    def test_response_takes_too_long_old_format_input_symbols(self, description, response, answer, outcome):
         params = {
             "strict_syntax": False,
             "input_symbols": [
