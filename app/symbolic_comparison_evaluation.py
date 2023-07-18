@@ -220,7 +220,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     try:
         ans = parse_expression(answer, parsing_params)
     except Exception as e:
-        raise Exception("SymPy was unable to parse the answer.") from e
+        raise Exception(f"SymPy was unable to parse the answer: {answer}.") from e
 
     criteria_parser = generate_criteria_parser()
     parsing_params["unsplittable_symbols"] += ("response","answer")
