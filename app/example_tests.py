@@ -206,7 +206,7 @@ class TestEvaluationFunction():
         for feedback_tag in feedback_tags:
             assert feedback_tag in result["tags"]
 
-    @pytest.mark.parametrize("response", ["eps","eps_r","e_r"])
+    @pytest.mark.parametrize("response", ["epsilon_r","eps","eps_r","e_r"])
     def test_using_input_symbols_alternatives(self, response):
         answer = "epsilon_r"
         params = {
