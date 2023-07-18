@@ -966,10 +966,10 @@ class TestEvaluationFunction():
             ("4", "1", "response^3-6*response^2+11*response-6=0", False, []),
             ("sin(x)+2", "sin(x)", "Derivative(response,x)=cos(x)", True, []),
             ("sin(x)+2", "sin(x)", "diff(response,x)=cos(x)", True, []),
-            ("exp(k*x)/(1+exp(k*x))", "c*exp(k*x)/(1+c*exp(k*x))", "diff(response,x)=k*response*(1-response)", True, []),
-            ("5*exp(k*x)/(1+5*exp(k*x))", "c*exp(k*x)/(1+c*exp(k*x))", "diff(response,x)=k*response*(1-response)", True, []),
-            ("6*exp(k*x)/(1+7*exp(k*x))", "c*exp(k*x)/(1+c*exp(k*x))", "diff(response,x)=k*response*(1-response)", False, []),
-            ("c*exp(k*x)/(1+c*exp(k*x))", "c*exp(k*x)/(1+c*exp(k*x))", "diff(response,x)=k*response*(1-response)", True, []),
+            ("exp(lambda*x)/(1+exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
+            ("5*exp(lambda*x)/(1+5*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
+            ("6*exp(lambda*x)/(1+7*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", False, []),
+            ("c*exp(lambda*x)/(1+c*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags):
