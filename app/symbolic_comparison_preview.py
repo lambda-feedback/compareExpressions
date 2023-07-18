@@ -23,22 +23,23 @@ from .preview_utilities import (
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 
 def parse_symbolic(response: str, params):
-    response_list = create_expression_set(response, params)
-    result_sympy_expression = []
+    response_list_in = create_expression_set(response, params)
+    response_list_out = []
     feedback = []
-    for response in response_list:
-        response = response.strip()
-        response = substitute_input_symbols([response], params)
+    for response in response_list_in:
+        response = substitute_input_symbols([response.strip()], params)[0]
+
+        # Converting absolute value notation to a form that SymPy accepts
+        response, response_feedback = convert_absolute_notation(response, "response")
+        if response_feedback is not None:
+            feedback.append(response_feedback)
+        response_list_out.append(response)
+
     parsing_params = create_sympy_parsing_params(params)
     parsing_params["extra_transformations"] = parser_transformations[9]  # Add conversion of equal signs
     parsing_params["symbol_dict"].update(sympy_symbols(params.get("symbols", {})))
-
-    # Converting absolute value notation to a form that SymPy accepts
-    response, response_feedback = convert_absolute_notation(response, "response")
-    if response_feedback is not None:
-        feedback.append(response_feedback)
-
-    for response in response_list:
+    result_sympy_expression = []
+    for response in response_list_out:
         # Safely try to parse answer and response into symbolic expressions
         try:
             if "atol" in params.keys():
