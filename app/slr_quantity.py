@@ -119,12 +119,11 @@ class PhysicalQuantity:
     def _value_latex(self, parameters):
         if self.value is not None:
             preview_parameters = {**parameters}
-#            if "rtol" in preview_parameters.keys():
-#                del preview_parameters["rtol"]
             if "rtol" not in preview_parameters.keys():
                 preview_parameters.update({"rtol": 1e-12})
-            value_latex = symbolic_preview(self.value.original_string(), preview_parameters)
-            value_latex = symbolic_preview(self.value.original_string(), preview_parameters)["preview"]["latex"]
+            original_string = self.value.original_string()
+            value = symbolic_preview(original_string, preview_parameters)
+            value_latex = value["preview"]["latex"]
             return value_latex
         return None
 
