@@ -7,6 +7,7 @@ from latex2sympy2 import latex2sympy
 from .expression_utilities import (
     extract_latex,
     SymbolDict,
+    find_matching_parenthesis,
 )
 
 class Params(TypedDict):
@@ -65,3 +66,20 @@ def parse_latex(response: str, symbols: SymbolDict) -> str:
 
     except Exception as e:
         raise ValueError(str(e))
+
+def sanitise_latex(response):
+    index = 0
+    response = response.replace('~',' ')
+    processed_response = []
+    while index < len(response):
+        mathrm_start = response.find(r"\mathrm{", index)
+        if mathrm_start > -1:
+            processed_response.append(response[index:mathrm_start])
+            mathrm_end = find_matching_parenthesis(response, mathrm_start+1, delimiters=('{','}'))
+            inside_mathrm = response[(mathrm_start+len(r"\mathrm{")):mathrm_end]
+            processed_response.append(inside_mathrm)
+            index = mathrm_end+1
+        else:
+            processed_response.append(response[index:])
+            index = len(response)
+    return "".join(processed_response)
