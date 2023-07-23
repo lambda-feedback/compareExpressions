@@ -51,6 +51,17 @@ class TestPreviewFunction():
             latex = value_latex+"~"+unit_latex
         assert result["latex"] == latex
 
+    def test_issue_with_sqrt(self):
+        params = {
+            "is_latex": True,
+            "physical_quantity": True,
+            "elementary_functions": True,
+        }
+        response = "\\sqrt{162}"
+        result = preview_function(response, params)["preview"]
+        assert result["latex"] == r'\sqrt{162}'
+        assert result["sympy"] == "sqrt(162)"
+
     def test_handwritten_input(self):
         params = {
             "is_latex": True,
@@ -59,7 +70,7 @@ class TestPreviewFunction():
         }
         response = "\\sqrt{162} \\mathrm{~N} / \\mathrm{m}^{2}"
         result = preview_function(response, params)["preview"]
-        assert result["latex"] == r"\sqrt{162}~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}" # TODO: Fix so that unnecessary parenthesis are simplified away
+        assert result["latex"] == r'\sqrt{162}~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}' # TODO: Fix so that unnecessary parenthesis are simplified away
         assert result["sympy"] == "sqrt(162) newton / metre^(2)"
 
 if __name__ == "__main__":

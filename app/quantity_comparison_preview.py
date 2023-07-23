@@ -86,16 +86,22 @@ def preview_function(response: str, params: Params) -> Result:
 
         if params.get("is_latex", False):
             value = res_parsed.value
-            separator = ""
+            unit = res_parsed.unit
             value_latex = ""
             if value is not None:
                 value_string = parse_latex(value.content_string(), symbols)
                 value = parse_expression(value_string, params)
-                separator = "~"
                 value_latex = sympy_to_latex(value, symbols)
-            unit_latex = res_parsed.unit_latex_string if res_parsed.unit_latex_string is not None else ""
-            latex_out = value_latex+separator+unit_latex
-            sympy_out = str(value)+" "+res_parsed.unit.content_string()
+            separator_latex = ""
+            separator_sympy = ""
+            if value is not None and unit is not None:
+                separator_latex = "~"
+                separator_sympy = " "
+            unit_latex = res_parsed.unit_latex_string if unit is not None else ""
+            latex_out = value_latex+separator_latex+unit_latex
+            value_sympy = str(value)
+            unit_sympy = res_parsed.unit.content_string() if unit is not None else ""
+            sympy_out = value_sympy+separator_sympy+unit_sympy
         else:
             latex_out = res_parsed.latex_string
             sympy_out = response
