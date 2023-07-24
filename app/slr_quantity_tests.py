@@ -223,6 +223,13 @@ slr_strict_si_syntax_test_cases = [
 ]
 
 slr_natural_si_syntax_test_cases = [
+    ("fs^4daA",
+     "fs^4daA",
+     None,
+     "fs^4daA",
+     r'A \cdot a \cdot d \cdot f \cdot s^{4}',
+     None,
+     ["NO_UNIT"]),
     ("mmPas",
      None,
      "mmPas",
