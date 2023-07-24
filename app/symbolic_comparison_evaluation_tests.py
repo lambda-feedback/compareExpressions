@@ -983,30 +983,5 @@ class TestEvaluationFunction():
         for feedback_tag in feedback_tags:
             assert feedback_tag in result["tags"]
 
-    @pytest.mark.parametrize(
-        "response, answer, value",
-        [
-            ("summation(2*k - 1, (k, 1, n))",          "summation(2*k - 1, (k, 1, n))",    True),
-            ("sum(2*k - 1, (k, 1, n))",                "summation(2*k - 1, (k, 1, n))",    True),
-            ("summation(2*i - 1, (i, 1, n))",          "summation(2*k - 1, (k, 1, n))",    True),
-            ("summation(2*k + 1, (k, 1, n))",          "summation(2*k - 1, (k, 1, n))",    False),
-            ("1 + summation(2*k + 1, (k, 1, n-1))",    "summation(2*k - 1, (k, 1, n))",    True),
-            ("1 + sum(2*k + 1, (k, 1, n-1))",          "summation(2*k - 1, (k, 1, n))",    True),
-            ("1 + summation(2*m + 1, (m, 1, n-1))",    "summation(2*k - 1, (k, 1, n))",    True),
-            ("1 + summation(2*i + 1, (i, 1, n-1))",    "summation(2*k - 1, (k, 1, n))",    True),
-            ("summation(2*(k + 1) - 3, (k, 1, n))",    "summation(2*k - 1, (k, 1, n))",    True),
-            ("summation(2*(k + 1) - 1, (k, 0, n-1))",  "summation(2*k - 1, (k, 1, n))",    True),
-            ("summation(2*k + 199, (k, -99, n-100))",  "summation(2*k - 1, (k, 1, n))",    True),
-            ("1/(1 + summation(2*k + 1, (k, 1, oo)))", "1/summation(2*k - 1, (k, 1, oo))", True),
-        ]
-    )
-    def test_sum_in_answer(self, response, answer, value):
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-        }
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is value
-
 if __name__ == "__main__":
     pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])

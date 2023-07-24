@@ -22,16 +22,3 @@ class Criterion:
     def __setitem__(self, key, value):
         self.feedback.update({key: value})
         return
-
-class CriterionNode:
-
-    def __init__(self, definition, output, actions):
-        self.definition = definition
-        self.result = None
-        self.output = output,
-        self.actions = actions
-
-    def check(self, inputs):
-        if self.result is None:
-            self.result = self._check_criteria(definition, inputs)
-            
