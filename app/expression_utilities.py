@@ -278,13 +278,15 @@ def substitute_input_symbols(exprs, params):
     return exprs
 
 
-def find_matching_parenthesis(string, index):
+def find_matching_parenthesis(string, index, delimiters=None):
     depth = 0
+    if delimiters == None:
+        delimiters = ('(', ')')
     for k in range(index, len(string)):
-        if string[k] == '(':
+        if string[k] == delimiters[0]:
             depth += 1
             continue
-        if string[k] == ')':
+        if string[k] == delimiters[1]:
             depth += -1
             if depth == 0:
                 return k
