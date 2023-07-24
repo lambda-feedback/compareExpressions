@@ -52,8 +52,10 @@ class PhysicalQuantity:
             def revert_content(node):
                 if node.label != "GROUP":
                     node.content = node.original[node.start:node.end+1]
-                if node.label == "UNIT":
-                    self.messages += [("REVERTED_UNIT", physical_quantities_messages["REVERTED_UNIT"](node.original[:node.start], node.content, node.original[node.end+1:]))]
+#                elif node.label == "GROUP":
+#                    node.content = node.content[0]+node.original[node.start:node.end+1]+node.content[1]
+                if node.label == "UNIT" or QuantityTags.U in node.tags:
+                    self.messages += [("REVERTED_UNIT", physical_quantities_messages["REVERTED_UNIT"](node.original[:node.start], node.content_string(), node.original[node.end+1:]))]
                 return ["", ""]
             self.value.traverse(revert_content)
         self.value_latex_string = self._value_latex(parameters)
@@ -335,12 +337,17 @@ def SLR_quantity_parser(parameters):
             is_unit = [False, False]
             for k, elem in enumerate(output[-2:], -2):
                 if isinstance(elem, ExprNode):
-                    is_unit[k] = QuantityTags.U in elem.tags
+                    is_unit[k] = QuantityTags.U in elem.tags and elem.label != "GROUP"
+                    is_unit[k] = is_unit[k] or (elem.tags == {QuantityTags.U} and elem.label == "GROUP")
                 else:
                     is_unit[k] = elem.label == "UNIT"
             if all(is_unit):
                 return insert_infix(" ", "SPACE")(production, output, tag_handler)
             else:
+                for k, elem in enumerate(output[-2:], -2):
+                    if is_unit[k] is True:
+#                        elem.tags.remove(QuantityTags.U)
+                        elem.tags.add(QuantityTags.V)
                 return group(2, empty=True)(production, output, tag_handler)
         juxtaposition = juxtaposition_natural
 
@@ -597,7 +604,10 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response", "answer"))
 
     for (tag, result) in evaluated_criteria.items():
-        eval_response.add_feedback((tag[0], "- "+result[1]+"<br>"))
+        if len(result[1].strip()) > 0:
+            eval_response.add_feedback((tag[0], "- "+result[1]+"<br>"))
+        else:
+            eval_response.add_feedback((tag[0], ""))
 
     # TODO: Comparison of units in way that allows for constructive feedback
 

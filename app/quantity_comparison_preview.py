@@ -75,21 +75,19 @@ def preview_function(response: str, params: Params) -> Result:
     latex_out = ""
     sympy_out = ""
 
+    quantity_parser = SLR_quantity_parser(params)
 
     try:
         if params.get("is_latex", False):
             response = sanitise_latex(response)
             response = fix_exponents(response)
-
-        quantity_parser = SLR_quantity_parser(params)
-        res_parsed = quantity_parsing(response, params, quantity_parser, "response")
-
-        if params.get("is_latex", False):
+            res_parsed = quantity_parsing(response, params, quantity_parser, "response")
             value = res_parsed.value
             unit = res_parsed.unit
             value_latex = ""
             if value is not None:
                 value_string = parse_latex(value.content_string(), symbols)
+                params.update({"is_latex": False})
                 value = parse_expression(value_string, params)
                 value_latex = sympy_to_latex(value, symbols)
             separator_latex = ""
@@ -103,6 +101,7 @@ def preview_function(response: str, params: Params) -> Result:
             unit_sympy = res_parsed.unit.content_string() if unit is not None else ""
             sympy_out = value_sympy+separator_sympy+unit_sympy
         else:
+            res_parsed = quantity_parsing(response, params, quantity_parser, "response")
             latex_out = res_parsed.latex_string
             sympy_out = response
 
