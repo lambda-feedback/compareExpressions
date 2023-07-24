@@ -51,16 +51,20 @@ class TestPreviewFunction():
             latex = value_latex+"~"+unit_latex
         assert result["latex"] == latex
 
-    def test_issue_with_sqrt(self):
+    @pytest.mark.parametrize("response,preview_latex,preview_sympy",
+        [
+            ("sin(123)", r"\sin{\left(123 \right)}", "sin(123)"),
+            ("sqrt(162)", r"\sqrt{162}", "sqrt(162)"),
+        ]
+    )
+    def test_issue_with_function_name_that_can_be_compound_unit(self, response, preview_latex, preview_sympy):
         params = {
-            "is_latex": True,
             "physical_quantity": True,
             "elementary_functions": True,
         }
-        response = "\\sqrt{162}"
         result = preview_function(response, params)["preview"]
-        assert result["latex"] == r'\sqrt{162}'
-        assert result["sympy"] == "sqrt(162)"
+        assert result["latex"] == preview_latex
+        assert result["sympy"] == preview_sympy
 
     def test_handwritten_input(self):
         params = {
