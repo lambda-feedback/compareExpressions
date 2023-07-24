@@ -9,7 +9,9 @@ from .symbolic_comparison_preview import preview_function as symbolic_preview
 from .feedback.quantity_comparison import criteria as physical_quantities_criteria
 from .feedback.quantity_comparison import internal as physical_quantities_messages
 from .feedback.quantity_comparison import QuantityTags
+from .expression_utilities import substitute
 from .slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
+from sympy import Basic
 from .unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
@@ -119,8 +121,6 @@ class PhysicalQuantity:
     def _value_latex(self, parameters):
         if self.value is not None:
             preview_parameters = {**parameters}
-#            if "rtol" in preview_parameters.keys():
-#                del preview_parameters["rtol"]
             if "rtol" not in preview_parameters.keys():
                 preview_parameters.update({"rtol": 1e-12})
             value_latex = symbolic_preview(self.value.original_string(), preview_parameters)
@@ -455,34 +455,50 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     def convert_to_standard_unit(q):
         q_converted_value = q.value.content_string() if q.value is not None else None
         q_converted_unit = None
+        q_converted_dimensions = None
         if q.unit is not None:
             q_converted_unit = q.unit.copy()
             q_converted_unit = expand_units(q_converted_unit, q.parser)
-            q_converted_unit = q_converted_unit.content_string()
+            q_converted_unit_string = q_converted_unit.content_string()
             try:
-                q_converted_unit = parse_expression(q_converted_unit, parsing_params)
+                q_converted_unit = parse_expression(q_converted_unit_string, parsing_params)
             except Exception as e:
                 raise Exception("SymPy was unable to parse the "+q.name+" unit") from e
+            base_unit_dimensions = [(base_unit[0], base_unit[2]) for base_unit in set_of_SI_base_unit_dimensions]
+            q_converted_dimensions = substitute(q_converted_unit_string, base_unit_dimensions)
+            q_converted_dimensions = parse_expression(q_converted_dimensions, parsing_params)
         if q.unit is not None and q.value is not None:
             q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
             q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify(rational=True)
             q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
-        return q_converted_value, q_converted_unit
+        return q_converted_value, q_converted_unit, q_converted_dimensions
 
     def matches(inputs):
-        value0, unit0 = convert_to_standard_unit(inputs[0])
-        value1, unit1 = convert_to_standard_unit(inputs[1])
-        value_match = False
-        unit_match = False
-        if value0 is None and value1 is None:
-            value_match = True
-        elif value0 is not None and value1 is not None:
-            value_match = symbolic_comparison(value0, value1, parameters)["is_correct"]
-        if unit0 is None and unit0 is None:
-            unit_match = True
-        elif unit0 is not None and unit1 is not None:
-            unit_match = bool((unit0 - unit1).simplify() == 0)
-        return value_match and unit_match
+        if isinstance(inputs[0], PhysicalQuantity) and isinstance(inputs[1], PhysicalQuantity):
+            value0, unit0, _ = convert_to_standard_unit(inputs[0])
+            value1, unit1, _ = convert_to_standard_unit(inputs[1])
+            value_match = False
+            unit_match = False
+            if value0 is None and value1 is None:
+                value_match = True
+            elif value0 is not None and value1 is not None:
+                value_match = symbolic_comparison(value0, value1, parameters)["is_correct"]
+            if unit0 is None and unit0 is None:
+                unit_match = True
+            elif unit0 is not None and unit1 is not None:
+                unit_match = bool((unit0 - unit1).simplify() == 0)
+            return value_match and unit_match
+        elif isinstance(inputs[0], Basic) and isinstance(inputs[1], Basic):
+            if inputs[0] is not None and inputs[1] is not None:
+                dimension_match = bool((inputs[0] - inputs[1]).cancel().simplify().simplify() == 0) # TODO: Make separate function for checking equality of expressions that can be parsed
+            else:
+                dimension_match = False
+            return dimension_match
+        return False
+
+    def dimension(quantity):
+        _, _, dimension = convert_to_standard_unit(quantity[0])
+        return dimension
 
     criteria_operations = {
         "and":           lambda x: x[0] and x[1],
@@ -492,7 +508,8 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
         "value":         lambda quantity: quantity[0].value,
         "is_number":     lambda value: value[0] is not None and value[0].tags == {QuantityTags.N},
         "is_expression": lambda value: value[0] is not None and QuantityTags.V in value[0].tags,
-        "matches":       matches
+        "matches":       matches,
+        "dimension":     dimension,
     }
 
     def generate_criteria_parser():
@@ -508,6 +525,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             (" *UNIT *",     "UNIT"),
             (" *VALUE *",    "VALUE"),
             (" *QUANTITY *", "QUANTITY"),
+            (" *DIMENSION *", "DIMENSION"),
             ("\( *",         "START_DELIMITER"),
             (" *\)",         "END_DELIMITER"),
             ("response",     "QUANTITY"),
@@ -522,6 +540,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ("BOOL",     "UNIT matches UNIT", infix),
             ("BOOL",     "VALUE matches VALUE", infix),
             ("BOOL",     "QUANTITY matches QUANTITY", infix),
+            ("BOOL",      "DIMENSION matches DIMENSION", infix),
             ("BOOL",     "not(BOOL)", operate(1)),
             ("BOOL",     "has(UNIT)", operate(1)),
             ("BOOL",     "has(VALUE)", operate(1)),
@@ -529,6 +548,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ("BOOL",     "is_expression(VALUE)", operate(1)),
             ("UNIT",     "unit(QUANTITY)", operate(1)),
             ("VALUE",    "value(QUANTITY)", operate(1)),
+            ("DIMENSION", "dimension(QUANTITY)", operate(1)),
             ("QUANTITY", "INPUT", create_node),
         ]
 
@@ -597,13 +617,14 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
 
     eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response", "answer"))
 
+    if eval_response.is_correct is False:
+        check_criterion("DIMENSION_MATCH", arg_names=("response", "answer"))
+
     for (tag, result) in evaluated_criteria.items():
-        satisfied_marker = '<svg focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>'
-        not_satisfied_marker = '<svg focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"></path></svg>'
         if result[0] is True:
-            eval_response.add_feedback((tag[0], satisfied_marker+result[1]))
+            eval_response.add_feedback((tag[0], "- "+result[1]))
         elif result[0] is False and len(result[1].strip()) > 0:
-            eval_response.add_feedback((tag[0], not_satisfied_marker+result[1]))
+            eval_response.add_feedback((tag[0], "- "+result[1]))
 
     # TODO: Comparison of units in way that allows for constructive feedback
 

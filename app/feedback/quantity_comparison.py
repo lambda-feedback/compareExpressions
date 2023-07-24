@@ -37,6 +37,10 @@ criteria["QUANTITY_MATCH"] = Criterion("QUANTITY matches QUANTITY")
 criteria["QUANTITY_MATCH"][True] = lambda inputs: f"${inputs[0].latex_string}$ matches ${inputs[1].latex_string}$"
 criteria["QUANTITY_MATCH"][False] = lambda inputs: f"${inputs[0].latex_string}$ does not match ${inputs[1].latex_string}$"
 
+criteria["DIMENSION_MATCH"] = Criterion("dimension(QUANTITY) matches dimension(QUANTITY)")
+criteria["DIMENSION_MATCH"][True] = lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
+criteria["DIMENSION_MATCH"][False] = lambda inputs: f"$Dimension {inputs[0]}$ does not match dimension ${inputs[1]}$"
+
 criteria["MISSING_VALUE"] = Criterion("not(has(value(response))) and has(value(answer))")
 criteria["MISSING_VALUE"][True] = lambda inputs: "The response is missing a value."
 criteria["MISSING_VALUE"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
