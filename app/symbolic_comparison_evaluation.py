@@ -74,7 +74,10 @@ def check_criterion(criterion, parameters_dict,generate_feedback=True):
         lhs = criterion.children[0].content_string()
         rhs = criterion.children[1].content_string()
         criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
-        result = bool(criterion_expression.subs(reserved_expressions).cancel().simplify().simplify() == 0)
+        if parsing_params.get("is_infinite_series", False):
+            result = bool(criterion_expression.subs(reserved_expressions).simplify() == 0)
+        else:
+            result = bool(criterion_expression.subs(reserved_expressions).cancel().simplify().simplify() == 0)
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
             if reference_tag in eval_response.get_tags():
                 continue
@@ -197,6 +200,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     answer, response = substitute_input_symbols([answer, response], params)
     parsing_params = create_sympy_parsing_params(params)
     parsing_params.update({"rationalise": True, "simplify": True})
+    if params.get("is_infinite_sum", False):
+        parsing_params.update({"rationalise": True, "simplify": False})
     parsing_params["extra_transformations"] = parser_transformations[9]  # Add conversion of equal signs
 
     # Converting absolute value notation to a form that SymPy accepts
