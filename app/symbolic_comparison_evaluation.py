@@ -298,5 +298,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     }
     for criterion in criteria_parsed:
         is_correct = is_correct and check_criterion(criterion, parameters_dict)
+    if params.get("contains_infinite_sum",False) and is_correct is False:
+        eval_response.add_feedback(("INFINITE_SUM_WARNING",symbolic_comparison_internal_messages["INFINITE_SUM_WARNING"]))
     eval_response.is_correct = is_correct
     return eval_response

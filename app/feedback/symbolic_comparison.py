@@ -36,4 +36,5 @@ internal = {
     "EQUALITY_NOT_EXPRESSION": "The response was an equality but was expected to be an expression.",
     "WITHIN_TOLERANCE": "The difference between the response the answer is within specified error tolerance.",
     "SYMBOLICALLY_EQUAL": "The difference response and answer are symbolically equal.",
+    "INFINITE_SUM_WARNING": "The system could not verify that the infinite sums match. If you cannot identify a mistake ask a teacher or other knowledgable person for assistance."
 }

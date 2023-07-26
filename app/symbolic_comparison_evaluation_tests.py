@@ -997,19 +997,34 @@ class TestEvaluationFunction():
             ("summation(2*(k + 1) - 3, (k, 1, n))",    "summation(2*k - 1, (k, 1, n))",    True),
             ("summation(2*(k + 1) - 1, (k, 0, n-1))",  "summation(2*k - 1, (k, 1, n))",    True),
             ("summation(2*k + 199, (k, -99, n-100))",  "summation(2*k - 1, (k, 1, n))",    True),
-            ("2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
-            ("2*Sum((-1)**k*(6/k**3 - pi**2/k)*sin(k*x), (k, 1, oo))", "2*Sum((-1)**k*(6/k**3 - pi**2/k)*sin(k*x), (k, 1, oo))", True),
-            ("Sum(2*(-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
-            ("2*Sum((-1)**n*(6/n**2 - pi**2)/n*sin(n*x), (n, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
         ]
     )
-    def test_sum_in_answer(self, response, answer, value):
+    def test_sum(self, response, answer, value):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
+        "response, answer, value",
+        [
+            ("2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
+            ("2*Sum((-1)**k*(6/k**3 - pi**2/k)*sin(k*x), (k, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
+            ("Sum(2*(-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
+            ("2*Sum((-1)**n*(6/n**2 - pi**2)/n*sin(n*x), (n, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
+        ]
+    )
+    def test_infinite_sum(self, response, answer, value):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        if result["is_correct"] is False:
+            assert "INFINITE_SUM_WARNING" in result["tags"]
 
 if __name__ == "__main__":
     pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])
