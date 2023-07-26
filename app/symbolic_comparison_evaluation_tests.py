@@ -614,13 +614,13 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is outcome
 
-    def test_warning_inappropriate_symbol(self):
+    def test_error_inappropriate_symbol(self):
         answer = '2**4'
         response = '2^4'
         params = {'strict_syntax': True}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "NOTATION_WARNING" in result["tags"]
+        assert "NOTATION_ERROR" in result["tags"]
 
     @pytest.mark.parametrize(
         "response,answer",
@@ -997,7 +997,6 @@ class TestEvaluationFunction():
             ("summation(2*(k + 1) - 3, (k, 1, n))",    "summation(2*k - 1, (k, 1, n))",    True),
             ("summation(2*(k + 1) - 1, (k, 0, n-1))",  "summation(2*k - 1, (k, 1, n))",    True),
             ("summation(2*k + 199, (k, -99, n-100))",  "summation(2*k - 1, (k, 1, n))",    True),
-            #("1/(1 + summation(2*k + 1, (k, 1, oo)))", "1/summation(2*k - 1, (k, 1, oo))", True),
         ]
     )
     def test_sum_in_answer(self, response, answer, value):
@@ -1021,7 +1020,7 @@ class TestEvaluationFunction():
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
-            "is_infinite_sum": True,
+            #"is_infinite_sum": True,
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value

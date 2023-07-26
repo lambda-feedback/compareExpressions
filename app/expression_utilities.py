@@ -25,10 +25,13 @@ elementary_functions_names = [
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
     ('exp', ['Exp']), ('E', ['e']), ('log', []),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
-    # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
-    ('Sum', ['sum','summation']), ('Derivative', ['diff']), 
 ]
-for data in elementary_functions_names:
+
+common_operations_names = [
+    ('Sum', ['sum','summation']), ('Derivative', ['diff']),
+]
+
+for data in elementary_functions_names+common_operations_names:
     upper_case_alternatives = [data[0].upper()]
     for alternative in data[1]:
         if alternative.upper() not in upper_case_alternatives:
@@ -44,6 +47,7 @@ greek_letters = [
 ]
 special_symbols_names = [(x, []) for x in greek_letters]
 
+reserved_symbol_names = elementary_functions_names+common_operations_names+special_symbols_names
 
 # -------- String Manipulation Utilities
 def create_expression_set(expr, params):
@@ -568,7 +572,7 @@ def parse_expression(expr, parsing_params):
     substitutions = separate_unsplittable_symbols
     if parsing_params["elementary_functions"] is True:
         alias_substitutions = []
-        for (name, alias_list) in elementary_functions_names+special_symbols_names:
+        for (name, alias_list) in reserved_symbol_names:
             if name in expr:
                 alias_substitutions += [(name, " "+name)]
             for alias in alias_list:
@@ -586,7 +590,7 @@ def parse_expression(expr, parsing_params):
         transformations += parser_transformations[11]
     if parsing_params.get("simplify", False):
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
-        parsed_expr = parsed_expr.simplify()
+        parsed_expr = parsed_expr.simplify(evaluate=False)
     else:
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
     if not isinstance(parsed_expr, Basic):

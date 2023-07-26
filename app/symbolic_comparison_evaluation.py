@@ -1,3 +1,5 @@
+import re
+
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy import Abs, Equality, latex, pi, Symbol
 from sympy.printing.latex import LatexPrinter
@@ -17,7 +19,6 @@ from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 from .feedback.symbolic_comparison import criteria as symbolic_comparison_criteria
 from .feedback.symbolic_comparison import equivalences as reference_criteria_strings
-
 
 criteria_operations = {
     "not": lambda x, p: not check_criterion(x[0], p, generate_feedback=False),
@@ -74,7 +75,7 @@ def check_criterion(criterion, parameters_dict,generate_feedback=True):
         lhs = criterion.children[0].content_string()
         rhs = criterion.children[1].content_string()
         criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
-        if parsing_params.get("is_infinite_series", False):
+        if parsing_params.get("contains_infinite_sum", False):
             result = bool(criterion_expression.subs(reserved_expressions).simplify() == 0)
         else:
             result = bool(criterion_expression.subs(reserved_expressions).cancel().simplify().simplify() == 0)
@@ -200,8 +201,11 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     answer, response = substitute_input_symbols([answer, response], params)
     parsing_params = create_sympy_parsing_params(params)
     parsing_params.update({"rationalise": True, "simplify": True})
-    if params.get("is_infinite_sum", False):
-        parsing_params.update({"rationalise": True, "simplify": False})
+    check_for_infinite_sum = re.compile("(Sum\().*?oo\)")
+    if check_for_infinite_sum.search(response) is not None or check_for_infinite_sum.search(answer) is not None:
+        params.update({"contains_infinite_sum": True})
+    if params.get("contains_infinite_sum", False):
+        parsing_params.update({"simplify": False})
     parsing_params["extra_transformations"] = parser_transformations[9]  # Add conversion of equal signs
 
     # Converting absolute value notation to a form that SymPy accepts
@@ -214,7 +218,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     if params.get("strict_syntax", True):
         if "^" in response:
-            eval_response.add_feedback(("NOTATION_WARNING", symbolic_comparison_internal_messages["NOTATION_WARNING"]))
+            eval_response.add_feedback(("NOTATION_ERROR", symbolic_comparison_internal_messages["NOTATION_ERROR"]))
+            return eval_response
 
     # Safely try to parse answer and response into symbolic expressions
     try:
