@@ -64,3 +64,16 @@ class CriteriaGraphNode:
                 except KeyError as exc:
                     raise Exception(f"Unexpected result ({str(result)}) in criteria {self.label}.") from exc
         return result
+
+    def get_by_label(self, label):
+        if self.label == label:
+            return self
+        else:
+            if self.children is not None:
+                for child in self.children.values():
+                    result = None
+                    if child is not None:
+                        result = child.get_by_label(label)
+                    if result is not None:
+                        return result
+        return None

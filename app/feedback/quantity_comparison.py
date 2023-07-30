@@ -73,18 +73,16 @@ internal = {
 
 END = CriteriaGraphNode("END",children=None)
 
-T = True
-F = False
 answer_matches_response_graph = CriteriaGraphNode("START")
 answer_matches_response_graph[None] = CriteriaGraphNode("DIMENSION_MATCH", criterion=criteria["DIMENSION_MATCH"])
-answer_matches_response_graph[None][T] = CriteriaGraphNode("QUANTITY_MATCH", criterion=criteria["QUANTITY_MATCH"])
-answer_matches_response_graph[None][T][T] = CriteriaGraphNode("PREFIX_IS_LARGE", criterion=criteria["PREFIX_IS_LARGE"])
-answer_matches_response_graph[None][T][T][T] = CriteriaGraphNode("PREFIX_IS_SMALL", criterion=criteria["PREFIX_IS_SMALL"])
-answer_matches_response_graph[None][T][T][T][T] = END
-answer_matches_response_graph[None][T][T][T][F] = END
-answer_matches_response_graph[None][T][T][F] = END
-answer_matches_response_graph[None][T][F] = END
-answer_matches_response_graph[None][F] = END
+answer_matches_response_graph.get_by_label("DIMENSION_MATCH")[True]  = CriteriaGraphNode("QUANTITY_MATCH", criterion=criteria["QUANTITY_MATCH"])
+answer_matches_response_graph.get_by_label("DIMENSION_MATCH")[False] = END
+answer_matches_response_graph.get_by_label("QUANTITY_MATCH") [True]  = CriteriaGraphNode("PREFIX_IS_LARGE", criterion=criteria["PREFIX_IS_LARGE"])
+answer_matches_response_graph.get_by_label("QUANTITY_MATCH") [False] = END
+answer_matches_response_graph.get_by_label("PREFIX_IS_LARGE")[True]  = END
+answer_matches_response_graph.get_by_label("PREFIX_IS_LARGE")[False] = CriteriaGraphNode("PREFIX_IS_SMALL", criterion=criteria["PREFIX_IS_SMALL"])
+answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[True]  = END
+answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[False] = END
 
 if __name__ == "__main__":
     # Generates a graphviz description of the criteria graphs(s) that can be used to generate visualize the graph
