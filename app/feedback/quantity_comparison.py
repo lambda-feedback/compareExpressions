@@ -35,11 +35,11 @@ criteria["EXPR_VALUE"] = Criterion("is_number(value(QUANTITY))")
 criteria["EXPR_VALUE"][True] = lambda inputs: f"{inputs[0].name} value is an expression: ${inputs[0].value_latex_string}$"
 criteria["EXPR_VALUE"][False] = lambda inputs: f"{inputs[0].name} value is not an expression."
 
-criteria["QUANTITY_MATCH"] = Criterion("QUANTITY matches QUANTITY", doc_string="Checks quantities match")
+criteria["QUANTITY_MATCH"] = Criterion("QUANTITY matches QUANTITY", doc_string="Quantities match")
 criteria["QUANTITY_MATCH"][True] = lambda inputs: f"${inputs[0].latex_string}$ matches ${inputs[1].latex_string}$"
 criteria["QUANTITY_MATCH"][False] = lambda inputs: f"${inputs[0].latex_string}$ does not match ${inputs[1].latex_string}$"
 
-criteria["DIMENSION_MATCH"] = Criterion("dimension(QUANTITY) matches dimension(QUANTITY)", doc_string="Checks dimensions match")
+criteria["DIMENSION_MATCH"] = Criterion("dimension(QUANTITY) matches dimension(QUANTITY)", doc_string="Dimensions match")
 criteria["DIMENSION_MATCH"][True] = lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
 criteria["DIMENSION_MATCH"][False] = lambda inputs: f"$Dimension {inputs[0]}$ does not match dimension ${inputs[1]}$"
 
@@ -59,12 +59,12 @@ criteria["UNEXPECTED_UNIT"] = Criterion("has(unit(response)) and not(has(unit(an
 criteria["UNEXPECTED_UNIT"][True] = lambda inputs: "The response is expected to be a value without unit(s)."
 criteria["UNEXPECTED_UNIT"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 
-criteria["PREFIX_IS_LARGE"] = Criterion("unit(response) >= 1000*unit(answer)", doc_string="Check if prefix is much larger for the response than the answer")
-criteria["PREFIX_IS_LARGE"][True] = lambda inputs: "The quantity can be written with fewer digits by using a larger prefix."
+criteria["PREFIX_IS_LARGE"] = Criterion("unit(response) >= 1000*unit(answer)", doc_string="The response prefix is much larger than the answer prefix")
+criteria["PREFIX_IS_LARGE"][True] = lambda inputs: "The quantity can be written with fewer digits by using a smaller prefix."
 criteria["PREFIX_IS_LARGE"][False] = no_feedback
 
-criteria["PREFIX_IS_SMALL"] = Criterion("unit(response)*1000 <= unit(answer)", doc_string="Check if prefix is much smaller for the response than the answer")
-criteria["PREFIX_IS_SMALL"][True] = lambda inputs: "The quantity can be written with fewer digits by using a smaller prefix."
+criteria["PREFIX_IS_SMALL"] = Criterion("unit(response)*1000 <= unit(answer)", doc_string="The response prefix is much smaller than the answer prefix")
+criteria["PREFIX_IS_SMALL"][True] = lambda inputs: "The quantity can be written with fewer digits by using a larger prefix."
 criteria["PREFIX_IS_SMALL"][False] = no_feedback
 
 internal = {
@@ -73,39 +73,18 @@ internal = {
 
 END = CriteriaGraphNode("END",children=None)
 
-answer_matches_response_graph = CriteriaGraphNode(
-    "START", children={
-        None: CriteriaGraphNode(
-            "DIMENSION_MATCH",
-            criteria["DIMENSION_MATCH"],
-            {
-                True: CriteriaGraphNode(
-                    "QUANTITY_MATCH", 
-                    criteria["QUANTITY_MATCH"],
-                    {
-                        True: CriteriaGraphNode(
-                            "PREFIX_IS_LARGE", 
-                            criteria["PREFIX_IS_LARGE"],
-                            {
-                                True: END,
-                                False: CriteriaGraphNode(
-                                    "PREFIX_IS_SMALL",
-                                    criteria["PREFIX_IS_SMALL"],
-                                    {
-                                        True: END,
-                                        False: END
-                                    }
-                                ),
-                            }
-                        ),
-                        False: END,
-                    }
-                ),
-                False: END,
-            }
-        ),
-    }
-)
+T = True
+F = False
+answer_matches_response_graph = CriteriaGraphNode("START")
+answer_matches_response_graph[None] = CriteriaGraphNode("DIMENSION_MATCH", criterion=criteria["DIMENSION_MATCH"])
+answer_matches_response_graph[None][T] = CriteriaGraphNode("QUANTITY_MATCH", criterion=criteria["QUANTITY_MATCH"])
+answer_matches_response_graph[None][T][T] = CriteriaGraphNode("PREFIX_IS_LARGE", criterion=criteria["PREFIX_IS_LARGE"])
+answer_matches_response_graph[None][T][T][T] = CriteriaGraphNode("PREFIX_IS_SMALL", criterion=criteria["PREFIX_IS_SMALL"])
+answer_matches_response_graph[None][T][T][T][T] = END
+answer_matches_response_graph[None][T][T][T][F] = END
+answer_matches_response_graph[None][T][T][F] = END
+answer_matches_response_graph[None][T][F] = END
+answer_matches_response_graph[None][F] = END
 
 if __name__ == "__main__":
     # Generates a graphviz description of the criteria graphs(s) that can be used to generate visualize the graph
@@ -123,13 +102,14 @@ if __name__ == "__main__":
         if node.criterion is not None:
             label = node.criterion.check
             if node.criterion.doc_string is not None:
-                label = node.criterion.doc_string
+                tooltip = node.criterion.doc_string
             nodes.append(f'{node.label} [label="{label}" tooltip="{tooltip}" shape="{shape}" style="{style}" fillcolor="{fillcolor}"]')
-        for (result, target) in node.children.items():
-            edges.append(f'{node.label} -> {target.label} [label="{str(result)}"]')
-            if target not in nodes_already_processed and target not in nodes_to_be_processed:
-                nodes_to_be_processed.append(target)
-        nodes_already_processed.append(node)
+        if node.children is not None:
+            for (result, target) in node.children.items():
+                edges.append(f'{node.label} -> {target.label} [label="{str(result)}"]')
+                if target not in nodes_already_processed and target not in nodes_to_be_processed:
+                    nodes_to_be_processed.append(target)
+            nodes_already_processed.append(node)
     dot_string = "digraph {\n"+"\n".join(nodes+edges)+"\n}"
     graphs = pydot.graph_from_dot_data(dot_string)
     graph = graphs[0]

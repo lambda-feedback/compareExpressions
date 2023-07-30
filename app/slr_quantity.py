@@ -673,6 +673,10 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
         "inputs": None,
         "eval_response": eval_response,
     }
-    answer_matches_response_graph.traverse(context)
+
+    is_correct = True
+    for node in answer_matches_response_graph.children.values():
+        is_correct = is_correct and node.traverse(context)
+    eval_response.is_correct = is_correct
 
     return eval_response

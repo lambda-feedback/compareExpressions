@@ -25,12 +25,17 @@ class Criterion:
         self.feedback.update({key: value})
         return
 
+undefined_optional_parameter = object()
+
 class CriteriaGraphNode:
 
-    def __init__(self, label, criterion=None, children=dict()):
+    def __init__(self, label, criterion=None, children=undefined_optional_parameter):
         self.label = label
         self.criterion = criterion
-        self.children = children
+        if children is undefined_optional_parameter:
+            self.children = dict()
+        else:
+            self.children = children
         return
 
     def __getitem__(self, key):
@@ -47,10 +52,6 @@ class CriteriaGraphNode:
         check = context["check_function"]
         inputs = context["inputs"]
         outputs = context["eval_response"]
-        if self.criterion is None:
-            descend = True
-        else:
-            descend = self.criterion.check
         if record is True:
             if self.criterion is None:
                 result = None
@@ -62,4 +63,4 @@ class CriteriaGraphNode:
                         self.children[result].traverse(context, record)
                 except KeyError as exc:
                     raise Exception(f"Unexpected result ({str(result)}) in criteria {self.label}.") from exc
-        return
+        return result
