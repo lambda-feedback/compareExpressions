@@ -85,7 +85,7 @@ answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[True]  = END
 answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[False] = END
 
 if __name__ == "__main__":
-    # Generates a graphviz description of the criteria graphs(s) that can be used to generate visualize the graph
+    # Generates a dot description of the criteria graphs(s) that uses graphviz generate an svg visualization the graph
     shape = "polygon"
     style = "filled"
     fillcolor = "#FFFFCC"
