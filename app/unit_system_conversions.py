@@ -52,12 +52,12 @@ Note that radians and degree have been moved to list_of_very_common_units_in_SI 
 Note that degrees Celsius is omitted.
 """
 set_of_derived_SI_units_in_SI_base_units = {
-    ('hertz',     'Hz',  '(second**(-1))',                                      ('Hertz',),     tuple()),
+    ('hertz',     'Hz',  '(second**(-1))',                                     ('Hertz',),     tuple()),
     ('newton',    'N',   '(metre*kilogram*second**(-2))',                      ('Newton',),    ('newtons', 'Newtons')),
-    ('pascal',    'Pa',  '(metre**(-1)*kilogram*second**(-2))',                 ('Pascal',),    ('pascals', 'Pascals')),
+    ('pascal',    'Pa',  '(metre**(-1)*kilogram*second**(-2))',                ('Pascal',),    ('pascals', 'Pascals')),
     ('joule',     'J',   '(metre**2*kilogram*second**(-2))',                   ('Joule',),     ('joules', 'Joules')),
     ('watt',      'W',   '(metre**2*kilogram*second**(-3))',                   ('Watt',),      ('watts', 'Watts')),
-    ('coulomb',   'C',   '(second*ampere)',                                     ('Coulomb',),   ('coulombs', 'Coulombs')),
+    ('coulomb',   'C',   '(second*ampere)',                                    ('Coulomb',),   ('coulombs', 'Coulombs')),
     ('volt',      'V',   '(metre**2*kilogram*second**(-3)*ampere**(-1))',      ('Volt',),      ('volts', 'Volts')),
     ('farad',     'F',   '(metre**(-2)*(kilogram)**(-1)*second**4*ampere**2)', ('Farad',),     ('farads', 'Farads')),
     ('ohm',       'O',   '(metre**2*kilogram*second**(-3)*ampere**(-2))',      ('Ohm',),       ('ohms', 'Ohms')),

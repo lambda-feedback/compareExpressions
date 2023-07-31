@@ -49,7 +49,8 @@ class TestEvaluationFunction():
         answer = string
         response = string
         result = evaluation_function(response, answer, params)
-        assert result["is_correct"]
+        assert result["is_correct"] is True
+        assert result["response_latex"] == "~".join([latex for latex in [value_latex,unit_latex] if latex is not None])
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
     def test_natural_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
@@ -57,7 +58,8 @@ class TestEvaluationFunction():
         answer = string
         response = string
         result = evaluation_function(response, answer, params)
-        assert result["is_correct"]
+        assert result["is_correct"] is True
+        assert result["response_latex"] == "~".join([latex for latex in [value_latex,unit_latex] if latex is not None])
 
     @pytest.mark.skip("Too resource intensive")
     def test_slow_quantity_alternative_names_natural_syntax(self):
@@ -197,8 +199,8 @@ class TestEvaluationFunction():
             ("-10500 g m/s^2",                          True,  "QUANTITY_MATCH"),
             ("-10.46 kg m/s^2",                         True,  "QUANTITY_MATCH"),
             ("-10.54 kg m/s^2",                         True,  "QUANTITY_MATCH"),
-            ("-10.44 kg m/s^2",                         False, "HAS_VALUE"),
-            ("-10.56 kg m/s^2",                         False, "HAS_VALUE"),
+            ("-10.44 kg m/s^2",                         False, "DIMENSION_MATCH"),
+            ("-10.56 kg m/s^2",                         False, "DIMENSION_MATCH"),
             ("-10.5",                                   False, "MISSING_UNIT"),
             ("kg m/s^2",                                False, "MISSING_VALUE"),
             ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "QUANTITY_MATCH"),

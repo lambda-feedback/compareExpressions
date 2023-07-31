@@ -3,13 +3,16 @@
 # -------
 
 import re
-from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals
+from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals, create_sympy_parsing_params
 from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .symbolic_comparison_preview import preview_function as symbolic_preview
 from .feedback.quantity_comparison import criteria as physical_quantities_criteria
 from .feedback.quantity_comparison import internal as physical_quantities_messages
 from .feedback.quantity_comparison import QuantityTags
+from .feedback.quantity_comparison import answer_matches_response_graph
+from .expression_utilities import substitute
 from .slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
+from sympy import Basic
 from .unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
@@ -434,25 +437,28 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             result = evaluated_criteria[(tag, arg_names)][0]
         else:
             criterion = criteria[tag]
-            criterion_tokens = criteria_parser.scan(criterion.check)
-            number_of_args = 0
-            for token in criterion_tokens:
-                if token.label == "QUANTITY":
-                    if collect_args is True:
-                        token.content = quantities[token.content.strip()]
-                        args.append(token.content)
-                    else:
-                        token.content = args[number_of_args]
-                        number_of_args += 1
-            criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
-
-            def execute(node):
-                key = node.label.strip()
-                if key in criteria_operations.keys():
-                    executed_children = [execute(c) for c in node.children]
-                    return criteria_operations[key](executed_children)
-                elif key == "QUANTITY":
-                    return node.content
+            if criterion.check == None:
+                result = True
+            else:
+                criterion_tokens = criteria_parser.scan(criterion.check)
+                number_of_args = 0
+                for token in criterion_tokens:
+                    if token.label == "QUANTITY":
+                        if collect_args is True:
+                            token.content = quantities[token.content.strip()]
+                            args.append(token.content)
+                        else:
+                            token.content = args[number_of_args]
+                            number_of_args += 1
+                criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+    
+                def execute(node):
+                    key = node.label.strip()
+                    if key in criteria_operations.keys():
+                        executed_children = [execute(c) for c in node.children]
+                        return criteria_operations[key](executed_children)
+                    elif key == "QUANTITY":
+                        return node.content
             result = execute(criterion_parsed)
             feedback = criteria[tag][result](args)
             evaluated_criteria.update({(tag, arg_names): (result, feedback)})
@@ -461,34 +467,67 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     def convert_to_standard_unit(q):
         q_converted_value = q.value.content_string() if q.value is not None else None
         q_converted_unit = None
+        q_converted_dimension = parse_expression("1", parsing_params)
         if q.unit is not None:
             q_converted_unit = q.unit.copy()
             q_converted_unit = expand_units(q_converted_unit, q.parser)
-            q_converted_unit = q_converted_unit.content_string()
+            q_converted_unit_string = q_converted_unit.content_string()
             try:
-                q_converted_unit = parse_expression(q_converted_unit, parsing_params)
+                q_converted_unit = parse_expression(q_converted_unit_string, parsing_params)
             except Exception as e:
                 raise Exception("SymPy was unable to parse the "+q.name+" unit") from e
-        if q.unit is not None and q.value is not None:
-            q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
-            q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify(rational=True)
-            q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
-        return q_converted_value, q_converted_unit
+            base_unit_dimensions = [(base_unit[0], base_unit[2]) for base_unit in set_of_SI_base_unit_dimensions]
+            if q.value is not None:
+                q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
+                q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify(rational=True)
+                q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
+            q_converted_unit_string = str(q_converted_unit)
+            q_converted_dimension = substitute(q_converted_unit_string, base_unit_dimensions)
+            dimension_parsing_params = create_sympy_parsing_params(parsing_params, unsplittable_symbols=(dim_data[1] for dim_data in base_unit_dimensions))
+            q_converted_dimension = parse_expression(q_converted_dimension, dimension_parsing_params)
+        return q_converted_value, q_converted_unit, q_converted_dimension
 
     def matches(inputs):
-        value0, unit0 = convert_to_standard_unit(inputs[0])
-        value1, unit1 = convert_to_standard_unit(inputs[1])
-        value_match = False
-        unit_match = False
-        if value0 is None and value1 is None:
-            value_match = True
-        elif value0 is not None and value1 is not None:
-            value_match = symbolic_comparison(value0, value1, parameters)["is_correct"]
-        if unit0 is None and unit0 is None:
-            unit_match = True
-        elif unit0 is not None and unit1 is not None:
-            unit_match = bool((unit0 - unit1).simplify() == 0)
-        return value_match and unit_match
+        if isinstance(inputs[0], PhysicalQuantity) and isinstance(inputs[1], PhysicalQuantity):
+            value0, unit0, _ = convert_to_standard_unit(inputs[0])
+            value1, unit1, _ = convert_to_standard_unit(inputs[1])
+            value_match = False
+            unit_match = False
+            if value0 is None and value1 is None:
+                value_match = True
+            elif value0 is not None and value1 is not None:
+                value_match = symbolic_comparison(value0, value1, parameters)["is_correct"]
+            if unit0 is None and unit0 is None:
+                unit_match = True
+            elif unit0 is not None and unit1 is not None:
+                unit_match = bool((unit0 - unit1).simplify() == 0)
+            return value_match and unit_match
+        elif isinstance(inputs[0], Basic) and isinstance(inputs[1], Basic):
+            if inputs[0] is not None and inputs[1] is not None:
+                dimension_match = bool((inputs[0] - inputs[1]).cancel().simplify().simplify() == 0) # TODO: Make separate function for checking equality of expressions that can be parsed
+            else:
+                dimension_match = False
+            return dimension_match
+        return False
+
+    def dimension(quantity):
+        _, _, dimension = convert_to_standard_unit(quantity[0])
+        return dimension
+
+    def compare(comparison):
+        comparison_dict = {
+            "=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() == 0),
+            "<=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() <= 0),
+            ">=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() >= 0),
+            "<": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() < 0),
+            ">": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() > 0),
+        }
+        def wrap(inputs):
+            if inputs[0] is not None and inputs[1] is not None:
+                return comparison_dict[comparison](inputs)
+            else:
+                return False
+        return wrap
 
     criteria_operations = {
         "and":           lambda x: x[0] and x[1],
@@ -498,7 +537,13 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
         "value":         lambda quantity: quantity[0].value,
         "is_number":     lambda value: value[0] is not None and value[0].tags == {QuantityTags.N},
         "is_expression": lambda value: value[0] is not None and QuantityTags.V in value[0].tags,
-        "matches":       matches
+        "matches":       matches,
+        "dimension":     dimension,
+        "=":             compare("="),
+        "<=":            compare("<="),
+        ">=":            compare(">="),
+        "<":             compare("<"),
+        ">":             compare(">"),
     }
 
     def generate_criteria_parser():
@@ -514,6 +559,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             (" *UNIT *",     "UNIT"),
             (" *VALUE *",    "VALUE"),
             (" *QUANTITY *", "QUANTITY"),
+            (" *DIMENSION *", "DIMENSION"),
             ("\( *",         "START_DELIMITER"),
             (" *\)",         "END_DELIMITER"),
             ("response",     "QUANTITY"),
@@ -523,19 +569,28 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
         token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations.keys()]
 
         productions = [
-            ("START",    "BOOL", create_node),
-            ("BOOL",     "BOOL and BOOL", infix),
-            ("BOOL",     "UNIT matches UNIT", infix),
-            ("BOOL",     "VALUE matches VALUE", infix),
-            ("BOOL",     "QUANTITY matches QUANTITY", infix),
-            ("BOOL",     "not(BOOL)", operate(1)),
-            ("BOOL",     "has(UNIT)", operate(1)),
-            ("BOOL",     "has(VALUE)", operate(1)),
-            ("BOOL",     "is_number(VALUE)", operate(1)),
-            ("BOOL",     "is_expression(VALUE)", operate(1)),
-            ("UNIT",     "unit(QUANTITY)", operate(1)),
-            ("VALUE",    "value(QUANTITY)", operate(1)),
-            ("QUANTITY", "INPUT", create_node),
+            ("START",     "BOOL", create_node),
+            ("BOOL",      "BOOL and BOOL", infix),
+            ("BOOL",      "UNIT matches UNIT", infix),
+            ("BOOL",      "VALUE matches VALUE", infix),
+            ("BOOL",      "QUANTITY matches QUANTITY", infix),
+            ("BOOL",      "DIMENSION matches DIMENSION", infix),
+            ("BOOL",      "not(BOOL)", operate(1)),
+            ("BOOL",      "has(UNIT)", operate(1)),
+            ("BOOL",      "has(VALUE)", operate(1)),
+            ("BOOL",      "is_number(VALUE)", operate(1)),
+            ("BOOL",      "is_expression(VALUE)", operate(1)),
+            ("BOOL",      "UNIT=UNIT", infix),
+            ("BOOL",      "UNIT<=UNIT", infix),
+            ("BOOL",      "UNIT>=UNIT", infix),
+            ("BOOL",      "UNIT<UNIT", infix),
+            ("BOOL",      "UNIT>UNIT", infix),
+            ("UNIT",      "unit(QUANTITY)", operate(1)),
+            ("UNIT",      "INPUT UNIT", group(2, empty=True)),
+            ("UNIT",      "UNIT INPUT", group(2, empty=True)),
+            ("VALUE",     "value(QUANTITY)", operate(1)),
+            ("QUANTITY",  "INPUT", create_node),
+            ("DIMENSION", "dimension(QUANTITY)", operate(1)),
         ]
 
         return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
@@ -547,6 +602,8 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     # -------------------
 
     for criterion in criteria.values():
+        if criterion.check is None:
+            continue
         criterion_tokens = criteria_parser.scan(criterion.check)
         relevant_quantities = set()
         relevant_criteria_operations = set()
@@ -589,26 +646,19 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ),
         )
 
-    if check_criterion("HAS_VALUE", arg_names=("response",)):
-        check_criterion("NUMBER_VALUE", ("response",))
-        check_criterion("EXPR_VALUE", ("response",))
-    if check_criterion("HAS_VALUE", arg_names=("answer",)):
-        check_criterion("NUMBER_VALUE", ("answer",))
-        check_criterion("EXPR_VALUE", ("answer",))
-
     eval_response.latex = quantities["response"].latex_string
 
-    for criterion in ["MISSING_VALUE", "MISSING_UNIT", "UNEXPECTED_VALUE", "UNEXPECTED_UNIT"]:
-        check_criterion(criterion)
+    context = {
+        "check_function": lambda label, criterion: check_criterion(label, arg_names=("response", "answer")),
+    }
 
-    eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response", "answer"))
+    is_correct = answer_matches_response_graph.traverse(context)
+    eval_response.is_correct = is_correct
 
     for (tag, result) in evaluated_criteria.items():
         if len(result[1].strip()) > 0:
             eval_response.add_feedback((tag[0], "- "+result[1]+"<br>"))
         else:
             eval_response.add_feedback((tag[0], ""))
-
-    # TODO: Comparison of units in way that allows for constructive feedback
 
     return eval_response
