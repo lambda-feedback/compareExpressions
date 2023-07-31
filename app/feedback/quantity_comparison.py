@@ -54,19 +54,19 @@ criteria["DIMENSION_MATCH"] = Criterion("dimension(QUANTITY) matches dimension(Q
 criteria["DIMENSION_MATCH"][True] = lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
 criteria["DIMENSION_MATCH"][False] = lambda inputs: f"Dimension of ${inputs[0]}$ does not match dimension of ${inputs[1]}$"
 
-criteria["MISSING_VALUE"] = Criterion("not(has(value(response))) and has(value(answer))")
+criteria["MISSING_VALUE"] = Criterion("not(has(value(response))) and has(value(answer))", doc_string="Response is missing value when answer has value")
 criteria["MISSING_VALUE"][True] = lambda inputs: "The response is missing a value."
 criteria["MISSING_VALUE"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 
-criteria["MISSING_UNIT"] = Criterion("not(has(unit(response))) and has(unit(answer))")
+criteria["MISSING_UNIT"] = Criterion("not(has(unit(response))) and has(unit(answer))", doc_string="Response is missing unit when answer has unit")
 criteria["MISSING_UNIT"][True] = lambda inputs: "The response is missing unit(s)."
 criteria["MISSING_UNIT"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 
-criteria["UNEXPECTED_VALUE"] = Criterion("has(value(response)) and not(has(value(answer)))")
+criteria["UNEXPECTED_VALUE"] = Criterion("has(value(response)) and not(has(value(answer)))", doc_string="Response has value when when answer has only unit")
 criteria["UNEXPECTED_VALUE"][True] = lambda inputs: "The response is expected only have unit(s), no value."
 criteria["UNEXPECTED_VALUE"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 
-criteria["UNEXPECTED_UNIT"] = Criterion("has(unit(response)) and not(has(unit(answer)))")
+criteria["UNEXPECTED_UNIT"] = Criterion("has(unit(response)) and not(has(unit(answer)))", doc_string="Response has unit when when answer has only value")
 criteria["UNEXPECTED_UNIT"][True] = lambda inputs: "The response is expected to be a value without unit(s)."
 criteria["UNEXPECTED_UNIT"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 

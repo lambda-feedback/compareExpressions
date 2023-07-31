@@ -93,8 +93,9 @@ def generate_svg(root_node, filename, dummy_input=None):
     rankdir = "TB"
     result_compass = None
     if rankdir == "TB":
-        result_compass = ("n")
-        result_compass = ("s")
+        result_compass = ("n","s")
+    if rankdir == "LR":
+        result_compass = ("w","e")
     graph_attributes = [f'splines="{splines}"', f'node [style="{style}"]', f'rankdir="{rankdir}"']
     criteria_shape = "polygon"
     special_shape = "ellipse"
@@ -140,8 +141,8 @@ def generate_svg(root_node, filename, dummy_input=None):
                         result_feedback = 'No new feedback produced'
                     nodes.append(f'{ghost_label} [label="{str(result)}" fillcolor="{result_fillcolor}" tooltip="{result_feedback}"]')
                     number_of_ghost_nodes += 1
-                    edges.append(f'{node.label} -> {ghost_label}:n [arrowhead="none"]')
-                    edges.append(f'{ghost_label}:s -> {target.label}')
+                    edges.append(f'{node.label}:{result_compass[1]} -> {ghost_label}:{result_compass[0]} [arrowhead="none"]')
+                    edges.append(f'{ghost_label}:{result_compass[1]} -> {target.label}')
                 if target not in nodes_already_processed and target not in nodes_to_be_processed:
                     nodes_to_be_processed.append(target)
             nodes_already_processed.append(node)

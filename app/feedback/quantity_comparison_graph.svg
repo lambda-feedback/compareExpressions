@@ -21,7 +21,7 @@
 <!-- MISSING_VALUE -->
 <g id="node2" class="node">
 <title>MISSING_VALUE</title>
-<g id="a_node2"><a xlink:title="MISSING_VALUE">
+<g id="a_node2"><a xlink:title="Response is missing value when answer has value">
 <polygon fill="#e5f8fb" stroke="#00b8d4" points="290.5,-1188 0,-1188 0,-1152 290.5,-1152 290.5,-1188"/>
 <text text-anchor="middle" x="145.25" y="-1164.58" font-family="Times New Roman,serif" font-size="14.00" fill="#212121">not(has(value(response))) and has(value(answer))</text>
 </a>
@@ -44,8 +44,8 @@
 </g>
 <!-- MISSING_VALUE&#45;&gt;GHOST_NODE_0 -->
 <g id="edge2" class="edge">
-<title>MISSING_VALUE&#45;&gt;GHOST_NODE_0:n</title>
-<path fill="none" stroke="black" d="M121.34,-1151.61C94.38,-1129.78 54.25,-1089.63 54.25,-1044"/>
+<title>MISSING_VALUE:s&#45;&gt;GHOST_NODE_0:n</title>
+<path fill="none" stroke="black" d="M145.25,-1152C145.25,-1089.23 54.25,-1106.77 54.25,-1044"/>
 </g>
 <!-- GHOST_NODE_1 -->
 <g id="node4" class="node">
@@ -58,8 +58,8 @@
 </g>
 <!-- MISSING_VALUE&#45;&gt;GHOST_NODE_1 -->
 <g id="edge4" class="edge">
-<title>MISSING_VALUE&#45;&gt;GHOST_NODE_1:n</title>
-<path fill="none" stroke="black" d="M181.88,-1151.63C194.37,-1143.01 205.25,-1131.15 205.25,-1116"/>
+<title>MISSING_VALUE:s&#45;&gt;GHOST_NODE_1:n</title>
+<path fill="none" stroke="black" d="M145.25,-1152C145.25,-1120.9 205.25,-1147.1 205.25,-1116"/>
 </g>
 <!-- END -->
 <g id="node26" class="node">
@@ -79,7 +79,7 @@
 <!-- MISSING_UNIT -->
 <g id="node5" class="node">
 <title>MISSING_UNIT</title>
-<g id="a_node5"><a xlink:title="MISSING_UNIT">
+<g id="a_node5"><a xlink:title="Response is missing unit when answer has unit">
 <polygon fill="#e5f8fb" stroke="#00b8d4" points="374.25,-1044 100.25,-1044 100.25,-1008 374.25,-1008 374.25,-1044"/>
 <text text-anchor="middle" x="237.25" y="-1020.58" font-family="Times New Roman,serif" font-size="14.00" fill="#212121">not(has(unit(response))) and has(unit(answer))</text>
 </a>
@@ -102,8 +102,8 @@
 </g>
 <!-- MISSING_UNIT&#45;&gt;GHOST_NODE_2 -->
 <g id="edge6" class="edge">
-<title>MISSING_UNIT&#45;&gt;GHOST_NODE_2:n</title>
-<path fill="none" stroke="black" d="M199.49,-1007.65C162.05,-987.54 110.25,-950.58 110.25,-900"/>
+<title>MISSING_UNIT:s&#45;&gt;GHOST_NODE_2:n</title>
+<path fill="none" stroke="black" d="M237.25,-1008C237.25,-933.91 110.25,-974.09 110.25,-900"/>
 </g>
 <!-- GHOST_NODE_3 -->
 <g id="node7" class="node">
@@ -116,8 +116,8 @@
 </g>
 <!-- MISSING_UNIT&#45;&gt;GHOST_NODE_3 -->
 <g id="edge8" class="edge">
-<title>MISSING_UNIT&#45;&gt;GHOST_NODE_3:n</title>
-<path fill="none" stroke="black" d="M254,-1007.89C261.74,-998.18 269.25,-985.33 269.25,-972"/>
+<title>MISSING_UNIT:s&#45;&gt;GHOST_NODE_3:n</title>
+<path fill="none" stroke="black" d="M237.25,-1008C237.25,-986.59 269.25,-993.41 269.25,-972"/>
 </g>
 <!-- GHOST_NODE_2&#45;&gt;END -->
 <g id="edge7" class="edge">
@@ -128,7 +128,7 @@
 <!-- UNEXPECTED_VALUE -->
 <g id="node8" class="node">
 <title>UNEXPECTED_VALUE</title>
-<g id="a_node8"><a xlink:title="UNEXPECTED_VALUE">
+<g id="a_node8"><a xlink:title="Response has value when when answer has only unit">
 <polygon fill="#e5f8fb" stroke="#00b8d4" points="446.5,-900 156,-900 156,-864 446.5,-864 446.5,-900"/>
 <text text-anchor="middle" x="301.25" y="-876.58" font-family="Times New Roman,serif" font-size="14.00" fill="#212121">has(value(response)) and not(has(value(answer)))</text>
 </a>
@@ -151,8 +151,8 @@
 </g>
 <!-- UNEXPECTED_VALUE&#45;&gt;GHOST_NODE_4 -->
 <g id="edge10" class="edge">
-<title>UNEXPECTED_VALUE&#45;&gt;GHOST_NODE_4:n</title>
-<path fill="none" stroke="black" d="M255.29,-863.61C213.15,-844.33 157.25,-808.8 157.25,-756"/>
+<title>UNEXPECTED_VALUE:s&#45;&gt;GHOST_NODE_4:n</title>
+<path fill="none" stroke="black" d="M301.25,-864C301.25,-824 157.25,-796 157.25,-756"/>
 </g>
 <!-- GHOST_NODE_5 -->
 <g id="node10" class="node">
@@ -165,8 +165,8 @@
 </g>
 <!-- UNEXPECTED_VALUE&#45;&gt;GHOST_NODE_5 -->
 <g id="edge12" class="edge">
-<title>UNEXPECTED_VALUE&#45;&gt;GHOST_NODE_5:n</title>
-<path fill="none" stroke="black" d="M310.75,-863.88C315.5,-853.76 320.25,-840.51 320.25,-828"/>
+<title>UNEXPECTED_VALUE:s&#45;&gt;GHOST_NODE_5:n</title>
+<path fill="none" stroke="black" d="M301.25,-864C301.25,-845.91 320.25,-846.09 320.25,-828"/>
 </g>
 <!-- GHOST_NODE_4&#45;&gt;END -->
 <g id="edge11" class="edge">
@@ -177,7 +177,7 @@
 <!-- UNEXPECTED_UNIT -->
 <g id="node11" class="node">
 <title>UNEXPECTED_UNIT</title>
-<g id="a_node11"><a xlink:title="UNEXPECTED_UNIT">
+<g id="a_node11"><a xlink:title="Response has unit when when answer has only value">
 <polygon fill="#e5f8fb" stroke="#00b8d4" points="477.25,-756 203.25,-756 203.25,-720 477.25,-720 477.25,-756"/>
 <text text-anchor="middle" x="340.25" y="-732.58" font-family="Times New Roman,serif" font-size="14.00" fill="#212121">has(unit(response)) and not(has(unit(answer)))</text>
 </a>
@@ -200,8 +200,8 @@
 </g>
 <!-- UNEXPECTED_UNIT&#45;&gt;GHOST_NODE_6 -->
 <g id="edge14" class="edge">
-<title>UNEXPECTED_UNIT&#45;&gt;GHOST_NODE_6:n</title>
-<path fill="none" stroke="black" d="M293.57,-719.52C251.18,-700.27 195.25,-664.85 195.25,-612"/>
+<title>UNEXPECTED_UNIT:s&#45;&gt;GHOST_NODE_6:n</title>
+<path fill="none" stroke="black" d="M340.25,-720C340.25,-639.64 195.25,-692.36 195.25,-612"/>
 </g>
 <!-- GHOST_NODE_7 -->
 <g id="node13" class="node">
@@ -214,8 +214,8 @@
 </g>
 <!-- UNEXPECTED_UNIT&#45;&gt;GHOST_NODE_7 -->
 <g id="edge16" class="edge">
-<title>UNEXPECTED_UNIT&#45;&gt;GHOST_NODE_7:n</title>
-<path fill="none" stroke="black" d="M360.05,-719.89C368.85,-710.37 377.25,-697.69 377.25,-684"/>
+<title>UNEXPECTED_UNIT:s&#45;&gt;GHOST_NODE_7:n</title>
+<path fill="none" stroke="black" d="M340.25,-720C340.25,-697.06 377.25,-706.94 377.25,-684"/>
 </g>
 <!-- GHOST_NODE_6&#45;&gt;END -->
 <g id="edge15" class="edge">
@@ -249,8 +249,8 @@
 </g>
 <!-- DIMENSION_MATCH&#45;&gt;GHOST_NODE_8 -->
 <g id="edge18" class="edge">
-<title>DIMENSION_MATCH&#45;&gt;GHOST_NODE_8:n</title>
-<path fill="none" stroke="black" d="M413.76,-575.82C413.51,-565.44 413.25,-551.96 413.25,-540"/>
+<title>DIMENSION_MATCH:s&#45;&gt;GHOST_NODE_8:n</title>
+<path fill="none" stroke="black" d="M414.25,-576C414.25,-559.99 413.25,-556.01 413.25,-540"/>
 </g>
 <!-- GHOST_NODE_9 -->
 <g id="node16" class="node">
@@ -263,8 +263,8 @@
 </g>
 <!-- DIMENSION_MATCH&#45;&gt;GHOST_NODE_9 -->
 <g id="edge20" class="edge">
-<title>DIMENSION_MATCH&#45;&gt;GHOST_NODE_9:n</title>
-<path fill="none" stroke="black" d="M465.53,-575.63C510.33,-556.83 568.25,-522.06 568.25,-468"/>
+<title>DIMENSION_MATCH:s&#45;&gt;GHOST_NODE_9:n</title>
+<path fill="none" stroke="black" d="M414.25,-576C414.25,-534.2 568.25,-509.8 568.25,-468"/>
 </g>
 <!-- QUANTITY_MATCH -->
 <g id="node17" class="node">
@@ -298,8 +298,8 @@
 </g>
 <!-- QUANTITY_MATCH&#45;&gt;GHOST_NODE_10 -->
 <g id="edge22" class="edge">
-<title>QUANTITY_MATCH&#45;&gt;GHOST_NODE_10:n</title>
-<path fill="none" stroke="black" d="M394.52,-431.7C386.2,-422.12 378.25,-409.45 378.25,-396"/>
+<title>QUANTITY_MATCH:s&#45;&gt;GHOST_NODE_10:n</title>
+<path fill="none" stroke="black" d="M413.25,-432C413.25,-409.68 378.25,-418.32 378.25,-396"/>
 </g>
 <!-- GHOST_NODE_11 -->
 <g id="node19" class="node">
@@ -312,8 +312,8 @@
 </g>
 <!-- QUANTITY_MATCH&#45;&gt;GHOST_NODE_11 -->
 <g id="edge24" class="edge">
-<title>QUANTITY_MATCH&#45;&gt;GHOST_NODE_11:n</title>
-<path fill="none" stroke="black" d="M439.24,-431.59C467.98,-410.03 510.25,-370.42 510.25,-324"/>
+<title>QUANTITY_MATCH:s&#45;&gt;GHOST_NODE_11:n</title>
+<path fill="none" stroke="black" d="M413.25,-432C413.25,-367.48 510.25,-388.52 510.25,-324"/>
 </g>
 <!-- PREFIX_IS_LARGE -->
 <g id="node20" class="node">
@@ -347,8 +347,8 @@
 </g>
 <!-- PREFIX_IS_LARGE&#45;&gt;GHOST_NODE_12 -->
 <g id="edge26" class="edge">
-<title>PREFIX_IS_LARGE&#45;&gt;GHOST_NODE_12:n</title>
-<path fill="none" stroke="black" d="M317.12,-287.51C282.27,-266.94 233.25,-229.24 233.25,-180"/>
+<title>PREFIX_IS_LARGE:s&#45;&gt;GHOST_NODE_12:n</title>
+<path fill="none" stroke="black" d="M351.25,-288C351.25,-252.45 233.25,-215.55 233.25,-180"/>
 </g>
 <!-- GHOST_NODE_13 -->
 <g id="node22" class="node">
@@ -361,8 +361,8 @@
 </g>
 <!-- PREFIX_IS_LARGE&#45;&gt;GHOST_NODE_13 -->
 <g id="edge28" class="edge">
-<title>PREFIX_IS_LARGE&#45;&gt;GHOST_NODE_13:n</title>
-<path fill="none" stroke="black" d="M360.75,-287.88C365.5,-277.76 370.25,-264.51 370.25,-252"/>
+<title>PREFIX_IS_LARGE:s&#45;&gt;GHOST_NODE_13:n</title>
+<path fill="none" stroke="black" d="M351.25,-288C351.25,-269.91 370.25,-270.09 370.25,-252"/>
 </g>
 <!-- GHOST_NODE_12&#45;&gt;END -->
 <g id="edge27" class="edge">
@@ -396,8 +396,8 @@
 </g>
 <!-- PREFIX_IS_SMALL&#45;&gt;GHOST_NODE_14 -->
 <g id="edge30" class="edge">
-<title>PREFIX_IS_SMALL&#45;&gt;GHOST_NODE_14:n</title>
-<path fill="none" stroke="black" d="M321.44,-143.51C307.11,-135.64 296.25,-124.3 296.25,-108"/>
+<title>PREFIX_IS_SMALL:s&#45;&gt;GHOST_NODE_14:n</title>
+<path fill="none" stroke="black" d="M390.25,-144C390.25,-99.26 296.25,-152.74 296.25,-108"/>
 </g>
 <!-- GHOST_NODE_15 -->
 <g id="node25" class="node">
@@ -410,8 +410,8 @@
 </g>
 <!-- PREFIX_IS_SMALL&#45;&gt;GHOST_NODE_15 -->
 <g id="edge32" class="edge">
-<title>PREFIX_IS_SMALL&#45;&gt;GHOST_NODE_15:n</title>
-<path fill="none" stroke="black" d="M384.25,-143.56C381.25,-133.33 378.25,-120.08 378.25,-108"/>
+<title>PREFIX_IS_SMALL:s&#45;&gt;GHOST_NODE_15:n</title>
+<path fill="none" stroke="black" d="M390.25,-144C390.25,-127.13 378.25,-124.87 378.25,-108"/>
 </g>
 <!-- GHOST_NODE_14&#45;&gt;END -->
 <g id="edge31" class="edge">
