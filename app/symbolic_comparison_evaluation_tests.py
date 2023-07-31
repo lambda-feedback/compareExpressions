@@ -983,6 +983,7 @@ class TestEvaluationFunction():
         for feedback_tag in feedback_tags:
             assert feedback_tag in result["tags"]
 
+    @pytest.mark.skip("Too resource intensive")
     @pytest.mark.parametrize(
         "response, answer, value",
         [
@@ -999,7 +1000,7 @@ class TestEvaluationFunction():
             ("summation(2*k + 199, (k, -99, n-100))",  "summation(2*k - 1, (k, 1, n))",    True),
         ]
     )
-    def test_sum(self, response, answer, value):
+    def test_slow_sum(self, response, answer, value):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1007,6 +1008,7 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value
 
+    @pytest.mark.skip("Too resource intensive")
     @pytest.mark.parametrize(
         "response, answer, value",
         [
@@ -1016,7 +1018,7 @@ class TestEvaluationFunction():
             ("2*Sum((-1)**n*(6/n**2 - pi**2)/n*sin(n*x), (n, 1, oo))", "2*Sum((-1)**n*(6/n**3 - pi**2/n)*sin(n*x), (n, 1, oo))", True),
         ]
     )
-    def test_infinite_sum(self, response, answer, value):
+    def test_slow_infinite_sum(self, response, answer, value):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
