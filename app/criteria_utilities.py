@@ -8,6 +8,9 @@ def no_feedback(inputs):
     return ""
 
 
+def flip_bool_result(result):
+    return not result
+
 class Criterion:
 
     def __init__(self, check, feedback_for_undefined_key=undefined_key, doc_string=None):
@@ -31,9 +34,11 @@ undefined_optional_parameter = object()
 
 class CriteriaGraphNode:
 
-    def __init__(self, label, criterion=None, children=undefined_optional_parameter):
+    def __init__(self, label, criterion=None, children=undefined_optional_parameter, override=True, result_map=None):
         self.label = label
         self.criterion = criterion
+        self.result_map = result_map
+        self.override = override
         if children is undefined_optional_parameter:
             self.children = dict()
         else:
@@ -50,21 +55,21 @@ class CriteriaGraphNode:
         self.children.update({key: value})
         return
 
-    def traverse(self, context, record=True):
+    def traverse(self, context, previous_result=None):
         check = context["check_function"]
-        inputs = context["inputs"]
-        outputs = context["eval_response"]
-        if record is True:
-            if self.criterion is None:
-                result = None
-            else:
-                result = check(self.label, self.criterion, inputs, outputs)
-            if self.children is not None:
-                try:
-                    if self.children[result] is not None:
-                        self.children[result].traverse(context, record)
-                except KeyError as exc:
-                    raise Exception(f"Unexpected result ({str(result)}) in criteria {self.label}.") from exc
+        if self.criterion is None or self.override is False:
+            result = previous_result
+        else:
+            result = check(self.label, self.criterion)
+        if self.children is not None:
+            try:
+                if self.children[result] is not None:
+                    prev_res = result
+                    if self.result_map is not None:
+                        prev_res = self.result_map(result)
+                    result = self.children[result].traverse(context, previous_result=prev_res)
+            except KeyError as exc:
+                raise Exception(f"Unexpected result ({str(result)}) in criteria {self.label}.") from exc
         return result
 
     def get_by_label(self, label):

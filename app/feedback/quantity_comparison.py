@@ -1,5 +1,5 @@
 from enum import Enum
-from ..criteria_utilities import Criterion, CriteriaGraphNode, no_feedback, generate_svg
+from ..criteria_utilities import Criterion, CriteriaGraphNode, no_feedback, generate_svg, flip_bool_result
 
 QuantityTags = Enum("QuantityTags", {v: i for i, v in enumerate("UVNR", 1)})
 
@@ -72,13 +72,21 @@ internal = {
 END = CriteriaGraphNode("END",children=None)
 
 answer_matches_response_graph = CriteriaGraphNode("START")
-answer_matches_response_graph[None] = CriteriaGraphNode("DIMENSION_MATCH", criterion=criteria["DIMENSION_MATCH"])
+answer_matches_response_graph.get_by_label("START")[None] = CriteriaGraphNode("MISSING_VALUE", criterion=criteria["MISSING_VALUE"], result_map=flip_bool_result)
+answer_matches_response_graph.get_by_label("MISSING_VALUE")[True]  = END
+answer_matches_response_graph.get_by_label("MISSING_VALUE")[False] = CriteriaGraphNode("MISSING_UNIT", criterion=criteria["MISSING_UNIT"], result_map=flip_bool_result)
+answer_matches_response_graph.get_by_label("MISSING_UNIT")[True]  = END
+answer_matches_response_graph.get_by_label("MISSING_UNIT")[False] = CriteriaGraphNode("UNEXPECTED_VALUE", criterion=criteria["UNEXPECTED_VALUE"], result_map=flip_bool_result)
+answer_matches_response_graph.get_by_label("UNEXPECTED_VALUE")[True]  = END
+answer_matches_response_graph.get_by_label("UNEXPECTED_VALUE")[False] = CriteriaGraphNode("UNEXPECTED_UNIT", criterion=criteria["UNEXPECTED_UNIT"], result_map=flip_bool_result)
+answer_matches_response_graph.get_by_label("UNEXPECTED_UNIT")[True]  = END
+answer_matches_response_graph.get_by_label("UNEXPECTED_UNIT")[False] = CriteriaGraphNode("DIMENSION_MATCH", criterion=criteria["DIMENSION_MATCH"])
 answer_matches_response_graph.get_by_label("DIMENSION_MATCH")[True]  = CriteriaGraphNode("QUANTITY_MATCH", criterion=criteria["QUANTITY_MATCH"])
 answer_matches_response_graph.get_by_label("DIMENSION_MATCH")[False] = END
-answer_matches_response_graph.get_by_label("QUANTITY_MATCH") [True]  = CriteriaGraphNode("PREFIX_IS_LARGE", criterion=criteria["PREFIX_IS_LARGE"])
-answer_matches_response_graph.get_by_label("QUANTITY_MATCH") [False] = END
+answer_matches_response_graph.get_by_label("QUANTITY_MATCH")[True]  = CriteriaGraphNode("PREFIX_IS_LARGE", criterion=criteria["PREFIX_IS_LARGE"], override=False)
+answer_matches_response_graph.get_by_label("QUANTITY_MATCH")[False] = END
 answer_matches_response_graph.get_by_label("PREFIX_IS_LARGE")[True]  = END
-answer_matches_response_graph.get_by_label("PREFIX_IS_LARGE")[False] = CriteriaGraphNode("PREFIX_IS_SMALL", criterion=criteria["PREFIX_IS_SMALL"])
+answer_matches_response_graph.get_by_label("PREFIX_IS_LARGE")[False] = CriteriaGraphNode("PREFIX_IS_SMALL", criterion=criteria["PREFIX_IS_SMALL"], override=False)
 answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[True]  = END
 answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[False] = END
 

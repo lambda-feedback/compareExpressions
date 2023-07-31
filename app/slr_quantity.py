@@ -3,7 +3,7 @@
 # -------
 
 import re
-from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals
+from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals, create_sympy_parsing_params
 from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .symbolic_comparison_preview import preview_function as symbolic_preview
 from .feedback.quantity_comparison import criteria as physical_quantities_criteria
@@ -467,7 +467,7 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     def convert_to_standard_unit(q):
         q_converted_value = q.value.content_string() if q.value is not None else None
         q_converted_unit = None
-        q_converted_dimensions = None
+        q_converted_dimension = parse_expression("1", parsing_params)
         if q.unit is not None:
             q_converted_unit = q.unit.copy()
             q_converted_unit = expand_units(q_converted_unit, q.parser)
@@ -477,13 +477,15 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             except Exception as e:
                 raise Exception("SymPy was unable to parse the "+q.name+" unit") from e
             base_unit_dimensions = [(base_unit[0], base_unit[2]) for base_unit in set_of_SI_base_unit_dimensions]
-            q_converted_dimensions = substitute(q_converted_unit_string, base_unit_dimensions)
-            q_converted_dimensions = parse_expression(q_converted_dimensions, parsing_params)
-        if q.unit is not None and q.value is not None:
-            q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
-            q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify(rational=True)
-            q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
-        return q_converted_value, q_converted_unit, q_converted_dimensions
+            if q.value is not None:
+                q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
+                q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify(rational=True)
+                q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
+            q_converted_unit_string = str(q_converted_unit)
+            q_converted_dimension = substitute(q_converted_unit_string, base_unit_dimensions)
+            dimension_parsing_params = create_sympy_parsing_params(parsing_params, unsplittable_symbols=(dim_data[1] for dim_data in base_unit_dimensions))
+            q_converted_dimension = parse_expression(q_converted_dimension, dimension_parsing_params)
+        return q_converted_value, q_converted_unit, q_converted_dimension
 
     def matches(inputs):
         if isinstance(inputs[0], PhysicalQuantity) and isinstance(inputs[1], PhysicalQuantity):
@@ -644,39 +646,19 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ),
         )
 
-    if check_criterion("HAS_VALUE", arg_names=("response",)):
-        check_criterion("NUMBER_VALUE", ("response",))
-        check_criterion("EXPR_VALUE", ("response",))
-    if check_criterion("HAS_VALUE", arg_names=("answer",)):
-        check_criterion("NUMBER_VALUE", ("answer",))
-        check_criterion("EXPR_VALUE", ("answer",))
-
     eval_response.latex = quantities["response"].latex_string
 
-    for criterion in ["MISSING_VALUE", "MISSING_UNIT", "UNEXPECTED_VALUE", "UNEXPECTED_UNIT"]:
-        check_criterion(criterion)
+    context = {
+        "check_function": lambda label, criterion: check_criterion(label, arg_names=("response", "answer")),
+    }
 
-    eval_response.is_correct = check_criterion("QUANTITY_MATCH", arg_names=("response", "answer"))
-
-    if eval_response.is_correct is False:
-        check_criterion("DIMENSION_MATCH", arg_names=("response", "answer"))
+    is_correct = answer_matches_response_graph.traverse(context)
+    eval_response.is_correct = is_correct
 
     for (tag, result) in evaluated_criteria.items():
         if len(result[1].strip()) > 0:
             eval_response.add_feedback((tag[0], "- "+result[1]+"<br>"))
         else:
             eval_response.add_feedback((tag[0], ""))
-
-    # TODO: Comparison of units in way that allows for constructive feedback
-    context = {
-        "check_function": lambda label, criterion, inputs, outputs: check_criterion(label, arg_names=("response", "answer")),
-        "inputs": None,
-        "eval_response": eval_response,
-    }
-
-    is_correct = True
-    for node in answer_matches_response_graph.children.values():
-        is_correct = is_correct and node.traverse(context)
-    eval_response.is_correct = is_correct
 
     return eval_response
