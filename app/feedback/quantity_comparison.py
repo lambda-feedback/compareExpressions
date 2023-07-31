@@ -1,7 +1,5 @@
-import pydot
-
 from enum import Enum
-from ..criteria_utilities import Criterion, CriteriaGraphNode, no_feedback
+from ..criteria_utilities import Criterion, CriteriaGraphNode, no_feedback, generate_svg
 
 QuantityTags = Enum("QuantityTags", {v: i for i, v in enumerate("UVNR", 1)})
 
@@ -85,30 +83,4 @@ answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[True]  = END
 answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[False] = END
 
 if __name__ == "__main__":
-    # Generates a dot description of the criteria graphs(s) that uses graphviz generate an svg visualization the graph
-    shape = "polygon"
-    style = "filled"
-    fillcolor = "#FFFFCC"
-    nodes_to_be_processed = [answer_matches_response_graph]
-    nodes_already_processed = []
-    nodes = []
-    edges = []
-    while len(nodes_to_be_processed) > 0:
-        node = nodes_to_be_processed.pop()
-        label = node.label
-        tooltip = node.label
-        if node.criterion is not None:
-            label = node.criterion.check
-            if node.criterion.doc_string is not None:
-                tooltip = node.criterion.doc_string
-            nodes.append(f'{node.label} [label="{label}" tooltip="{tooltip}" shape="{shape}" style="{style}" fillcolor="{fillcolor}"]')
-        if node.children is not None:
-            for (result, target) in node.children.items():
-                edges.append(f'{node.label} -> {target.label} [label="{str(result)}"]')
-                if target not in nodes_already_processed and target not in nodes_to_be_processed:
-                    nodes_to_be_processed.append(target)
-            nodes_already_processed.append(node)
-    dot_string = "digraph {\n"+"\n".join(nodes+edges)+"\n}"
-    graphs = pydot.graph_from_dot_data(dot_string)
-    graph = graphs[0]
-    graph.write_svg("app/feedback/output.svg")
+    generate_svg(answer_matches_response_graph, "app/feedback/quantity_comparison_graph.svg")

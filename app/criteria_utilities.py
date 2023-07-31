@@ -1,3 +1,5 @@
+import pydot # Used for creating visualization of criteria graph
+
 def undefined_key(key):
     raise KeyError("No feedback defined for key: "+str(key))
 
@@ -77,3 +79,66 @@ class CriteriaGraphNode:
                     if result is not None:
                         return result
         return None
+
+
+def generate_svg(root_node, filename):
+    # Generates a dot description of the subgraph with the given node as root and uses graphviz generate a visualization the graph in svg format
+    splines = "spline"
+    style = "filled"
+    rankdir = "TB"
+    result_compass = None
+    if rankdir == "TB":
+        result_compass = ("n")
+        result_compass = ("s")
+    graph_attributes = [f'splines="{splines}"', f'node [style="{style}"]', f'rankdir="{rankdir}"']
+    criteria_shape = "polygon"
+    special_shape = "ellipse"
+    criteria_color = "#00B8D4"
+    special_color = "#2F3C86"
+    criteria_fillcolor = "#E5F8FB"
+    result_fillcolor = "#C5CAE9"
+    special_fillcolor = "#4051B5"
+    criteria_fontcolor = "#212121"
+    special_fontcolor = "#FFFFFF"
+    nodes_to_be_processed = [root_node]
+    nodes_already_processed = []
+    nodes = []
+    edges = []
+    number_of_ghost_nodes = 0
+    while len(nodes_to_be_processed) > 0:
+        node = nodes_to_be_processed.pop()
+        label = node.label
+        tooltip = node.label
+        shape = special_shape
+        color = special_color
+        fillcolor = special_fillcolor
+        fontcolor = special_fontcolor
+        if node.criterion is not None:
+            shape = criteria_shape
+            color = criteria_color
+            fillcolor = criteria_fillcolor
+            fontcolor = criteria_fontcolor
+            label = node.criterion.check
+            if node.criterion.doc_string is not None:
+                tooltip = node.criterion.doc_string
+        nodes.append(f'{node.label} [label="{label}" tooltip="{tooltip}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
+        if node.children is not None:
+            for (result, target) in node.children.items():
+                if result is None:
+                    edges.append(f'{node.label} -> {target.label}')
+                else:
+                    ghost_label = f'GHOST_NODE_{str(number_of_ghost_nodes)}'
+                    nodes.append(f'{ghost_label} [label="{str(result)}" fillcolor="{result_fillcolor}"]')
+                    number_of_ghost_nodes += 1
+                    edges.append(f'{node.label} -> {ghost_label}:n [arrowhead="none"]')
+                    edges.append(f'{ghost_label}:s -> {target.label}')
+                if target not in nodes_already_processed and target not in nodes_to_be_processed:
+                    nodes_to_be_processed.append(target)
+            nodes_already_processed.append(node)
+    dot_preamble = 'digraph neato {'+'\n'.join(graph_attributes)+'\n'
+    dot_postamble = '\n}'
+    dot_string = dot_preamble+"\n".join(nodes+edges)+dot_postamble
+    graphs = pydot.graph_from_dot_data(dot_string)
+    graph = graphs[0]
+    graph.write_svg(filename)
+    return dot_string
