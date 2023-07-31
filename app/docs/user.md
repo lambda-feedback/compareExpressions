@@ -54,7 +54,9 @@ If `physical_quantity` is set to `true` the answer and response will interpreted
 
 **Remark:** Setting `physical_quantity` to `true` will also mean that comparisons will be done numerically. If neither the `atol` nor `rtol` parameters are set, the evaluation function will choose a relative error based on the number of sigificant digits given in the answer.
 
-When `physical_quantity` the evaluation function will generate feedback based on the flowchart below. Hovering over a criterion node will show a short natural language description of the criterion. Hovering over a result node will show the feedback produced so far.
+When `physical_quantity` the evaluation function will generate feedback based on the flowchart below. Hovering over a criterion node will show a short natural language description of the criterion. Hovering over a result node will show the feedback produced so far. **Remark:** In some browser it is necessary to right-click and open the image in a separate tab in order for the tooltips to show up on hover.
+
+![A flowchart describing the criteria that are checked for physical quantities and what feedback they produce](quantity_comparison_graph.svg)
 
 ## `plus_minus` and `minus_plus`
 

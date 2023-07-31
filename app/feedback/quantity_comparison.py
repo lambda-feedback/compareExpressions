@@ -104,5 +104,4 @@ answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[True]  = END
 answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[False] = END
 
 if __name__ == "__main__":
-    dot_string = generate_svg(answer_matches_response_graph, "app/feedback/quantity_comparison_graph.svg", dummy_input=[DummyInput("response"), DummyInput("answer")])
-    print(dot_string)
+    generate_svg(answer_matches_response_graph, "app/docs/quantity_comparison_graph.svg", dummy_input=[DummyInput("response"), DummyInput("answer")])
