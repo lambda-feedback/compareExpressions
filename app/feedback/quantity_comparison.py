@@ -1,6 +1,19 @@
 from enum import Enum
 from ..criteria_utilities import Criterion, CriteriaGraphNode, no_feedback, generate_svg, flip_bool_result
 
+class DummyInput:
+
+    def __init__(self, name):
+        self.name = name
+        self.unit_latex_string = name
+        self.value_latex_string = name
+        self.latex_string = name
+        return
+
+    def __str__(self):
+        return self.name
+
+
 QuantityTags = Enum("QuantityTags", {v: i for i, v in enumerate("UVNR", 1)})
 
 criteria = dict()
@@ -39,7 +52,7 @@ criteria["QUANTITY_MATCH"][False] = lambda inputs: f"${inputs[0].latex_string}$ 
 
 criteria["DIMENSION_MATCH"] = Criterion("dimension(QUANTITY) matches dimension(QUANTITY)", doc_string="Dimensions match")
 criteria["DIMENSION_MATCH"][True] = lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
-criteria["DIMENSION_MATCH"][False] = lambda inputs: f"$Dimension {inputs[0]}$ does not match dimension ${inputs[1]}$"
+criteria["DIMENSION_MATCH"][False] = lambda inputs: f"Dimension of ${inputs[0]}$ does not match dimension of ${inputs[1]}$"
 
 criteria["MISSING_VALUE"] = Criterion("not(has(value(response))) and has(value(answer))")
 criteria["MISSING_VALUE"][True] = lambda inputs: "The response is missing a value."
@@ -91,4 +104,5 @@ answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[True]  = END
 answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[False] = END
 
 if __name__ == "__main__":
-    generate_svg(answer_matches_response_graph, "app/feedback/quantity_comparison_graph.svg")
+    dot_string = generate_svg(answer_matches_response_graph, "app/feedback/quantity_comparison_graph.svg", dummy_input=[DummyInput("response"), DummyInput("answer")])
+    print(dot_string)
