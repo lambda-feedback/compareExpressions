@@ -154,34 +154,34 @@ def generate_svg(root_node, filename, dummy_input=None):
     if rankdir == "LR":
         result_compass = ("w","e")
     graph_attributes = [f'splines="{splines}"', f'node [style="{style}"]', f'rankdir="{rankdir}"']
-    criteria_shape = "polygon"
-    special_shape = "ellipse"
-    criteria_color = "#00B8D4"
-    special_color = "#2F3C86"
-    criteria_fillcolor = "#E5F8FB"
+    criterion_shape = "polygon"
+    criterion_color = "#00B8D4"
+    criterion_fillcolor = "#E5F8FB"
+    criterion_fontcolor = "#212121"
+    result_shape = "ellipse"
+    result_color = "#212121"
     result_fillcolor = "#C5CAE9"
+    result_fontcolor = "#212121"
+    special_shape = "ellipse"
+    special_color = "#2F3C86"
     special_fillcolor = "#4051B5"
-    criteria_fontcolor = "#212121"
     special_fontcolor = "#FFFFFF"
+    criterion_params = (criterion_shape, criterion_color, criterion_fillcolor, criterion_fontcolor)
+    result_params = (result_shape, result_color, result_fillcolor, result_fontcolor)
+    special_params = (special_shape, special_color, special_fillcolor, special_fontcolor)
     nodes_to_be_processed = [root_node]
     nodes_already_processed = []
     nodes = []
     edges = []
-    number_of_ghost_nodes = 0
+    number_of_result_nodes = 0
     while len(nodes_to_be_processed) > 0:
         node = nodes_to_be_processed.pop()
         label = node.label
         tooltip = node.label
-        shape = special_shape
-        color = special_color
-        fillcolor = special_fillcolor
-        fontcolor = special_fontcolor
+        shape, color, fillcolor, fontcolor = special_params
         feedback_descriptions = dict()
         if node.criterion is not None:
-            shape = criteria_shape
-            color = criteria_color
-            fillcolor = criteria_fillcolor
-            fontcolor = criteria_fontcolor
+            shape, color, fillcolor, fontcolor = criterion_params
             label = node.criterion.check
             feedback_descriptions.update({key: value(dummy_input) for (key, value) in node.criterion.feedback.items()})
             if node.criterion.doc_string is not None:
@@ -192,14 +192,15 @@ def generate_svg(root_node, filename, dummy_input=None):
                 if result is None:
                     edges.append(f'{node.label} -> {target.label}')
                 else:
-                    ghost_label = f'GHOST_NODE_{str(number_of_ghost_nodes)}'
+                    shape, color, fillcolor, fontcolor = result_params
+                    result_label = f'RESULT_NODE_{str(number_of_result_nodes)}'
                     result_feedback = feedback_descriptions.get(result,"")
                     if result_feedback.strip() == "":
                         result_feedback = 'No new feedback produced'
-                    nodes.append(f'{ghost_label} [label="{str(result)}" fillcolor="{result_fillcolor}" tooltip="{result_feedback}"]')
-                    number_of_ghost_nodes += 1
-                    edges.append(f'{node.label}:{result_compass[1]} -> {ghost_label}:{result_compass[0]} [arrowhead="none"]')
-                    edges.append(f'{ghost_label}:{result_compass[1]} -> {target.label}')
+                    nodes.append(f'{result_label} [label="{str(result)}" tooltip="{result_feedback}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
+                    number_of_result_nodes += 1
+                    edges.append(f'{node.label}:{result_compass[1]} -> {result_label}:{result_compass[0]} [arrowhead="none"]')
+                    edges.append(f'{result_label}:{result_compass[1]} -> {target.label}')
                 if target not in nodes_already_processed and target not in nodes_to_be_processed:
                     nodes_to_be_processed.append(target)
             nodes_already_processed.append(node)
