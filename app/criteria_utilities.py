@@ -86,12 +86,14 @@ class CriteriaGraphNode:
 
 END = CriteriaGraphNode("END", children=None)
 
-# What is this supposed to be useful for?
-# - Ensures START node is created properly
-# - Can be used to store criteria list to simplify creation of graph nodes
-# - Can check if attached item is a node or a container and handle the two
-#   cases appropriately to make it easier to join graphs
 class CriteriaGraphContainer:
+    '''
+    This container class provides the following utikity functionality:
+        - Ensures that an appropriate START node is created
+        - Streamlines graph specification via the attach and finish functions
+    '''
+    # Consider adding the following functionality:
+    #    - Allow attaching graphnodes or other containers directly
 
     def __init__(self, criteria_dict):
         self.START = CriteriaGraphNode("START")
