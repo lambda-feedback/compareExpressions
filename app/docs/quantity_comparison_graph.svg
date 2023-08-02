@@ -255,7 +255,7 @@
 <!-- GHOST_NODE_9 -->
 <g id="node16" class="node">
 <title>GHOST_NODE_9</title>
-<g id="a_node16"><a xlink:title="Dimension of $response$ does not match dimension of $answer$">
+<g id="a_node16"><a xlink:title="Dimensions of $response$ does not match the dimensions of $answer$">
 <ellipse fill="#c5cae9" stroke="black" cx="568.25" cy="-450" rx="30.11" ry="18"/>
 <text text-anchor="middle" x="568.25" y="-444.57" font-family="Times New Roman,serif" font-size="14.00">False</text>
 </a>

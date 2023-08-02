@@ -1,5 +1,5 @@
 from enum import Enum
-from ..criteria_utilities import Criterion, CriteriaGraphNode, no_feedback, generate_svg, flip_bool_result
+from ..criteria_utilities import Criterion, CriteriaGraphNode, CriteriaGraphContainer, END, flip_bool_result, no_feedback, generate_svg
 
 class DummyInput:
 
@@ -39,8 +39,8 @@ criteria["FULL_QUANTITY"][True] = lambda inputs: f"{inputs[0].name} has both val
 criteria["FULL_QUANTITY"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 
 criteria["NUMBER_VALUE"] = Criterion("is_number(value(QUANTITY))")
-criteria["NUMBER_VALUE"][True] = lambda inputs: f"{inputs[0].name} value is a number: ${inputs[0].value_latex_string}$"
-criteria["NUMBER_VALUE"][False] = lambda inputs: f"{inputs[0].name} value is not a number."
+criteria["NUMBER_VALUE"][True] = no_feedback #  lambda inputs: f"{inputs[0].name} value is a number: ${inputs[0].value_latex_string}$"
+criteria["NUMBER_VALUE"][False] = no_feedback #  lambda inputs: f"{inputs[0].name} value is not a number."
 
 criteria["EXPR_VALUE"] = Criterion("is_number(value(QUANTITY))")
 criteria["EXPR_VALUE"][True] = lambda inputs: f"{inputs[0].name} value is an expression: ${inputs[0].value_latex_string}$"
@@ -52,7 +52,7 @@ criteria["QUANTITY_MATCH"][False] = lambda inputs: f"${inputs[0].latex_string}$ 
 
 criteria["DIMENSION_MATCH"] = Criterion("dimension(QUANTITY) matches dimension(QUANTITY)", doc_string="Dimensions match")
 criteria["DIMENSION_MATCH"][True] = lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
-criteria["DIMENSION_MATCH"][False] = lambda inputs: f"Dimension of ${inputs[0]}$ does not match dimension of ${inputs[1]}$"
+criteria["DIMENSION_MATCH"][False] = lambda inputs: f"Dimensions of ${inputs[0].latex_string}$ does not match the dimensions of ${inputs[1].latex_string}$"
 
 criteria["MISSING_VALUE"] = Criterion("not(has(value(response))) and has(value(answer))", doc_string="Response is missing value when answer has value")
 criteria["MISSING_VALUE"][True] = lambda inputs: "The response is missing a value."
@@ -82,26 +82,24 @@ internal = {
     "REVERTED_UNIT": lambda before, content, after: "Possible ambiguity: <strong>`"+content+"`</strong> was not interpreted as a unit in<br>`"+before+"`<strong>`"+content+"`</strong>`"+after+"`"
 }
 
-END = CriteriaGraphNode("END",children=None)
-
-answer_matches_response_graph = CriteriaGraphNode("START")
-answer_matches_response_graph.get_by_label("START")[None] = CriteriaGraphNode("MISSING_VALUE", criterion=criteria["MISSING_VALUE"], result_map=flip_bool_result)
-answer_matches_response_graph.get_by_label("MISSING_VALUE")[True]  = END
-answer_matches_response_graph.get_by_label("MISSING_VALUE")[False] = CriteriaGraphNode("MISSING_UNIT", criterion=criteria["MISSING_UNIT"], result_map=flip_bool_result)
-answer_matches_response_graph.get_by_label("MISSING_UNIT")[True]  = END
-answer_matches_response_graph.get_by_label("MISSING_UNIT")[False] = CriteriaGraphNode("UNEXPECTED_VALUE", criterion=criteria["UNEXPECTED_VALUE"], result_map=flip_bool_result)
-answer_matches_response_graph.get_by_label("UNEXPECTED_VALUE")[True]  = END
-answer_matches_response_graph.get_by_label("UNEXPECTED_VALUE")[False] = CriteriaGraphNode("UNEXPECTED_UNIT", criterion=criteria["UNEXPECTED_UNIT"], result_map=flip_bool_result)
-answer_matches_response_graph.get_by_label("UNEXPECTED_UNIT")[True]  = END
-answer_matches_response_graph.get_by_label("UNEXPECTED_UNIT")[False] = CriteriaGraphNode("DIMENSION_MATCH", criterion=criteria["DIMENSION_MATCH"])
-answer_matches_response_graph.get_by_label("DIMENSION_MATCH")[True]  = CriteriaGraphNode("QUANTITY_MATCH", criterion=criteria["QUANTITY_MATCH"])
-answer_matches_response_graph.get_by_label("DIMENSION_MATCH")[False] = END
-answer_matches_response_graph.get_by_label("QUANTITY_MATCH")[True]  = CriteriaGraphNode("PREFIX_IS_LARGE", criterion=criteria["PREFIX_IS_LARGE"], override=False)
-answer_matches_response_graph.get_by_label("QUANTITY_MATCH")[False] = END
-answer_matches_response_graph.get_by_label("PREFIX_IS_LARGE")[True]  = END
-answer_matches_response_graph.get_by_label("PREFIX_IS_LARGE")[False] = CriteriaGraphNode("PREFIX_IS_SMALL", criterion=criteria["PREFIX_IS_SMALL"], override=False)
-answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[True]  = END
-answer_matches_response_graph.get_by_label("PREFIX_IS_SMALL")[False] = END
+answer_matches_response_graph = CriteriaGraphContainer(criteria)
+answer_matches_response_graph.attach("START", "MISSING_VALUE", result_map=flip_bool_result)
+answer_matches_response_graph.finish("MISSING_VALUE", True)
+answer_matches_response_graph.attach("MISSING_VALUE", "MISSING_UNIT", False, result_map=flip_bool_result)
+answer_matches_response_graph.finish("MISSING_UNIT", True)
+answer_matches_response_graph.attach("MISSING_UNIT", "UNEXPECTED_VALUE", False, result_map=flip_bool_result)
+answer_matches_response_graph.finish("UNEXPECTED_VALUE", True)
+answer_matches_response_graph.attach("UNEXPECTED_VALUE", "UNEXPECTED_UNIT", False, result_map=flip_bool_result)
+answer_matches_response_graph.finish("UNEXPECTED_UNIT", True)
+answer_matches_response_graph.attach("UNEXPECTED_UNIT", "DIMENSION_MATCH", False)
+answer_matches_response_graph.attach("DIMENSION_MATCH", "QUANTITY_MATCH", True)
+answer_matches_response_graph.finish("DIMENSION_MATCH", False)
+answer_matches_response_graph.attach("QUANTITY_MATCH", "PREFIX_IS_LARGE", True, override=False)
+answer_matches_response_graph.finish("QUANTITY_MATCH", False)
+answer_matches_response_graph.finish("PREFIX_IS_LARGE", True)
+answer_matches_response_graph.attach("PREFIX_IS_LARGE", "PREFIX_IS_SMALL", False, override=False)
+answer_matches_response_graph.finish("PREFIX_IS_SMALL", True)
+answer_matches_response_graph.finish("PREFIX_IS_SMALL", False)
 
 if __name__ == "__main__":
-    generate_svg(answer_matches_response_graph, "app/docs/quantity_comparison_graph.svg", dummy_input=[DummyInput("response"), DummyInput("answer")])
+    generate_svg(answer_matches_response_graph.START, "app/docs/quantity_comparison_graph.svg", dummy_input=[DummyInput("response"), DummyInput("answer")])

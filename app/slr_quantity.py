@@ -17,6 +17,8 @@ from .unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
 
+from .criteria_utilities import traverse
+
 # -----------------
 # QUANTITY HANDLING
 # -----------------
@@ -648,11 +650,10 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
 
     eval_response.latex = quantities["response"].latex_string
 
-    context = {
-        "check_function": lambda label, criterion: check_criterion(label, arg_names=("response", "answer")),
-    }
+    check = lambda label, criterion: check_criterion(label, arg_names=("response", "answer"))
 
-    is_correct = answer_matches_response_graph.traverse(context)
+    #is_correct = answer_matches_response_graph.traverse(check)
+    is_correct = traverse(answer_matches_response_graph,check)
     eval_response.is_correct = is_correct
 
     for (tag, result) in evaluated_criteria.items():

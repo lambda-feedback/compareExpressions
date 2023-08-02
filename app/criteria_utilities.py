@@ -55,8 +55,7 @@ class CriteriaGraphNode:
         self.children.update({key: value})
         return
 
-    def traverse(self, context, previous_result=None):
-        check = context["check_function"]
+    def traverse(self, check, previous_result=None):
         if self.criterion is None or self.override is False:
             result = previous_result
         else:
@@ -67,7 +66,7 @@ class CriteriaGraphNode:
                     prev_res = result
                     if self.result_map is not None:
                         prev_res = self.result_map(result)
-                    result = self.children[result].traverse(context, previous_result=prev_res)
+                    result = self.children[result].traverse(check, previous_result=prev_res)
             except KeyError as exc:
                 raise Exception(f"Unexpected result ({str(result)}) in criteria {self.label}.") from exc
         return result
@@ -85,6 +84,43 @@ class CriteriaGraphNode:
                         return result
         return None
 
+END = CriteriaGraphNode("END", children=None)
+
+# What is this supposed to be useful for?
+# - Ensures START node is created properly
+# - Can be used to store criteria list to simplify creation of graph nodes
+# - Can check if attached item is a node or a container and handle the two
+#   cases appropriately to make it easier to join graphs
+class CriteriaGraphContainer:
+
+    def __init__(self, criteria_dict):
+        self.START = CriteriaGraphNode("START")
+        self.criteria = criteria_dict
+        return
+
+    def get_by_label(self, label):
+        return self.START.get_by_label(label)
+
+    def attach(self, source, label, result=None, criterion=undefined_optional_parameter, override=None, result_map=None):
+        try:
+            source = self.get_by_label(source)
+        except KeyError as exc:
+            raise KeyError(f"Unknown connection node: {source}") from exc
+        if criterion is undefined_optional_parameter:
+            try:
+                criterion = self.criteria[label]
+            except KeyError as exc:
+                raise KeyError(f"Unknown criteria: {label}") from exc
+        source[result] = CriteriaGraphNode(label, criterion, override=override, result_map=result_map)
+        return
+
+    def finish(self, source, result):
+        try:
+            source = self.get_by_label(source)
+        except KeyError as exc:
+            raise KeyError(f"Unknown connection node: {source}") from exc
+        source[result] = END
+        return
 
 def generate_svg(root_node, filename, dummy_input=None):
     # Generates a dot description of the subgraph with the given node as root and uses graphviz generate a visualization the graph in svg format
@@ -153,3 +189,22 @@ def generate_svg(root_node, filename, dummy_input=None):
     graph = graphs[0]
     graph.write_svg(filename)
     return dot_string
+
+def traverse(node, check):
+    if isinstance(node, CriteriaGraphContainer):
+        node = node.START
+    result = None
+    while node.children is not None:
+        result_map = None
+        if node.result_map is not None:
+            result_map = node.result_map
+        if node.criterion is not None and node.override is True:
+            result = check(node.label, node.criterion)
+        try:
+            if node.children[result] is not None:
+                node = node.children[result]
+        except KeyError as exc:
+            raise Exception(f"Unexpected result ({str(result)}) in criteria {node.label}.") from exc
+        if result_map is not None:
+            result = result_map(result)
+    return result
