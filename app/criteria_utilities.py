@@ -169,13 +169,16 @@ def generate_svg(root_node, filename, dummy_input=None):
     criterion_params = (criterion_shape, criterion_color, criterion_fillcolor, criterion_fontcolor)
     result_params = (result_shape, result_color, result_fillcolor, result_fontcolor)
     special_params = (special_shape, special_color, special_fillcolor, special_fontcolor)
-    nodes_to_be_processed = [root_node]
-    nodes_already_processed = []
     nodes = []
     edges = []
     number_of_result_nodes = 0
+    result_node_paths = []
+    results = []
+    previous_result_node_index = -1
+    nodes_to_be_processed = [(previous_result_node_index, root_node)]
+    nodes_already_processed = []
     while len(nodes_to_be_processed) > 0:
-        node = nodes_to_be_processed.pop()
+        previous_result_node_index, node = nodes_to_be_processed.pop()
         label = node.label
         tooltip = node.label
         shape, color, fillcolor, fontcolor = special_params
@@ -191,19 +194,41 @@ def generate_svg(root_node, filename, dummy_input=None):
             nodes_already_processed.append(node)
             if node.children is not None:
                 for (result, target) in node.children.items():
+                    current_result_node_index = previous_result_node_index
                     if result is None:
                         edges.append(f'{node.label} -> {target.label}')
                     else:
                         shape, color, fillcolor, fontcolor = result_params
                         result_label = f'RESULT_NODE_{str(number_of_result_nodes)}'
                         result_feedback = feedback_descriptions.get(result,"")
+                        result_feedback_info = [' + '+feedback_descriptions.get(result,"")]
+                        if node.override is True:
+                            is_correct = result
+                        elif node.override is False:
+                            is_correct = results[previous_result_node_index]
+                        if node.result_map is not None:
+                            is_correct = node.result_map(is_correct)
+                        results.append(is_correct)
                         if result_feedback.strip() == "":
-                            result_feedback = 'No new feedback produced'
-                        nodes.append(f'{result_label} [label="{str(result)}" tooltip="{result_feedback}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
+                            result_feedback = []
+                            result_feedback_info = [' + No new feedback produced']
+                        else:
+                            result_feedback = [" &#9679; "+result_feedback]
+                        previous_feedback = []
+                        if previous_result_node_index >= 0:
+                            previous_feedback = result_node_paths[previous_result_node_index]
+                        result_node_paths.append(previous_feedback+result_feedback)
+                        if is_correct is True:
+                            tooltip = ['Response is CORRECT']
+                        if is_correct is False:
+                            tooltip = ['Response is INCORRECT']
+                        tooltip = "\n".join(tooltip+previous_feedback+result_feedback_info)
+                        nodes.append(f'{result_label} [label="{str(result)}" tooltip="{tooltip}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
+                        current_result_node_index = number_of_result_nodes
                         number_of_result_nodes += 1
                         edges.append(f'{node.label}:{result_compass[1]} -> {result_label}:{result_compass[0]} [arrowhead="none"]')
                         edges.append(f'{result_label}:{result_compass[1]} -> {target.label}')
-                    nodes_to_be_processed.append(target)
+                    nodes_to_be_processed.append((current_result_node_index, target))
     dot_preamble = 'digraph {'+'\n'.join(graph_attributes)+'\n'
     dot_postamble = '\n}'
     dot_string = dot_preamble+"\n".join(nodes+edges)+dot_postamble
