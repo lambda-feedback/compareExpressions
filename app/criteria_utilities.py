@@ -55,8 +55,7 @@ class CriteriaGraphNode:
         self.children.update({key: value})
         return
 
-    def traverse(self, context, previous_result=None):
-        check = context["check_function"]
+    def traverse(self, check, previous_result=None):
         if self.criterion is None or self.override is False:
             result = previous_result
         else:
@@ -67,7 +66,7 @@ class CriteriaGraphNode:
                     prev_res = result
                     if self.result_map is not None:
                         prev_res = self.result_map(result)
-                    result = self.children[result].traverse(context, previous_result=prev_res)
+                    result = self.children[result].traverse(check, previous_result=prev_res)
             except KeyError as exc:
                 raise Exception(f"Unexpected result ({str(result)}) in criteria {self.label}.") from exc
         return result
@@ -85,6 +84,64 @@ class CriteriaGraphNode:
                         return result
         return None
 
+END = CriteriaGraphNode("END", children=None)
+
+class CriteriaGraphContainer:
+    '''
+    This container class provides the following utility functionality:
+        - Ensures that an appropriate START node is created
+        - Streamlines graph specification via the attach and finish functions
+    '''
+    # Consider adding the following functionality:
+    #    - Allow attaching graphnodes or other containers directly
+
+    def __init__(self, criteria_dict):
+        self.START = CriteriaGraphNode("START")
+        self.criteria = criteria_dict
+        return
+
+    def get_by_label(self, label):
+        return self.START.get_by_label(label)
+
+    def attach(self, source, label, result=None, criterion=undefined_optional_parameter, **kwargs):
+        try:
+            source = self.get_by_label(source)
+        except KeyError as exc:
+            raise KeyError(f"Unknown connection node: {source}") from exc
+        if criterion is undefined_optional_parameter:
+            try:
+                criterion = self.criteria[label]
+            except KeyError as exc:
+                raise KeyError(f"Unknown criteria: {label}") from exc
+        source[result] = CriteriaGraphNode(label, criterion, **kwargs)
+        return
+
+    def finish(self, source, result):
+        try:
+            source = self.get_by_label(source)
+        except KeyError as exc:
+            raise KeyError(f"Unknown connection node: {source}") from exc
+        source[result] = END
+        return
+
+def traverse(node, check):
+    if isinstance(node, CriteriaGraphContainer):
+        node = node.START
+    result = None
+    while node.children is not None:
+        result_map = None
+        if node.result_map is not None:
+            result_map = node.result_map
+        if node.criterion is not None and node.override is True:
+            result = check(node.label, node.criterion)
+        try:
+            if node.children[result] is not None:
+                node = node.children[result]
+        except KeyError as exc:
+            raise Exception(f"Unexpected result ({str(result)}) in criteria {node.label}.") from exc
+        if result_map is not None:
+            result = result_map(result)
+    return result
 
 def generate_svg(root_node, filename, dummy_input=None):
     # Generates a dot description of the subgraph with the given node as root and uses graphviz generate a visualization the graph in svg format
@@ -97,55 +154,81 @@ def generate_svg(root_node, filename, dummy_input=None):
     if rankdir == "LR":
         result_compass = ("w","e")
     graph_attributes = [f'splines="{splines}"', f'node [style="{style}"]', f'rankdir="{rankdir}"']
-    criteria_shape = "polygon"
-    special_shape = "ellipse"
-    criteria_color = "#00B8D4"
-    special_color = "#2F3C86"
-    criteria_fillcolor = "#E5F8FB"
+    criterion_shape = "polygon"
+    criterion_color = "#00B8D4"
+    criterion_fillcolor = "#E5F8FB"
+    criterion_fontcolor = "#212121"
+    result_shape = "ellipse"
+    result_color = "#212121"
     result_fillcolor = "#C5CAE9"
+    result_fontcolor = "#212121"
+    special_shape = "ellipse"
+    special_color = "#2F3C86"
     special_fillcolor = "#4051B5"
-    criteria_fontcolor = "#212121"
     special_fontcolor = "#FFFFFF"
-    nodes_to_be_processed = [root_node]
-    nodes_already_processed = []
+    criterion_params = (criterion_shape, criterion_color, criterion_fillcolor, criterion_fontcolor)
+    result_params = (result_shape, result_color, result_fillcolor, result_fontcolor)
+    special_params = (special_shape, special_color, special_fillcolor, special_fontcolor)
     nodes = []
     edges = []
-    number_of_ghost_nodes = 0
+    number_of_result_nodes = 0
+    result_node_paths = []
+    results = []
+    previous_result_node_index = -1
+    nodes_to_be_processed = [(previous_result_node_index, root_node)]
+    nodes_already_processed = []
     while len(nodes_to_be_processed) > 0:
-        node = nodes_to_be_processed.pop()
+        previous_result_node_index, node = nodes_to_be_processed.pop()
         label = node.label
         tooltip = node.label
-        shape = special_shape
-        color = special_color
-        fillcolor = special_fillcolor
-        fontcolor = special_fontcolor
+        shape, color, fillcolor, fontcolor = special_params
         feedback_descriptions = dict()
         if node.criterion is not None:
-            shape = criteria_shape
-            color = criteria_color
-            fillcolor = criteria_fillcolor
-            fontcolor = criteria_fontcolor
+            shape, color, fillcolor, fontcolor = criterion_params
             label = node.criterion.check
             feedback_descriptions.update({key: value(dummy_input) for (key, value) in node.criterion.feedback.items()})
             if node.criterion.doc_string is not None:
                 tooltip = node.criterion.doc_string
         nodes.append(f'{node.label} [label="{label}" tooltip="{tooltip}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
-        if node.children is not None:
-            for (result, target) in node.children.items():
-                if result is None:
-                    edges.append(f'{node.label} -> {target.label}')
-                else:
-                    ghost_label = f'GHOST_NODE_{str(number_of_ghost_nodes)}'
-                    result_feedback = feedback_descriptions.get(result,"")
-                    if result_feedback.strip() == "":
-                        result_feedback = 'No new feedback produced'
-                    nodes.append(f'{ghost_label} [label="{str(result)}" fillcolor="{result_fillcolor}" tooltip="{result_feedback}"]')
-                    number_of_ghost_nodes += 1
-                    edges.append(f'{node.label}:{result_compass[1]} -> {ghost_label}:{result_compass[0]} [arrowhead="none"]')
-                    edges.append(f'{ghost_label}:{result_compass[1]} -> {target.label}')
-                if target not in nodes_already_processed and target not in nodes_to_be_processed:
-                    nodes_to_be_processed.append(target)
+        if node not in nodes_already_processed:
             nodes_already_processed.append(node)
+            if node.children is not None:
+                for (result, target) in node.children.items():
+                    current_result_node_index = previous_result_node_index
+                    if result is None:
+                        edges.append(f'{node.label} -> {target.label}')
+                    else:
+                        shape, color, fillcolor, fontcolor = result_params
+                        result_label = f'RESULT_NODE_{str(number_of_result_nodes)}'
+                        result_feedback = feedback_descriptions.get(result,"")
+                        result_feedback_info = [' + '+feedback_descriptions.get(result,"")]
+                        if node.override is True:
+                            is_correct = result
+                        elif node.override is False:
+                            is_correct = results[previous_result_node_index]
+                        if node.result_map is not None:
+                            is_correct = node.result_map(is_correct)
+                        results.append(is_correct)
+                        if result_feedback.strip() == "":
+                            result_feedback = []
+                            result_feedback_info = [' + No new feedback produced']
+                        else:
+                            result_feedback = [" &#9679; "+result_feedback]
+                        previous_feedback = []
+                        if previous_result_node_index >= 0:
+                            previous_feedback = result_node_paths[previous_result_node_index]
+                        result_node_paths.append(previous_feedback+result_feedback)
+                        if is_correct is True:
+                            tooltip = ['Response is CORRECT']
+                        if is_correct is False:
+                            tooltip = ['Response is INCORRECT']
+                        tooltip = "\n".join(tooltip+previous_feedback+result_feedback_info)
+                        nodes.append(f'{result_label} [label="{str(result)}" tooltip="{tooltip}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
+                        current_result_node_index = number_of_result_nodes
+                        number_of_result_nodes += 1
+                        edges.append(f'{node.label}:{result_compass[1]} -> {result_label}:{result_compass[0]} [arrowhead="none"]')
+                        edges.append(f'{result_label}:{result_compass[1]} -> {target.label}')
+                    nodes_to_be_processed.append((current_result_node_index, target))
     dot_preamble = 'digraph {'+'\n'.join(graph_attributes)+'\n'
     dot_postamble = '\n}'
     dot_string = dot_preamble+"\n".join(nodes+edges)+dot_postamble
