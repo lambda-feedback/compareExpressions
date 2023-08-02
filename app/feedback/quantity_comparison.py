@@ -1,5 +1,5 @@
 from enum import Enum
-from ..criteria_utilities import Criterion, CriteriaGraphNode, CriteriaGraphContainer, END, flip_bool_result, no_feedback, generate_svg
+from ..criteria_utilities import Criterion, CriteriaGraphContainer, flip_bool_result, no_feedback, generate_svg
 
 class DummyInput:
 

@@ -88,7 +88,7 @@ END = CriteriaGraphNode("END", children=None)
 
 class CriteriaGraphContainer:
     '''
-    This container class provides the following utikity functionality:
+    This container class provides the following utility functionality:
         - Ensures that an appropriate START node is created
         - Streamlines graph specification via the attach and finish functions
     '''
@@ -103,7 +103,7 @@ class CriteriaGraphContainer:
     def get_by_label(self, label):
         return self.START.get_by_label(label)
 
-    def attach(self, source, label, result=None, criterion=undefined_optional_parameter, override=None, result_map=None):
+    def attach(self, source, label, result=None, criterion=undefined_optional_parameter, **kwargs):
         try:
             source = self.get_by_label(source)
         except KeyError as exc:
@@ -113,7 +113,7 @@ class CriteriaGraphContainer:
                 criterion = self.criteria[label]
             except KeyError as exc:
                 raise KeyError(f"Unknown criteria: {label}") from exc
-        source[result] = CriteriaGraphNode(label, criterion, override=override, result_map=result_map)
+        source[result] = CriteriaGraphNode(label, criterion, **kwargs)
         return
 
     def finish(self, source, result):
@@ -123,6 +123,25 @@ class CriteriaGraphContainer:
             raise KeyError(f"Unknown connection node: {source}") from exc
         source[result] = END
         return
+
+def traverse(node, check):
+    if isinstance(node, CriteriaGraphContainer):
+        node = node.START
+    result = None
+    while node.children is not None:
+        result_map = None
+        if node.result_map is not None:
+            result_map = node.result_map
+        if node.criterion is not None and node.override is True:
+            result = check(node.label, node.criterion)
+        try:
+            if node.children[result] is not None:
+                node = node.children[result]
+        except KeyError as exc:
+            raise Exception(f"Unexpected result ({str(result)}) in criteria {node.label}.") from exc
+        if result_map is not None:
+            result = result_map(result)
+    return result
 
 def generate_svg(root_node, filename, dummy_input=None):
     # Generates a dot description of the subgraph with the given node as root and uses graphviz generate a visualization the graph in svg format
@@ -191,22 +210,3 @@ def generate_svg(root_node, filename, dummy_input=None):
     graph = graphs[0]
     graph.write_svg(filename)
     return dot_string
-
-def traverse(node, check):
-    if isinstance(node, CriteriaGraphContainer):
-        node = node.START
-    result = None
-    while node.children is not None:
-        result_map = None
-        if node.result_map is not None:
-            result_map = node.result_map
-        if node.criterion is not None and node.override is True:
-            result = check(node.label, node.criterion)
-        try:
-            if node.children[result] is not None:
-                node = node.children[result]
-        except KeyError as exc:
-            raise Exception(f"Unexpected result ({str(result)}) in criteria {node.label}.") from exc
-        if result_map is not None:
-            result = result_map(result)
-    return result
