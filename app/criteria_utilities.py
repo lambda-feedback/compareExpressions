@@ -187,23 +187,23 @@ def generate_svg(root_node, filename, dummy_input=None):
             if node.criterion.doc_string is not None:
                 tooltip = node.criterion.doc_string
         nodes.append(f'{node.label} [label="{label}" tooltip="{tooltip}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
-        if node.children is not None:
-            for (result, target) in node.children.items():
-                if result is None:
-                    edges.append(f'{node.label} -> {target.label}')
-                else:
-                    shape, color, fillcolor, fontcolor = result_params
-                    result_label = f'RESULT_NODE_{str(number_of_result_nodes)}'
-                    result_feedback = feedback_descriptions.get(result,"")
-                    if result_feedback.strip() == "":
-                        result_feedback = 'No new feedback produced'
-                    nodes.append(f'{result_label} [label="{str(result)}" tooltip="{result_feedback}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
-                    number_of_result_nodes += 1
-                    edges.append(f'{node.label}:{result_compass[1]} -> {result_label}:{result_compass[0]} [arrowhead="none"]')
-                    edges.append(f'{result_label}:{result_compass[1]} -> {target.label}')
-                if target not in nodes_already_processed and target not in nodes_to_be_processed:
-                    nodes_to_be_processed.append(target)
+        if node not in nodes_already_processed:
             nodes_already_processed.append(node)
+            if node.children is not None:
+                for (result, target) in node.children.items():
+                    if result is None:
+                        edges.append(f'{node.label} -> {target.label}')
+                    else:
+                        shape, color, fillcolor, fontcolor = result_params
+                        result_label = f'RESULT_NODE_{str(number_of_result_nodes)}'
+                        result_feedback = feedback_descriptions.get(result,"")
+                        if result_feedback.strip() == "":
+                            result_feedback = 'No new feedback produced'
+                        nodes.append(f'{result_label} [label="{str(result)}" tooltip="{result_feedback}" shape="{shape}" color="{color}" fillcolor="{fillcolor}" fontcolor="{fontcolor}"]')
+                        number_of_result_nodes += 1
+                        edges.append(f'{node.label}:{result_compass[1]} -> {result_label}:{result_compass[0]} [arrowhead="none"]')
+                        edges.append(f'{result_label}:{result_compass[1]} -> {target.label}')
+                    nodes_to_be_processed.append(target)
     dot_preamble = 'digraph {'+'\n'.join(graph_attributes)+'\n'
     dot_postamble = '\n}'
     dot_string = dot_preamble+"\n".join(nodes+edges)+dot_postamble
