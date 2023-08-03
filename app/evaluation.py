@@ -36,24 +36,20 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if len(reserved_keywords_collisions) > 0:
         raise Exception("`"+"`, `".join(reserved_keywords_collisions)+"` are reserved keyword and cannot be used as input symbol codes or alternatives.")
 
-    unsplittable_symbols = []
-    if "substitutions" not in params.keys() and params.get("physical_quantity",False):
-        all_units = set_of_SI_prefixes | set_of_SI_base_unit_dimensions
-        unsplittable_symbols += [x[0] for x in all_units]
-
-    parameters = {"comparison": "expression", "strict_syntax": True, "reserved_keywords": reserved_keywords}
+    parameters = {
+        "comparison": "expression",
+        "strict_syntax": True,
+        "reserved_keywords": reserved_keywords,
+    }
     parameters.update(params)
 
     if params.get("is_latex",False):
         response = preview_function(response, params)["preview"]["sympy"]
 
     answer, response = substitute_input_symbols([answer, response], parameters)
-    parsing_params = create_sympy_parsing_params(
-        parameters, unsplittable_symbols=unsplittable_symbols
-    )
 
     if parameters.get("physical_quantity", False) is True:
-        eval_response = quantity_comparison(response, answer, parameters, parsing_params, eval_response)
+        eval_response = quantity_comparison(response, answer, parameters, eval_response)
     else:
         eval_response = symbolic_comparison(response, answer, parameters, eval_response)
 
