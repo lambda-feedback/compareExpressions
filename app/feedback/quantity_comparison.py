@@ -51,7 +51,7 @@ criteria["QUANTITY_MATCH"][True] = lambda inputs: f"${inputs[0].latex_string}$ m
 criteria["QUANTITY_MATCH"][False] = lambda inputs: f"${inputs[0].latex_string}$ does not match ${inputs[1].latex_string}$"
 
 criteria["DIMENSION_MATCH"] = Criterion("dimension(QUANTITY) matches dimension(QUANTITY)", doc_string="Dimensions match")
-criteria["DIMENSION_MATCH"][True] = lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
+criteria["DIMENSION_MATCH"][True] = no_feedback  # lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
 criteria["DIMENSION_MATCH"][False] = lambda inputs: f"Dimensions of ${inputs[0].latex_string}$ does not match the dimensions of ${inputs[1].latex_string}$"
 
 criteria["MISSING_VALUE"] = Criterion("not(has(value(response))) and has(value(answer))", doc_string="Response is missing value when answer has value")
@@ -70,11 +70,16 @@ criteria["UNEXPECTED_UNIT"] = Criterion("has(unit(response)) and not(has(unit(an
 criteria["UNEXPECTED_UNIT"][True] = lambda inputs: "The response is expected to be a value without unit(s)."
 criteria["UNEXPECTED_UNIT"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 
-criteria["PREFIX_IS_LARGE"] = Criterion("unit(response) >= 1000*unit(answer)", doc_string="The response prefix is much larger than the answer prefix")
+criteria["RESPONSE_AND_ANSWER_HAS_UNITS"] = Criterion("has(unit(response)) and has(unit(answer))", doc_string="Both response and answer has a unit")
+criteria["RESPONSE_AND_ANSWER_HAS_UNITS"][True] = no_feedback
+criteria["RESPONSE_AND_ANSWER_HAS_UNITS"][False] = no_feedback
+
+
+criteria["PREFIX_IS_LARGE"] = Criterion("expanded_unit(response) >= 1000*expanded_unit(answer)", doc_string="The response prefix is much larger than the answer prefix")
 criteria["PREFIX_IS_LARGE"][True] = lambda inputs: "The quantity can be written with fewer digits by using a smaller prefix."
 criteria["PREFIX_IS_LARGE"][False] = no_feedback
 
-criteria["PREFIX_IS_SMALL"] = Criterion("unit(response)*1000 <= unit(answer)", doc_string="The response prefix is much smaller than the answer prefix")
+criteria["PREFIX_IS_SMALL"] = Criterion("expanded_unit(response)*1000 <= expanded_unit(answer)", doc_string="The response prefix is much smaller than the answer prefix")
 criteria["PREFIX_IS_SMALL"][True] = lambda inputs: "The quantity can be written with fewer digits by using a larger prefix."
 criteria["PREFIX_IS_SMALL"][False] = no_feedback
 
@@ -94,8 +99,10 @@ answer_matches_response_graph.finish("UNEXPECTED_UNIT", True)
 answer_matches_response_graph.attach("UNEXPECTED_UNIT", "DIMENSION_MATCH", False)
 answer_matches_response_graph.attach("DIMENSION_MATCH", "QUANTITY_MATCH", True)
 answer_matches_response_graph.finish("DIMENSION_MATCH", False)
-answer_matches_response_graph.attach("QUANTITY_MATCH", "PREFIX_IS_LARGE", True, override=False)
+answer_matches_response_graph.attach("QUANTITY_MATCH", "RESPONSE_AND_ANSWER_HAS_UNITS", True, override=False)
 answer_matches_response_graph.finish("QUANTITY_MATCH", False)
+answer_matches_response_graph.attach("RESPONSE_AND_ANSWER_HAS_UNITS", "PREFIX_IS_LARGE", True, override=False)
+answer_matches_response_graph.finish("RESPONSE_AND_ANSWER_HAS_UNITS", False)
 answer_matches_response_graph.finish("PREFIX_IS_LARGE", True)
 answer_matches_response_graph.attach("PREFIX_IS_LARGE", "PREFIX_IS_SMALL", False, override=False)
 answer_matches_response_graph.finish("PREFIX_IS_SMALL", True)

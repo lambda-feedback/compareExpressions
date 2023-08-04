@@ -130,17 +130,21 @@ def traverse(node, check):
     result = None
     while node.children is not None:
         result_map = None
+        override = node.override
         if node.result_map is not None:
             result_map = node.result_map
-        if node.criterion is not None and node.override is True:
-            result = check(node.label, node.criterion)
+        new_result = result
+        if node.criterion is not None:
+            new_result = check(node.label, node.criterion)
         try:
-            if node.children[result] is not None:
-                node = node.children[result]
+            if node.children[new_result] is not None:
+                node = node.children[new_result]
         except KeyError as exc:
-            raise Exception(f"Unexpected result ({str(result)}) in criteria {node.label}.") from exc
+            raise Exception(f"Unexpected result ({str(new_result)}) in criteria {node.label}.") from exc
         if result_map is not None:
-            result = result_map(result)
+            new_result = result_map(new_result)
+        if override is True:
+            result = new_result
     return result
 
 def generate_svg(root_node, filename, dummy_input=None):
@@ -227,7 +231,7 @@ def generate_svg(root_node, filename, dummy_input=None):
                         current_result_node_index = number_of_result_nodes
                         number_of_result_nodes += 1
                         edges.append(f'{node.label}:{result_compass[1]} -> {result_label}:{result_compass[0]} [arrowhead="none"]')
-                        edges.append(f'{result_label}:{result_compass[1]} -> {target.label}')
+                        edges.append(f'{result_label}:{result_compass[1]} -> {target.label}:{result_compass[0]}')
                     nodes_to_be_processed.append((current_result_node_index, target))
     dot_preamble = 'digraph {'+'\n'.join(graph_attributes)+'\n'
     dot_postamble = '\n}'

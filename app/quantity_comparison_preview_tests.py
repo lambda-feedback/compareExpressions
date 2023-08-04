@@ -75,7 +75,7 @@ class TestPreviewFunction():
         response = "\\sqrt{162} \\mathrm{~N} / \\mathrm{m}^{2}"
         result = preview_function(response, params)["preview"]
         assert result["latex"] == r'\sqrt{162}~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}' # TODO: Fix so that unnecessary parenthesis are simplified away
-        assert result["sympy"] == "sqrt(162) newton / metre^(2)"
+        assert result["sympy"] == "sqrt(162) newton / metre**(2)"
 
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

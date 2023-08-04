@@ -12,7 +12,7 @@ from .feedback.quantity_comparison import QuantityTags
 from .feedback.quantity_comparison import answer_matches_response_graph
 from .expression_utilities import substitute
 from .slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
-from sympy import Basic
+from sympy import Basic, posify
 from .unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
@@ -24,20 +24,25 @@ from .criteria_utilities import traverse
 # -----------------
 
 
-def expand_units(node, parser):
-    if node.label == "UNIT" and len(node.children) == 0 and node.content not in [x[0] for x in set_of_SI_base_unit_dimensions]:
-        expanded_unit_content = conversion_to_base_si_units[node.content]
-        node = parser.parse(parser.scan(expanded_unit_content))[0]
-    for k, child in enumerate(node.children):
-        node.children[k] = expand_units(child, parser)
-    return node
-
-
 class PhysicalQuantity:
 
-    def __init__(self, name, parameters, ast_root, parser, messages=[], tag_handler=lambda x: x):
+    def __init__(self, name, parameters, ast_root, parser, messages=None, tag_handler=lambda x: x):
         self.name = name
-        self.messages = messages
+        self.parameters = parameters
+        prefixes = [x[0] for x in set_of_SI_prefixes]
+        fundamental_units = [x[0] for x in set_of_SI_base_unit_dimensions]
+        dimensions = [x[2] for x in set_of_SI_base_unit_dimensions]
+        unsplittable_symbols = prefixes+fundamental_units+dimensions
+        symbol_assumptions = tuple([(f'{s}','positive') for s in fundamental_units+dimensions])
+        self.parsing_params = create_sympy_parsing_params(
+            parameters,
+            unsplittable_symbols=unsplittable_symbols,
+            symbol_assumptions=symbol_assumptions,
+        )
+        if messages == None:
+            self.messages = []
+        else:
+            self.messages = messages
         self.ast_root = ast_root
         self.parser = parser
         self.tag_handler = tag_handler
@@ -57,8 +62,6 @@ class PhysicalQuantity:
             def revert_content(node):
                 if node.label != "GROUP":
                     node.content = node.original[node.start:node.end+1]
-#                elif node.label == "GROUP":
-#                    node.content = node.content[0]+node.original[node.start:node.end+1]+node.content[1]
                 if node.label == "UNIT" or QuantityTags.U in node.tags:
                     self.messages += [("REVERTED_UNIT", physical_quantities_messages["REVERTED_UNIT"](node.original[:node.start], node.content_string(), node.original[node.end+1:]))]
                 return ["", ""]
@@ -73,6 +76,7 @@ class PhysicalQuantity:
         value_latex = self.value_latex_string if self.value_latex_string is not None else ""
         unit_latex = self.unit_latex_string if self.unit_latex_string is not None else ""
         self.latex_string = value_latex+separator+unit_latex
+        self.standard_value, self.standard_unit, self.expanded_unit, self.dimension = self._all_forms()
         return
 
     def _rotate(self, direction):
@@ -157,6 +161,41 @@ class PhysicalQuantity:
             return ["\\frac{"]+self._unit_latex(children[0])+["}{"]+self._unit_latex(children[1])+["}"]
         else:
             return [content]
+
+    def _expand_units(self, node):
+        if node.label == "UNIT" and len(node.children) == 0 and node.content not in [x[0] for x in set_of_SI_base_unit_dimensions]:
+            expanded_unit_content = conversion_to_base_si_units[node.content]
+            node = self.parser.parse(self.parser.scan(expanded_unit_content))[0]
+        for k, child in enumerate(node.children):
+            node.children[k] = self._expand_units(child)
+        return node
+
+    def _all_forms(self):
+        parsing_params = self.parsing_params
+        converted_value = self.value.content_string() if self.value is not None else None
+        converted_unit = None
+        expanded_unit = None
+        converted_dimension = parse_expression("1", parsing_params)
+        if self.unit is not None:
+            converted_unit = self.unit.copy()
+            expanded_unit = self._expand_units(converted_unit)
+            converted_unit_string = expanded_unit.content_string()
+            try:
+                expanded_unit = parse_expression(expanded_unit.content_string(), parsing_params)
+                converted_unit = expanded_unit
+            except Exception as e:
+                raise Exception("SymPy was unable to parse the "+self.name+" unit") from e
+            base_unit_dimensions = [(base_unit[0], base_unit[2]) for base_unit in set_of_SI_base_unit_dimensions]
+            if self.value is not None:
+                substitution_dict = {symbol: 1 for symbol in converted_unit.free_symbols if str(symbol) in [x[0] for x in set_of_SI_base_unit_dimensions]}
+                converted_unit_factor = converted_unit.subs(substitution_dict).simplify()
+                converted_unit = (converted_unit/converted_unit_factor).simplify(rational=True)
+                converted_value = "("+str(converted_value)+")*("+str(converted_unit_factor)+")"
+            converted_unit_string = str(converted_unit)
+            converted_dimension = substitute(converted_unit_string, base_unit_dimensions)
+            converted_dimension = parse_expression(converted_dimension, parsing_params)
+        return converted_value, converted_unit, expanded_unit, converted_dimension
+
 
 
 def SLR_generate_unit_dictionaries(units_string, strictness):
@@ -414,7 +453,8 @@ def SLR_quantity_parsing(expr, parameters, parser, name):
     return PhysicalQuantity(name, parameters, quantity[0], parser, messages=[], tag_handler=tag_handler)
 
 
-def quantity_comparison(response, answer, parameters, parsing_params, eval_response):
+def quantity_comparison(response, answer, parameters, eval_response):
+
     eval_response.is_correct = False
 
     quantity_parser = SLR_quantity_parser(parameters)
@@ -427,6 +467,12 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     quantities = dict()
     evaluated_criteria = dict()
     criteria = physical_quantities_criteria
+    prefixes = [x[0] for x in set_of_SI_prefixes]
+    fundamental_units = [x[0] for x in set_of_SI_base_unit_dimensions]
+    dimensions = [x[2] for x in set_of_SI_base_unit_dimensions]
+    unsplittable_symbols = prefixes+fundamental_units+dimensions
+    symbol_assumptions = tuple([(f'{s}','positive') for s in fundamental_units+dimensions])
+    parsing_params = create_sympy_parsing_params(parameters, unsplittable_symbols=unsplittable_symbols, symbol_assumptions=symbol_assumptions)
 
     def check_criterion(tag, arg_names=None):
         if arg_names is None:
@@ -459,40 +505,25 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                     if key in criteria_operations.keys():
                         executed_children = [execute(c) for c in node.children]
                         return criteria_operations[key](executed_children)
-                    elif key == "QUANTITY":
+                    elif key == "QUANTITY" or key == "INPUT":
                         return node.content
+                    elif "INPUT" in [c.label for c in node.children]:
+                        executed_children = [execute(c) for c in node.children]
+                        expression = "".join([str(c) for c in executed_children])
+                        expression = parse_expression(expression, parsing_params)
+                        return expression
+                    return None
             result = execute(criterion_parsed)
             feedback = criteria[tag][result](args)
             evaluated_criteria.update({(tag, arg_names): (result, feedback)})
         return result
 
-    def convert_to_standard_unit(q):
-        q_converted_value = q.value.content_string() if q.value is not None else None
-        q_converted_unit = None
-        q_converted_dimension = parse_expression("1", parsing_params)
-        if q.unit is not None:
-            q_converted_unit = q.unit.copy()
-            q_converted_unit = expand_units(q_converted_unit, q.parser)
-            q_converted_unit_string = q_converted_unit.content_string()
-            try:
-                q_converted_unit = parse_expression(q_converted_unit_string, parsing_params)
-            except Exception as e:
-                raise Exception("SymPy was unable to parse the "+q.name+" unit") from e
-            base_unit_dimensions = [(base_unit[0], base_unit[2]) for base_unit in set_of_SI_base_unit_dimensions]
-            if q.value is not None:
-                q_converted_unit_factor = q_converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
-                q_converted_unit = (q_converted_unit/q_converted_unit_factor).simplify(rational=True)
-                q_converted_value = "("+str(q_converted_value)+")*("+str(q_converted_unit_factor)+")"
-            q_converted_unit_string = str(q_converted_unit)
-            q_converted_dimension = substitute(q_converted_unit_string, base_unit_dimensions)
-            dimension_parsing_params = create_sympy_parsing_params(parsing_params, unsplittable_symbols=(dim_data[1] for dim_data in base_unit_dimensions))
-            q_converted_dimension = parse_expression(q_converted_dimension, dimension_parsing_params)
-        return q_converted_value, q_converted_unit, q_converted_dimension
-
     def matches(inputs):
         if isinstance(inputs[0], PhysicalQuantity) and isinstance(inputs[1], PhysicalQuantity):
-            value0, unit0, _ = convert_to_standard_unit(inputs[0])
-            value1, unit1, _ = convert_to_standard_unit(inputs[1])
+            value0 = inputs[0].standard_value
+            unit0 = inputs[0].standard_unit
+            value1 = inputs[1].standard_value
+            unit1 = inputs[1].standard_unit
             value_match = False
             unit_match = False
             if value0 is None and value1 is None:
@@ -511,10 +542,6 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
                 dimension_match = False
             return dimension_match
         return False
-
-    def dimension(quantity):
-        _, _, dimension = convert_to_standard_unit(quantity[0])
-        return dimension
 
     def compare(comparison):
         comparison_dict = {
@@ -536,11 +563,13 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
         "not":           lambda x: not x[0],
         "has":           lambda x: x[0] is not None,
         "unit":          lambda quantity: quantity[0].unit,
+        "expanded_unit": lambda quantity: quantity[0].expanded_unit,
+        "base_unit":     lambda quantity: quantity[0].standard_unit,
         "value":         lambda quantity: quantity[0].value,
         "is_number":     lambda value: value[0] is not None and value[0].tags == {QuantityTags.N},
         "is_expression": lambda value: value[0] is not None and QuantityTags.V in value[0].tags,
         "matches":       matches,
-        "dimension":     dimension,
+        "dimension":     lambda quantity: quantity[0].dimension,
         "=":             compare("="),
         "<=":            compare("<="),
         ">=":            compare(">="),
@@ -588,6 +617,8 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
             ("BOOL",      "UNIT<UNIT", infix),
             ("BOOL",      "UNIT>UNIT", infix),
             ("UNIT",      "unit(QUANTITY)", operate(1)),
+            ("UNIT",      "base_unit(QUANTITY)", operate(1)),
+            ("UNIT",      "expanded_unit(QUANTITY)", operate(1)),
             ("UNIT",      "INPUT UNIT", group(2, empty=True)),
             ("UNIT",      "UNIT INPUT", group(2, empty=True)),
             ("VALUE",     "value(QUANTITY)", operate(1)),
@@ -659,7 +690,5 @@ def quantity_comparison(response, answer, parameters, parsing_params, eval_respo
     for (tag, result) in evaluated_criteria.items():
         if len(result[1].strip()) > 0:
             eval_response.add_feedback((tag[0], "- "+result[1]+"<br>"))
-        else:
-            eval_response.add_feedback((tag[0], ""))
 
     return eval_response

@@ -34,12 +34,16 @@ def fix_exponents(response):
         while index < len(response):
             exponent_start = response.find(notation, index)
             if exponent_start > -1:
-                exponent_start += len(notation)
                 processed_response.append(response[index:exponent_start])
+                exponent_start += len(notation)
+                processed_response.append("**")
                 exponent_end = find_matching_parenthesis(response, exponent_start, delimiters=('{','}'))
-                inside_exponent = '('+response[(exponent_start+1):exponent_end]+')'
-                processed_response.append(inside_exponent)
-                index = exponent_end+1
+                if exponent_end > 0:
+                    inside_exponent = '('+response[(exponent_start+len(notation)):exponent_end]+')'
+                    processed_response.append(inside_exponent)
+                    index = exponent_end+1
+                else:
+                    index = exponent_start
             else:
                 processed_response.append(response[index:])
                 break
