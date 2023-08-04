@@ -87,23 +87,23 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, response_latex, value, strictness, units_string, tags",
         [
-            ("2.00 kilometre/hour", "2.00 km/h", r"2.0~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, None, None, set(["QUANTITY_MATCH"])),
+            ("2.00 kilometre/hour", "2.00 km/h", r"2.0~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
             ("2.00", "2.00 km/h", r"2.0", False, None, None, set(["MISSING_UNIT"])),
             ("kilometre/hour", "2.00 km/h", r"\frac{\mathrm{kilometre}}{\mathrm{hour}}", False, None, None, set(["MISSING_VALUE"])),
-            ("2 km/h", "2.00 km/h", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, None, None, set(["QUANTITY_MATCH"])),
-            ("0.56 m/s", "2.00 km/h", r"0.56~\frac{\mathrm{metre}}{\mathrm{second}}", False, None, None, set(["QUANTITY_MATCH"])),
-            ("0.556 m/s", "2.00 km/h", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, None, None, set(["QUANTITY_MATCH"])),
-            ("2000 meter/hour", "2.00 km/h", r"2000~\frac{\mathrm{metre}}{\mathrm{hour}}", True, None, None, {"QUANTITY_MATCH", "PREFIX_IS_SMALL"}),
-            ("0.002 megametre/hour", "2.00 km/h", r"0.002~\frac{\mathrm{megametre}}{\mathrm{hour}}", True, None, None, {"QUANTITY_MATCH", "PREFIX_IS_LARGE"}),
-            ("2 metre/millihour", "2.00 km/h", r"2~\frac{\mathrm{metre}}{\mathrm{millihour}}", True, None, None, set(["QUANTITY_MATCH"])),
-            ("1.243 mile/hour", "2.00 km/h", r"1.243~\frac{\mathrm{mile}}{\mathrm{hour}}", True, None, None, set(["QUANTITY_MATCH"])),
-            ("109.12 foot/minute", "2.00 km/h", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, None, None, set(["QUANTITY_MATCH"])),
-            ("0.556 m/s", "0.556 metre/second", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, "strict", "SI", set(["QUANTITY_MATCH"])),
-            ("5.56 dm/s", "0.556 metre/second", r"5.56~\frac{\mathrm{decimetre}}{\mathrm{second}}", True, "strict", "SI", set(["QUANTITY_MATCH"])),
-            ("55.6 centimetre second^(-1)", "0.556 metre/second", r"55.6~\mathrm{centimetre}~\mathrm{second}^{(-1)}", True, "strict", "SI", set(["QUANTITY_MATCH"])),
-            ("1.24 mile/hour", "1.24 mile/hour", r"1.24~\frac{\mathrm{mile}}{\mathrm{hour}}", True, "strict", "imperial common", set(["QUANTITY_MATCH"])),
-            ("2 km/h", "1.24 mile/hour", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, "strict", "imperial common", set(["QUANTITY_MATCH"])),  # This should be False, but due to SI units being used as base it still works in this case...
-            ("109.12 foot/minute", "1.24 mile/hour", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, "strict", "imperial common", set(["QUANTITY_MATCH"])),
+            ("2 km/h", "2.00 km/h", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
+            ("0.56 m/s", "2.00 km/h", r"0.56~\frac{\mathrm{metre}}{\mathrm{second}}", False, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
+            ("0.556 m/s", "2.00 km/h", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
+            ("2000 meter/hour", "2.00 km/h", r"2000~\frac{\mathrm{metre}}{\mathrm{hour}}", True, None, None, {"RESPONSE_MATCHES_ANSWER", "PREFIX_IS_SMALL"}),
+            ("0.002 megametre/hour", "2.00 km/h", r"0.002~\frac{\mathrm{megametre}}{\mathrm{hour}}", True, None, None, {"RESPONSE_MATCHES_ANSWER", "PREFIX_IS_LARGE"}),
+            ("2 metre/millihour", "2.00 km/h", r"2~\frac{\mathrm{metre}}{\mathrm{millihour}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
+            ("1.243 mile/hour", "2.00 km/h", r"1.243~\frac{\mathrm{mile}}{\mathrm{hour}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
+            ("109.12 foot/minute", "2.00 km/h", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
+            ("0.556 m/s", "0.556 metre/second", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, "strict", "SI", set(["RESPONSE_MATCHES_ANSWER"])),
+            ("5.56 dm/s", "0.556 metre/second", r"5.56~\frac{\mathrm{decimetre}}{\mathrm{second}}", True, "strict", "SI", set(["RESPONSE_MATCHES_ANSWER"])),
+            ("55.6 centimetre second^(-1)", "0.556 metre/second", r"55.6~\mathrm{centimetre}~\mathrm{second}^{(-1)}", True, "strict", "SI", set(["RESPONSE_MATCHES_ANSWER"])),
+            ("1.24 mile/hour", "1.24 mile/hour", r"1.24~\frac{\mathrm{mile}}{\mathrm{hour}}", True, "strict", "imperial common", set(["RESPONSE_MATCHES_ANSWER"])),
+            ("2 km/h", "1.24 mile/hour", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, "strict", "imperial common", set(["RESPONSE_MATCHES_ANSWER"])),  # This should be False, but due to SI units being used as base it still works in this case...
+            ("109.12 foot/minute", "1.24 mile/hour", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, "strict", "imperial common", set(["RESPONSE_MATCHES_ANSWER"])),
         ]
     )
     def test_checking_the_value_of_a_physical_quantity(self, response, answer, response_latex, value, strictness, units_string, tags):
