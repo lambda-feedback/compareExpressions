@@ -74,6 +74,10 @@ criteria["RESPONSE_MATCHES_ANSWER"] = Criterion("response matches answer", doc_s
 criteria["RESPONSE_MATCHES_ANSWER"][True] = lambda inputs: f"${inputs[0].latex_string}$ matches the expected answer"
 criteria["RESPONSE_MATCHES_ANSWER"][False] = lambda inputs: f"${inputs[0].latex_string}$ does not match the expected answer"
 
+criteria["RESPONSE_DIMENSION_MATCHES_ANSWER"] = Criterion("dimension(QUANTITY) matches dimension(QUANTITY)", doc_string="Dimensions match")
+criteria["RESPONSE_DIMENSION_MATCHES_ANSWER"][True] = no_feedback  # lambda inputs: f"The {inputs[0].name} and {inputs[1].name} have the same dimensions."
+criteria["RESPONSE_DIMENSION_MATCHES_ANSWER"][False] = lambda inputs: f"Dimensions of ${inputs[0].latex_string}$ does not match the expected dimensions"
+
 criteria["RESPONSE_AND_ANSWER_HAS_UNITS"] = Criterion("has(unit(response)) and has(unit(answer))", doc_string="Both response and answer has a unit")
 criteria["RESPONSE_AND_ANSWER_HAS_UNITS"][True] = no_feedback
 criteria["RESPONSE_AND_ANSWER_HAS_UNITS"][False] = no_feedback
@@ -99,9 +103,9 @@ answer_matches_response_graph.attach("MISSING_UNIT", "UNEXPECTED_VALUE", False, 
 answer_matches_response_graph.finish("UNEXPECTED_VALUE", True)
 answer_matches_response_graph.attach("UNEXPECTED_VALUE", "UNEXPECTED_UNIT", False, result_map=flip_bool_result)
 answer_matches_response_graph.finish("UNEXPECTED_UNIT", True)
-answer_matches_response_graph.attach("UNEXPECTED_UNIT", "DIMENSION_MATCH", False)
-answer_matches_response_graph.attach("DIMENSION_MATCH", "RESPONSE_MATCHES_ANSWER", True)
-answer_matches_response_graph.finish("DIMENSION_MATCH", False)
+answer_matches_response_graph.attach("UNEXPECTED_UNIT", "RESPONSE_DIMENSION_MATCHES_ANSWER", False)
+answer_matches_response_graph.attach("RESPONSE_DIMENSION_MATCHES_ANSWER", "RESPONSE_MATCHES_ANSWER", True)
+answer_matches_response_graph.finish("RESPONSE_DIMENSION_MATCHES_ANSWER", False)
 answer_matches_response_graph.attach("RESPONSE_MATCHES_ANSWER", "RESPONSE_AND_ANSWER_HAS_UNITS", True, override=False)
 answer_matches_response_graph.finish("RESPONSE_MATCHES_ANSWER", False)
 answer_matches_response_graph.attach("RESPONSE_AND_ANSWER_HAS_UNITS", "PREFIX_IS_LARGE", True, override=False)
