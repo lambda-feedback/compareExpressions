@@ -231,7 +231,7 @@ def generate_svg(root_node, filename, dummy_input=None):
                         current_result_node_index = number_of_result_nodes
                         number_of_result_nodes += 1
                         edges.append(f'{node.label}:{result_compass[1]} -> {result_label}:{result_compass[0]} [arrowhead="none"]')
-                        edges.append(f'{result_label}:{result_compass[1]} -> {target.label}')
+                        edges.append(f'{result_label}:{result_compass[1]} -> {target.label}:{result_compass[0]}')
                     nodes_to_be_processed.append((current_result_node_index, target))
     dot_preamble = 'digraph {'+'\n'.join(graph_attributes)+'\n'
     dot_postamble = '\n}'

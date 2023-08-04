@@ -460,7 +460,7 @@ def sympy_to_latex(equation, symbols):
     return latex_out
 
 
-def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
+def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
     '''
     Input:
         params               : evaluation function parameter dictionary
@@ -526,9 +526,9 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
         "simplify": params.get("simplify", False)
     }
 
+    symbol_assumptions = list(symbol_assumptions)
     if "symbol_assumptions" in params.keys():
         symbol_assumptions_strings = params["symbol_assumptions"]
-        symbol_assumptions = []
         index = symbol_assumptions_strings.find("(")
         while index > -1:
             index_match = find_matching_parenthesis(symbol_assumptions_strings, index)
@@ -538,11 +538,11 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple()):
             except (SyntaxError, TypeError) as e:
                 raise Exception("List of symbol assumptions not written correctly.") from e
             index = symbol_assumptions_strings.find('(', index_match+1)
-        for sym, ass in symbol_assumptions:
-            try:
-                parsing_params["symbol_dict"].update({sym: eval("Symbol('"+sym+"',"+ass+"=True)")})
-            except Exception as e:
-                raise Exception(f"Assumption {ass} for symbol {sym} caused a problem.") from e
+    for sym, ass in symbol_assumptions:
+        try:
+            parsing_params["symbol_dict"].update({sym: eval("Symbol('"+sym+"',"+ass+"=True)")})
+        except Exception as e:
+            raise Exception(f"Assumption {ass} for symbol {sym} caused a problem.") from e
 
     return parsing_params
 

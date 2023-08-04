@@ -29,11 +29,15 @@ class PhysicalQuantity:
     def __init__(self, name, parameters, ast_root, parser, messages=None, tag_handler=lambda x: x):
         self.name = name
         self.parameters = parameters
-        all_units = set_of_SI_prefixes | set_of_SI_base_unit_dimensions
-        unsplittable_symbols = [x[0] for x in all_units]
+        prefixes = [x[0] for x in set_of_SI_prefixes]
+        fundamental_units = [x[0] for x in set_of_SI_base_unit_dimensions]
+        dimensions = [x[2] for x in set_of_SI_base_unit_dimensions]
+        unsplittable_symbols = prefixes+fundamental_units+dimensions
+        symbol_assumptions = tuple([(f'{s}','positive') for s in fundamental_units+dimensions])
         self.parsing_params = create_sympy_parsing_params(
             parameters,
-            unsplittable_symbols=unsplittable_symbols
+            unsplittable_symbols=unsplittable_symbols,
+            symbol_assumptions=symbol_assumptions,
         )
         if messages == None:
             self.messages = []
@@ -58,8 +62,6 @@ class PhysicalQuantity:
             def revert_content(node):
                 if node.label != "GROUP":
                     node.content = node.original[node.start:node.end+1]
-#                elif node.label == "GROUP":
-#                    node.content = node.content[0]+node.original[node.start:node.end+1]+node.content[1]
                 if node.label == "UNIT" or QuantityTags.U in node.tags:
                     self.messages += [("REVERTED_UNIT", physical_quantities_messages["REVERTED_UNIT"](node.original[:node.start], node.content_string(), node.original[node.end+1:]))]
                 return ["", ""]
@@ -185,13 +187,13 @@ class PhysicalQuantity:
                 raise Exception("SymPy was unable to parse the "+self.name+" unit") from e
             base_unit_dimensions = [(base_unit[0], base_unit[2]) for base_unit in set_of_SI_base_unit_dimensions]
             if self.value is not None:
-                converted_unit_factor = converted_unit.subs({name: 1 for name in [x[0] for x in set_of_SI_base_unit_dimensions]}).simplify()
+                substitution_dict = {symbol: 1 for symbol in converted_unit.free_symbols if str(symbol) in [x[0] for x in set_of_SI_base_unit_dimensions]}
+                converted_unit_factor = converted_unit.subs(substitution_dict).simplify()
                 converted_unit = (converted_unit/converted_unit_factor).simplify(rational=True)
                 converted_value = "("+str(converted_value)+")*("+str(converted_unit_factor)+")"
             converted_unit_string = str(converted_unit)
             converted_dimension = substitute(converted_unit_string, base_unit_dimensions)
-            dimension_parsing_params = create_sympy_parsing_params(parsing_params, unsplittable_symbols=tuple(dim_data[1] for dim_data in base_unit_dimensions))
-            converted_dimension = parse_expression(converted_dimension, dimension_parsing_params)
+            converted_dimension = parse_expression(converted_dimension, parsing_params)
         return converted_value, converted_unit, expanded_unit, converted_dimension
 
 
@@ -465,9 +467,12 @@ def quantity_comparison(response, answer, parameters, eval_response):
     quantities = dict()
     evaluated_criteria = dict()
     criteria = physical_quantities_criteria
-    all_units = set_of_SI_prefixes | set_of_SI_base_unit_dimensions
-    unsplittable_symbols = [x[0] for x in all_units]
-    parsing_params = create_sympy_parsing_params(parameters, unsplittable_symbols=unsplittable_symbols)
+    prefixes = [x[0] for x in set_of_SI_prefixes]
+    fundamental_units = [x[0] for x in set_of_SI_base_unit_dimensions]
+    dimensions = [x[2] for x in set_of_SI_base_unit_dimensions]
+    unsplittable_symbols = prefixes+fundamental_units+dimensions
+    symbol_assumptions = tuple([(f'{s}','positive') for s in fundamental_units+dimensions])
+    parsing_params = create_sympy_parsing_params(parameters, unsplittable_symbols=unsplittable_symbols, symbol_assumptions=symbol_assumptions)
 
     def check_criterion(tag, arg_names=None):
         if arg_names is None:
@@ -540,11 +545,11 @@ def quantity_comparison(response, answer, parameters, eval_response):
 
     def compare(comparison):
         comparison_dict = {
-            "=": lambda inputs: bool(posify(inputs[0] - inputs[1])[0].cancel().simplify().simplify() == 0),
-            "<=": lambda inputs: bool(posify(inputs[0] - inputs[1])[0].cancel().simplify().simplify() <= 0),
-            ">=": lambda inputs: bool(posify(inputs[0] - inputs[1])[0].cancel().simplify().simplify() >= 0),
-            "<": lambda inputs: bool(posify(inputs[0] - inputs[1])[0].cancel().simplify().simplify() < 0),
-            ">": lambda inputs: bool(posify(inputs[0] - inputs[1])[0].cancel().simplify().simplify() > 0),
+            "=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() == 0),
+            "<=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() <= 0),
+            ">=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() >= 0),
+            "<": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() < 0),
+            ">": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() > 0),
         }
         def wrap(inputs):
             if inputs[0] is not None and inputs[1] is not None:

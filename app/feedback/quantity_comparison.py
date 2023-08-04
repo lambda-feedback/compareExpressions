@@ -70,6 +70,11 @@ criteria["UNEXPECTED_UNIT"] = Criterion("has(unit(response)) and not(has(unit(an
 criteria["UNEXPECTED_UNIT"][True] = lambda inputs: "The response is expected to be a value without unit(s)."
 criteria["UNEXPECTED_UNIT"][False] = no_feedback  # Unknown how the condition has failed, no feedback in this case
 
+criteria["RESPONSE_AND_ANSWER_HAS_UNITS"] = Criterion("has(unit(response)) and has(unit(answer))", doc_string="Both response and answer has a unit")
+criteria["RESPONSE_AND_ANSWER_HAS_UNITS"][True] = no_feedback
+criteria["RESPONSE_AND_ANSWER_HAS_UNITS"][False] = no_feedback
+
+
 criteria["PREFIX_IS_LARGE"] = Criterion("expanded_unit(response) >= 1000*expanded_unit(answer)", doc_string="The response prefix is much larger than the answer prefix")
 criteria["PREFIX_IS_LARGE"][True] = lambda inputs: "The quantity can be written with fewer digits by using a smaller prefix."
 criteria["PREFIX_IS_LARGE"][False] = no_feedback
@@ -94,8 +99,10 @@ answer_matches_response_graph.finish("UNEXPECTED_UNIT", True)
 answer_matches_response_graph.attach("UNEXPECTED_UNIT", "DIMENSION_MATCH", False)
 answer_matches_response_graph.attach("DIMENSION_MATCH", "QUANTITY_MATCH", True)
 answer_matches_response_graph.finish("DIMENSION_MATCH", False)
-answer_matches_response_graph.attach("QUANTITY_MATCH", "PREFIX_IS_LARGE", True, override=False)
+answer_matches_response_graph.attach("QUANTITY_MATCH", "RESPONSE_AND_ANSWER_HAS_UNITS", True, override=False)
 answer_matches_response_graph.finish("QUANTITY_MATCH", False)
+answer_matches_response_graph.attach("RESPONSE_AND_ANSWER_HAS_UNITS", "PREFIX_IS_LARGE", True, override=False)
+answer_matches_response_graph.finish("RESPONSE_AND_ANSWER_HAS_UNITS", False)
 answer_matches_response_graph.finish("PREFIX_IS_LARGE", True)
 answer_matches_response_graph.attach("PREFIX_IS_LARGE", "PREFIX_IS_SMALL", False, override=False)
 answer_matches_response_graph.finish("PREFIX_IS_SMALL", True)

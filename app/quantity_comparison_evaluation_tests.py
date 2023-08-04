@@ -196,11 +196,11 @@ class TestEvaluationFunction():
             ("-10.5 kilogram m/s^2",                    True,  "QUANTITY_MATCH"),
             ("-10.5 kg m/s^2",                          True,  "QUANTITY_MATCH"),
             ("-0.5 kg m/s^2+10 kg m/s^2",               False, "REVERTED_UNIT"),
-            ("-10500 g m/s^2",                          True,  "QUANTITY_MATCH"),
+            ("-10500 g m/s^2",                          True,  "PREFIX_IS_SMALL"),
             ("-10.46 kg m/s^2",                         True,  "QUANTITY_MATCH"),
             ("-10.54 kg m/s^2",                         True,  "QUANTITY_MATCH"),
-            ("-10.44 kg m/s^2",                         False, "DIMENSION_MATCH"),
-            ("-10.56 kg m/s^2",                         False, "DIMENSION_MATCH"),
+            ("-10.44 kg m/s^2",                         False, "QUANTITY_MATCH"),
+            ("-10.56 kg m/s^2",                         False, "QUANTITY_MATCH"),
             ("-10.5",                                   False, "MISSING_UNIT"),
             ("kg m/s^2",                                False, "MISSING_VALUE"),
             ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "QUANTITY_MATCH"),
@@ -216,7 +216,7 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "res,ans,is_correct,tag,latex",
         [
-            ("-10.5",          "-10.5",    True,  "NUMBER_VALUE",     r"-10.5"),
+            ("-10.5",          "-10.5",    True,  "QUANTITY_MATCH",     r"-10.5"),
             ("-10.5 kg m/s^2", "-10.5",    False, "UNEXPECTED_UNIT",  r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
             ("kg m/s^2",       "kg m/s^2", True,  "QUANTITY_MATCH",   r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
             ("-10.5 kg m/s^2", "kg m/s^2", False, "UNEXPECTED_VALUE", r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
