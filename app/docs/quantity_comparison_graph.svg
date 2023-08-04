@@ -223,18 +223,18 @@
 <path fill="none" stroke="black" d="M273.25,-720C273.25,-649.95 177.25,-665.05 177.25,-595 177.25,-595 177.25,-595 177.25,-161 177.25,-112.28 206.49,-106.14 241.25,-72 258.17,-55.38 283.56,-61.19 291.08,-46.53"/>
 <polygon fill="black" stroke="black" points="294.66,-47.5 293.25,-37 287.8,-46.09 294.66,-47.5"/>
 </g>
-<!-- DIMENSION_MATCH -->
+<!-- RESPONSE_DIMENSION_MATCHES_ANSWER -->
 <g id="node14" class="node">
-<title>DIMENSION_MATCH</title>
+<title>RESPONSE_DIMENSION_MATCHES_ANSWER</title>
 <g id="a_node14"><a xlink:title="Dimensions match">
 <polygon fill="#e5f8fb" stroke="#00b8d4" points="705.88,-756 360.62,-756 360.62,-720 705.88,-720 705.88,-756"/>
 <text text-anchor="middle" x="533.25" y="-732.58" font-family="Times New Roman,serif" font-size="14.00" fill="#212121">dimension(QUANTITY) matches dimension(QUANTITY)</text>
 </a>
 </g>
 </g>
-<!-- RESULT_NODE_7&#45;&gt;DIMENSION_MATCH -->
+<!-- RESULT_NODE_7&#45;&gt;RESPONSE_DIMENSION_MATCHES_ANSWER -->
 <g id="edge17" class="edge">
-<title>RESULT_NODE_7:s&#45;&gt;DIMENSION_MATCH:n</title>
+<title>RESULT_NODE_7:s&#45;&gt;RESPONSE_DIMENSION_MATCHES_ANSWER:n</title>
 <path fill="none" stroke="black" d="M370.25,-792C370.25,-722.01 515.31,-818.06 531.74,-766.88"/>
 <polygon fill="black" stroke="black" points="535.34,-767.39 533.25,-757 528.41,-766.42 535.34,-767.39"/>
 </g>
@@ -247,23 +247,23 @@
 </a>
 </g>
 </g>
-<!-- DIMENSION_MATCH&#45;&gt;RESULT_NODE_8 -->
+<!-- RESPONSE_DIMENSION_MATCHES_ANSWER&#45;&gt;RESULT_NODE_8 -->
 <g id="edge18" class="edge">
-<title>DIMENSION_MATCH:s&#45;&gt;RESULT_NODE_8:n</title>
+<title>RESPONSE_DIMENSION_MATCHES_ANSWER:s&#45;&gt;RESULT_NODE_8:n</title>
 <path fill="none" stroke="black" d="M533.25,-720C533.25,-704 533.25,-700 533.25,-684"/>
 </g>
 <!-- RESULT_NODE_9 -->
 <g id="node16" class="node">
 <title>RESULT_NODE_9</title>
-<g id="a_node16"><a xlink:title="Response is INCORRECT&#10; + Dimensions of $response$ does not match the dimensions of $answer$">
+<g id="a_node16"><a xlink:title="Response is INCORRECT&#10; + Dimensions of $response$ does not match the expected dimensions">
 <ellipse fill="#c5cae9" stroke="#212121" cx="711.25" cy="-594" rx="30.11" ry="18"/>
 <text text-anchor="middle" x="711.25" y="-588.58" font-family="Times New Roman,serif" font-size="14.00" fill="#212121">False</text>
 </a>
 </g>
 </g>
-<!-- DIMENSION_MATCH&#45;&gt;RESULT_NODE_9 -->
+<!-- RESPONSE_DIMENSION_MATCHES_ANSWER&#45;&gt;RESULT_NODE_9 -->
 <g id="edge20" class="edge">
-<title>DIMENSION_MATCH:s&#45;&gt;RESULT_NODE_9:n</title>
+<title>RESPONSE_DIMENSION_MATCHES_ANSWER:s&#45;&gt;RESULT_NODE_9:n</title>
 <path fill="none" stroke="black" d="M533.25,-720C533.25,-673.73 711.25,-658.27 711.25,-612"/>
 </g>
 <!-- RESPONSE_MATCHES_ANSWER -->
