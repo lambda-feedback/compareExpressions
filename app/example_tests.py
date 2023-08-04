@@ -91,6 +91,7 @@ class TestEvaluationFunction():
             ("2.00", "2.00 km/h", r"2.0", False, None, None, set(["MISSING_UNIT"])),
             ("kilometre/hour", "2.00 km/h", r"\frac{\mathrm{kilometre}}{\mathrm{hour}}", False, None, None, set(["MISSING_VALUE"])),
             ("2 km/h", "2.00 km/h", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
+            ("2 km", "2.00 km/h", r"2~\mathrm{kilometre}", True, None, None, set(["RESPONSE_DIMENSION_MATCHES_ANSWER"])),
             ("0.56 m/s", "2.00 km/h", r"0.56~\frac{\mathrm{metre}}{\mathrm{second}}", False, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
             ("0.556 m/s", "2.00 km/h", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, None, None, set(["RESPONSE_MATCHES_ANSWER"])),
             ("2000 meter/hour", "2.00 km/h", r"2000~\frac{\mathrm{metre}}{\mathrm{hour}}", True, None, None, {"RESPONSE_MATCHES_ANSWER", "PREFIX_IS_SMALL"}),
