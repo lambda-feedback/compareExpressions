@@ -1,4 +1,3 @@
-from enum import Enum
 from ..criteria_utilities import Criterion, CriteriaGraphContainer, flip_bool_result, no_feedback, generate_svg
 
 class DummyInput:
@@ -13,8 +12,6 @@ class DummyInput:
     def __str__(self):
         return self.name
 
-
-QuantityTags = Enum("QuantityTags", {v: i for i, v in enumerate("UVNR", 1)})
 
 criteria = dict()
 

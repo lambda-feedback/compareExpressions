@@ -3,12 +3,12 @@
 # -------
 
 import re
+from enum import Enum
 from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals, create_sympy_parsing_params
 from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .symbolic_comparison_preview import preview_function as symbolic_preview
 from .feedback.quantity_comparison import criteria as physical_quantities_criteria
 from .feedback.quantity_comparison import internal as physical_quantities_messages
-from .feedback.quantity_comparison import QuantityTags
 from .feedback.quantity_comparison import answer_matches_response_graph
 from .expression_utilities import substitute
 from .slr_parsing_utilities import SLR_Parser, relabel, catch_undefined, infix, insert_infix, group, tag_removal, create_node, ExprNode, operate
@@ -23,6 +23,7 @@ from .criteria_utilities import traverse
 # QUANTITY HANDLING
 # -----------------
 
+QuantityTags = Enum("QuantityTags", {v: i for i, v in enumerate("UVNR", 1)})
 
 class PhysicalQuantity:
 
