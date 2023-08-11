@@ -624,10 +624,24 @@ class TestEvaluationFunction():
                 {"rtol": 0.05},
                 True
             ),
+            (
+                "Another example from AERO4007 Q9.3",
+                "0.224*(rho*L^3)+0.648*pi*(rhoL^3)",
+                "43/192*(rho*L^3)+(83/128)*(pi*rho*L^3)",
+                {"rtol": 0.05},
+                True
+            ),
         ]
     )
     def test_numerical_comparison(self, description, response, answer, tolerance, outcome):
-        params = {"strict_syntax": False}
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "pi": {"aliases": [], "latex": "\\(\\pi\\)"},
+                "rho": {"aliases": [], "latex": "\\(\\rho\\)"},
+            }
+        }
         params.update(tolerance)
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is outcome

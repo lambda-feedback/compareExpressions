@@ -260,16 +260,14 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
         # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
         # are other reserved symbols.
-        pi_symbol = pi
-        for s in ans.free_symbols:
-            if str(s) == 'pi':
-                pi_symbol = s
-        ans = ans.subs(pi_symbol, float(pi))
-        pi_symbol = pi
-        for s in ans.free_symbols:
-            if str(s) == 'pi':
-                pi_symbol = s
-        res = res.subs(pi_symbol, float(pi))
+        def replace_pi(expr):
+            pi_symbol = pi
+            for s in expr.free_symbols:
+                if str(s) == 'pi':
+                    pi_symbol = s
+            return expr.subs(pi_symbol, float(pi))
+        ans = replace_pi(ans)
+        res = replace_pi(res)
         if "atol" in params.keys():
             absolute_error = abs(ans-res)
             if isinstance(absolute_error, float) or absolute_error.is_constant():
