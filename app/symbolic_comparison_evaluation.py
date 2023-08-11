@@ -260,18 +260,28 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
         # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
         # are other reserved symbols.
-        ans = ans.subs(Symbol('pi'), float(pi))
-        res = res.subs(Symbol('pi'), float(pi))
-        if res.is_constant() and ans.is_constant():
-            if "atol" in params.keys():
-                error_below_atol = bool(abs(float(ans-res)) < float(params["atol"]))
-            else:
-                error_below_atol = True
-            if "rtol" in params.keys():
-                rtol = float(params["rtol"])
-                error_below_rtol = bool(float(abs(((ans-res)/ans).simplify())) < rtol)
-            else:
-                error_below_rtol = True
+        pi_symbol = pi
+        for s in ans.free_symbols:
+            if str(s) == 'pi':
+                pi_symbol = s
+        ans = ans.subs(pi_symbol, float(pi))
+        pi_symbol = pi
+        for s in ans.free_symbols:
+            if str(s) == 'pi':
+                pi_symbol = s
+        res = res.subs(pi_symbol, float(pi))
+        if "atol" in params.keys():
+            absolute_error = abs(ans-res)
+            if isinstance(absolute_error, float) or absolute_error.is_constant():
+                error_below_atol = bool(float(absolute_error) < float(params["atol"]))
+        else:
+            error_below_atol = True
+        if "rtol" in params.keys():
+            relative_error = abs(((ans-res)/ans).simplify())
+            if isinstance(relative_error, float) or relative_error.is_constant():
+                error_below_rtol = bool(float(relative_error) < float(params["rtol"]))
+        else:
+            error_below_rtol = True
         if error_below_atol and error_below_rtol:
             eval_response.is_correct = True
             tag = "WITHIN_TOLERANCE"
