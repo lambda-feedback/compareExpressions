@@ -608,8 +608,26 @@ class TestEvaluationFunction():
             ),
         ]
     )
-    def test_numerical_comparison(self, description, response, answer, tolerance, outcome):
+    def test_numerical_comparison_problem(self, description, response, answer, tolerance, outcome):
         params = {"numerical": True}
+        params.update(tolerance)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    @pytest.mark.parametrize(
+        "description,response,answer,tolerance,outcome",
+        [
+            (
+                "Example from AERO4007 Q9.3",
+                "0.224*(rho*L^3)+2.03*(rho*L^3)",
+                "43/192*(rho*L^3)+(83/128)*(pi*rho*L^3)",
+                {"rtol": 0.05},
+                True
+            ),
+        ]
+    )
+    def test_numerical_comparison(self, description, response, answer, tolerance, outcome):
+        params = {"strict_syntax": False}
         params.update(tolerance)
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is outcome
