@@ -40,6 +40,7 @@ COPY feedback/symbolic_comparison.py ./app/feedback/
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
 COPY docs/user.md ./app/docs/user.md
+COPY docs/quantity_comparison_graph.svg ./app/docs/quantity_comparison_graph.svg
 
 # Set permissions so files and directories can be accessed on AWS
 RUN chmod 644 $(find . -type f)
