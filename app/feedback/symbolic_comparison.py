@@ -34,6 +34,6 @@ internal = {
     "NOTATION_WARNING": "Note that `^` cannot be used to denote exponentiation, use `**` instead.",
     "EXPRESSION_NOT_EQUALITY": "The response was an expression but was expected to be an equality.",
     "EQUALITY_NOT_EXPRESSION": "The response was an equality but was expected to be an expression.",
-    "WITHIN_TOLERANCE": "The difference between the response the answer is within specified error tolerance.",
-    "SYMBOLICALLY_EQUAL": "The difference response and answer are symbolically equal.",
+    "WITHIN_TOLERANCE": "",  # "The difference between the response the answer is within specified error tolerance.",
+    "SYMBOLICALLY_EQUAL": "The response and answer are symbolically equal.",
 }
