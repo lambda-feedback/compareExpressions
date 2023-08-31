@@ -647,12 +647,13 @@ class TestEvaluationFunction():
         assert result["is_correct"] is outcome
 
     def test_warning_inappropriate_symbol(self):
-        answer = '2**4'
-        response = '2^4'
+        answer = 'factorial(2**4)'
+        response = '2^4!'
         params = {'strict_syntax': True}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "NOTATION_WARNING" in result["tags"]
+        assert "NOTATION_WARNING_EXPONENT" in result["tags"]
+        assert "NOTATION_WARNING_FACTORIAL" in result["tags"]
 
     @pytest.mark.parametrize(
         "response,answer",
