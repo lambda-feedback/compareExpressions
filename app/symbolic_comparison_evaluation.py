@@ -209,7 +209,9 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     if params.get("strict_syntax", True):
         if "^" in response:
-            eval_response.add_feedback(("NOTATION_WARNING", symbolic_comparison_internal_messages["NOTATION_WARNING"]))
+            eval_response.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages["NOTATION_WARNING_EXPONENT"]))
+        if "!" in response:
+            eval_response.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages["NOTATION_WARNING_FACTORIAL"]))
 
     # Safely try to parse answer and response into symbolic expressions
     try:
