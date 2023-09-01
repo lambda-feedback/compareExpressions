@@ -1041,5 +1041,15 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value
 
+    def test_exclamation_mark_for_factorial(self):
+        response = "3!"
+        answer = "factorial(3)"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
 if __name__ == "__main__":
     pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])
