@@ -255,8 +255,20 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         eval_response.is_correct = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().is_constant()
         return eval_response
 
-    error_below_atol = False
-    error_below_rtol = False
+    is_correct = True
+    parameters_dict = {
+        "parsing_params": parsing_params,
+        "reserved_expressions": reserved_expressions,
+        "reference_criteria_strings": reference_criteria_strings,
+        "symbolic_comparison_criteria": symbolic_comparison_criteria,
+        "eval_response": eval_response,
+    }
+    for criterion in criteria_parsed:
+        is_correct = is_correct and check_criterion(criterion, parameters_dict)
+    eval_response.is_correct = is_correct
+
+    error_below_atol = None
+    error_below_rtol = None
 
     if params.get("numerical", False) or params.get("rtol", False) or params.get("atol", False):
         # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
@@ -271,32 +283,28 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         ans = replace_pi(ans)
         res = replace_pi(res)
         if "atol" in params.keys():
-            absolute_error = abs(ans-res)
-            if isinstance(absolute_error, float) or absolute_error.is_constant():
-                error_below_atol = bool(float(absolute_error) < float(params["atol"]))
+            try:
+                absolute_error = abs(float(ans-res))
+                error_below_atol = bool(absolute_error < float(params["atol"]))
+            except TypeError:
+                error_below_atol = None
         else:
             error_below_atol = True
         if "rtol" in params.keys():
-            relative_error = abs(((ans-res)/ans).simplify())
-            if isinstance(relative_error, float) or relative_error.is_constant():
-                error_below_rtol = bool(float(relative_error) < float(params["rtol"]))
+            try:
+                relative_error = abs(float((ans-res)/ans)) # TODO: capture error here and see if you can rewrite this in a faster way
+                error_below_rtol = bool(relative_error < float(params["rtol"]))
+            except TypeError:
+                error_below_rtol = None
         else:
             error_below_rtol = True
-        if error_below_atol and error_below_rtol:
+        if error_below_atol is None or error_below_rtol is None:
+            eval_response.is_correct = False
+            tag = "NOT_NUMERICAL"
+            eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+        elif error_below_atol is True and error_below_rtol is True:
             eval_response.is_correct = True
             tag = "WITHIN_TOLERANCE"
             eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
-            return eval_response
 
-    is_correct = True
-    parameters_dict = {
-        "parsing_params": parsing_params,
-        "reserved_expressions": reserved_expressions,
-        "reference_criteria_strings": reference_criteria_strings,
-        "symbolic_comparison_criteria": symbolic_comparison_criteria,
-        "eval_response": eval_response,
-    }
-    for criterion in criteria_parsed:
-        is_correct = is_correct and check_criterion(criterion, parameters_dict)
-    eval_response.is_correct = is_correct
     return eval_response

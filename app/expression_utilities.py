@@ -578,7 +578,7 @@ def parse_expression(expr, parsing_params):
     substitutions.sort(key=lambda x: -len(x[0]))
     expr = substitute(expr, substitutions)
     can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
-    if strict_syntax:
+    if strict_syntax is True:
         transformations = parser_transformations[0:4]+extra_transformations
     else:
         transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
