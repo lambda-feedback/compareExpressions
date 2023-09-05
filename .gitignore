@@ -134,3 +134,4 @@ app/benchmark.py
 *.prof
 *.wpr
 *.wpu
+app/profiling_examples.py
