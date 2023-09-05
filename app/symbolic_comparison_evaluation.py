@@ -270,41 +270,42 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     error_below_atol = None
     error_below_rtol = None
 
-    if params.get("numerical", False) or params.get("rtol", False) or params.get("atol", False):
-        # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
-        # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
-        # are other reserved symbols.
-        def replace_pi(expr):
-            pi_symbol = pi
-            for s in expr.free_symbols:
-                if str(s) == 'pi':
-                    pi_symbol = s
-            return expr.subs(pi_symbol, float(pi))
-        ans = replace_pi(ans)
-        res = replace_pi(res)
-        if "atol" in params.keys():
-            try:
-                absolute_error = abs(float(ans-res))
-                error_below_atol = bool(absolute_error < float(params["atol"]))
-            except TypeError:
-                error_below_atol = None
-        else:
-            error_below_atol = True
-        if "rtol" in params.keys():
-            try:
-                relative_error = abs(float((ans-res)/ans)) # TODO: capture error here and see if you can rewrite this in a faster way
-                error_below_rtol = bool(relative_error < float(params["rtol"]))
-            except TypeError:
-                error_below_rtol = None
-        else:
-            error_below_rtol = True
-        if error_below_atol is None or error_below_rtol is None:
-            eval_response.is_correct = False
-            tag = "NOT_NUMERICAL"
-            eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
-        elif error_below_atol is True and error_below_rtol is True:
-            eval_response.is_correct = True
-            tag = "WITHIN_TOLERANCE"
-            eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+    if eval_response.is_correct is False:
+        if params.get("numerical", False) or params.get("rtol", False) or params.get("atol", False):
+            # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
+            # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
+            # are other reserved symbols.
+            def replace_pi(expr):
+                pi_symbol = pi
+                for s in expr.free_symbols:
+                    if str(s) == 'pi':
+                        pi_symbol = s
+                return expr.subs(pi_symbol, float(pi))
+            ans = replace_pi(ans)
+            res = replace_pi(res)
+            if "atol" in params.keys():
+                try:
+                    absolute_error = abs(float(ans-res))
+                    error_below_atol = bool(absolute_error < float(params["atol"]))
+                except TypeError:
+                    error_below_atol = None
+            else:
+                error_below_atol = True
+            if "rtol" in params.keys():
+                try:
+                    relative_error = abs(float((ans-res)/ans)) # TODO: capture error here and see if you can rewrite this in a faster way
+                    error_below_rtol = bool(relative_error < float(params["rtol"]))
+                except TypeError:
+                    error_below_rtol = None
+            else:
+                error_below_rtol = True
+            if error_below_atol is None or error_below_rtol is None:
+                eval_response.is_correct = False
+                tag = "NOT_NUMERICAL"
+                eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+            elif error_below_atol is True and error_below_rtol is True:
+                eval_response.is_correct = True
+                tag = "WITHIN_TOLERANCE"
+                eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
 
     return eval_response
