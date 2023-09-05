@@ -293,7 +293,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
                 error_below_atol = True
             if "rtol" in params.keys():
                 try:
-                    relative_error = abs(float((ans-res)/ans)) # TODO: capture error here and see if you can rewrite this in a faster way
+                    relative_error = abs(float((ans-res)/ans))
                     error_below_rtol = bool(relative_error < float(params["rtol"]))
                 except TypeError:
                     error_below_rtol = None
