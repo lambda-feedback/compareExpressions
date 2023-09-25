@@ -26,8 +26,7 @@ class ModifiedLatexPrinter(LatexPrinter):
             log_not = r"\log"
         if len(expr.args) > 1:
             base = self._print(expr.args[1])
-            if base != "10":
-                log_not = r"\log_{%s}" % base
+            log_not = r"\log_{%s}" % base
         tex = r"%s{\left(%s \right)}" % (log_not, self._print(expr.args[0]))
 
         if exp is not None:
