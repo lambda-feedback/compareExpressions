@@ -66,5 +66,14 @@ class TestPreviewFunction():
         assert "latex" in preview
         assert "sympy" in preview
 
+    def test_natural_logarithm_notation(self):
+        response = "ln(x)"
+        params = Params(is_latex=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == r"\ln{\left(x \right)}"
+
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

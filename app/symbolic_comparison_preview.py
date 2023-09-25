@@ -1,4 +1,3 @@
-from sympy.printing.latex import LatexPrinter
 from sympy.parsing.sympy_parser import T as parser_transformations
 from .expression_utilities import (
     extract_latex,
@@ -10,6 +9,7 @@ from .expression_utilities import (
     substitute_input_symbols,
     SymbolDict,
     sympy_symbols,
+    sympy_to_latex,
 )
 
 from .preview_utilities import (
@@ -91,9 +91,7 @@ def preview_function(response: str, params: Params) -> Result:
         latex_out = []
         sympy_out = []
         for expression in expression_list:
-            latex_out.append(
-                LatexPrinter({"symbol_names": latex_symbols(symbols), "mul_symbol": r" \cdot "}).doprint(expression)
-            )
+            latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
             sympy_out.append(str(expression))
 
         if len(sympy_out) == 1:

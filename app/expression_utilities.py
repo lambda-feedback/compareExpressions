@@ -16,6 +16,24 @@ from sympy import Basic, Symbol
 import re
 from typing import Dict, List, TypedDict
 
+class ModifiedLatexPrinter(LatexPrinter):
+    """Modified LatexPrinter class that prints logarithms other than the natural logarithm correctly.
+    """
+    def _print_log(self, expr, exp=None):
+        if self._settings["ln_notation"] and len(expr.args) < 2:
+            log_not = r"\ln"
+        else:
+            log_not = r"\log"
+        if len(expr.args) > 1:
+            base = self._print(expr.args[1])
+            log_not = r"\log_{%s}" % base
+        tex = r"%s{\left(%s \right)}" % (log_not, self._print(expr.args[0]))
+
+        if exp is not None:
+            return r"%s^{%s}" % (tex, exp)
+        else:
+            return tex
+
 elementary_functions_names = [
     ('sin', []), ('sinc', []), ('csc', ['cosec']), ('cos', []), ('sec', []), ('tan', []), ('cot', ['cotan']),
     ('asin', ['arcsin']), ('acsc', ['arccsc', 'arccosec', 'acosec']), ('acos', ['arccos']), ('asec', ['arcsec']),
@@ -23,7 +41,7 @@ elementary_functions_names = [
     ('sinh', []), ('cosh', []), ('tanh', []), ('csch', ['cosech']), ('sech', []),
     ('asinh', ['arcsinh']), ('acosh', ['arccosh']), ('atanh', ['arctanh']),
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
-    ('exp', ['Exp']), ('E', ['e']), ('log', []),
+    ('exp', ['Exp']), ('E', ['e']), ('log', ['ln']),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
     ('summation', ['sum','Sum']), ('Derivative', ['diff']), 
@@ -453,10 +471,18 @@ def latex_symbols(symbols):
     return symbol_dict
 
 
-def sympy_to_latex(equation, symbols):
-    latex_out = LatexPrinter(
-        {"symbol_names": latex_symbols(symbols)}
-    ).doprint(equation)
+def sympy_to_latex(equation, symbols, settings=None):
+    default_settings = {
+        "symbol_names": latex_symbols(symbols),
+        "ln_notation": True,
+    }
+    if settings is None:
+        settings = default_settings
+    else:
+        for key in default_settings.keys():
+            if key not in settings.keys():
+                settings[key] = default_settings[key]
+    latex_out = ModifiedLatexPrinter(settings).doprint(equation)
     return latex_out
 
 
