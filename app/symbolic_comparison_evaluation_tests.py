@@ -32,7 +32,7 @@ elementary_function_test_cases = [
     ("exp", "Bexp(x)exp(x)", "B*exp(2*x)", r"B \cdot e^{x} \cdot e^{x}"),
     ("exp2", "a+b*E^2", "a+b*exp(2)", r"a + b \cdot e^{2}"),
     ("exp3", "a+b*e^2", "a+b*exp(2)", r"a + b \cdot e^{2}"),
-    ("ln", "Bexp(log(10))", "10B", r"B \cdot e^{\ln{\left(10 \right)}}"),
+    ("ln", "Bexp(ln(10))", "10B", r"B \cdot e^{\ln{\left(10 \right)}}"),
     #("log", "Bexp(log10(10))", "10B", r"B \cdot e^{\log{\left(10 \right)}}"),
     ("sqrt", "Bsqrt(4)", "2B", r"\sqrt{4} \cdot B"),
     ("sign", "Bsign(1)", "B", r"B \cdot \operatorname{sign}{\left(1 \right)}"),
