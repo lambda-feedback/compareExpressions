@@ -1,4 +1,3 @@
-from sympy.printing.latex import LatexPrinter
 from sympy.parsing.sympy_parser import T as parser_transformations
 from .expression_utilities import (
     extract_latex,
