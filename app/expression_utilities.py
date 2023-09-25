@@ -453,10 +453,18 @@ def latex_symbols(symbols):
     return symbol_dict
 
 
-def sympy_to_latex(equation, symbols):
-    latex_out = LatexPrinter(
-        {"symbol_names": latex_symbols(symbols)}
-    ).doprint(equation)
+def sympy_to_latex(equation, symbols, settings=None):
+    default_settings = {
+        "symbol_names": latex_symbols(symbols),
+        "ln_notation": True,
+    }
+    if settings is None:
+        settings = default_settings
+    else:
+        for key in default_settings.keys():
+            if key not in settings.keys():
+                settings[key] = default_settings[key]
+    latex_out = LatexPrinter(settings).doprint(equation)
     return latex_out
 
 
