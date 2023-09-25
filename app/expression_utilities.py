@@ -16,6 +16,25 @@ from sympy import Basic, Symbol
 import re
 from typing import Dict, List, TypedDict
 
+class ModifiedLatexPrinter(LatexPrinter):
+    """Modified LatexPrinter class that prints logarithms other than the natural logarithm correctly.
+    """
+    def _print_log(self, expr, exp=None):
+        if self._settings["ln_notation"] and len(expr.args) < 2:
+            log_not = r"\ln"
+        else:
+            log_not = r"\log"
+        if len(expr.args) > 1:
+            base = self._print(expr.args[1])
+            if base != "10":
+                log_not = r"\log_{%s}" % base
+        tex = r"%s{\left(%s \right)}" % (log_not, self._print(expr.args[0]))
+
+        if exp is not None:
+            return r"%s^{%s}" % (tex, exp)
+        else:
+            return tex
+
 elementary_functions_names = [
     ('sin', []), ('sinc', []), ('csc', ['cosec']), ('cos', []), ('sec', []), ('tan', []), ('cot', ['cotan']),
     ('asin', ['arcsin']), ('acsc', ['arccsc', 'arccosec', 'acosec']), ('acos', ['arccos']), ('asec', ['arcsec']),
@@ -464,7 +483,7 @@ def sympy_to_latex(equation, symbols, settings=None):
         for key in default_settings.keys():
             if key not in settings.keys():
                 settings[key] = default_settings[key]
-    latex_out = LatexPrinter(settings).doprint(equation)
+    latex_out = ModifiedLatexPrinter(settings).doprint(equation)
     return latex_out
 
 
