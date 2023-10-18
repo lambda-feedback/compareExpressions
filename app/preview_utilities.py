@@ -68,18 +68,22 @@ def parse_latex(response: str, symbols: SymbolDict) -> str:
         raise ValueError(str(e))
 
 def sanitise_latex(response):
-    index = 0
+    response = "".join(response.split())
     response = response.replace('~',' ')
-    processed_response = []
-    while index < len(response):
-        mathrm_start = response.find(r"\mathrm{", index)
-        if mathrm_start > -1:
-            processed_response.append(response[index:mathrm_start])
-            mathrm_end = find_matching_parenthesis(response, mathrm_start+1, delimiters=('{','}'))
-            inside_mathrm = response[(mathrm_start+len(r"\mathrm{")):mathrm_end]
-            processed_response.append(inside_mathrm)
-            index = mathrm_end+1
-        else:
-            processed_response.append(response[index:])
-            index = len(response)
-    return "".join(processed_response)
+    wrappers = [r"\mathrm",r"\text"]
+    for wrapper in wrappers:
+        processed_response = []
+        index = 0
+        while index < len(response):
+            wrapper_start = response.find(wrapper+"{", index)
+            if wrapper_start > -1:
+                processed_response.append(response[index:wrapper_start])
+                wrapper_end = find_matching_parenthesis(response, wrapper_start+1, delimiters=('{','}'))
+                inside_wrapper = response[(wrapper_start+len(wrapper+"{")):wrapper_end]
+                processed_response.append(inside_wrapper)
+                index = wrapper_end+1
+            else:
+                processed_response.append(response[index:])
+                index = len(response)
+        response = "".join(processed_response)
+    return response
