@@ -269,6 +269,8 @@ def set_tags(strictness):
             tags.remove(QuantityTags.N)
         elif node.label == "SOLIDUS" and node.children[0].content == "1" and node.children[1].tags == {QuantityTags.U}:
             tags.remove(QuantityTags.N)
+        elif node.label == "SOLIDUS" and node.children[0].tags == {QuantityTags.N} and node.children[1].tags == {QuantityTags.N}:
+            tags = tags # Do not change tags
         elif node.label in ["PRODUCT", "SOLIDUS", "POWER"]:
             if any(x in tags for x in [QuantityTags.N, QuantityTags.V, QuantityTags.R]):
                 if QuantityTags.U in tags:
