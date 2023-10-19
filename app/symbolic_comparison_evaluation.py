@@ -271,7 +271,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     error_below_rtol = None
 
     if eval_response.is_correct is False:
-        if params.get("numerical", False) or params.get("rtol", False) or params.get("atol", False):
+        if params.get("numerical", False) or float(params.get("rtol", 0)) > 0 or float(params.get("atol", 0)) > 0:
             # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
             # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
             # are other reserved symbols.

@@ -553,6 +553,54 @@ class TestEvaluationFunction():
         "description,response,answer,tolerance,tags,outcome",
         [
             (
+                "Correct response, symbolic comparison set with atol=0",
+                "sqrt(3)+5",
+                "sqrt(3)+5",
+                {"atol": 0},
+                [],
+                True
+            ),
+            (
+                "Incorrect response, symbolic comparison set with atol=0",
+                "sqrt(3)+5",
+                "6.73",
+                {"atol": 0},
+                [],
+                False
+            ),
+            (
+                "Correct response, symbolic comparison set with rtol=0",
+                "sqrt(3)+5",
+                "sqrt(3)+5",
+                {"rtol": 0},
+                [],
+                True
+            ),
+            (
+                "Incorrect response, symbolic comparison set with rtol=0",
+                "sqrt(3)+5",
+                "6.73",
+                {"rtol": 0},
+                [],
+                False
+            ),
+            (
+                "Correct response, symbolic comparison set with atol=0 and rtol=0",
+                "sqrt(3)+5",
+                "sqrt(3)+5",
+                {"rtol": 0, "atol": 0},
+                [],
+                True
+            ),
+            (
+                "Incorrect response, symbolic comparison set with atol=0 and rtol=0",
+                "sqrt(3)+5",
+                "6.73",
+                {"rtol": 0, "atol": 0},
+                [],
+                False
+            ),
+            (
                 "Correct response, tolerance specified with atol",
                 "6.73",
                 "sqrt(3)+5",
