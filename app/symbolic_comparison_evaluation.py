@@ -283,7 +283,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
                 return expr.subs(pi_symbol, float(pi))
             ans = replace_pi(ans)
             res = replace_pi(res)
-            if "atol" in params.keys():
+            if float(params.get("atol", 0)) > 0:
                 try:
                     absolute_error = abs(float(ans-res))
                     error_below_atol = bool(absolute_error < float(params["atol"]))
@@ -291,7 +291,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
                     error_below_atol = None
             else:
                 error_below_atol = True
-            if "rtol" in params.keys():
+            if float(params.get("rtol", 0)) > 0:
                 try:
                     relative_error = abs(float((ans-res)/ans))
                     error_below_rtol = bool(relative_error < float(params["rtol"]))
