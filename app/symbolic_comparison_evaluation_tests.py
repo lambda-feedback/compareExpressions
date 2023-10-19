@@ -562,8 +562,8 @@ class TestEvaluationFunction():
             ),
             (
                 "Incorrect response, symbolic comparison set with atol=0",
-                "sqrt(3)+5",
                 "6.73",
+                "sqrt(3)+5",
                 {"atol": 0},
                 [],
                 False
@@ -594,8 +594,8 @@ class TestEvaluationFunction():
             ),
             (
                 "Incorrect response, symbolic comparison set with atol=0 and rtol=0",
-                "sqrt(3)+5",
                 "6.73",
+                "sqrt(3)+5",
                 {"rtol": 0, "atol": 0},
                 [],
                 False
@@ -605,6 +605,14 @@ class TestEvaluationFunction():
                 "6.73",
                 "sqrt(3)+5",
                 {"atol": 0.005},
+                ["WITHIN_TOLERANCE"],
+                True
+            ),
+            (
+                "Correct response, tolerance specified with atol != 0 and rtol = 0",
+                "6.73",
+                "sqrt(3)+5",
+                {"atol": 0.005, "rtol": 0},
                 ["WITHIN_TOLERANCE"],
                 True
             ),
@@ -667,7 +675,7 @@ class TestEvaluationFunction():
         ]
     )
     def test_numerical_comparison_problem(self, description, response, answer, tolerance, tags, outcome):
-        params = {"numerical": True}
+        params = {"elementary_functions": True}
         params.update(tolerance)
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is outcome
