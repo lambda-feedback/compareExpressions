@@ -353,10 +353,14 @@ class TestEvaluationFunction():
 
     @pytest.mark.parametrize(
         "response,answer",
-        generate_input_variations(response="I", answer="(-1)**(1/2)")
+        generate_input_variations(response="I", answer="(-1)**(1/2)")+\
+        generate_input_variations(response="e^(Ix)", answer="cos(x)+I*sin(x)")+\
+        generate_input_variations(response="e^(Ix)+e^(-Ix)", answer="2cos(x)")+\
+        generate_input_variations(response="1", answer="re(1+2*I)")+\
+        generate_input_variations(response="2", answer="im(1+2*I)")
     )
     def test_complex_numbers(self, response, answer):
-        params = {"complexNumbers": True, "strict_syntax": False}
+        params = {"complexNumbers": True, "strict_syntax": False, "elementary_functions": True}
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
@@ -1046,39 +1050,41 @@ class TestEvaluationFunction():
         assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
 
     @pytest.mark.parametrize(
-        "response, answer, criteria, value, feedback_tags",
+        "response, answer, criteria, value, feedback_tags, additional_params",
         [
-            ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"]),
-            ("a+b", "b+a", "not(answer=response)", False, []),
-            ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"]),
-            ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),
-            ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"]),
-            ("2a", "a", "response/answer=2", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("2a", "a", "2*answer = response", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("2a", "a", "answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"]),
-            ("-a", "a", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("-a", "a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("-a", "a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"]),
-            ("1", "1", "response^3-6*response^2+11*response-6=0", True, []),
-            ("2", "1", "response^3-6*response^2+11*response-6=0", True, []),
-            ("3", "1", "response^3-6*response^2+11*response-6=0", True, []),
-            ("4", "1", "response^3-6*response^2+11*response-6=0", False, []),
-            ("sin(x)+2", "sin(x)", "Derivative(response,x)=cos(x)", True, []),
-            ("sin(x)+2", "sin(x)", "diff(response,x)=cos(x)", True, []),
-            ("exp(lambda*x)/(1+exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
-            ("5*exp(lambda*x)/(1+5*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
-            ("6*exp(lambda*x)/(1+7*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", False, []),
-            ("c*exp(lambda*x)/(1+c*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, []),
+            ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"], {}),
+            ("a+b", "b+a", "not(answer=response)", False, [], {}),
+            ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"], {}),
+            ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
+            ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
+            ("2a", "a", "response/answer=2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
+            ("2a", "a", "2*answer = response", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
+            ("2a", "a", "answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
+            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
+            ("-a", "a", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
+            ("-a", "a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
+            ("-a", "a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
+            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
+            ("1", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
+            ("2", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
+            ("3", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
+            ("4", "1", "response^3-6*response^2+11*response-6=0", False, [], {}),
+            ("sin(x)+2", "sin(x)", "Derivative(response,x)=cos(x)", True, [], {}),
+            ("sin(x)+2", "sin(x)", "diff(response,x)=cos(x)", True, [], {}),
+            ("exp(lambda*x)/(1+exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, [], {}),
+            ("5*exp(lambda*x)/(1+5*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, [], {}),
+            ("6*exp(lambda*x)/(1+7*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", False, [], {}),
+            ("c*exp(lambda*x)/(1+c*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, [], {}),
+            ("-A/r^2*cos(omega*t-k*r)+k*A/r*sin(omega*t-k*r)", "(-A/(r**2))*exp(I*(omega*t-k*r))*(1+I*k*r)", "re(response)=re(answer)", True, [], {"complexNumbers": True, "symbol_assumptions": "('k','real') ('r','real') ('omega','real') ('t','real') ('A','real')"}),
         ]
     )
-    def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags):
+    def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
             "criteria": criteria,
         }
+        params.update(additional_params)
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is value
         for feedback_tag in feedback_tags:
