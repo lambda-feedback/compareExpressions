@@ -1075,7 +1075,32 @@ class TestEvaluationFunction():
             ("5*exp(lambda*x)/(1+5*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, [], {}),
             ("6*exp(lambda*x)/(1+7*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", False, [], {}),
             ("c*exp(lambda*x)/(1+c*exp(lambda*x))", "c*exp(lambda*x)/(1+c*exp(lambda*x))", "diff(response,x)=lambda*response*(1-response)", True, [], {}),
-            ("-A/r^2*cos(omega*t-k*r)+k*A/r*sin(omega*t-k*r)", "(-A/(r**2))*exp(I*(omega*t-k*r))*(1+I*k*r)", "re(response)=re(answer)", True, [], {"complexNumbers": True, "symbol_assumptions": "('k','real') ('r','real') ('omega','real') ('t','real') ('A','real')"}),
+            ("-A/r^2*cos(omega*t-k*r)+k*A/r*sin(omega*t-k*r)", "(-A/(r**2))*exp(i*(omega*t-k*r))*(1+i*k*r)", "re(response)=re(answer)", True, [],
+                {
+                    "complexNumbers": True,
+                    "symbol_assumptions": "('k','real') ('r','real') ('omega','real') ('t','real') ('A','real')",
+                    'symbols': {
+                        'r': {'aliases': ['R'], 'latex': r'\(r\)'},
+                        'A': {'aliases': ['a'], 'latex': r'\(A\)'},
+                        'omega': {'aliases': ['OMEGA', 'Omega'], 'latex': r'\(\omega\)'},
+                        'k': {'aliases': ['K'], 'latex': r'\(k\)'},
+                        't': {'aliases': ['T'], 'latex': r'\(t\)'},
+                        'I': {'aliases': ['i'], 'latex': r'\(i\)'},
+                    }
+                }),
+            ("-A/r^2*(cos(omega*t-kr)+I*sin(omega*t-kr))*(1+Ikr)", "(-A/(r**2))*exp(I*(omega*t-k*r))*(1+I*k*r)", "re(response)=re(answer)", True, [],
+                {
+                    "complexNumbers": True,
+                    "symbol_assumptions": "('k','real') ('r','real') ('omega','real') ('t','real') ('A','real')",
+                    'symbols': {
+                        'r': {'aliases': ['R'], 'latex': r'\(r\)'},
+                        'A': {'aliases': ['a'], 'latex': r'\(A\)'},
+                        'omega': {'aliases': ['OMEGA', 'Omega'], 'latex': r'\(\omega\)'},
+                        'k': {'aliases': ['K'], 'latex': r'\(k\)'},
+                        't': {'aliases': ['T'], 'latex': r'\(t\)'},
+                        'I': {'aliases': ['i'], 'latex': r'\(i\)'},
+                    }
+                }),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):

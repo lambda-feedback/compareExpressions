@@ -222,6 +222,17 @@ def substitute_input_symbols(exprs, params):
 
     substitutions = [(expr, expr) for expr in params.get("reserved_keywords",[])]
 
+    if params.get("elementary_functions", False) is True:
+        alias_substitutions = []
+        for expr in exprs:
+            for (name, alias_list) in elementary_functions_names+special_symbols_names:
+                if name in expr:
+                    alias_substitutions += [(name, " "+name)]
+                for alias in alias_list:
+                    if alias in expr:
+                        alias_substitutions += [(alias, " "+name)]
+        substitutions += alias_substitutions
+
     input_symbols = params.get("symbols",dict())
 
     if "symbols" in params.keys():
@@ -497,12 +508,11 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
                         parse_expression function.
     '''
 
+    unsplittable_symbols = list(unsplittable_symbols)
     if "symbols" in params.keys():
-        to_keep = []
         for symbol in params["symbols"].keys():
             if len(symbol) > 1:
-                to_keep.append(symbol)
-        unsplittable_symbols += tuple(to_keep)
+                unsplittable_symbols.append(symbol)
 
     if params.get("specialFunctions", False) is True:
         from sympy import beta, gamma, zeta
@@ -512,6 +522,12 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         zeta = Symbol("zeta")
     if params.get("complexNumbers", False) is True:
         from sympy import I
+#        imaginary_constant_index = None
+#        for (k, symbol) in enumerate(unsplittable_symbols):
+#            if "I" == symbol[0]:
+#                imaginary_constant_index = k
+#        if imaginary_constant_index is not None:
+#            unsplittable_symbols = unsplittable_symbols[0:imaginary_constant_index]+unsplittable_symbols[imaginary_constant_index+1:]
     else:
         I = Symbol("I")
     if params.get("elementary_functions", False) is True:
@@ -535,10 +551,10 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "E": E
     }
 
-    for symbol in unsplittable_symbols:
-        symbol_dict.update({symbol: Symbol(symbol)})
+#    for symbol in unsplittable_symbols:
+#        symbol_dict.update({symbol: Symbol(symbol)})
 
-    symbol_dict.update(sympy_symbols(params.get("symbols", {})))
+    symbol_dict.update(sympy_symbols(unsplittable_symbols))
 
     strict_syntax = params.get("strict_syntax", True)
 
