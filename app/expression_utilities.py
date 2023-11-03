@@ -522,12 +522,6 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         zeta = Symbol("zeta")
     if params.get("complexNumbers", False) is True:
         from sympy import I
-#        imaginary_constant_index = None
-#        for (k, symbol) in enumerate(unsplittable_symbols):
-#            if "I" == symbol[0]:
-#                imaginary_constant_index = k
-#        if imaginary_constant_index is not None:
-#            unsplittable_symbols = unsplittable_symbols[0:imaginary_constant_index]+unsplittable_symbols[imaginary_constant_index+1:]
     else:
         I = Symbol("I")
     if params.get("elementary_functions", False) is True:
