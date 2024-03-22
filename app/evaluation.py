@@ -28,7 +28,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     for input_symbol in params.get("input_symbols",[]):
         input_symbols_reserved_words += [input_symbol[0]]+input_symbol[1]
 
-    reserved_keywords = ["response", "answer", "plus_minus", "minus_plus"]
+    reserved_keywords = ["response", "answer", "plus_minus", "minus_plus", "where"]
     reserved_keywords_collisions = []
     for keyword in reserved_keywords:
         if keyword in input_symbols_reserved_words:

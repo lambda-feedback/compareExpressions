@@ -11,7 +11,7 @@ from .expression_utilities import (
     latex_symbols,
 )
 
-from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_node, operate, join, group
+from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_node, operate, join, group, proceed, append_last
 
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
@@ -40,31 +40,41 @@ def generate_criteria_parser():
         (" *= *",        "EQUALITY"),
         ("\( *",         "START_DELIMITER"),
         (" *\)",         "END_DELIMITER"),
+        (" *; *",        "SEPARATOR"),
         ("response",     "EXPR"),
+        (" *where *",    "WHERE"),
         ("answer",       "EXPR"),
+        ("EQUAL",        "EQUAL"),
+        ("EQUALS",       "EQUALS"),
         ("EXPR",         "EXPR", catch_undefined),
     ]
     token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations.keys()]
 
     productions = [
-        ("START",    "BOOL", create_node),
-        ("BOOL",     "not(BOOL)", operate(1)),
-        ("BOOL",     "EXPR=EXPR", infix),
-        ("EXPR",     "-EXPR", join),
-        ("EXPR",     "EXPR-EXPR", infix),
-        ("EXPR",     "EXPR+EXPR", infix),
-        ("EXPR",     "EXPR*EXPR", infix),
-        ("EXPR",     "EXPREXPR", join),
-        ("EXPR",     "EXPR/EXPR", infix),
-        ("EXPR",     "(EXPR)", join),
+        ("START", "BOOL", create_node),
+        ("BOOL",  "not(BOOL)", operate(1)),
+        ("BOOL",  "EQUAL", proceed),
+        ("EQUAL",  "EQUAL where EQUAL", infix),
+        ("EQUAL",  "EQUAL where EQUALS", infix),
+        ("EQUALS", "EQUAL;EQUAL", infix),
+        ("EQUALS", "EQUALS;EQUAL", append_last),
+        ("EQUAL", "EXPR=EXPR", infix),
+        ("EXPR",  "-EXPR", join),
+        ("EXPR",  "EXPR-EXPR", infix),
+        ("EXPR",  "EXPR+EXPR", infix),
+        ("EXPR",  "EXPR*EXPR", infix),
+        ("EXPR",  "EXPREXPR", join),
+        ("EXPR",  "EXPR/EXPR", infix),
+        ("EXPR",  "(EXPR)", join),
     ]
 
     return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
 
-def check_criterion(criterion, parameters_dict,generate_feedback=True):
+def check_criterion(criterion, parameters_dict, generate_feedback=True):
     label = criterion.label.strip()
     parsing_params = parameters_dict["parsing_params"]
     reserved_expressions = parameters_dict["reserved_expressions"]
+    local_substitutions = parameters_dict.get("local_substitutions",[])
     reference_criteria_strings = parameters_dict["reference_criteria_strings"]
     eval_response = parameters_dict["eval_response"]
     parsing_params = {key: value for (key,value) in parameters_dict["parsing_params"].items()}
@@ -74,7 +84,7 @@ def check_criterion(criterion, parameters_dict,generate_feedback=True):
         lhs = criterion.children[0].content_string()
         rhs = criterion.children[1].content_string()
         criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
-        result = bool(criterion_expression.subs(reserved_expressions).cancel().simplify().simplify() == 0)
+        result = bool(criterion_expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
             if reference_tag in eval_response.get_tags():
                 continue
@@ -82,6 +92,19 @@ def check_criterion(criterion, parameters_dict,generate_feedback=True):
                 feedback = symbolic_comparison_criteria[reference_tag].feedback[result]([])
                 eval_response.add_feedback((reference_tag, feedback))
                 break
+    elif label == "WHERE":
+        crit = criterion.children[0]
+        subs = criterion.children[1]
+        local_subs = []
+        if subs.label == "EQUALITY":
+            subs = [subs]
+        elif subs.label == "SEPARATOR":
+            subs = subs.children
+        for sub in subs:
+            name = sub.children[0].content_string()
+            expr = parse_expression(sub.children[1].content_string(), parsing_params)
+            local_subs.append((name, expr))
+        result = check_criterion(crit, {**parameters_dict, **{"local_substitutions": local_subs}}, generate_feedback)
     elif label in criteria_operations.keys():
         result = criteria_operations[label](criterion.children, parameters_dict)
     return result
@@ -227,7 +250,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         raise Exception(f"SymPy was unable to parse the answer: {answer}.") from e
 
     criteria_parser = generate_criteria_parser()
-    parsing_params["unsplittable_symbols"] += ("response", "answer")
+    parsing_params["unsplittable_symbols"] += ("response", "answer", "where")
     reserved_expressions = [("response", res), ("answer", ans)]
     criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
     criteria_parsed = create_criteria_list(criteria_string, criteria_parser, parsing_params)
