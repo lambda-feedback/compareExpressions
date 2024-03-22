@@ -19,6 +19,9 @@ def catch_undefined(label, content, original, start, end):
 
 
 # Syntax tree building utilities
+def proceed(production, output, tag_handler):
+    return output
+
 def package(production, output, tag_handler):
     label = production[0].label
     handle = production[1]
@@ -35,6 +38,14 @@ def append(production, output, tag_handler):
     children = output[1-len(handle):]
     output = output[0:(1-len(handle))]
     output[-1].children += children
+    return output
+
+
+def append_last(production, output, tag_handler):
+    handle = production[1]
+    last = output[-1]
+    output = output[0:(1-len(handle))]
+    output[-1].children.append(last)
     return output
 
 

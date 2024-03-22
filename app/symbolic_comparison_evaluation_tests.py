@@ -1101,6 +1101,9 @@ class TestEvaluationFunction():
                         'I': {'aliases': ['i'], 'latex': r'\(i\)'},
                     }
                 }),
+            ("3", "x+1", "response=answer where x=2", True, [], {}),
+            ("6", "x+y+1", "response=answer where x=2; y=3", True, [], {}),
+            ("15", "x+y*z+1", "response=answer where x=2; y=3; z=4", True, [], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
