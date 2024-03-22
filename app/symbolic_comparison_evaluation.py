@@ -18,6 +18,7 @@ from .feedback.symbolic_comparison import internal as symbolic_comparison_intern
 from .feedback.symbolic_comparison import criteria as symbolic_comparison_criteria
 from .feedback.symbolic_comparison import equivalences as reference_criteria_strings
 
+from .criteria_graph_utilities import CriteriaGraph
 
 criteria_operations = {
     "not": lambda x, p: not check_criterion(x[0], p, generate_feedback=False),
@@ -108,6 +109,25 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
     elif label in criteria_operations.keys():
         result = criteria_operations[label](criterion.children, parameters_dict)
     return result
+
+def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
+    def evaluation_node_internal(response):
+        result = check_criterion(criterion, parameters_dict, generate_feedback)
+        label = criterion.content_string()
+        if result:
+            return {label+"_TRUE"}
+        else:
+            return {label+"_FALSE"}
+    label = criterion.content_string()
+    graph = CriteriaGraph(label)
+    END = CriteriaGraph.END
+    graph.add_node(END)
+    graph.add_evaluation_node(label, summary=label, details="Checks if "+label+" is true.", evaluate=evaluation_node_internal)
+    graph.attach(label, label+"_TRUE", summary="True", details=label+" is true.")
+    graph.attach(label+"_TRUE", END.label)
+    graph.attach(label, label+"_FALSE", summary="True", details=label+" is false.")
+    graph.attach(label+"_FALSE", END.label)
+    return graph
 
 def create_criteria_list(criteria_string, criteria_parser, parsing_params):
     criteria_string_list = []
@@ -286,8 +306,12 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "symbolic_comparison_criteria": symbolic_comparison_criteria,
         "eval_response": eval_response,
     }
+    criteria_feedback = set()
     for criterion in criteria_parsed:
-        is_correct = is_correct and check_criterion(criterion, parameters_dict)
+        main_criteria = criterion.content_string()+"_TRUE"
+        criteria_feedback = criteria_feedback.union(criterion_eval_node(criterion, parameters_dict).generate_feedback(response, main_criteria))
+        #is_correct = is_correct and check_criterion(criterion, parameters_dict)
+        is_correct = is_correct and main_criteria in criteria_feedback
     eval_response.is_correct = is_correct
 
     error_below_atol = None
