@@ -189,6 +189,16 @@ def criterion_where_node(criterion, parameters_dict, label=None):
             else:
                 return {label+"_FALSE"}
         return expression_check
+    expression_to_vary = None
+    if expression.children[0].content_string().strip() == "response":
+        expression_to_vary = expression.children[1]
+    elif expression.children[1].content_string().strip() == "response":
+        expression_to_vary = expression.children[1]
+    if "response" in expression_to_vary.content_string():
+        expression_to_vary = None
+    if expression_to_vary is not None:
+        expression_to_vary = parse_expression(expression_to_vary.content_string(), parsing_params)
+        expression_variations = []
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
     graph.add_node(END)
