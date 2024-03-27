@@ -74,7 +74,7 @@ def generate_criteria_parser():
 def check_criterion(criterion, parameters_dict, generate_feedback=True):
     label = criterion.label.strip()
     parsing_params = parameters_dict["parsing_params"]
-    reserved_expressions = parameters_dict["reserved_expressions"]
+    reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     local_substitutions = parameters_dict.get("local_substitutions",[])
     reference_criteria_strings = parameters_dict["reference_criteria_strings"]
     eval_response = parameters_dict["eval_response"]
@@ -82,10 +82,10 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
     parsing_params.update({"simplify": False})
     symbolic_comparison_criteria = parameters_dict["symbolic_comparison_criteria"]
     if label == "EQUALITY":
+        result = check_equality(criterion, parameters_dict)
         lhs = criterion.children[0].content_string()
         rhs = criterion.children[1].content_string()
         criterion_expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
-        result = bool(criterion_expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
             if reference_tag in eval_response.get_tags():
                 continue
@@ -110,8 +110,19 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
         result = criteria_operations[label](criterion.children, parameters_dict)
     return result
 
+def check_equality(criterion, parameters_dict):
+    reserved_expressions = list(parameters_dict["reserved_expressions"].items())
+    local_substitutions = parameters_dict.get("local_substitutions",[])
+    parsing_params = {key: value for (key,value) in parameters_dict["parsing_params"].items()}
+    parsing_params.update({"simplify": False})
+    lhs = criterion.children[0].content_string()
+    rhs = criterion.children[1].content_string()
+    expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
+    result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
+    return result
+
 def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
-    def evaluation_node_internal(response):
+    def evaluation_node_internal(unused_input):
         result = check_criterion(criterion, parameters_dict, generate_feedback)
         label = criterion.content_string()
         if result:
@@ -126,6 +137,65 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
     graph.attach(label, label+"_TRUE", summary="True", details=label+" is true.")
     graph.attach(label+"_TRUE", END.label)
     graph.attach(label, label+"_FALSE", summary="True", details=label+" is false.")
+    graph.attach(label+"_FALSE", END.label)
+    return graph
+
+def criterion_equality_node(criterion, parameters_dict, label=None):
+    if label is None:
+        label = criterion.content_string()
+    def evaluation_node_internal(unused_input):
+        result = check_equality(criterion, parameters_dict)
+        if result is True:
+            return {label+"_TRUE"}
+        else:
+            return {label+"_FALSE"}
+    graph = CriteriaGraph(label)
+    lhs = criterion.children[0].content_string()
+    rhs = criterion.children[1].content_string()
+    END = CriteriaGraph.END
+    graph.add_node(END)
+    graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=evaluation_node_internal)
+    graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
+    graph.attach(label+"_TRUE", END.label)
+    graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
+    graph.attach(label+"_FALSE", END.label)
+    return graph
+
+def criterion_where_node(criterion, parameters_dict, label=None):
+    parsing_params = parameters_dict["parsing_params"]
+    expression = criterion.children[0]
+    subs = criterion.children[1]
+    local_subs = []
+    if subs.label == "EQUALITY":
+        subs = [subs]
+    elif subs.label == "SEPARATOR":
+        subs = subs.children
+    for sub in subs:
+        name = sub.children[0].content_string()
+        expr = parse_expression(sub.children[1].content_string(), parsing_params)
+        local_subs.append((name, expr))
+    if label is None:
+        label = criterion.content_string()
+    local_parameters = {**parameters_dict}
+    if "local_substitutions" in local_parameters.keys():
+        local_parameters["local_substitutions"] += local_subs
+    else:
+        local_parameters.update({"local_substitutions": local_subs})
+    def create_expression_check(crit):
+        def expression_check(unused_input):
+            result = check_equality(crit, local_parameters)
+            if result is True:
+                return {label+"_TRUE"}
+            else:
+                return {label+"_FALSE"}
+        return expression_check
+    graph = CriteriaGraph(label)
+    END = CriteriaGraph.END
+    graph.add_node(END)
+    graph.add_evaluation_node(label, summary=label, details="Checks if "+str(expression)+" where "+str(subs)+".", evaluate=create_expression_check(expression))
+    graph.attach(label, label+"_TRUE", summary=str(expression)+" where "+str(subs), details=str(expression)+" where "+str(subs)+"is true.")
+    graph.attach(label+"_TRUE", END.label)
+    graph.attach(label, label+"_FALSE", summary="not "+str(expression), details=str(expression)+" is not true with"+str(subs)+".")
     graph.attach(label+"_FALSE", END.label)
     return graph
 
@@ -160,6 +230,21 @@ def create_criteria_list(criteria_string, criteria_parser, parsing_params):
             print(e)
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
     return criteria_parsed
+
+def create_criteria_graphs(criteria, params_dict):
+    criteria_graphs = {}
+    graph_templates = {
+        "EQUALITY": criterion_equality_node,
+        "WHERE": criterion_where_node
+    }
+
+    for criterion in criteria:
+        label = criterion.label.strip()
+        graph_template = graph_templates.get(label, criterion_eval_node)
+        graph = graph_template(criterion, params_dict)
+        criteria_graphs.update({criterion.content_string(): graph})
+    return criteria_graphs
+
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
@@ -271,7 +356,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     criteria_parser = generate_criteria_parser()
     parsing_params["unsplittable_symbols"] += ("response", "answer", "where")
-    reserved_expressions = [("response", res), ("answer", ans)]
+    reserved_expressions = {"response": res, "answer": ans}
     criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
     criteria_parsed = create_criteria_list(criteria_string, criteria_parser, parsing_params)
 
@@ -306,12 +391,23 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "symbolic_comparison_criteria": symbolic_comparison_criteria,
         "eval_response": eval_response,
     }
+    criteria_graphs = create_criteria_graphs(criteria_parsed, parameters_dict)
     criteria_feedback = set()
-    for criterion in criteria_parsed:
-        main_criteria = criterion.content_string()+"_TRUE"
-        criteria_feedback = criteria_feedback.union(criterion_eval_node(criterion, parameters_dict).generate_feedback(response, main_criteria))
+    #for criterion in criteria_parsed:
+    for (criterion_identifier, graph) in criteria_graphs.items():
+        main_criteria = criterion_identifier+"_TRUE"
+        criteria_feedback = criteria_feedback.union(graph.generate_feedback(response, main_criteria))
+        #criteria_feedback = criteria_feedback.union(criterion_eval_node(criterion, parameters_dict).generate_feedback(response, main_criteria))
         #is_correct = is_correct and check_criterion(criterion, parameters_dict)
         is_correct = is_correct and main_criteria in criteria_feedback
+        result = main_criteria in criteria_feedback
+        for (reference_tag, reference_strings) in reference_criteria_strings.items():
+            if reference_tag in eval_response.get_tags():
+                continue
+            if "".join(criterion_identifier.split()) in reference_strings:
+                feedback = symbolic_comparison_criteria[reference_tag].feedback[result]([])
+                eval_response.add_feedback((reference_tag, feedback))
+                break
     eval_response.is_correct = is_correct
 
     error_below_atol = None
