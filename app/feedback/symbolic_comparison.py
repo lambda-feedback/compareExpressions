@@ -14,12 +14,12 @@ criteria["RESPONSE_EQUAL_ANSWER"][True] = lambda inputs: "The response matches t
 criteria["RESPONSE_EQUAL_ANSWER"][False] = lambda inputs: "The response does not match the expected answer."
 
 criteria["RESPONSE_DOUBLE_ANSWER"] = Criterion("response=2*answer")
-equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["response/answer=2","2*answer=response","answer=response/2","answer-response/2","-answer+response/2","-2*answer+response","2*answer-response","-2+answer/response","-2+response/answer","answer-1*response/2","-answer+1*response/2","-2+1*answer/response","-2+1*response/answer"]})
+equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["response=2*answer","response/answer=2","2*answer=response","answer=response/2","answer-response/2","-answer+response/2","-2*answer+response","2*answer-response","-2+answer/response","-2+response/answer","answer-1*response/2","-answer+1*response/2","-2+1*answer/response","-2+1*response/answer"]})
 criteria["RESPONSE_DOUBLE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by 2."
 criteria["RESPONSE_DOUBLE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by 2."
 
 criteria["RESPONSE_NEGATIVE_ANSWER"] = Criterion("response=-answer")
-equivalences.update({"RESPONSE_NEGATIVE_ANSWER": ["answer=-response","answer+response=0","answer+response","answer/response=-1","response/answer+1"]})
+equivalences.update({"RESPONSE_NEGATIVE_ANSWER": ["response=-answer","answer=-response","answer+response=0","answer+response","answer/response=-1","response/answer+1"]})
 criteria["RESPONSE_NEGATIVE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by -1."
 criteria["RESPONSE_NEGATIVE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by -1."
 
