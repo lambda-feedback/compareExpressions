@@ -1,6 +1,7 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Abs, Equality, latex, pi, Symbol
+from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow
 from sympy.printing.latex import LatexPrinter
+from copy import deepcopy
 
 from .expression_utilities import (
     substitute_input_symbols,
@@ -161,6 +162,44 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     graph.attach(label+"_FALSE", END.label)
     return graph
 
+def find_coords_for_node_type(expression, node_type):
+    stack = [(expression, tuple() )]
+    node_coords = []
+    while len(stack) > 0:
+        (expr, coord) = stack.pop()
+        if isinstance(expr, node_type):
+            node_coords.append(coord)
+        for (k, arg) in enumerate(expr.args):
+            stack.append((arg, coord+(k,)))
+    return node_coords
+
+def replace_node_variations(expression, type_of_node, replacement_function):
+    variations = []
+    list_of_coords = find_coords_for_node_type(expression, type_of_node)
+    for coords in list_of_coords:
+        nodes = [expression]
+        for coord in coords:
+            nodes.append(nodes[-1].args[coord])
+        for k in range(0, len(nodes[-1].args)):
+            variation = replacement_function(nodes[-1], k)
+            for (node, coord) in reversed(list(zip(nodes, coords))):
+                new_args = node.args[0:coord]+(variation,)+node.args[coord+1:]
+                variation = type(node)(*new_args)
+            variations.append(variation)
+    return variations
+
+def one_addition_to_subtraction(expression):
+    def addition_to_subtraction(node, k):
+        return node - 2*node.args[k]
+    variations = replace_node_variations(expression, Add, addition_to_subtraction)
+    return variations
+
+def one_exponent_flip(expression):
+    def exponent_flip(node, k):
+        return node**(-1)
+    variations = replace_node_variations(expression, Pow, exponent_flip)
+    return variations
+
 def criterion_where_node(criterion, parameters_dict, label=None):
     parsing_params = parameters_dict["parsing_params"]
     expression = criterion.children[0]
@@ -189,6 +228,17 @@ def criterion_where_node(criterion, parameters_dict, label=None):
             else:
                 return {label+"_FALSE"}
         return expression_check
+
+    graph = CriteriaGraph(label)
+    END = CriteriaGraph.END
+    graph.add_node(END)
+    graph.add_evaluation_node(label, summary=label, details="Checks if "+str(expression)+" where "+str(subs)+".", evaluate=create_expression_check(expression))
+    graph.attach(label, label+"_TRUE", summary=str(expression)+" where "+str(subs), details=str(expression)+" where "+str(subs)+"is true.")
+    graph.attach(label+"_TRUE", END.label)
+    graph.attach(label, label+"_FALSE", summary="not "+str(expression), details=str(expression)+" is not true with"+str(subs)+".")
+
+    reserved_expressions = list(parameters_dict["reserved_expressions"].items())
+    response = parameters_dict["reserved_expressions"]["response"]
     expression_to_vary = None
     if expression.children[0].content_string().strip() == "response":
         expression_to_vary = expression.children[1]
@@ -197,16 +247,69 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     if "response" in expression_to_vary.content_string():
         expression_to_vary = None
     if expression_to_vary is not None:
-        expression_to_vary = parse_expression(expression_to_vary.content_string(), parsing_params)
-        expression_variations = []
-    graph = CriteriaGraph(label)
-    END = CriteriaGraph.END
-    graph.add_node(END)
-    graph.add_evaluation_node(label, summary=label, details="Checks if "+str(expression)+" where "+str(subs)+".", evaluate=create_expression_check(expression))
-    graph.attach(label, label+"_TRUE", summary=str(expression)+" where "+str(subs), details=str(expression)+" where "+str(subs)+"is true.")
-    graph.attach(label+"_TRUE", END.label)
-    graph.attach(label, label+"_FALSE", summary="not "+str(expression), details=str(expression)+" is not true with"+str(subs)+".")
-    graph.attach(label+"_FALSE", END.label)
+        response_value = response.subs(local_subs)
+        expression_to_vary = parse_expression(expression_to_vary.content_string(), parsing_params).subs(reserved_expressions)
+        variation_groups = {
+            "ONE_ADDITION_TO_SUBTRACTION": {
+                "variations": one_addition_to_subtraction(expression_to_vary),
+                "summary": lambda expression, variations: str(expression)+" is true if one addition is changed to a subtraction or vice versa.",
+                "details": lambda expression, variations: "The following expressions are checked: "+", ".join([str(e) for e in variations]),
+            },
+            "ONE_EXPONENT_FLIP": {
+                "variations": one_exponent_flip(expression_to_vary),
+                "summary": lambda expression, variations: str(expression)+" is true if one exponent has its sign changed.",
+                "details": lambda expression, variations: "The following expressions are checked: "+", ".join([str(e) for e in variations]),
+            }
+        }
+        values_and_expressions = {expression_to_vary.subs(local_subs): set([expression_to_vary])}
+        values_and_variations_group = {expression_to_vary.subs(local_subs): set(["UNDETECTABLE"])}
+        for (group_label, info) in variation_groups.items():
+            for variation in info["variations"]:
+                value = variation.subs(local_subs)
+                values_and_expressions.update({value: values_and_expressions.get(value, set()).union(set([variation]))})
+                if value == expression_to_vary.subs(local_subs):
+                    values_and_variations_group["UNDETECTABLE"].add(variation)
+                else:
+                    values_and_variations_group.update({value: values_and_variations_group.get(value, set()).union(set([group_label]))})
+        if len(values_and_expressions) > 1:
+            def identify_reason(unused_input):
+                reasons = {label+"_"+group_label for group_label in values_and_variations_group.get(response_value, {"UNKNOWN"})}
+                return reasons
+            graph.attach(label+"_FALSE", label+"_IDENTIFY_REASON", summary="Identify reason.", details="Attempt to identify why the response is incorrect.", evaluate=identify_reason)
+            graph.attach(label+"_IDENTIFY_REASON", label+"_UNKNOWN", summary="Unknown reason", details="No candidates for how the response was computed were found.")
+            graph.attach(label+"_UNKNOWN", END.label)
+
+            def get_candidates(unused_input):
+                candidates = set(["response candidates "+", ".join([str(e) for e in values_and_expressions[response_value]])])
+                return candidates
+            for (group_label, group_info) in variation_groups.items():
+                graph.attach(
+                    label+"_IDENTIFY_REASON",
+                    label+"_"+group_label,
+                    summary=group_info["summary"](expression_to_vary, group_info["variations"]),
+                    details=group_info["details"](expression_to_vary, group_info["variations"])
+                )
+                graph.attach(
+                    label+"_"+group_label,
+                    label+"_GET_CANDIDATES_"+group_label,
+                    summary="Get candidate responses that satisfy "+str(expression),
+                    details="Get candidate responses that satisfy "+str(expression), evaluate=get_candidates
+                )
+
+            for (value, expressions) in values_and_expressions.items():
+                expressions_string = ", ".join([str(e) for e in expressions])
+                for group_label in values_and_variations_group[value]:
+                    if group_label != "UNDETECTABLE":
+                        graph.attach(
+                            label+"_GET_CANDIDATES_"+group_label,
+                            "response candidates "+expressions_string,
+                            summary="Response candidates: "+expressions_string,
+                            details="Response candidates: "+expressions_string
+                        )
+                        graph.attach(
+                            "response candidates "+expressions_string,
+                            END.label
+                        )
     return graph
 
 def create_criteria_list(criteria_string, criteria_parser, parsing_params):
@@ -411,6 +514,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         #is_correct = is_correct and check_criterion(criterion, parameters_dict)
         is_correct = is_correct and main_criteria in criteria_feedback
         result = main_criteria in criteria_feedback
+        for item in criteria_feedback:
+            eval_response.add_feedback((item, item))
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
             if reference_tag in eval_response.get_tags():
                 continue

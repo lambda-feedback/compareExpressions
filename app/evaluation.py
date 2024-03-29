@@ -8,7 +8,6 @@ from .slr_quantity import quantity_comparison
 from .unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
 from .preview import preview_function
 
-
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
     Function that allows for various types of comparison of various kinds of expressions.
