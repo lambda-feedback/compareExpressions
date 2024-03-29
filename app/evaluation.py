@@ -7,7 +7,6 @@ from .symbolic_comparison_evaluation import evaluation_function as symbolic_comp
 from .slr_quantity import quantity_comparison
 from .unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
 from .preview import preview_function
-from sympy import Add
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
