@@ -396,15 +396,15 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         if params["multiple_answers_criteria"] == "all":
             is_correct = all(matches["responses"]) and all(matches["answers"])
             if is_correct is False:
-                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_ALL",symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ALL"]))
+                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_ALL", symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ALL"]))
         elif params["multiple_answers_criteria"] == "all_responses":
             is_correct = all(matches["responses"])
             if is_correct is False:
-                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_RESPONSE",symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_RESPONSE"]))
+                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_RESPONSE", symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_RESPONSE"]))
         elif params["multiple_answers_criteria"] == "all_answers":
             is_correct = all(matches["answers"])
             if is_correct is False:
-                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_RESPONSE",symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ANSWERS"]))
+                eval_response.add_feedback(("MULTIPLE_ANSWER_FAIL_RESPONSE", symbolic_comparison_internal_messages["MULTIPLE_ANSWER_FAIL_ANSWERS"]))
         else:
             raise SyntaxWarning(f"Unknown multiple_answers_criteria: {params['multiple_answers_critera']}")
         eval_response.is_correct = is_correct
@@ -515,7 +515,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         is_correct = is_correct and main_criteria in criteria_feedback
         result = main_criteria in criteria_feedback
         for item in criteria_feedback:
-            eval_response.add_feedback((item, item))
+            eval_response.add_feedback((item, ""))
         for (reference_tag, reference_strings) in reference_criteria_strings.items():
             if reference_tag in eval_response.get_tags():
                 continue
