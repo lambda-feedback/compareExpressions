@@ -25,7 +25,7 @@ class EvaluationResponse:
         self._feedback_tags
 
     def _serialise_feedback(self) -> str:
-        return "<br>".join(x[1] if isinstance(x, tuple) else x for x in self._feedback)
+        return "<br>".join(x[1] if (isinstance(x, tuple) and len(x[1].strip())) > 0 else x for x in self._feedback)
 
     def serialise(self, include_test_data=False) -> dict:
         out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback())
