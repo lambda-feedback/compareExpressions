@@ -178,7 +178,7 @@ class TestEvaluationFunction():
     def test_si_units_check_tag(self, ans, res, tag):
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         result = evaluation_function(res, ans, params, include_test_data=True)
-        assert tag in result["tags"].keys()
+        assert tag in result["tags"]
         assert result["is_correct"] is False
 
     def test_si_units_parse_error(self):
@@ -186,7 +186,7 @@ class TestEvaluationFunction():
         res = "-10.5 kg m/s^"
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         result = evaluation_function(res, ans, params, include_test_data=True)
-        assert "PARSE_EXCEPTION" in result["tags"].keys()
+        assert "PARSE_EXCEPTION" in result["tags"]
         assert result["is_correct"] is False
 
     @pytest.mark.parametrize(
@@ -210,7 +210,7 @@ class TestEvaluationFunction():
         ans = "-10.5 kilogram metre/second^2"
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         result = evaluation_function(res, ans, params, include_test_data=True)
-        assert tag in result["tags"].keys()
+        assert tag in result["tags"]
         assert result["is_correct"] is is_correct
 
     @pytest.mark.parametrize(
@@ -226,7 +226,7 @@ class TestEvaluationFunction():
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["response_latex"] == latex
-        assert tag in result["tags"].keys()
+        assert tag in result["tags"]
         assert result["is_correct"] == is_correct
 
 if __name__ == "__main__":

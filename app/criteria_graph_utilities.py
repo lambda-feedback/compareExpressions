@@ -21,10 +21,11 @@ class CriteriaGraph:
             return self.label == other.label and self.summary == other.summary and self.details == other.details
 
     class Evaluation(Node):
-        def __init__(self, label, summary, details, evaluate):
+        def __init__(self, label, summary, details, evaluate, replacement=None):
             super().__init__(label, summary, details)
             self.results = self.outgoing
             self.evaluate = evaluate
+            self.replacement = replacement
             return
 
     class Criterion(Node):
@@ -295,7 +296,7 @@ class CriteriaGraph:
 #        source.outgoing = source.outgoing[0:source_edge_index]+source.outgoing[source_edge_index+1:]
 #        target.incoming = target.incoming[0:target_edge_index]+target.incoming[target_edge_index+1:]
 #        return
-#
+
     def add_dependencies(self, source_label, dependencies):
         if source_label in self.evaluations.keys():
             if self.dependencies.get(source_label, None) is None:
@@ -396,37 +397,40 @@ class CriteriaGraph:
 #
 #        return
 
-#    def build_tree(self, starting_evaluation, return_node=RETURN, main_criteria=None):
-#        node = self.evaluations.get(starting_evaluation, None)
-#        if node is None:
-#            raise Exception(f"Unknown evaluation node {node.label}.")
-#        identifier = 0
-#        root_node = CriteriaGraph.Tree(node, identifier=identifier, main_criteria=main_criteria)
-#        stack = [(edge.target, root_node) for (k, edge) in enumerate(node.outgoing)]
-#        visited_nodes = [node.label]
-#        while len(stack) > 0:
-#            node, parent = stack.pop()
-#            if node.label in visited_nodes:
-#                parent.outgoing.append(CriteriaGraph.Tree(CriteriaGraph.Output("RETURN"+str(identifier), "Go to: "+node.label, "Reached a previously visited node."), parent=parent, identifier=identifier, main_criteria=main_criteria))
-#            else:
-#                tree_node = CriteriaGraph.Tree(node, parent=parent, identifier=identifier, main_criteria=main_criteria)
-#                parent.outgoing.append(tree_node)
-#                if not isinstance(node, CriteriaGraph.Output):
-#                    visited_nodes.append(node.label)
-#                stack += [(edge.target, tree_node) for (k, edge) in enumerate(node.outgoing)]
-#            identifier += 1
-#        return root_node
-#
-#    def trees(self, label):
-#        trees = [self.build_tree(start, main_criteria=[label]) for start in self.starting_evaluations(label)]
-#        return trees
-#
+    def build_tree(self, starting_evaluation, return_node=RETURN, main_criteria=None):
+        node = self.evaluations.get(starting_evaluation, None)
+        if node is None:
+            raise Exception(f"Unknown evaluation node {node.label}.")
+        identifier = 0
+        root_node = CriteriaGraph.Tree(node, identifier=identifier, main_criteria=main_criteria)
+        stack = [(edge.target, root_node) for (k, edge) in enumerate(node.outgoing)]
+        visited_nodes = [node.label]
+        while len(stack) > 0:
+            node, parent = stack.pop()
+            if node.label in visited_nodes:
+                parent.outgoing.append(CriteriaGraph.Tree(CriteriaGraph.Output("RETURN"+str(identifier), "Go to: "+node.label, "Reached a previously visited node."), parent=parent, identifier=identifier, main_criteria=main_criteria))
+            else:
+                tree_node = CriteriaGraph.Tree(node, parent=parent, identifier=identifier, main_criteria=main_criteria)
+                parent.outgoing.append(tree_node)
+                if not isinstance(node, CriteriaGraph.Output):
+                    visited_nodes.append(node.label)
+                stack += [(edge.target, tree_node) for (k, edge) in enumerate(node.outgoing)]
+            identifier += 1
+        return root_node
+
+    def trees(self, label):
+        trees = [self.build_tree(start, main_criteria=[label]) for start in self.starting_evaluations(label)]
+        return trees
+
     def generate_feedback(self, response, main_criteria):
         evaluations = set().union(self.starting_evaluations(main_criteria))
         visited_evaluations = set()
         feedback = set()
         while len(evaluations) > 0:
             e = evaluations.pop()
+            if e in self.evaluations.keys() and self.evaluations[e].replacement is not None:
+                visited_evaluations.update({e})
+                e = self.evaluations[e].replacement.label
             if e not in visited_evaluations and e in self.evaluations.keys():
                 visited_evaluations.update({e})
                 try:

@@ -4,6 +4,7 @@ class EvaluationResponse:
         self.latex = None
         self._feedback = [] # A list that will hold all feedback items
         self._feedback_tags = {}  # A dictionary that holds a list with indices to all feedback items with the same tag
+        self._criteria_graphs = {}
         self.latex = ""
         self.simplified = ""
 
@@ -24,13 +25,17 @@ class EvaluationResponse:
             raise TypeError("Feedback must be on the form (tag, feedback).")
         self._feedback_tags
 
+    def add_criteria_graph(self, name, graph):
+        self._criteria_graphs.update({name: graph.json()})
+
     def _serialise_feedback(self) -> str:
         return "<br>".join(x[1] if (isinstance(x, tuple) and len(x[1].strip())) > 0 else x for x in self._feedback)
 
     def serialise(self, include_test_data=False) -> dict:
         out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback())
+        out.update(dict(tags=self._feedback_tags))
         if include_test_data is True:
-            out.update(dict(tags=self._feedback_tags))
+            out.update(dict(criteria_graphs=self._criteria_graphs))
         if self.latex is not None:
             out.update(dict(response_latex=self.latex))
         if self.simplified is not None:

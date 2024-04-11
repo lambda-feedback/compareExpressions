@@ -1,5 +1,5 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow
+from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow, Mul
 from sympy.printing.latex import LatexPrinter
 from copy import deepcopy
 
@@ -155,10 +155,10 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     rhs = criterion.children[1].content_string()
     END = CriteriaGraph.END
     graph.add_node(END)
-    graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=evaluation_node_internal)
-    graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
+    graph.add_evaluation_node(label, summary=label, details="Checks if "+lhs+"="+rhs+".", evaluate=evaluation_node_internal)
+    graph.attach(label, label+"_TRUE", summary=lhs+"="+rhs, details=lhs+" is equal to "+rhs+".")
     graph.attach(label+"_TRUE", END.label)
-    graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
+    graph.attach(label, label+"_FALSE", summary=lhs+"=\\="+rhs, details=lhs+" is not equal to"+rhs+".")
     graph.attach(label+"_FALSE", END.label)
     return graph
 
@@ -192,6 +192,15 @@ def one_addition_to_subtraction(expression):
     def addition_to_subtraction(node, k):
         return node - 2*node.args[k]
     variations = replace_node_variations(expression, Add, addition_to_subtraction)
+    return variations
+
+def one_swap_addition_and_multiplication(expression):
+    def addition_to_multiplication(node, k):
+        return node - node.args[k-1] - node.args[k] + node.args[k-1] * node.args[k]
+    def multiplication_to_addition(node, k):
+        return node - 2*node.args[k]
+    variations = replace_node_variations(expression, Add, addition_to_multiplication)
+    variations += replace_node_variations(expression, Mul, addition_to_multiplication)
     return variations
 
 def one_exponent_flip(expression):
@@ -232,10 +241,10 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
     graph.add_node(END)
-    graph.add_evaluation_node(label, summary=label, details="Checks if "+str(expression)+" where "+str(subs)+".", evaluate=create_expression_check(expression))
-    graph.attach(label, label+"_TRUE", summary=str(expression)+" where "+str(subs), details=str(expression)+" where "+str(subs)+"is true.")
+    graph.add_evaluation_node(label, summary=label, details="Checks if "+expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+".", evaluate=create_expression_check(expression))
+    graph.attach(label, label+"_TRUE", summary=expression.content_string()+" where "+", ".join([s.content_string() for s in subs]), details=expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+"is true.")
     graph.attach(label+"_TRUE", END.label)
-    graph.attach(label, label+"_FALSE", summary="not "+str(expression), details=str(expression)+" is not true with"+str(subs)+".")
+    graph.attach(label, label+"_FALSE", summary="not "+expression.content_string(), details=expression.content_string()+" is not true when "+", ".join([s.content_string() for s in subs])+".")
 
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     response = parameters_dict["reserved_expressions"]["response"]
@@ -252,12 +261,17 @@ def criterion_where_node(criterion, parameters_dict, label=None):
         variation_groups = {
             "ONE_ADDITION_TO_SUBTRACTION": {
                 "variations": one_addition_to_subtraction(expression_to_vary),
-                "summary": lambda expression, variations: str(expression)+" is true if one addition is changed to a subtraction or vice versa.",
+                "summary": lambda expression, variations: criterion.children[0].content_string()+" if one addition is changed to a subtraction or vice versa.",
                 "details": lambda expression, variations: "The following expressions are checked: "+", ".join([str(e) for e in variations]),
             },
             "ONE_EXPONENT_FLIP": {
                 "variations": one_exponent_flip(expression_to_vary),
-                "summary": lambda expression, variations: str(expression)+" is true if one exponent has its sign changed.",
+                "summary": lambda expression, variations: criterion.children[0].content_string()+" is true if one exponent has its sign changed.",
+                "details": lambda expression, variations: "The following expressions are checked: "+", ".join([str(e) for e in variations]),
+            },
+            "ONE_SWAP_ADDITION_AND_MULTIPLICATION": {
+                "variations": one_swap_addition_and_multiplication(expression_to_vary),
+                "summary": lambda expression, variations: criterion.children[0].content_string()+" is true if one addition is replaced with a multiplication or vice versa.",
                 "details": lambda expression, variations: "The following expressions are checked: "+", ".join([str(e) for e in variations]),
             }
         }
@@ -292,8 +306,9 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                 graph.attach(
                     label+"_"+group_label,
                     label+"_GET_CANDIDATES_"+group_label,
-                    summary="Get candidate responses that satisfy "+str(expression),
-                    details="Get candidate responses that satisfy "+str(expression), evaluate=get_candidates
+                    summary="Get candidate responses that satisfy "+expression.content_string(),
+                    details="Get candidate responses that satisfy "+expression.content_string(),
+                    evaluate=get_candidates
                 )
 
             for (value, expressions) in values_and_expressions.items():
@@ -303,7 +318,7 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                         graph.attach(
                             label+"_GET_CANDIDATES_"+group_label,
                             "response candidates "+expressions_string,
-                            summary="Response candidates: "+expressions_string,
+                            summary="response = "+str(value),
                             details="Response candidates: "+expressions_string
                         )
                         graph.attach(
@@ -355,6 +370,9 @@ def create_criteria_graphs(criteria, params_dict):
         label = criterion.label.strip()
         graph_template = graph_templates.get(label, criterion_eval_node)
         graph = graph_template(criterion, params_dict)
+        for evaluation in graph.evaluations.values():
+            if evaluation.label in params_dict.get("disabled_evaluation_nodes", set()):
+                evaluation.replacement = CriteriaGraph.END
         criteria_graphs.update({criterion.content_string(): graph})
     return criteria_graphs
 
@@ -503,16 +521,15 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "reference_criteria_strings": reference_criteria_strings,
         "symbolic_comparison_criteria": symbolic_comparison_criteria,
         "eval_response": eval_response,
+        "disabled_evaluation_nodes": params.get("disabled_evaluation_nodes", set())
     }
     criteria_graphs = create_criteria_graphs(criteria_parsed, parameters_dict)
     criteria_feedback = set()
-    #for criterion in criteria_parsed:
     for (criterion_identifier, graph) in criteria_graphs.items():
         main_criteria = criterion_identifier+"_TRUE"
         criteria_feedback = criteria_feedback.union(graph.generate_feedback(response, main_criteria))
-        #criteria_feedback = criteria_feedback.union(criterion_eval_node(criterion, parameters_dict).generate_feedback(response, main_criteria))
-        #is_correct = is_correct and check_criterion(criterion, parameters_dict)
         is_correct = is_correct and main_criteria in criteria_feedback
+        eval_response.add_criteria_graph(criterion_identifier, graph.build_tree(criterion_identifier, main_criteria=main_criteria))
         result = main_criteria in criteria_feedback
         for item in criteria_feedback:
             eval_response.add_feedback((item, ""))
