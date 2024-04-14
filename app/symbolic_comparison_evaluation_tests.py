@@ -1124,7 +1124,7 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params",
         [
-            ("8", "x+y*z**2-1", "response=answer where x=4; y=3; z=2", False, ["response=answer where x=4; y=3_GET_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response=answer where x=4; y=3_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response candidates -x + y*z**2"], {}),
+            ("8", "x+y*z**2-1", "response=answer where x=4; y=3; z=2", False, ["response=answer where x=4; y=3; z=2_GET_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response=answer where x=4; y=3; z=2_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response candidates -x + y*z**2"], {}),
         ]
     )
     def test_disabled_evaluation_nodes(self, response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params):
@@ -1138,9 +1138,9 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is value
         for feedback_tag in expected_feedback_tags:
-            assert feedback_tag in list(result["tags"].keys())
+            assert feedback_tag in result["tags"]
         for feedback_tag in disabled_feedback_tags:
-            assert feedback_tag not in list(result["tags"].keys())
+            assert feedback_tag not in result["tags"]
 
     @pytest.mark.parametrize(
         "response, answer, value",

@@ -33,7 +33,7 @@ class EvaluationResponse:
 
     def serialise(self, include_test_data=False) -> dict:
         out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback())
-        out.update(dict(tags=self._feedback_tags))
+        out.update(dict(tags=list(self._feedback_tags.keys())))
         if include_test_data is True:
             out.update(dict(criteria_graphs=self._criteria_graphs))
         if self.latex is not None:

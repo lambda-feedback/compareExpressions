@@ -529,7 +529,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         main_criteria = criterion_identifier+"_TRUE"
         criteria_feedback = criteria_feedback.union(graph.generate_feedback(response, main_criteria))
         is_correct = is_correct and main_criteria in criteria_feedback
-        eval_response.add_criteria_graph(criterion_identifier, graph.build_tree(criterion_identifier, main_criteria=main_criteria))
+        eval_response.add_criteria_graph(criterion_identifier, graph)
         result = main_criteria in criteria_feedback
         for item in criteria_feedback:
             eval_response.add_feedback((item, ""))
