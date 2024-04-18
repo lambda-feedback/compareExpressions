@@ -235,7 +235,10 @@ def traverse_postfix(expr_node, action):
 
 
 def traverse_infix(expr_node, action):
-    return [(False, expr_node.children[0])]+[(True, action(expr_node))]+[(False, expr_node.children[1])]
+    out = []
+    for x in expr_node.children[0:-1]:
+        out += [(False, x), (True, action(expr_node))]
+    return out+[(False, expr_node.children[-1])]
 
 
 def traverse_group(expr_node, action):

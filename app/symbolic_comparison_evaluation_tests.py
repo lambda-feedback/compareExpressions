@@ -1104,7 +1104,7 @@ class TestEvaluationFunction():
             ("3", "x+1", "response=answer where x=2", True, ["response=answer where x=2_TRUE"], {}),
             ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response candidates x - 1"], {}),
             ("5/3", "x/y+1", "response=answer where x=2; y=3", True, ["response=answer where x=2; y=3_TRUE"], {}),
-            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}), #NOTE: Sympy reporesents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
+            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}), #NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
         ]
@@ -1120,6 +1120,27 @@ class TestEvaluationFunction():
         assert result["is_correct"] is value
         for feedback_tag in feedback_tags:
             assert feedback_tag in result["tags"]
+
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params",
+        [
+            ("8", "x+y*z**2-1", "response=answer where x=4; y=3; z=2", False, ["response=answer where x=4; y=3; z=2_GET_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response=answer where x=4; y=3; z=2_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response candidates -x + y*z**2"], {}),
+        ]
+    )
+    def test_disabled_evaluation_nodes(self, response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+            "disabled_evaluation_nodes": disabled_evaluation_nodes
+        }
+        params.update(additional_params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        for feedback_tag in expected_feedback_tags:
+            assert feedback_tag in result["tags"]
+        for feedback_tag in disabled_feedback_tags:
+            assert feedback_tag not in result["tags"]
 
     @pytest.mark.parametrize(
         "response, answer, value",
