@@ -1104,7 +1104,7 @@ class TestEvaluationFunction():
             ("3", "x+1", "response=answer where x=2", True, ["response=answer where x=2_TRUE"], {}),
             ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response candidates x - 1"], {}),
             ("5/3", "x/y+1", "response=answer where x=2; y=3", True, ["response=answer where x=2; y=3_TRUE"], {}),
-            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}), #NOTE: Sympy reporesents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
+            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}), #NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
         ]
