@@ -2,6 +2,7 @@ from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow
 from sympy.printing.latex import LatexPrinter
 from copy import deepcopy
+import re
 
 from .expression_utilities import (
     substitute_input_symbols,
@@ -144,22 +145,42 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
 def criterion_equality_node(criterion, parameters_dict, label=None):
     if label is None:
         label = criterion.content_string()
-    def evaluation_node_internal(unused_input):
+    def mathematical_equivalence(unused_input):
         result = check_equality(criterion, parameters_dict)
         if result is True:
             return {label+"_TRUE"}
         else:
             return {label+"_FALSE"}
     graph = CriteriaGraph(label)
-    lhs = criterion.children[0].content_string()
-    rhs = criterion.children[1].content_string()
     END = CriteriaGraph.END
     graph.add_node(END)
-    graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=evaluation_node_internal)
-    graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
-    graph.attach(label+"_TRUE", END.label)
-    graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
-    graph.attach(label+"_FALSE", END.label)
+    lhs = criterion.children[0].content_string()
+    rhs = criterion.children[1].content_string()
+    def syntactical_equivalence(unused_input):
+        result = parameters_dict["original_input"]["answer"] == parameters_dict["original_input"]["response"]
+        if result is True:
+            return {label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE"}
+        else:
+            return {label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE"}
+    def is_number(string):
+        match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
+        return match_content is not None and len(match_content.group(0)) > 0
+    if (lhs == "response" and rhs == "answer" and is_number(parameters_dict["original_input"]["answer"])) or (rhs == "response" and lhs == "answer" and is_number(parameters_dict["original_input"]["answer"])):
+        graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=mathematical_equivalence)
+        graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
+        graph.attach(label+"_TRUE", label+"_SYNTACTICAL_EQUIVALENCE", summary="response is written like answer", details="Checks if "+str(lhs)+" is written exactly the same as "+str(rhs)+".", evaluate=syntactical_equivalence)
+        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE", label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE", summary="response is written like answer", details=""+str(lhs)+" is written exactly the same as "+str(rhs)+".")
+        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE", END.label)
+        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE", label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", summary="response is not written like answer", details=""+str(lhs)+" is not written exactly the same as "+str(rhs)+".")
+        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
+        graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
+        graph.attach(label+"_FALSE", END.label)
+    else:
+        graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=mathematical_equivalence)
+        graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
+        graph.attach(label+"_TRUE", END.label)
+        graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
+        graph.attach(label+"_FALSE", END.label)
     return graph
 
 def find_coords_for_node_type(expression, node_type):
@@ -503,6 +524,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "reference_criteria_strings": reference_criteria_strings,
         "symbolic_comparison_criteria": symbolic_comparison_criteria,
         "eval_response": eval_response,
+        "original_input": {"answer": answer, "response": response},
     }
     criteria_graphs = create_criteria_graphs(criteria_parsed, parameters_dict)
     criteria_feedback = set()
@@ -510,8 +532,6 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     for (criterion_identifier, graph) in criteria_graphs.items():
         main_criteria = criterion_identifier+"_TRUE"
         criteria_feedback = criteria_feedback.union(graph.generate_feedback(response, main_criteria))
-        #criteria_feedback = criteria_feedback.union(criterion_eval_node(criterion, parameters_dict).generate_feedback(response, main_criteria))
-        #is_correct = is_correct and check_criterion(criterion, parameters_dict)
         is_correct = is_correct and main_criteria in criteria_feedback
         result = main_criteria in criteria_feedback
         for item in criteria_feedback:
