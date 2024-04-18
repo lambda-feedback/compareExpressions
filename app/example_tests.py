@@ -121,7 +121,7 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert preview["latex"] == response_latex
         assert result["response_latex"] == response_latex
-        assert tags == {tag for (tag, feedback) in result["tags"].items() if len(feedback) > 0}
+        assert tags == set(result["tags"])
         assert result["is_correct"] == value
 
     @pytest.mark.parametrize(
