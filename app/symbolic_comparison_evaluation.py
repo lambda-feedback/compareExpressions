@@ -162,6 +162,23 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             return {label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE"}
         else:
             return {label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE"}
+    def same_symbols(unused_input):
+        local_substitutions = parameters_dict.get("local_substitutions",[])
+        reserved_expressions = list(parameters_dict["reserved_expressions"].items())
+        parsing_params = {key: value for (key,value) in parameters_dict["parsing_params"].items()}
+        parsing_params.update({"simplify": False})
+        for k, item in enumerate(reserved_expressions):
+            if item[0] == "answer":
+                reserved_expressions[k] = ("answer", parameters_dict["reserved_expressions"]["answer_original"])
+            elif item[0] == "response":
+                reserved_expressions[k] = ("response", parameters_dict["reserved_expressions"]["response_original"])
+        lsym = parse_expression(lhs, parsing_params).subs(reserved_expressions).subs(local_substitutions)
+        rsym = parse_expression(rhs, parsing_params).subs(reserved_expressions).subs(local_substitutions)
+        result = lsym.free_symbols == rsym.free_symbols
+        if result is True:
+            return {label+"_SAME_SYMBOLS"+"_TRUE"}
+        else:
+            return {label+"_SAME_SYMBOLS"+"_FALSE"}
     def is_number(string):
         match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
         return match_content is not None and len(match_content.group(0)) > 0
@@ -173,12 +190,21 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE", END.label)
         graph.attach(label+"_SYNTACTICAL_EQUIVALENCE", label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", summary="response is not written like answer", details=""+str(lhs)+" is not written exactly the same as "+str(rhs)+".")
         graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
+        graph.attach(label+"_TRUE", label+"_SAME_SYMBOLS", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".", evaluate=same_symbols)
+        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_TRUE", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".")
+        graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
+        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_FALSE", summary=str(lhs)+" does not have the same symbols as "+str(rhs), details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".")
+        graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
         graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
         graph.attach(label+"_FALSE", END.label)
     else:
         graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=mathematical_equivalence)
         graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
-        graph.attach(label+"_TRUE", END.label)
+        graph.attach(label+"_TRUE", label+"_SAME_SYMBOLS", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".", evaluate=same_symbols)
+        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_TRUE", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".")
+        graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
+        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_FALSE", summary=str(lhs)+" does not have the same symbols as "+str(rhs), details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".")
+        graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
         graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
         graph.attach(label+"_FALSE", END.label)
     return graph
@@ -494,8 +520,11 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
             eval_response.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages["NOTATION_WARNING_FACTORIAL"]))
 
     # Safely try to parse answer and response into symbolic expressions
+    parsing_params_original = {**parsing_params}
+    parsing_params_original.update({"rationalise": False, "simplify": False})
     try:
         res = parse_expression(response, parsing_params)
+        res_original = parse_expression(response, parsing_params_original)
     except Exception as e:
         eval_response.is_correct = False
         eval_response.add_feedback(("PARSE_ERROR", symbolic_comparison_internal_messages["PARSE_ERROR"](response)))
@@ -503,12 +532,18 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     try:
         ans = parse_expression(answer, parsing_params)
+        ans_original = parse_expression(answer, parsing_params_original)
     except Exception as e:
         raise Exception(f"SymPy was unable to parse the answer: {answer}.") from e
 
     criteria_parser = generate_criteria_parser()
     parsing_params["unsplittable_symbols"] += ("response", "answer", "where")
-    reserved_expressions = {"response": res, "answer": ans}
+    reserved_expressions = {
+        "response": res,
+        "answer": ans,
+        "response_original": res_original,
+        "answer_original": ans_original,
+    }
     criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
     criteria_parsed = create_criteria_list(criteria_string, criteria_parser, parsing_params)
 
