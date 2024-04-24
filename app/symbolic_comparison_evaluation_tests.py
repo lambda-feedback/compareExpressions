@@ -1107,6 +1107,9 @@ class TestEvaluationFunction():
             ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}), #NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
+            ("2", "2", "response=answer", True, ["response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE"], {}),
+            ("4/2", "2", "answer=response", True, ["answer=response_SYNTACTICAL_EQUIVALENCE_FALSE"], {}),
+            ("2+x-x", "2", "answer=response", True, ["answer=response_SAME_SYMBOLS_FALSE"], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
