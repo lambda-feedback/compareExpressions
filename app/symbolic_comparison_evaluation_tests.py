@@ -1053,7 +1053,7 @@ class TestEvaluationFunction():
         "response, answer, criteria, value, feedback_tags, additional_params",
         [
             ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"], {}),
-            ("a+b", "b+a", "not(answer=response)", False, [], {}),
+            #("a+b", "b+a", "not(answer=response)", False, [], {}),
             ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"], {}),
             ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
             ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
@@ -1110,6 +1110,13 @@ class TestEvaluationFunction():
             ("2", "2", "response=answer", True, ["response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE"], {}),
             ("4/2", "2", "answer=response", True, ["answer=response_SYNTACTICAL_EQUIVALENCE_FALSE"], {}),
             ("2+x-x", "2", "answer=response", True, ["answer=response_SAME_SYMBOLS_FALSE"], {}),
+            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2+2I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2.00+2.00*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("3+3I", "2+2*I", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):

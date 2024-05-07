@@ -25,6 +25,13 @@ class EvaluationResponse:
             raise TypeError("Feedback must be on the form (tag, feedback).")
         self._feedback_tags
 
+    def add_feedback_from_tags(self, tags, graph, inputs):
+        for (tag, data) in zip(tags, inputs):
+            if tag not in self._feedback_tags.keys():
+                feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
+                if feedback_string is not None:
+                    self.add_feedback((tag, feedback_string))
+
     def add_criteria_graph(self, name, graph):
         self._criteria_graphs.update({name: graph.json()})
 

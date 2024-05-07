@@ -29,9 +29,10 @@ class CriteriaGraph:
             return
 
     class Criterion(Node):
-        def __init__(self, label, summary, details, tags=None):
+        def __init__(self, label, summary, details, tags=None, feedback_string_generator=lambda x: None):
             super().__init__(label, summary, details)
             self.consequences = self.outgoing
+            self.feedback_string_generator = feedback_string_generator
             if tags is None:
                 self.tags = set()
             else:
@@ -193,7 +194,9 @@ class CriteriaGraph:
             output.append(" -.-> ".join(sufficiency))
         return "\n\t".join(output)
 
-    def add_evaluation_node(self, label, summary, details, sufficiencies=None, evaluate=None):
+    def add_evaluation_node(self, label, summary, details, sufficiencies=None, evaluate=None, feedback_string_generator=None):
+        if feedback_string_generator is not None:
+            raise Exception(f"{label} is an evaluation node, evaluation nodes cannot generate feedback strings.")
         if label in self.evaluations.keys():
             raise Exception(f"Evaluation node {label} is already defined.")
         else:
@@ -202,12 +205,12 @@ class CriteriaGraph:
             self.sufficiencies.update({label: sufficiencies})
         return node
 
-    def add_criterion_node(self, label, summary, details, sufficiencies=None, evaluate=None):
+    def add_criterion_node(self, label, summary, details, sufficiencies=None, evaluate=None, feedback_string_generator=None):
         if label in self.criteria.keys():
             raise Exception(f"Criterion node {label} is already defined.")
         if sufficiencies is not None:
             raise Exception(f"Criterion nodes cannot have sufficiencies.")
-        node = CriteriaGraph.Criterion(label, summary, details)
+        node = CriteriaGraph.Criterion(label, summary, details, feedback_string_generator)
         self.criteria.update({label: node})
         self.sufficiencies.update({label: sufficiencies})
         return node
@@ -230,7 +233,7 @@ class CriteriaGraph:
         else:
             raise Exception("Can only add evaluation, criterion or output nodes to criteria graph.")
 
-    def attach(self, source_label, target_label, summary=None, details=None, sufficiencies=None, evaluate=None):
+    def attach(self, source_label, target_label, summary=None, details=None, sufficiencies=None, evaluate=None, feedback_string_generator=None):
         source = self.evaluations.get(source_label, None)
         if source is None:
             source = self.criteria.get(source_label, None)
