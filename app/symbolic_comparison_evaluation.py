@@ -201,39 +201,14 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
         return match_content is not None and len(match_content.group(0)) > 0
 
-    def split_on_numbers(string):
-        string = "".join(string.split())
-        split_string = []
-        i = 0
-        j = i
-        while j < len(string):
-            m = re.match('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string[j:])
-            if m is not None:
-                split_string.append(string[i:j])
-                split_string.append(m.group())
-                i = j+len(m.group())
-                j = i+1
-            else:
-                j += 1
-            if j == len(string):
-                split_string.append(string[i:j])
-        split_string = [e for e in split_string if len(e) > 0]
-        return split_string
-
     def is_complex_number_on_cartesian_form(string):
-        split_string = split_on_numbers(string)
-        result = False
-        if len(split_string) == 4:
-            result = True
-            result = result and is_number(split_string[0])
-            result = result and split_string[1] == "+"
-            result = result and is_number(split_string[2])
-            result = result and re.fullmatch("\*?I", split_string[3])
+        string = "".join(string.split())
+        result = re.fullmatch(is_number_regex+"?\+?"+is_number_regex+"?\*?I?", string)
         return result
 
     def is_complex_number_on_exponential_form(string):
         string = "".join(string.split())
-        result = re.fullmatch(is_number_regex+"\**(E\^|exp)\(?"+is_number_regex+"*\*?I\)?", string)
+        result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"*\*?I\)?", string)
         return result is not None
 
     def response_and_answer_on_same_form(unused_input):
