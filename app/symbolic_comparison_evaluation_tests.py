@@ -1117,6 +1117,7 @@ class TestEvaluationFunction():
             ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
             ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
             ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2*e^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):

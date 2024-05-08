@@ -195,11 +195,13 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         else:
             return {label+"_SAME_SYMBOLS"+"_FALSE"}
 
+    is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
+
     def is_number(string):
         match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
         return match_content is not None and len(match_content.group(0)) > 0
 
-    def is_complex_number_on_cartesian_form(string):
+    def split_on_numbers(string):
         string = "".join(string.split())
         split_string = []
         i = 0
@@ -216,20 +218,31 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             if j == len(string):
                 split_string.append(string[i:j])
         split_string = [e for e in split_string if len(e) > 0]
+        return split_string
+
+    def is_complex_number_on_cartesian_form(string):
+        split_string = split_on_numbers(string)
         result = False
         if len(split_string) == 4:
             result = True
             result = result and is_number(split_string[0])
             result = result and split_string[1] == "+"
             result = result and is_number(split_string[2])
-            result = result and re.fullmatch("\**I", split_string[3])
+            result = result and re.fullmatch("\*?I", split_string[3])
         return result
+
+    def is_complex_number_on_exponential_form(string):
+        string = "".join(string.split())
+        result = re.fullmatch(is_number_regex+"\**(E\^|exp)\(?"+is_number_regex+"*\*?I\)?", string)
+        return result is not None
 
     def response_and_answer_on_same_form(unused_input):
         local_answer = parameters_dict["original_input"]["answer"]
         local_response = parameters_dict["original_input"]["response"]
         if is_complex_number_on_cartesian_form(local_answer) and is_complex_number_on_cartesian_form(local_response):
             return {label+"_SAME_FORM"+"_CARTESIAN"}
+        elif is_complex_number_on_exponential_form(local_answer) and is_complex_number_on_exponential_form(local_response):
+            return {label+"_SAME_FORM"+"_EXPONENTIAL"}
         else:
             return {label+"_SAME_FORM"+"_UNKNOWN"}
 
@@ -280,65 +293,76 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
     )
 
-    if (lhs == "response" and rhs == "answer" and is_number(parameters_dict["original_input"]["answer"])) or\
-       (rhs == "response" and lhs == "answer" and is_number(parameters_dict["original_input"]["answer"])) or\
-       (rhs == "response" and lhs == "answer" and is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"])) or\
-       (rhs == "response" and lhs == "answer" and is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"])):
-        graph.attach(
-            label+"_TRUE",
-            label+"_SYNTACTICAL_EQUIVALENCE",
-            summary="response is written like answer",
-            details="Checks if "+str(lhs)+" is written exactly the same as "+str(rhs)+".",
-            evaluate=syntactical_equivalence
-        )
-        graph.attach(
-            label+"_SYNTACTICAL_EQUIVALENCE",
-            label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
-            summary="response is written like answer",
-            details=""+str(lhs)+" is written exactly the same as "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("TRUE")
-        )
-        graph.attach(
-            label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
-            END.label
-        )
-        graph.attach(
-            label+"_SYNTACTICAL_EQUIVALENCE",
-            label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE",
-            summary="response is not written like answer", details=""+str(lhs)+" is not written exactly the same as "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
-        )
-        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
+    if set([lhs, rhs]) == set(["response", "answer"]):
+        if is_number(parameters_dict["original_input"]["answer"]) or\
+            is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"]) or\
+            is_complex_number_on_exponential_form(parameters_dict["original_input"]["answer"]):
 
-        graph.attach(
-            label+"_TRUE",
-            label+"_SAME_FORM",
-            summary=str(lhs)+" is written in the same form as "+str(rhs),
-            details=str(lhs)+" is written in the same form as "+str(rhs)+".",
-            evaluate=response_and_answer_on_same_form
-        )
+            graph.attach(
+                label+"_TRUE",
+                label+"_SYNTACTICAL_EQUIVALENCE",
+                summary="response is written like answer",
+                details="Checks if "+str(lhs)+" is written exactly the same as "+str(rhs)+".",
+                evaluate=syntactical_equivalence
+            )
+            graph.attach(
+                label+"_SYNTACTICAL_EQUIVALENCE",
+                label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
+                summary="response is written like answer",
+                details=""+str(lhs)+" is written exactly the same as "+str(rhs)+".",
+                feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("TRUE")
+            )
+            graph.attach(
+                label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
+                END.label
+            )
+            graph.attach(
+                label+"_SYNTACTICAL_EQUIVALENCE",
+                label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE",
+                summary="response is not written like answer", details=""+str(lhs)+" is not written exactly the same as "+str(rhs)+".",
+                feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
+            )
+            graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
 
-        if is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"]):
+            graph.attach(
+                label+"_TRUE",
+                label+"_SAME_FORM",
+                summary=str(lhs)+" is written in the same form as "+str(rhs),
+                details=str(lhs)+" is written in the same form as "+str(rhs)+".",
+                evaluate=response_and_answer_on_same_form
+            )
+
+            if is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"]):
+                graph.attach(
+                    label+"_SAME_FORM",
+                    label+"_SAME_FORM"+"_CARTESIAN",
+                    summary=str(lhs)+" and "+str(rhs)+" are both complex numbers written on cartesian form",
+                    details=str(lhs)+" and "+str(rhs)+" are both complex numbers written on cartesian form."
+                    #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
+                )
+                graph.attach(label+"_SAME_FORM"+"_CARTESIAN", END.label)
+
+            if is_complex_number_on_exponential_form(parameters_dict["original_input"]["answer"]):
+                graph.attach(
+                    label+"_SAME_FORM",
+                    label+"_SAME_FORM"+"_EXPONENTIAL",
+                    summary=str(lhs)+" and "+str(rhs)+" are both complex numbers written on exponential form",
+                    details=str(lhs)+" and "+str(rhs)+" are both complex numbers written on exponential form."
+                    #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
+                )
+                graph.attach(label+"_SAME_FORM"+"_EXPONENTIAL", END.label)
+
             graph.attach(
                 label+"_SAME_FORM",
-                label+"_SAME_FORM"+"_CARTESIAN",
-                summary=str(lhs)+" and "+str(rhs)+" are both complex numbers written in cartesian form",
-                details=str(lhs)+" and "+str(rhs)+" are both complex numbers written in cartesian form."
-                #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
+                label+"_SAME_FORM"+"_UNKNOWN",
+                summary="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form",
+                details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form."
+                #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
             )
-            graph.attach(label+"_SAME_FORM"+"_CARTESIAN", END.label)
 
-        graph.attach(
-            label+"_SAME_FORM",
-            label+"_SAME_FORM"+"_UNKNOWN",
-            summary="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form",
-            details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form."
-            #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
-        )
+            graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)
 
-        graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)
-
-        graph.attach(label+"_FALSE", label+"_SAME_FORM")
+            graph.attach(label+"_FALSE", label+"_SAME_FORM")
     else:
         graph.attach(label+"_FALSE", END.label)
     return graph
