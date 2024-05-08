@@ -233,23 +233,57 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         else:
             return {label+"_SAME_FORM"+"_UNKNOWN"}
 
+    # Check for mathematical equivalence
+    graph.add_evaluation_node(
+        label,
+        summary=label,
+        details="Checks if "+str(lhs)+"="+str(rhs)+".",
+        evaluate=mathematical_equivalence
+    )
+    graph.attach(
+        label,
+        label+"_TRUE",
+        summary=str(lhs)+"="+str(rhs),
+        details=str(lhs)+" is equal to "+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["response=answer"]("TRUE")
+    )
+
+    graph.attach(
+        label+"_TRUE",
+        label+"_SAME_SYMBOLS",
+        summary=str(lhs)+" has the same symbols as "+str(rhs),
+        details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
+        evaluate=same_symbols
+    )
+    graph.attach(
+        label+"_SAME_SYMBOLS",
+        label+"_SAME_SYMBOLS"+"_TRUE",
+        summary=str(lhs)+" has the same symbols as "+str(rhs),
+        details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
+    )
+    graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
+    graph.attach(
+        label+"_SAME_SYMBOLS",
+        label+"_SAME_SYMBOLS"+"_FALSE",
+        summary=str(lhs)+" does not have the same symbols as "+str(rhs),
+        details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
+    )
+    graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
+
+    graph.attach(
+        label,
+        label+"_FALSE",
+        summary=str(lhs)+"=\\="+str(rhs),
+        details=str(lhs)+" is not equal to"+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
+    )
+
     if (lhs == "response" and rhs == "answer" and is_number(parameters_dict["original_input"]["answer"])) or\
        (rhs == "response" and lhs == "answer" and is_number(parameters_dict["original_input"]["answer"])) or\
        (rhs == "response" and lhs == "answer" and is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"])) or\
        (rhs == "response" and lhs == "answer" and is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"])):
-        graph.add_evaluation_node(
-            label,
-            summary=label,
-            details="Checks if "+str(lhs)+"="+str(rhs)+".",
-            evaluate=mathematical_equivalence
-        )
-        graph.attach(
-            label,
-            label+"_TRUE",
-            summary=str(lhs)+"="+str(rhs),
-            details=str(lhs)+" is equal to "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["response=answer"]("TRUE")
-        )
         graph.attach(
             label+"_TRUE",
             label+"_SYNTACTICAL_EQUIVALENCE",
@@ -275,29 +309,6 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
         )
         graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
-        graph.attach(
-            label+"_TRUE",
-            label+"_SAME_SYMBOLS",
-            summary=str(lhs)+" has the same symbols as "+str(rhs),
-            details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
-            evaluate=same_symbols
-        )
-        graph.attach(
-            label+"_SAME_SYMBOLS",
-            label+"_SAME_SYMBOLS"+"_TRUE",
-            summary=str(lhs)+" has the same symbols as "+str(rhs),
-            details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
-        )
-        graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
-        graph.attach(
-            label+"_SAME_SYMBOLS",
-            label+"_SAME_SYMBOLS"+"_FALSE",
-            summary=str(lhs)+" does not have the same symbols as "+str(rhs),
-            details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
-        )
-        graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
 
         graph.attach(
             label+"_TRUE",
@@ -306,14 +317,17 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             details=str(lhs)+" is written in the same form as "+str(rhs)+".",
             evaluate=response_and_answer_on_same_form
         )
-        graph.attach(
-            label+"_SAME_FORM",
-            label+"_SAME_FORM"+"_CARTESIAN",
-            summary=str(lhs)+" and "+str(rhs)+" are both complex numbers written in cartesian form",
-            details=str(lhs)+" and "+str(rhs)+" are both complex numbers written in cartesian form."
-            #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
-        )
-        graph.attach(label+"_SAME_FORM"+"_CARTESIAN", END.label)
+
+        if is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"]):
+            graph.attach(
+                label+"_SAME_FORM",
+                label+"_SAME_FORM"+"_CARTESIAN",
+                summary=str(lhs)+" and "+str(rhs)+" are both complex numbers written in cartesian form",
+                details=str(lhs)+" and "+str(rhs)+" are both complex numbers written in cartesian form."
+                #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
+            )
+            graph.attach(label+"_SAME_FORM"+"_CARTESIAN", END.label)
+
         graph.attach(
             label+"_SAME_FORM",
             label+"_SAME_FORM"+"_UNKNOWN",
@@ -321,60 +335,11 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form."
             #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
         )
+
         graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)
 
-        graph.attach(
-            label,
-            label+"_FALSE",
-            summary=str(lhs)+"=\\="+str(rhs),
-            details=str(lhs)+" is not equal to"+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
-        )
         graph.attach(label+"_FALSE", label+"_SAME_FORM")
     else:
-        graph.add_evaluation_node(
-            label,
-            summary=label,
-            details="Checks if "+str(lhs)+"="+str(rhs)+".",
-            evaluate=mathematical_equivalence
-        )
-        graph.attach(
-            label,
-            label+"_TRUE",
-            summary=str(lhs)+"="+str(rhs),
-            details=str(lhs)+" is equal to "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["response=answer"]("TRUE")
-        )
-        graph.attach(
-            label+"_TRUE",
-            label+"_SAME_SYMBOLS",
-            summary=str(lhs)+" has the same symbols as "+str(rhs),
-            details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
-            evaluate=same_symbols
-        )
-        graph.attach(
-            label+"_SAME_SYMBOLS",
-            label+"_SAME_SYMBOLS"+"_TRUE",
-            summary=str(lhs)+" has the same symbols as "+str(rhs),
-            details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
-        )
-        graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
-        graph.attach(
-            label+"_SAME_SYMBOLS",
-            label+"_SAME_SYMBOLS"+"_FALSE",
-            summary=str(lhs)+" does not have the same symbols as "+str(rhs),
-            details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
-        )
-        graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
-        graph.attach(
-            label,
-            label+"_FALSE",
-            summary=str(lhs)+"=\\="+str(rhs),
-            details=str(lhs)+" is not equal to"+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
-        )
         graph.attach(label+"_FALSE", END.label)
     return graph
 
