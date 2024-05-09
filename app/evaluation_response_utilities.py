@@ -26,7 +26,7 @@ class EvaluationResponse:
         self._feedback_tags
 
     def add_feedback_from_tags(self, tags, graph, inputs):
-        for (tag, data) in zip(tags, inputs):
+        for tag in tags:
             if tag not in self._feedback_tags.keys():
                 feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
                 if feedback_string is not None:
