@@ -36,7 +36,13 @@ class EvaluationResponse:
         self._criteria_graphs.update({name: graph.json()})
 
     def _serialise_feedback(self) -> str:
-        return "<br>".join(x[1] if (isinstance(x, tuple) and len(x[1].strip())) > 0 else x for x in self._feedback)
+        feedback = []
+        for x in self._feedback:
+            if (isinstance(x, tuple) and len(x[1].strip())) > 0:
+                feedback.append(x[1].strip())
+            elif len(x.strip()) > 0:
+                feedback.append(x.strip())
+        return "<br>".join(feedback)
 
     def serialise(self, include_test_data=False) -> dict:
         out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback())

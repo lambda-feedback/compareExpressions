@@ -1,5 +1,6 @@
 from ..criteria_utilities import Criterion
 
+
 # TODO: Find better way of identifying reference criteria
 # equivalences dictionary should contain a list of variations that are likely to be produced by the following procedure:
 # - rewrite critera as expr=0,
@@ -9,7 +10,7 @@ equivalences = dict()
 criteria = dict()
 
 criteria["RESPONSE_DOUBLE_ANSWER"] = Criterion("response=2*answer")
-equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["response=2*answer","response/answer=2", "2*answer=response", "answer=response/2", "answer-response/2", "-answer+response/2", "-2*answer+response", "2*answer-response", "-2+answer/response", "-2+response/answer", "answer-1*response/2", "-answer+1*response/2", "-2+1*answer/response", "-2+1*response/answer"]})
+equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["response=2*answer", "response/answer=2", "2*answer=response", "answer=response/2", "answer-response/2", "-answer+response/2", "-2*answer+response", "2*answer-response", "-2+answer/response", "-2+response/answer", "answer-1*response/2", "-answer+1*response/2", "-2+1*answer/response", "-2+1*response/answer"]})
 criteria["RESPONSE_DOUBLE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by 2."
 criteria["RESPONSE_DOUBLE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by 2."
 
@@ -60,7 +61,7 @@ feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "EXPRESSION_NOT_EQUALITY": "The response was an expression but was expected to be an equality.",
     "EQUALITY_NOT_EXPRESSION": "The response was an equality but was expected to be an expression.",
     "WITHIN_TOLERANCE": None,  # "The difference between the response the answer is within specified error tolerance.",
-    "NOT_NUMERICAL": None,  #"The expression cannot be evaluated numerically.",
+    "NOT_NUMERICAL": None,  # "The expression cannot be evaluated numerically.",
 }[tag]
 feedback_generators["GENERIC"] = lambda tag: lambda inputs: {
     "TRUE": None,
