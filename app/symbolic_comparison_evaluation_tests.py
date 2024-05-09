@@ -1052,11 +1052,11 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
         [
-            ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"], {}),
+            ("a+b", "b+a", "answer=response", True, ["answer=response_TRUE"], {}),
             #("a+b", "b+a", "not(answer=response)", False, [], {}),
-            ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"], {}),
-            ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
-            ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
+            ("a+b", "b+a", "answer-response=0", True, ["answer-response=0_TRUE"], {}),
+            ("a+b", "b+a", "answer/response=1", True, ["answer/response=1_TRUE"], {}),
+            ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["answer=response_TRUE", "answer-response=0_TRUE", "answer/response=1_TRUE"], {}),
             ("2a", "a", "response/answer=2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
             ("2a", "a", "2*answer = response", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
             ("2a", "a", "answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
@@ -1145,21 +1145,21 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
         [
-            ("2", "2", "response=answer", True, ["response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE"], {}),
-            ("4/2", "2", "answer=response", True, ["answer=response_SYNTACTICAL_EQUIVALENCE_FALSE"], {}),
-            ("2+x-x", "2", "answer=response", True, ["answer=response_SAME_SYMBOLS_FALSE"], {}),
-            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2+2I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2.00+2.00*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2", "2", "response=answer", True, ["response=answer_TRUE", "response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE", "response=answer_SAME_FORM_CARTESIAN"], {}),
+            ("4/2", "2", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2+x-x", "2", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_SYMBOLS_FALSE"], {}),
+            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2+2I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2.00+2.00*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
             ("3+3I", "2+2*I", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("2*e^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*E^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*exp(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*e**(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("e**(2*I)", "1*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2*e^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("2*E^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("2*exp(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("2*e**(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("e**(2*I)", "1*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
             ("0.48+0.88*i", "1*e^(0.5*I)", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
         ]
     )
@@ -1173,8 +1173,7 @@ class TestEvaluationFunction():
         params.update(additional_params)
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is value
-        for feedback_tag in feedback_tags:
-            assert feedback_tag in result["tags"]
+        assert set(feedback_tags) == set(result["tags"])
 
     @pytest.mark.parametrize(
         "response, answer, value",
