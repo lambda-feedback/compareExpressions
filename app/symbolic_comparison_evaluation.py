@@ -298,7 +298,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                     label+"_SAME_FORM"+"_UNKNOWN",
                     summary="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form",
                     details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form.",
-                    feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("UNKNOWN"),
+                    feedback_string_generator=symbolic_feedback_generators["SAME_FORM"]("UNKNOWN"),
                 )
 
                 graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)
