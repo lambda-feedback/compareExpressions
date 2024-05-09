@@ -18,6 +18,7 @@ def is_complex_number_on_exponential_form(string):
     result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"*\*?I\)?", string)
     return result is not None
 
+
 patterns = {
     "CARTESIAN": {
         "matcher": is_complex_number_on_cartesian_form,
@@ -31,6 +32,7 @@ patterns = {
     },
 }
 
+
 def attach_form_criteria(graph, attachment_node, criterion, parameters_dict, form_label):
     graph.attach(
         attachment_node,
@@ -41,10 +43,12 @@ def attach_form_criteria(graph, attachment_node, criterion, parameters_dict, for
     )
     graph.attach(attachment_node+"_"+form_label, CriteriaGraph.END.label)
 
+
 def response_and_answer_on_same_form(label, parameters_dict):
     local_answer = parameters_dict["original_input"]["answer"]
     local_response = parameters_dict["original_input"]["response"]
     matches_found = set()
+
     def inner(unused_input):
         for form_label in patterns.keys():
             if patterns[form_label]["matcher"](local_answer) and patterns[form_label]["matcher"](local_response):

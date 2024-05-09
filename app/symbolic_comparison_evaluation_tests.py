@@ -1149,10 +1149,12 @@ class TestEvaluationFunction():
             ("4/2", "2", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
             ("2+x-x", "2", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_SYMBOLS_FALSE"], {}),
             ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {"I": {"aliases": ["i","j"], "latex": r"\(i\)"}}),
             ("2+2I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
             ("2.00+2.00*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
             ("3+3I", "2+2*I", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
             ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {"I": {"aliases": ["i","j"], "latex": r"\(i\)"}}),
             ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
             ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
             ("2*e^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
@@ -1160,7 +1162,7 @@ class TestEvaluationFunction():
             ("2*exp(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
             ("2*e**(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
             ("e**(2*I)", "1*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("0.48+0.88*i", "1*e^(0.5*I)", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("0.48+0.88*I", "1*e^(0.5*I)", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
         ]
     )
     def test_syntactical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):

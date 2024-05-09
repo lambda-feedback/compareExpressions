@@ -228,7 +228,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         label+"_SAME_SYMBOLS"+"_TRUE",
         summary=str(lhs)+" has the same symbols as "+str(rhs),
         details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
-        feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
+        feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
     )
     graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
     graph.attach(
