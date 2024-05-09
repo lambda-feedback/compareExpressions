@@ -201,32 +201,6 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         else:
             return {label+"_SAME_SYMBOLS"+"_FALSE"}
 
-#    is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
-#
-#    def is_number(string):
-#        match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
-#        return match_content is not None and len(match_content.group(0)) > 0
-#
-#    def is_complex_number_on_cartesian_form(string):
-#        string = "".join(string.split())
-#        result = re.fullmatch(is_number_regex+"?\+?"+is_number_regex+"?\*?I?", string)
-#        return result
-#
-#    def is_complex_number_on_exponential_form(string):
-#        string = "".join(string.split())
-#        result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"*\*?I\)?", string)
-#        return result is not None
-#
-#    def response_and_answer_on_same_form(unused_input):
-#        local_answer = parameters_dict["original_input"]["answer"]
-#        local_response = parameters_dict["original_input"]["response"]
-#        if is_complex_number_on_cartesian_form(local_answer) and is_complex_number_on_cartesian_form(local_response):
-#            return {label+"_SAME_FORM"+"_CARTESIAN"}
-#        elif is_complex_number_on_exponential_form(local_answer) and is_complex_number_on_exponential_form(local_response):
-#            return {label+"_SAME_FORM"+"_EXPONENTIAL"}
-#        else:
-#            return {label+"_SAME_FORM"+"_UNKNOWN"}
-
     # Check for mathematical equivalence
     graph.add_evaluation_node(
         label,
