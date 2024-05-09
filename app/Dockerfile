@@ -30,6 +30,7 @@ COPY quantity_comparison_evaluation_tests.py ./app/
 COPY slr_parsing_utilities.py ./app/
 COPY slr_quantity.py ./app/
 COPY slr_quantity_tests.py ./app/
+COPY syntactical_comparison_utilities.py ./app/
 COPY symbolic_comparison_evaluation.py ./app/
 COPY symbolic_comparison_evaluation_tests.py ./app/
 COPY unit_system_conversions.py ./app/

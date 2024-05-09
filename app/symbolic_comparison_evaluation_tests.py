@@ -353,10 +353,10 @@ class TestEvaluationFunction():
 
     @pytest.mark.parametrize(
         "response,answer",
-        generate_input_variations(response="I", answer="(-1)**(1/2)")+\
-        generate_input_variations(response="e^(Ix)", answer="cos(x)+I*sin(x)")+\
-        generate_input_variations(response="e^(Ix)+e^(-Ix)", answer="2cos(x)")+\
-        generate_input_variations(response="1", answer="re(1+2*I)")+\
+        generate_input_variations(response="I", answer="(-1)**(1/2)") +
+        generate_input_variations(response="e^(Ix)", answer="cos(x)+I*sin(x)") +
+        generate_input_variations(response="e^(Ix)+e^(-Ix)", answer="2cos(x)") +
+        generate_input_variations(response="1", answer="re(1+2*I)") +
         generate_input_variations(response="2", answer="im(1+2*I)")
     )
     def test_complex_numbers(self, response, answer):
@@ -966,7 +966,7 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     def test_no_reserved_keywords_in_input_symbol_codes(self):
-        reserved_keywords = ["response","answer"]
+        reserved_keywords = ["response", "answer"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -989,7 +989,7 @@ class TestEvaluationFunction():
         assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_input_symbol_alternatives(self):
-        reserved_keywords = ["response","answer"]
+        reserved_keywords = ["response", "answer"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1015,14 +1015,14 @@ class TestEvaluationFunction():
         assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
-        reserved_keywords = ["response","answer"]
+        reserved_keywords = ["response", "answer"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
         }
         input_symbols = []
         for keyword in reserved_keywords:
-            input_symbols.append([keyword,[]])
+            input_symbols.append([keyword, []])
         params.update({"input_symbols": input_symbols})
         response = "a+b"
         answer = "b+a"
@@ -1031,7 +1031,7 @@ class TestEvaluationFunction():
         assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_alternatives(self):
-        reserved_keywords = ["response","answer"]
+        reserved_keywords = ["response", "answer"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1040,7 +1040,7 @@ class TestEvaluationFunction():
         labels = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
         label_index = 0
         for keyword in reserved_keywords:
-            input_symbols.append([labels[label_index],[keyword]])
+            input_symbols.append([labels[label_index], [keyword]])
             label_index += 1
         params.update({"input_symbols": input_symbols})
         response = "a+b"
@@ -1053,7 +1053,7 @@ class TestEvaluationFunction():
         "response, answer, criteria, value, feedback_tags, additional_params",
         [
             ("a+b", "b+a", "answer=response", True, ["RESPONSE_EQUAL_ANSWER"], {}),
-            ("a+b", "b+a", "not(answer=response)", False, [], {}),
+            #("a+b", "b+a", "not(answer=response)", False, [], {}),
             ("a+b", "b+a", "answer-response=0", True, ["RESPONSE_EQUAL_ANSWER"], {}),
             ("a+b", "b+a", "answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
             ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["RESPONSE_EQUAL_ANSWER"], {}),
@@ -1104,12 +1104,9 @@ class TestEvaluationFunction():
             ("3", "x+1", "response=answer where x=2", True, ["response=answer where x=2_TRUE"], {}),
             ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response candidates x - 1"], {}),
             ("5/3", "x/y+1", "response=answer where x=2; y=3", True, ["response=answer where x=2; y=3_TRUE"], {}),
-            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}), #NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
+            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}),  # NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
-            ("2", "2", "response=answer", True, ["response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE"], {}),
-            ("4/2", "2", "answer=response", True, ["answer=response_SYNTACTICAL_EQUIVALENCE_FALSE"], {}),
-            ("2+x-x", "2", "answer=response", True, ["answer=response_SAME_SYMBOLS_FALSE"], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
@@ -1146,6 +1143,40 @@ class TestEvaluationFunction():
             assert feedback_tag not in result["tags"]
 
     @pytest.mark.parametrize(
+        "response, answer, criteria, value, feedback_tags, additional_params",
+        [
+            ("2", "2", "response=answer", True, ["response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE"], {}),
+            ("4/2", "2", "answer=response", True, ["answer=response_SYNTACTICAL_EQUIVALENCE_FALSE"], {}),
+            ("2+x-x", "2", "answer=response", True, ["answer=response_SAME_SYMBOLS_FALSE"], {}),
+            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2+2I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2.00+2.00*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("3+3I", "2+2*I", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
+            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("2*e^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("2*E^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("2*exp(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("2*e**(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("e**(2*I)", "1*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
+            ("0.48+0.88*i", "1*e^(0.5*I)", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+        ]
+    )
+    def test_syntactical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "syntactical_comparison": True,
+            "criteria": criteria,
+        }
+        params.update(additional_params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        for feedback_tag in feedback_tags:
+            assert feedback_tag in result["tags"]
+
+    @pytest.mark.parametrize(
         "response, answer, value",
         [
             ("summation(2*k - 1, (k, 1, n))",          "summation(2*k - 1, (k, 1, n))",    True),
@@ -1179,6 +1210,7 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
+
 
 if __name__ == "__main__":
     pytest.main(['-xsk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

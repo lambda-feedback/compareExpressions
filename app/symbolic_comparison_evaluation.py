@@ -18,7 +18,13 @@ from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_no
 from .evaluation_response_utilities import EvaluationResponse
 from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 from .feedback.symbolic_comparison import criteria as symbolic_comparison_criteria
+from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_generators
 from .feedback.symbolic_comparison import equivalences as reference_criteria_strings
+
+from .syntactical_comparison_utilities import patterns as syntactical_forms
+from .syntactical_comparison_utilities import is_number as syntactical_is_number
+from .syntactical_comparison_utilities import response_and_answer_on_same_form
+from .syntactical_comparison_utilities import attach_form_criteria
 
 from .criteria_graph_utilities import CriteriaGraph
 
@@ -136,15 +142,28 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
     END = CriteriaGraph.END
     graph.add_node(END)
     graph.add_evaluation_node(label, summary=label, details="Checks if "+label+" is true.", evaluate=evaluation_node_internal)
-    graph.attach(label, label+"_TRUE", summary="True", details=label+" is true.")
+    graph.attach(
+        label,
+        label+"_TRUE",
+        summary="True",
+        details=label+" is true.",
+        feedback_string_generator=symbolic_feedback_generators["GENERIC"]("TRUE")
+    )
     graph.attach(label+"_TRUE", END.label)
-    graph.attach(label, label+"_FALSE", summary="True", details=label+" is false.")
+    graph.attach(
+        label,
+        label+"_FALSE",
+        summary="True",
+        details=label+" is false.",
+        feedback_string_generator=symbolic_feedback_generators["GENERIC"]("FALSE")
+    )
     graph.attach(label+"_FALSE", END.label)
     return graph
 
 def criterion_equality_node(criterion, parameters_dict, label=None):
     if label is None:
         label = criterion.content_string()
+
     def mathematical_equivalence(unused_input):
         result = check_equality(criterion, parameters_dict)
         if result is True:
@@ -156,12 +175,14 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     graph.add_node(END)
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
+
     def syntactical_equivalence(unused_input):
         result = parameters_dict["original_input"]["answer"] == parameters_dict["original_input"]["response"]
         if result is True:
             return {label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE"}
         else:
             return {label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE"}
+
     def same_symbols(unused_input):
         local_substitutions = parameters_dict.get("local_substitutions",[])
         reserved_expressions = list(parameters_dict["reserved_expressions"].items())
@@ -179,33 +200,137 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             return {label+"_SAME_SYMBOLS"+"_TRUE"}
         else:
             return {label+"_SAME_SYMBOLS"+"_FALSE"}
-    def is_number(string):
-        match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
-        return match_content is not None and len(match_content.group(0)) > 0
-    if (lhs == "response" and rhs == "answer" and is_number(parameters_dict["original_input"]["answer"])) or (rhs == "response" and lhs == "answer" and is_number(parameters_dict["original_input"]["answer"])):
-        graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=mathematical_equivalence)
-        graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
-        graph.attach(label+"_TRUE", label+"_SYNTACTICAL_EQUIVALENCE", summary="response is written like answer", details="Checks if "+str(lhs)+" is written exactly the same as "+str(rhs)+".", evaluate=syntactical_equivalence)
-        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE", label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE", summary="response is written like answer", details=""+str(lhs)+" is written exactly the same as "+str(rhs)+".")
-        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE", END.label)
-        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE", label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", summary="response is not written like answer", details=""+str(lhs)+" is not written exactly the same as "+str(rhs)+".")
-        graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
-        graph.attach(label+"_TRUE", label+"_SAME_SYMBOLS", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".", evaluate=same_symbols)
-        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_TRUE", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".")
-        graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
-        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_FALSE", summary=str(lhs)+" does not have the same symbols as "+str(rhs), details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".")
-        graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
-        graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
-        graph.attach(label+"_FALSE", END.label)
+
+#    is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
+#
+#    def is_number(string):
+#        match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
+#        return match_content is not None and len(match_content.group(0)) > 0
+#
+#    def is_complex_number_on_cartesian_form(string):
+#        string = "".join(string.split())
+#        result = re.fullmatch(is_number_regex+"?\+?"+is_number_regex+"?\*?I?", string)
+#        return result
+#
+#    def is_complex_number_on_exponential_form(string):
+#        string = "".join(string.split())
+#        result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"*\*?I\)?", string)
+#        return result is not None
+#
+#    def response_and_answer_on_same_form(unused_input):
+#        local_answer = parameters_dict["original_input"]["answer"]
+#        local_response = parameters_dict["original_input"]["response"]
+#        if is_complex_number_on_cartesian_form(local_answer) and is_complex_number_on_cartesian_form(local_response):
+#            return {label+"_SAME_FORM"+"_CARTESIAN"}
+#        elif is_complex_number_on_exponential_form(local_answer) and is_complex_number_on_exponential_form(local_response):
+#            return {label+"_SAME_FORM"+"_EXPONENTIAL"}
+#        else:
+#            return {label+"_SAME_FORM"+"_UNKNOWN"}
+
+    # Check for mathematical equivalence
+    graph.add_evaluation_node(
+        label,
+        summary=label,
+        details="Checks if "+str(lhs)+"="+str(rhs)+".",
+        evaluate=mathematical_equivalence
+    )
+    graph.attach(
+        label,
+        label+"_TRUE",
+        summary=str(lhs)+"="+str(rhs),
+        details=str(lhs)+" is equal to "+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["response=answer"]("TRUE")
+    )
+
+    graph.attach(
+        label+"_TRUE",
+        label+"_SAME_SYMBOLS",
+        summary=str(lhs)+" has the same symbols as "+str(rhs),
+        details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
+        evaluate=same_symbols
+    )
+    graph.attach(
+        label+"_SAME_SYMBOLS",
+        label+"_SAME_SYMBOLS"+"_TRUE",
+        summary=str(lhs)+" has the same symbols as "+str(rhs),
+        details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
+    )
+    graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
+    graph.attach(
+        label+"_SAME_SYMBOLS",
+        label+"_SAME_SYMBOLS"+"_FALSE",
+        summary=str(lhs)+" does not have the same symbols as "+str(rhs),
+        details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
+    )
+    graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
+
+    graph.attach(
+        label,
+        label+"_FALSE",
+        summary=str(lhs)+"=\\="+str(rhs),
+        details=str(lhs)+" is not equal to"+str(rhs)+".",
+        feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
+    )
+
+    if parameters_dict["syntactical_comparison"] is True:
+        if set([lhs, rhs]) == set(["response", "answer"]):
+            has_recognisable_form = syntactical_is_number(parameters_dict["original_input"]["answer"])
+            for form_label in syntactical_forms.keys():
+                has_recognisable_form = has_recognisable_form or syntactical_forms[form_label]["matcher"](parameters_dict["original_input"]["answer"])
+            if has_recognisable_form is True:
+
+                graph.attach(
+                    label+"_TRUE",
+                    label+"_SYNTACTICAL_EQUIVALENCE",
+                    summary="response is written like answer",
+                    details="Checks if "+str(lhs)+" is written exactly the same as "+str(rhs)+".",
+                    evaluate=syntactical_equivalence
+                )
+                graph.attach(
+                    label+"_SYNTACTICAL_EQUIVALENCE",
+                    label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
+                    summary="response is written like answer",
+                    details=""+str(lhs)+" is written exactly the same as "+str(rhs)+".",
+                    feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("TRUE")
+                )
+                graph.attach(
+                    label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
+                    END.label
+                )
+                graph.attach(
+                    label+"_SYNTACTICAL_EQUIVALENCE",
+                    label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE",
+                    summary="response is not written like answer", details=""+str(lhs)+" is not written exactly the same as "+str(rhs)+".",
+                    feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
+                )
+                graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
+
+                graph.attach(
+                    label+"_TRUE",
+                    label+"_SAME_FORM",
+                    summary=str(lhs)+" is written in the same form as "+str(rhs),
+                    details=str(lhs)+" is written in the same form as "+str(rhs)+".",
+                    evaluate=response_and_answer_on_same_form(label+"_SAME_FORM", parameters_dict)
+                )
+
+                for form_label in syntactical_forms.keys():
+                    if syntactical_forms[form_label]["matcher"](parameters_dict["original_input"]["answer"]) is True:
+                        attach_form_criteria(graph, label+"_SAME_FORM", criterion, parameters_dict, form_label)
+
+                graph.attach(
+                    label+"_SAME_FORM",
+                    label+"_SAME_FORM"+"_UNKNOWN",
+                    summary="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form",
+                    details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form.",
+                    feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("UNKNOWN"),
+                )
+
+                graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)
+
+                graph.attach(label+"_FALSE", label+"_SAME_FORM")
     else:
-        graph.add_evaluation_node(label, summary=label, details="Checks if "+str(lhs)+"="+str(rhs)+".", evaluate=mathematical_equivalence)
-        graph.attach(label, label+"_TRUE", summary=str(lhs)+"="+str(rhs), details=str(lhs)+" is equal to "+str(rhs)+".")
-        graph.attach(label+"_TRUE", label+"_SAME_SYMBOLS", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".", evaluate=same_symbols)
-        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_TRUE", summary=str(lhs)+" has the same symbols as "+str(rhs), details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".")
-        graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
-        graph.attach(label+"_SAME_SYMBOLS", label+"_SAME_SYMBOLS"+"_FALSE", summary=str(lhs)+" does not have the same symbols as "+str(rhs), details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".")
-        graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
-        graph.attach(label, label+"_FALSE", summary=str(lhs)+"=\="+str(rhs), details=str(lhs)+" is not equal to"+str(rhs)+".")
         graph.attach(label+"_FALSE", END.label)
     return graph
 
@@ -288,10 +413,27 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
     graph.add_node(END)
-    graph.add_evaluation_node(label, summary=label, details="Checks if "+expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+".", evaluate=create_expression_check(expression))
-    graph.attach(label, label+"_TRUE", summary=expression.content_string()+" where "+", ".join([s.content_string() for s in subs]), details=expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+"is true.")
+    graph.add_evaluation_node(
+        label,
+        summary=label,
+        details="Checks if "+expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+".",
+        evaluate=create_expression_check(expression)
+    )
+    graph.attach(
+        label,
+        label+"_TRUE",
+        summary=expression.content_string()+" where "+", ".join([s.content_string() for s in subs]),
+        details=expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+"is true.",
+        feedback_string_generator=symbolic_feedback_generators["response=answer_where"]("TRUE")
+    )
     graph.attach(label+"_TRUE", END.label)
-    graph.attach(label, label+"_FALSE", summary="not "+expression.content_string(), details=expression.content_string()+" is not true when "+", ".join([s.content_string() for s in subs])+".")
+    graph.attach(
+        label,
+        label+"_FALSE",
+        summary="not "+expression.content_string(),
+        details=expression.content_string()+" is not true when "+", ".join([s.content_string() for s in subs])+".",
+        feedback_string_generator=symbolic_feedback_generators["response=answer_where"]("FALSE")
+    )
 
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     response = parameters_dict["reserved_expressions"]["response"]
@@ -336,8 +478,20 @@ def criterion_where_node(criterion, parameters_dict, label=None):
             def identify_reason(unused_input):
                 reasons = {label+"_"+group_label for group_label in values_and_variations_group.get(response_value, {"UNKNOWN"})}
                 return reasons
-            graph.attach(label+"_FALSE", label+"_IDENTIFY_REASON", summary="Identify reason.", details="Attempt to identify why the response is incorrect.", evaluate=identify_reason)
-            graph.attach(label+"_IDENTIFY_REASON", label+"_UNKNOWN", summary="Unknown reason", details="No candidates for how the response was computed were found.")
+            graph.attach(
+                label+"_FALSE",
+                label+"_IDENTIFY_REASON",
+                summary="Identify reason.",
+                details="Attempt to identify why the response is incorrect.",
+                evaluate=identify_reason
+            )
+            graph.attach(
+                label+"_IDENTIFY_REASON",
+                label+"_UNKNOWN",
+                summary="Unknown reason",
+                details="No candidates for how the response was computed were found.",
+                feedback_string_generator=symbolic_feedback_generators["IDENTIFY_REASON"]("UNKNOWN")
+            )
             graph.attach(label+"_UNKNOWN", END.label)
 
             def get_candidates(unused_input):
@@ -348,7 +502,8 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                     label+"_IDENTIFY_REASON",
                     label+"_"+group_label,
                     summary=group_info["summary"](expression_to_vary, group_info["variations"]),
-                    details=group_info["details"](expression_to_vary, group_info["variations"])
+                    details=group_info["details"](expression_to_vary, group_info["variations"]),
+                    feedback_string_generator=symbolic_feedback_generators["IDENTIFY_REASON"]("UNKNOWN")
                 )
                 graph.attach(
                     label+"_"+group_label,
@@ -374,7 +529,7 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                         )
     return graph
 
-def create_criteria_list(criteria_string, criteria_parser, parsing_params):
+def create_criteria_dict(criteria_string, criteria_parser, parsing_params):
     criteria_string_list = []
     delims = [
         ("(", ")"),
@@ -394,13 +549,11 @@ def create_criteria_list(criteria_string, criteria_parser, parsing_params):
             criteria_string_list.append(criteria_string[criterion_start:n].strip())
             criterion_start = n+1
     criteria_string_list.append(criteria_string[criterion_start:].strip())
-    criteria_tokens = []
-    criteria_parsed = []
+    criteria_parsed = dict()
     for criterion in criteria_string_list:
         try:
             criterion_tokens = criteria_parser.scan(criterion)
-            criteria_tokens.append(criterion_tokens)
-            criteria_parsed.append(criteria_parser.parse(criterion_tokens)[0])
+            criteria_parsed.update({criterion: criteria_parser.parse(criterion_tokens)[0]})
         except Exception as e:
             print(e)
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
@@ -413,14 +566,13 @@ def create_criteria_graphs(criteria, params_dict):
         "WHERE": criterion_where_node
     }
 
-    for criterion in criteria:
-        label = criterion.label.strip()
-        graph_template = graph_templates.get(label, criterion_eval_node)
+    for (label, criterion) in criteria.items():
+        graph_template = graph_templates.get(criterion.label, criterion_eval_node)
         graph = graph_template(criterion, params_dict)
         for evaluation in graph.evaluations.values():
             if evaluation.label in params_dict.get("disabled_evaluation_nodes", set()):
                 evaluation.replacement = CriteriaGraph.END
-        criteria_graphs.update({criterion.content_string(): graph})
+        criteria_graphs.update({label: graph})
     return criteria_graphs
 
 
@@ -536,17 +688,6 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     except Exception as e:
         raise Exception(f"SymPy was unable to parse the answer: {answer}.") from e
 
-    criteria_parser = generate_criteria_parser()
-    parsing_params["unsplittable_symbols"] += ("response", "answer", "where")
-    reserved_expressions = {
-        "response": res,
-        "answer": ans,
-        "response_original": res_original,
-        "answer_original": ans_original,
-    }
-    criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
-    criteria_parsed = create_criteria_list(criteria_string, criteria_parser, parsing_params)
-
     # Add how res was interpreted to the response
     # eval_response.latex = latex(res)
     symbols = params.get("symbols", {})
@@ -570,6 +711,19 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         eval_response.is_correct = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().is_constant()
         return eval_response
 
+    # Parse criteria
+    criteria_parser = generate_criteria_parser()
+    parsing_params["unsplittable_symbols"] += ("response", "answer", "where")
+    reserved_expressions = {
+        "response": res,
+        "answer": ans,
+        "response_original": res_original,
+        "answer_original": ans_original,
+    }
+    criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
+    criteria_parsed = create_criteria_dict(criteria_string, criteria_parser, parsing_params)
+
+    # Create criteria graphs
     is_correct = True
     parameters_dict = {
         "parsing_params": parsing_params,
@@ -578,15 +732,28 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "symbolic_comparison_criteria": symbolic_comparison_criteria,
         "eval_response": eval_response,
         "original_input": {"answer": answer, "response": response},
-        "disabled_evaluation_nodes": params.get("disabled_evaluation_nodes", set())
+        "disabled_evaluation_nodes": params.get("disabled_evaluation_nodes", set()),
+        "syntactical_comparison": params.get("syntactical_comparison", False),
     }
     criteria_graphs = create_criteria_graphs(criteria_parsed, parameters_dict)
+
+    # Generate feedback from criteria graphs
     criteria_feedback = set()
     for (criterion_identifier, graph) in criteria_graphs.items():
+        # TODO: Find better way to identify main criteria for criteria graph
         main_criteria = criterion_identifier+"_TRUE"
         criteria_feedback = criteria_feedback.union(graph.generate_feedback(response, main_criteria))
+
+        # TODO: Implement way to define completeness of task other than "all main criteria satisfied"
         is_correct = is_correct and main_criteria in criteria_feedback
         eval_response.add_criteria_graph(criterion_identifier, graph)
+
+        # Generate feedback strings from found feedback
+        # NOTE: Feedback strings are generated for each graph due to the
+        #       assumption that some way to return partial feedback
+        #       before script has executed completely will be available
+        #       in the future
+        eval_response.add_feedback_from_tags(criteria_feedback, graph, {"criterion": criteria_parsed[criterion_identifier]})
         result = main_criteria in criteria_feedback
         for item in criteria_feedback:
             eval_response.add_feedback((item, ""))

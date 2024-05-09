@@ -1,12 +1,8 @@
-from .expression_utilities import (
-    substitute_input_symbols,
-    create_sympy_parsing_params
-)
 from .evaluation_response_utilities import EvaluationResponse
 from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .slr_quantity import quantity_comparison
-from .unit_system_conversions import set_of_SI_prefixes, set_of_SI_base_unit_dimensions
 from .preview import preview_function
+
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
@@ -19,12 +15,12 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     eval_response = EvaluationResponse()
     eval_response.is_correct = False
 
-    input_symbols_reserved_words = list(params.get("symbols",dict()).keys())
+    input_symbols_reserved_words = list(params.get("symbols", dict()).keys())
 
-    for input_symbol in params.get("symbols",dict()).values():
+    for input_symbol in params.get("symbols", dict()).values():
         input_symbols_reserved_words += input_symbol.get("aliases",[])
 
-    for input_symbol in params.get("input_symbols",[]):
+    for input_symbol in params.get("input_symbols", []):
         input_symbols_reserved_words += [input_symbol[0]]+input_symbol[1]
 
     reserved_keywords = ["response", "answer", "plus_minus", "minus_plus", "where"]
@@ -42,7 +38,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     }
     parameters.update(params)
 
-    if params.get("is_latex",False):
+    if params.get("is_latex", False):
         response = preview_function(response, params)["preview"]["sympy"]
 
     if parameters.get("physical_quantity", False) is True:
