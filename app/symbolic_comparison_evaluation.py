@@ -21,6 +21,11 @@ from .feedback.symbolic_comparison import criteria as symbolic_comparison_criter
 from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_generators
 from .feedback.symbolic_comparison import equivalences as reference_criteria_strings
 
+from .syntactical_comparison_utilities import patterns as syntactical_forms
+from .syntactical_comparison_utilities import is_number as syntactical_is_number
+from .syntactical_comparison_utilities import response_and_answer_on_same_form
+from .syntactical_comparison_utilities import attach_form_criteria
+
 from .criteria_graph_utilities import CriteriaGraph
 
 criteria_operations = {
@@ -196,31 +201,31 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         else:
             return {label+"_SAME_SYMBOLS"+"_FALSE"}
 
-    is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
-
-    def is_number(string):
-        match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
-        return match_content is not None and len(match_content.group(0)) > 0
-
-    def is_complex_number_on_cartesian_form(string):
-        string = "".join(string.split())
-        result = re.fullmatch(is_number_regex+"?\+?"+is_number_regex+"?\*?I?", string)
-        return result
-
-    def is_complex_number_on_exponential_form(string):
-        string = "".join(string.split())
-        result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"*\*?I\)?", string)
-        return result is not None
-
-    def response_and_answer_on_same_form(unused_input):
-        local_answer = parameters_dict["original_input"]["answer"]
-        local_response = parameters_dict["original_input"]["response"]
-        if is_complex_number_on_cartesian_form(local_answer) and is_complex_number_on_cartesian_form(local_response):
-            return {label+"_SAME_FORM"+"_CARTESIAN"}
-        elif is_complex_number_on_exponential_form(local_answer) and is_complex_number_on_exponential_form(local_response):
-            return {label+"_SAME_FORM"+"_EXPONENTIAL"}
-        else:
-            return {label+"_SAME_FORM"+"_UNKNOWN"}
+#    is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
+#
+#    def is_number(string):
+#        match_content = re.fullmatch('^-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?', string)
+#        return match_content is not None and len(match_content.group(0)) > 0
+#
+#    def is_complex_number_on_cartesian_form(string):
+#        string = "".join(string.split())
+#        result = re.fullmatch(is_number_regex+"?\+?"+is_number_regex+"?\*?I?", string)
+#        return result
+#
+#    def is_complex_number_on_exponential_form(string):
+#        string = "".join(string.split())
+#        result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"*\*?I\)?", string)
+#        return result is not None
+#
+#    def response_and_answer_on_same_form(unused_input):
+#        local_answer = parameters_dict["original_input"]["answer"]
+#        local_response = parameters_dict["original_input"]["response"]
+#        if is_complex_number_on_cartesian_form(local_answer) and is_complex_number_on_cartesian_form(local_response):
+#            return {label+"_SAME_FORM"+"_CARTESIAN"}
+#        elif is_complex_number_on_exponential_form(local_answer) and is_complex_number_on_exponential_form(local_response):
+#            return {label+"_SAME_FORM"+"_EXPONENTIAL"}
+#        else:
+#            return {label+"_SAME_FORM"+"_UNKNOWN"}
 
     # Check for mathematical equivalence
     graph.add_evaluation_node(
@@ -271,9 +276,10 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
 
     if parameters_dict["syntactical_comparison"] is True:
         if set([lhs, rhs]) == set(["response", "answer"]):
-            if is_number(parameters_dict["original_input"]["answer"]) or\
-                is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"]) or\
-                is_complex_number_on_exponential_form(parameters_dict["original_input"]["answer"]):
+            has_recognisable_form = syntactical_is_number(parameters_dict["original_input"]["answer"])
+            for form_label in syntactical_forms.keys():
+                has_recognisable_form = has_recognisable_form or syntactical_forms[form_label]["matcher"](parameters_dict["original_input"]["answer"])
+            if has_recognisable_form is True:
 
                 graph.attach(
                     label+"_TRUE",
@@ -306,35 +312,19 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                     label+"_SAME_FORM",
                     summary=str(lhs)+" is written in the same form as "+str(rhs),
                     details=str(lhs)+" is written in the same form as "+str(rhs)+".",
-                    evaluate=response_and_answer_on_same_form
+                    evaluate=response_and_answer_on_same_form(label+"_SAME_FORM", parameters_dict)
                 )
 
-                if is_complex_number_on_cartesian_form(parameters_dict["original_input"]["answer"]):
-                    graph.attach(
-                        label+"_SAME_FORM",
-                        label+"_SAME_FORM"+"_CARTESIAN",
-                        summary=str(lhs)+" and "+str(rhs)+" are both complex numbers written on cartesian form",
-                        details=str(lhs)+" and "+str(rhs)+" are both complex numbers written on cartesian form."
-                        #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
-                    )
-                    graph.attach(label+"_SAME_FORM"+"_CARTESIAN", END.label)
-
-                if is_complex_number_on_exponential_form(parameters_dict["original_input"]["answer"]):
-                    graph.attach(
-                        label+"_SAME_FORM",
-                        label+"_SAME_FORM"+"_EXPONENTIAL",
-                        summary=str(lhs)+" and "+str(rhs)+" are both complex numbers written on exponential form",
-                        details=str(lhs)+" and "+str(rhs)+" are both complex numbers written on exponential form."
-                        #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("TRUE")
-                    )
-                    graph.attach(label+"_SAME_FORM"+"_EXPONENTIAL", END.label)
+                for form_label in syntactical_forms.keys():
+                    if syntactical_forms[form_label]["matcher"](parameters_dict["original_input"]["answer"]) is True:
+                        attach_form_criteria(graph, label+"_SAME_FORM", criterion, parameters_dict, form_label)
 
                 graph.attach(
                     label+"_SAME_FORM",
                     label+"_SAME_FORM"+"_UNKNOWN",
                     summary="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form",
-                    details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form."
-                    #feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("FALSE")
+                    details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form.",
+                    feedback_string_generator=symbolic_feedback_generators["SAME_SYMBOLS"]("UNKNOWN"),
                 )
 
                 graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)

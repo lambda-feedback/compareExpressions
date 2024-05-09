@@ -2,7 +2,7 @@ class EvaluationResponse:
     def __init__(self):
         self.is_correct = False
         self.latex = None
-        self._feedback = [] # A list that will hold all feedback items
+        self._feedback = []  # A list that will hold all feedback items
         self._feedback_tags = {}  # A dictionary that holds a list with indices to all feedback items with the same tag
         self._criteria_graphs = {}
         self.latex = ""

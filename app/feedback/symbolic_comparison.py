@@ -97,3 +97,8 @@ feedback_generators["SAME_SYMBOLS"] = lambda tag: lambda inputs: {
     "TRUE": None,
     "FALSE": "The response can be simplified further.",
 }[tag]
+feedback_generators["SAME_FORM"] = lambda tag: lambda inputs: {
+    "CARTESIAN": None,
+    "EXPONENTIAL": None,
+    "UNKNOWN": "The response is not written on the expected form.",
+}[tag]
