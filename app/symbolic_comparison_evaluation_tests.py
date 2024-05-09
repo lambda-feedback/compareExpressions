@@ -1107,22 +1107,6 @@ class TestEvaluationFunction():
             ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}), #NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
-            ("2", "2", "response=answer", True, ["response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE"], {}),
-            ("4/2", "2", "answer=response", True, ["answer=response_SYNTACTICAL_EQUIVALENCE_FALSE"], {}),
-            ("2+x-x", "2", "answer=response", True, ["answer=response_SAME_SYMBOLS_FALSE"], {}),
-            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2+2I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2.00+2.00*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("3+3I", "2+2*I", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("2*e^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*E^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*exp(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*e**(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("e**(2*I)", "1*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("0.48+0.88*i", "1*e^(0.5*I)", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
@@ -1158,6 +1142,9 @@ class TestEvaluationFunction():
         for feedback_tag in disabled_feedback_tags:
             assert feedback_tag not in result["tags"]
 
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value, feedback_tags, additional_params",
+        [
             ("2", "2", "response=answer", True, ["response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE"], {}),
             ("4/2", "2", "answer=response", True, ["answer=response_SYNTACTICAL_EQUIVALENCE_FALSE"], {}),
             ("2+x-x", "2", "answer=response", True, ["answer=response_SAME_SYMBOLS_FALSE"], {}),
@@ -1180,6 +1167,7 @@ class TestEvaluationFunction():
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
+            "syntactical_comparison": True,
             "criteria": criteria,
         }
         params.update(additional_params)
