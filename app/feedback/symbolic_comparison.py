@@ -1,25 +1,25 @@
-from ..criteria_utilities import Criterion, no_feedback
+from ..criteria_utilities import Criterion
 
 # TODO: Find better way of identifying reference criteria
 # equivalences dictionary should contain a list of variations that are likely to be produced by the following procedure:
 # - rewrite critera as expr=0,
 # - parse left hand side of rewritten critera as a sympy expression
 # - turn sympy expression into a string and remove all whitespace
-equivalences = dict()  
+equivalences = dict()
 criteria = dict()
 
 criteria["RESPONSE_EQUAL_ANSWER"] = Criterion("response=answer")
-equivalences.update({"RESPONSE_EQUAL_ANSWER": ["response=answer","answer=response","answer-response=0","-answer+response=0","answer/response=1","response/answer-1=0"]})
+equivalences.update({"RESPONSE_EQUAL_ANSWER": ["response=answer", "answer=response", "answer-response=0", "-answer+response=0", "answer/response=1", "response/answer-1=0"]})
 criteria["RESPONSE_EQUAL_ANSWER"][True] = lambda inputs: "The response matches the expected answer."
 criteria["RESPONSE_EQUAL_ANSWER"][False] = lambda inputs: "The response does not match the expected answer."
 
 criteria["RESPONSE_DOUBLE_ANSWER"] = Criterion("response=2*answer")
-equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["response=2*answer","response/answer=2","2*answer=response","answer=response/2","answer-response/2","-answer+response/2","-2*answer+response","2*answer-response","-2+answer/response","-2+response/answer","answer-1*response/2","-answer+1*response/2","-2+1*answer/response","-2+1*response/answer"]})
+equivalences.update({"RESPONSE_DOUBLE_ANSWER": ["response=2*answer","response/answer=2", "2*answer=response", "answer=response/2", "answer-response/2", "-answer+response/2", "-2*answer+response", "2*answer-response", "-2+answer/response", "-2+response/answer", "answer-1*response/2", "-answer+1*response/2", "-2+1*answer/response", "-2+1*response/answer"]})
 criteria["RESPONSE_DOUBLE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by 2."
 criteria["RESPONSE_DOUBLE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by 2."
 
 criteria["RESPONSE_NEGATIVE_ANSWER"] = Criterion("response=-answer")
-equivalences.update({"RESPONSE_NEGATIVE_ANSWER": ["response=-answer","answer=-response","answer+response=0","answer+response","answer/response=-1","response/answer+1"]})
+equivalences.update({"RESPONSE_NEGATIVE_ANSWER": ["response=-answer", "answer=-response", "answer+response=0", "answer+response","answer/response=-1", "response/answer+1"]})
 criteria["RESPONSE_NEGATIVE_ANSWER"][True] = lambda inputs: "The response is the expected answer multiplied by -1."
 criteria["RESPONSE_NEGATIVE_ANSWER"][False] = lambda inputs: "The response is not the expected answer multiplied by -1."
 
@@ -36,7 +36,7 @@ internal = {
     "EXPRESSION_NOT_EQUALITY": "The response was an expression but was expected to be an equality.",
     "EQUALITY_NOT_EXPRESSION": "The response was an equality but was expected to be an expression.",
     "WITHIN_TOLERANCE": "",  # "The difference between the response the answer is within specified error tolerance.",
-    "NOT_NUMERICAL": "", #"The expression cannot be evaluated numerically.",
+    "NOT_NUMERICAL": "",  # "The expression cannot be evaluated numerically.",
 }
 
 # Format for feedback string entry: criteria["eval_tag"]("criteria_tag", inputs) = "formatted string" | None
@@ -65,7 +65,7 @@ feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "EXPRESSION_NOT_EQUALITY": "The response was an expression but was expected to be an equality.",
     "EQUALITY_NOT_EXPRESSION": "The response was an equality but was expected to be an expression.",
     "WITHIN_TOLERANCE": None,  # "The difference between the response the answer is within specified error tolerance.",
-    "NOT_NUMERICAL": None, #"The expression cannot be evaluated numerically.",
+    "NOT_NUMERICAL": None,  #"The expression cannot be evaluated numerically.",
 }[tag]
 feedback_generators["GENERIC"] = lambda tag: lambda inputs: {
     "TRUE": None,
@@ -98,7 +98,7 @@ feedback_generators["SAME_SYMBOLS"] = lambda tag: lambda inputs: {
     "FALSE": "The response can be simplified further.",
 }[tag]
 feedback_generators["SAME_FORM"] = lambda tag: lambda inputs: {
-    "CARTESIAN": "Response and answer are both written on Cartesian form", # None,
-    "EXPONENTIAL": "Response and answer are both written on exponential form", # None,
+    "CARTESIAN": "Response and answer are both written on Cartesian form",  # None,
+    "EXPONENTIAL": "Response and answer are both written on exponential form",  # None,
     "UNKNOWN": "The response is not written on the expected form.",
 }[tag]

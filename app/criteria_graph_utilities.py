@@ -29,10 +29,13 @@ class CriteriaGraph:
             return
 
     class Criterion(Node):
-        def __init__(self, label, summary, details, tags=None, feedback_string_generator=lambda x: None):
+        def __init__(self, label, summary, details, tags=None, feedback_string_generator=None):
             super().__init__(label, summary, details)
             self.consequences = self.outgoing
-            self.feedback_string_generator = feedback_string_generator
+            if feedback_string_generator is not None:
+                self.feedback_string_generator = feedback_string_generator
+            else:
+                self.feedback_string_generator = lambda x: None
             if tags is None:
                 self.tags = set()
             else:
@@ -210,7 +213,7 @@ class CriteriaGraph:
             raise Exception(f"Criterion node {label} is already defined.")
         if sufficiencies is not None:
             raise Exception(f"Criterion nodes cannot have sufficiencies.")
-        node = CriteriaGraph.Criterion(label, summary, details, feedback_string_generator)
+        node = CriteriaGraph.Criterion(label, summary=summary, details=details, feedback_string_generator=feedback_string_generator)
         self.criteria.update({label: node})
         self.sufficiencies.update({label: sufficiencies})
         return node
@@ -268,7 +271,7 @@ class CriteriaGraph:
                     if summary is None or details is None:
                         raise Exception(f"Unknown node {target_label}. If you wish to create a new node summary and details must be specified.")
                     else:
-                        target = target_generator(target_label, summary, details, sufficiencies, evaluate)
+                        target = target_generator(target_label, summary=summary, details=details, sufficiencies=sufficiencies, evaluate=evaluate, feedback_string_generator=feedback_string_generator)
                 else:
                     raise Exception(f"Both {source_label} and {target_label} are {type_name} nodes. Only {other_type_name} nodes can be attached to {type_name} nodes.")
 
