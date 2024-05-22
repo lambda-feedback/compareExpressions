@@ -8,26 +8,7 @@ from .criteria_graph_utilities import CriteriaGraph
 is_integer_regex = '(-?(0|[1-9]\d*)(e-?(0|[1-9]\d*))?)'
 is_number_on_decimal_form_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
 
-is_number_regex = '((\(?'+is_number_on_decimal_form_regex+'+\)?)\/?\(?'+is_number_on_decimal_form_regex+'?\)?)'
-
-
-
-def split_on_number(string):
-    split_string = []
-    number_indices = []
-    i = 0
-    while i < len(string):
-        match = re.search(is_number_regex, string)
-        if match is not None:
-            start, end = match.span()
-            if start > i:
-                split_string.append(string[i:start])
-            number_indices.append(len(split_string))
-            split_string.append(match.group())
-            i = end
-        else:
-            i = len(string)
-    return split_string, number_indices
+is_number_regex = '(('+is_number_on_decimal_form_regex+')+\/?(\('+is_number_on_decimal_form_regex+'\)|'+is_number_on_decimal_form_regex+')?)'
 
 def extract_numbers(string):
     numbers = []
@@ -84,12 +65,14 @@ def is_complex_number_on_cartesian_form(string):
 def is_complex_number_on_exponential_form(string):
     string = "".join(string.split())
     result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"?\*?I\)?", string)
-    return result is not None
+    result = result is not None and numbers_in_string_are_simplified(string)
+    return result
 
 def is_complex_number_on_polar_form(string):
     string = "".join(string.split())
     result = re.fullmatch(is_number_regex+"?\*?\(?(cos\("+is_number_regex+"\))(\+|-)I\*?sin\("+is_number_regex+"\)\)?", string)
-    return result is not None
+    result = result is not None and numbers_in_string_are_simplified(string)
+    return result
 
 patterns = {
     "CARTESIAN": {
