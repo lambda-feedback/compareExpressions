@@ -96,5 +96,6 @@ feedback_generators["SAME_SYMBOLS"] = lambda tag: lambda inputs: {
 feedback_generators["SAME_FORM"] = lambda tag: lambda inputs: {
     "CARTESIAN": "Response and answer are both written on Cartesian form.",  # None,
     "EXPONENTIAL": "Response and answer are both written on exponential form.",  # None,
+    "POLAR": "Response and answer are both written on polar form.",  # None,
     "UNKNOWN": "The response is not written on the expected form.",
 }[tag]
