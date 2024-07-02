@@ -497,10 +497,6 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                             summary="response = "+str(value),
                             details="Response candidates: "+expressions_string
                         )
-                        graph.attach(
-                            "response candidates "+expressions_string,
-                            END.label
-                        )
     return graph
 
 def create_criteria_dict(criteria_string, criteria_parser, parsing_params):
@@ -527,7 +523,8 @@ def create_criteria_dict(criteria_string, criteria_parser, parsing_params):
     for criterion in criteria_string_list:
         try:
             criterion_tokens = criteria_parser.scan(criterion)
-            criteria_parsed.update({criterion: criteria_parser.parse(criterion_tokens)[0]})
+            criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+            criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
             print(e)
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
