@@ -1,5 +1,5 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow, Mul
+from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow, Mul,N
 from sympy.printing.latex import LatexPrinter
 from copy import deepcopy
 import re
@@ -119,14 +119,113 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
     return result
 
 def check_equality(criterion, parameters_dict):
+    
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     local_substitutions = parameters_dict.get("local_substitutions",[])
     parsing_params = {key: value for (key,value) in parameters_dict["parsing_params"].items()}
     parsing_params.update({"simplify": False})
+    
+    #Define atol and rtol
+    """
+    ATOL = float(parameters_dict.get("atol"))
+    
+    RTOL = float(parameters_dict.get("rtol"))
+    """
+    #Gets the LHS and RHS of the equation
+    
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
+    
+ #LHS is response
+ #RHS is answer
+    
+    #Parses into a mathematical expression - the numerical value needs to be extracted
     expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
+    
+    
+    #Note response and answer
+    #Separates LHS and RHS and parses
+    RES = (parse_expression(lhs, parsing_params))
+    ANS = (parse_expression(rhs, parsing_params))
+    
+    #Simplifies and converts RES and ANS to decimals
+    res = N(RES.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify())
+    ans = N(ANS.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify())
+   
     result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
+    
+    # Finds the answer and result from the criterion. 
+    
+    
+    error_below_atol = None
+    error_below_rtol = None
+
+#Status messages, remove
+    """
+    print(f"\n atol is {float(parameters_dict.get("atol"))}")
+    print(f"\n rtol is {float(parameters_dict.get("rtol"))}")
+
+    print("\n")
+    print("=============")
+    print(res)
+    print(ans)            
+    """
+
+    if result is False:
+        if """params.get("numerical", False)""" or float(parameters_dict.get("rtol", 0)) > 0 or float(parameters_dict.get("atol", 0)) > 0:
+            # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
+            # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
+            # are other reserved symbols.
+            
+            #Removing this because I'm not sure exactly what it does
+            """
+            def replace_pi(expr):
+                pi_symbol = pi
+                for s in expr.free_symbols:
+                    if str(s) == 'pi':
+                        pi_symbol = s
+                return expr.subs(pi_symbol, float(pi))
+            ans = replace_pi(ans)
+            res = replace_pi(res)
+            """
+            if float(parameters_dict.get("atol", 0)) > 0:
+                try:
+                    absolute_error = abs(float(ans-res))
+                    error_below_atol = bool(absolute_error < float(parameters_dict["atol"]))
+                except TypeError:
+                    error_below_atol = None
+            else:
+                error_below_atol = True
+            if float(parameters_dict.get("rtol", 0)) > 0:
+                try:
+                    relative_error = abs(float((ans-res)/ans))
+                    error_below_rtol = bool(relative_error < float(parameters_dict["rtol"]))
+                except TypeError:
+                    error_below_rtol = None
+            else:
+                error_below_rtol = True
+            if error_below_atol is None or error_below_rtol is None:
+                
+                result = False
+                
+                print("\n INVALID \n")
+                
+                """
+                eval_response.is_correct = False
+                tag = "NOT_NUMERICAL"
+                eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+                """
+            elif error_below_atol is True and error_below_rtol is True:
+                
+                result = True
+                print("\n WITHIN ERROR TOLERANCE \n")
+                """
+                eval_response.is_correct = True
+                tag = "WITHIN_TOLERANCE"
+                eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
+                """
+
+    
     return result
 
 def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
@@ -160,12 +259,14 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
     graph.attach(label+"_FALSE", END.label)
     return graph
 
+
+#Not the issue
 def criterion_equality_node(criterion, parameters_dict, label=None):
     if label is None:
         label = criterion.content_string()
 
     def mathematical_equivalence(unused_input):
-        result = check_equality(criterion, parameters_dict)
+        result = check_equality(criterion, parameters_dict, params)
         if result is True:
             return {label+"_TRUE"}
         else:
@@ -355,6 +456,8 @@ def one_exponent_flip(expression):
     variations = replace_node_variations(expression, Pow, exponent_flip)
     return variations
 
+#3rd in chain: returns part of the criterion graph
+
 def criterion_where_node(criterion, parameters_dict, label=None):
     parsing_params = parameters_dict["parsing_params"]
     expression = criterion.children[0]
@@ -530,6 +633,9 @@ def create_criteria_dict(criteria_string, criteria_parser, parsing_params):
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
     return criteria_parsed
 
+
+# 2nd in the chain - Creates the evaluation criteria 
+
 def create_criteria_graphs(criteria, params_dict):
     criteria_graphs = {}
     graph_templates = {
@@ -546,17 +652,19 @@ def create_criteria_graphs(criteria, params_dict):
         criteria_graphs.update({label: graph})
     return criteria_graphs
 
-
+"""
+The main function
+"""
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
     Function used to symbolically compare two expressions.
     """
 
-    eval_response = EvaluationResponse()
+    eval_response = EvaluationResponse() #Initiayion
     eval_response.is_correct = False
 
     # This code handles the plus_minus and minus_plus operators
-    # actual symbolic comparison is done in check_equality
+    # actual symbolic comparison is done in *check_equality*
     if "multiple_answers_criteria" not in params.keys():
         params.update({"multiple_answers_criteria": "all"})
 
@@ -604,8 +712,11 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
 
     return eval_response
 
-
+#1st in chain, executes the comparison. Returns the eval response, which includes the T/F and additional info. Evalresponse is a class
 def symbolic_comparison(response, answer, params, eval_response) -> dict:
+
+    #Error exceptions
+
 
     if not isinstance(answer, str):
         raise Exception("No answer was given.")
@@ -623,6 +734,9 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         eval_response.add_feedback(("NO_RESPONSE", symbolic_comparison_internal_messages["NO_RESPONSE"]))
         return eval_response
 
+
+    # Makes everything symbolic
+    
     answer, response = substitute_input_symbols([answer, response], params)
     parsing_params = create_sympy_parsing_params(params)
     parsing_params.update({"rationalise": True, "simplify": True})
@@ -694,6 +808,10 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
     criteria_parsed = create_criteria_dict(criteria_string, criteria_parser, parsing_params)
 
+
+    # Criteria graphs are the reference
+
+
     # Create criteria graphs
     is_correct = True
     parameters_dict = {
@@ -705,6 +823,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "original_input": {"answer": answer, "response": response},
         "disabled_evaluation_nodes": params.get("disabled_evaluation_nodes", set()),
         "syntactical_comparison": params.get("syntactical_comparison", False),
+        "atol": (params.get("atol", 0)),
+        "rtol": (params.get("rtol", 0)),
     }
     criteria_graphs = create_criteria_graphs(criteria_parsed, parameters_dict)
 
@@ -736,46 +856,5 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
                 eval_response.add_feedback((reference_tag, feedback))
                 break
     eval_response.is_correct = is_correct
-
-    error_below_atol = None
-    error_below_rtol = None
-
-    if eval_response.is_correct is False:
-        if params.get("numerical", False) or float(params.get("rtol", 0)) > 0 or float(params.get("atol", 0)) > 0:
-            # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
-            # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
-            # are other reserved symbols.
-            def replace_pi(expr):
-                pi_symbol = pi
-                for s in expr.free_symbols:
-                    if str(s) == 'pi':
-                        pi_symbol = s
-                return expr.subs(pi_symbol, float(pi))
-            ans = replace_pi(ans)
-            res = replace_pi(res)
-            if float(params.get("atol", 0)) > 0:
-                try:
-                    absolute_error = abs(float(ans-res))
-                    error_below_atol = bool(absolute_error < float(params["atol"]))
-                except TypeError:
-                    error_below_atol = None
-            else:
-                error_below_atol = True
-            if float(params.get("rtol", 0)) > 0:
-                try:
-                    relative_error = abs(float((ans-res)/ans))
-                    error_below_rtol = bool(relative_error < float(params["rtol"]))
-                except TypeError:
-                    error_below_rtol = None
-            else:
-                error_below_rtol = True
-            if error_below_atol is None or error_below_rtol is None:
-                eval_response.is_correct = False
-                tag = "NOT_NUMERICAL"
-                eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
-            elif error_below_atol is True and error_below_rtol is True:
-                eval_response.is_correct = True
-                tag = "WITHIN_TOLERANCE"
-                eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
 
     return eval_response
