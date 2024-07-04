@@ -208,7 +208,7 @@ def check_equality(criterion, parameters_dict):
                 
                 result = False
                 
-                print("\n INVALID \n")
+                
                 
                 """
                 eval_response.is_correct = False
@@ -218,7 +218,7 @@ def check_equality(criterion, parameters_dict):
             elif error_below_atol is True and error_below_rtol is True:
                 
                 result = True
-                print("\n WITHIN ERROR TOLERANCE \n")
+                
                 """
                 eval_response.is_correct = True
                 tag = "WITHIN_TOLERANCE"
