@@ -1115,6 +1115,28 @@ class TestEvaluationFunction():
                         'M': {'aliases': [], 'latex': r'\(M\)'},
                     }
                 }),
+            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d = 34; Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d = 34; Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
+                {
+                    'symbols': {
+                        'Ta': {'aliases': [], 'latex': r'\(T_a\)'},
+                        'gamma': {'aliases': [''], 'latex': r'\(\gamma\)'},
+                        'T0b': {'aliases': [], 'latex': r'\(T_{0b}\)'},
+                        'T0d': {'aliases': [], 'latex': r'\(T_{0d}\)'},
+                        'QR': {'aliases': [], 'latex': r'\(Q_R\)'},
+                        'cp': {'aliases': [], 'latex': r'\(c_p\)'},
+                    }
+                }),
+            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d = Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d = Ta*(1+( gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
+                {
+                    'symbols': {
+                        'Ta': {'aliases': [], 'latex': r'\(T_a\)'},
+                        'gamma': {'aliases': [''], 'latex': r'\(\gamma\)'},
+                        'T0b': {'aliases': [], 'latex': r'\(T_{0b}\)'},
+                        'T0d': {'aliases': [], 'latex': r'\(T_{0d}\)'},
+                        'QR': {'aliases': [], 'latex': r'\(Q_R\)'},
+                        'cp': {'aliases': [], 'latex': r'\(c_p\)'},
+                    }
+                }),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
