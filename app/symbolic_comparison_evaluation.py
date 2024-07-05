@@ -126,11 +126,7 @@ def check_equality(criterion, parameters_dict):
     parsing_params.update({"simplify": False})
     
     #Define atol and rtol
-    """
-    ATOL = float(parameters_dict.get("atol"))
     
-    RTOL = float(parameters_dict.get("rtol"))
-    """
     #Gets the LHS and RHS of the equation
     
     lhs = criterion.children[0].content_string()
@@ -155,39 +151,30 @@ def check_equality(criterion, parameters_dict):
     result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
     
     # Finds the answer and result from the criterion. 
-    
-    
-    error_below_atol = None
+
     error_below_rtol = None
+    error_below_atol = None
 
-#Status messages, remove
-    """
-    print(f"\n atol is {float(parameters_dict.get("atol"))}")
-    print(f"\n rtol is {float(parameters_dict.get("rtol"))}")
-
-    print("\n")
-    print("=============")
-    print(res)
-    print(ans)            
-    """
 
     if result is False:
-        if """params.get("numerical", False)""" or float(parameters_dict.get("rtol", 0)) > 0 or float(parameters_dict.get("atol", 0)) > 0:
+        if parameters_dict.get("numerical", False) or float(parameters_dict.get("rtol", 0)) > 0 or float(parameters_dict.get("atol", 0)) > 0:
             # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
             # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
             # are other reserved symbols.
             
             #Removing this because I'm not sure exactly what it does
-            """
+            
+            
             def replace_pi(expr):
                 pi_symbol = pi
                 for s in expr.free_symbols:
                     if str(s) == 'pi':
                         pi_symbol = s
                 return expr.subs(pi_symbol, float(pi))
+                
             ans = replace_pi(ans)
             res = replace_pi(res)
-            """
+            
             if float(parameters_dict.get("atol", 0)) > 0:
                 try:
                     absolute_error = abs(float(ans-res))
@@ -266,7 +253,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         label = criterion.content_string()
 
     def mathematical_equivalence(unused_input):
-        result = check_equality(criterion, parameters_dict, params)
+        result = check_equality(criterion, parameters_dict)
         if result is True:
             return {label+"_TRUE"}
         else:
@@ -825,6 +812,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "syntactical_comparison": params.get("syntactical_comparison", False),
         "atol": (params.get("atol", 0)),
         "rtol": (params.get("rtol", 0)),
+        "numerical": params.get("numerical", False),
+        
     }
     criteria_graphs = create_criteria_graphs(criteria_parsed, parameters_dict)
 
