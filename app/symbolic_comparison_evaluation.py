@@ -161,17 +161,14 @@ def check_equality(criterion, parameters_dict):
             # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
             # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
             # are other reserved symbols.
-            
-            #Removing this because I'm not sure exactly what it does
-            
-            
+
             def replace_pi(expr):
                 pi_symbol = pi
                 for s in expr.free_symbols:
                     if str(s) == 'pi':
                         pi_symbol = s
                 return expr.subs(pi_symbol, float(pi))
-                
+            
             ans = replace_pi(ans)
             res = replace_pi(res)
             

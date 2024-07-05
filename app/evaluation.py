@@ -46,6 +46,5 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     else:
         eval_response = symbolic_comparison(response, answer, parameters, eval_response)
         
-    print(f"\n Response: {eval_response}")
 
     return eval_response.serialise(include_test_data)
