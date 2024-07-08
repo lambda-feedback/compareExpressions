@@ -1282,14 +1282,69 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            (
+            ( # Exactly the same coefficients
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
                 True,
                 [],
                 {
-                    'rtol': 0.01,
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # One less significant digit in response
+                "0.0236x^3-0.285x^2+1.38x-1.12",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                True,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Near lower bound for all coefficients
+                "0.02355x^3-0.2845x^2+1.377x-1.117",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                True,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Near upper bound for all coefficients
+                "0.023649x^3-0.2849x^2+1.3849x-1.1249",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                True,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Slightly below lower bound for all coefficients
+                "0.02352x^3-0.2831x^2+1.376x-1.1163",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                False,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Slightly above upper bound for all coefficients
+                "0.023652x^3-0.2861x^2+1.390x-1.128",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)/2=diff(answer,x,2)/2 where x=0, diff(response,x,3)/6=diff(answer,x,3)/6 where x=0",
+                False,
+                [],
+                {
+                    'rtol': 0.005,
                     'atol': 0,
                 }
             ),
