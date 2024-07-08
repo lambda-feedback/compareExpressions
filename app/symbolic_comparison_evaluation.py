@@ -137,41 +137,28 @@ def check_equality(criterion, parameters_dict):
     
     #Parses into a mathematical expression - the numerical value needs to be extracted
     expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
-    
-    
-    #Note response and answer
-    #Separates LHS and RHS and parses
-    RES = (parse_expression(lhs, parsing_params))
-    ANS = (parse_expression(rhs, parsing_params))
-    
-    #Simplifies and converts RES and ANS to decimals
-    res = N(RES.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify())
-    ans = N(ANS.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify())
-   
     result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
-    
-    # Finds the answer and result from the criterion. 
-
-    error_below_rtol = None
-    error_below_atol = None
-
 
     if result is False:
+        error_below_rtol = None
+        error_below_atol = None
         if parameters_dict.get("numerical", False) or float(parameters_dict.get("rtol", 0)) > 0 or float(parameters_dict.get("atol", 0)) > 0:
+
             # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
             # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
             # are other reserved symbols.
-
             def replace_pi(expr):
                 pi_symbol = pi
                 for s in expr.free_symbols:
                     if str(s) == 'pi':
                         pi_symbol = s
                 return expr.subs(pi_symbol, float(pi))
-            
-            ans = replace_pi(ans)
-            res = replace_pi(res)
-            
+
+            # NOTE: This code assumes that the left hand side is the response and the right hand side is the answer
+            # Separates LHS and RHS, parses and evaluates them
+            res = N(replace_pi(parse_expression(lhs, parsing_params).subs(reserved_expressions).subs(local_substitutions)))
+            ans = N(replace_pi(parse_expression(rhs, parsing_params).subs(reserved_expressions).subs(local_substitutions)))
+
             if float(parameters_dict.get("atol", 0)) > 0:
                 try:
                     absolute_error = abs(float(ans-res))
@@ -189,20 +176,16 @@ def check_equality(criterion, parameters_dict):
             else:
                 error_below_rtol = True
             if error_below_atol is None or error_below_rtol is None:
-                
                 result = False
-                
-                
-                
+                # TODO: The code below for supplying the right tag will be moved elsewhere in the code in the future
                 """
                 eval_response.is_correct = False
                 tag = "NOT_NUMERICAL"
                 eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
                 """
             elif error_below_atol is True and error_below_rtol is True:
-                
                 result = True
-                
+                # TODO: The code below for supplying the right tag will be moved elsewhere in the code in the future
                 """
                 eval_response.is_correct = True
                 tag = "WITHIN_TOLERANCE"
@@ -499,11 +482,11 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     response = parameters_dict["reserved_expressions"]["response"]
     expression_to_vary = None
-    if expression.children[0].content_string().strip() == "response":
+    if "response" in expression.children[0].content_string().strip():
         expression_to_vary = expression.children[1]
-    elif expression.children[1].content_string().strip() == "response":
-        expression_to_vary = expression.children[1]
-    if "response" in expression_to_vary.content_string():
+    elif "response" in expression.children[1].content_string().strip():
+        expression_to_vary = expression.children[0]
+    if expression_to_vary is not None and "response" in expression_to_vary.content_string():
         expression_to_vary = None
     if expression_to_vary is not None:
         response_value = response.subs(local_subs)
@@ -525,14 +508,16 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                 "details": lambda expression, variations: "The following expressions are checked: "+", ".join([str(e) for e in variations]),
             }
         }
-        values_and_expressions = {expression_to_vary.subs(local_subs): set([expression_to_vary])}
-        values_and_variations_group = {expression_to_vary.subs(local_subs): set(["UNDETECTABLE"])}
+        reference_value = expression_to_vary.subs(local_subs)
+        values_and_expressions = {reference_value: set([expression_to_vary])}
+        values_and_variations_group = {reference_value: set(["UNDETECTABLE"])}
+        undetectable_variations = set()
         for (group_label, info) in variation_groups.items():
             for variation in info["variations"]:
                 value = variation.subs(local_subs)
                 values_and_expressions.update({value: values_and_expressions.get(value, set()).union(set([variation]))})
-                if value == expression_to_vary.subs(local_subs):
-                    values_and_variations_group["UNDETECTABLE"].add(variation)
+                if value == reference_value:
+                    undetectable_variations.add(variation)
                 else:
                     values_and_variations_group.update({value: values_and_variations_group.get(value, set()).union(set([group_label]))})
         if len(values_and_expressions) > 1:
@@ -789,7 +774,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "response_original": res_original,
         "answer_original": ans_original,
     }
-    criteria_string = substitute_input_symbols(params.get("criteria", "answer=response"), params)[0]
+    criteria_string = substitute_input_symbols(params.get("criteria", "response=answer"), params)[0]
     criteria_parsed = create_criteria_dict(criteria_string, criteria_parser, parsing_params)
 
 
