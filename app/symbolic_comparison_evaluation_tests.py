@@ -1208,6 +1208,161 @@ class TestEvaluationFunction():
         assert set(feedback_tags) == set(result["tags"])
 
     @pytest.mark.parametrize(
+        "response, answer, criteria, value, feedback_tags, additional_params",
+        [
+            ("14", "a+b*c", "response=answer where a=2; b=3; c=4", True, [],
+                {
+                    'symbols': {
+                        'a': {'aliases': [], 'latex': r'\(a\)'},
+                        'b': {'aliases': [''], 'latex': r'\(b)'},
+                        'c': {'aliases': [], 'latex': r'\(c)'},
+                    },
+                    'atol': 1,
+                    'rtol': 0,
+                }
+            ),
+            ("2/3", "a/b", "response=answer where a=2; b=3", True, [],
+                {
+                    'symbols': {
+                        'a': {'aliases': [], 'latex': r'\(a)'},
+                        'b': {'aliases': [], 'latex': r'\(b)'},
+                    },
+                    'rtol': 0.1,
+                    'atol': 0.1,
+                }
+            ),
+            ("0.6667", "a/b", "response=answer where a=2; b=3", True, [],
+                {
+                    'symbols': {
+                        'a': {'aliases': [], 'latex': r'\(a)'},
+                        'b': {'aliases': [], 'latex': r'\(b)'},
+                    },
+                    'rtol': 0.1,
+                    'atol': 0,
+                }
+            ),
+            ("0.1667", "a/b", "response=answer where a=1; b=6", True, [],
+                {
+                    'symbols': {
+                        'a': {'aliases': [], 'latex': r'\(a)'},
+                        'b': {'aliases': [], 'latex': r'\(b)'},
+                    },
+                    'rtol': 0,
+                    'atol': 0.1,
+                }
+            ),
+            ("1.41", "sqrt(a)", "response=answer where a=2", True, [],
+                {
+                    'symbols': {
+                        'a': {'aliases': [], 'latex': r'\(a)'},
+                    },
+                    'rtol': 0,
+                    'atol': 0.1,
+                }
+            ),
+            ("2", "(a/b)^c", "response=answer where a=7; b=5; c=1.4", False, [],
+                {
+                    'symbols': {
+                        'a': {'aliases': [], 'latex': r'\(a)'},
+                        'b': {'aliases': [], 'latex': r'\(b)'},
+                        'c': {'aliases': [], 'latex': r'\(c)'},
+                    },
+                    'rtol': 0.01,
+                    'atol': 0,
+                }
+            ),
+            ("1.6017", "(a/b)^c", "response=answer where a=7; b=5; c=1.4", True, [],
+                {
+                    'symbols': {
+                        'a': {'aliases': [], 'latex': r'\(a)'},
+                        'b': {'aliases': [], 'latex': r'\(b)'},
+                        'c': {'aliases': [], 'latex': r'\(c)'},
+                    },
+                    'rtol': 0.01,
+                    'atol': 0,
+                }
+            ),
+            ( # Exactly the same coefficients
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                True,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # One less significant digit in response
+                "0.0236x^3-0.285x^2+1.38x-1.12",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                True,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Near lower bound for all coefficients
+                "0.02355x^3-0.2845x^2+1.377x-1.117",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                True,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Near upper bound for all coefficients
+                "0.023649x^3-0.2849x^2+1.3849x-1.1249",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                True,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Slightly below lower bound for all coefficients
+                "0.02352x^3-0.2831x^2+1.376x-1.1163",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
+                False,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+            ( # Slightly above upper bound for all coefficients
+                "0.023652x^3-0.2861x^2+1.390x-1.128",
+                "0.02364x^3-0.2846x^2+1.383x-1.122",
+                "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)/2=diff(answer,x,2)/2 where x=0, diff(response,x,3)/6=diff(answer,x,3)/6 where x=0",
+                False,
+                [],
+                {
+                    'rtol': 0.005,
+                    'atol': 0,
+                }
+            ),
+        ]
+    )
+    def test_criteria_where_numerical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        params.update(additional_params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        for feedback_tag in feedback_tags:
+            assert feedback_tag in result["tags"]
+
+    @pytest.mark.parametrize(
         "response, answer, value",
         [
             ("summation(2*k - 1, (k, 1, n))",          "summation(2*k - 1, (k, 1, n))",    True),
