@@ -45,8 +45,8 @@ def attach_form_criteria(graph, attachment_node, criterion, parameters_dict, for
 
 
 def response_and_answer_on_same_form(label, parameters_dict):
-    local_answer = parameters_dict["original_input"]["answer"]
-    local_response = parameters_dict["original_input"]["response"]
+    local_answer = parameters_dict["reserved_expressions_strings"]["task"]["answer"]
+    local_response = parameters_dict["reserved_expressions_strings"]["learner"]["response"]
     matches_found = set()
 
     def inner(unused_input):

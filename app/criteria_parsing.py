@@ -6,17 +6,19 @@ def generate_criteria_parser(reserved_expressions):
     null_symbol = "NULL"
 
     token_list = [
-        (start_symbol,     start_symbol),
-        (end_symbol,       end_symbol),
-        (null_symbol,      null_symbol),
-        (" *BOOL *",       "BOOL"),
-        (" *EQUALITY *",   "EQUALITY"),
-        (" *RESERVED *",   "RESERVED"),
-        (" *= *",          "EQUAL"),
-        (" *where *",      "WHERE"),
-        (" *written as *", "WRITTEN_AS"),
-        (" *; *", "SEPARATOR"),
-        (" *OTHER *",      "OTHER", catch_undefined),
+        (start_symbol,        start_symbol),
+        (end_symbol,          end_symbol),
+        (null_symbol,         null_symbol),
+        (" *BOOL *",          "BOOL"),
+        (" *EQUALITY *",      "EQUALITY"),
+        (" *EQUAL *",         "EQUAL"),
+        (" *EQUAL_LIST *", "EQUAL_LIST"),
+        (" *RESERVED *",      "RESERVED"),
+        (" *= *",             "EQUALITY"),
+        (" *where *",         "WHERE"),
+        (" *written as *",    "WRITTEN_AS"),
+        (" *; *",             "SEPARATOR"),
+        (" *OTHER *",         "OTHER", catch_undefined),
     ]
 
     for value in reserved_expressions.values():
@@ -24,22 +26,20 @@ def generate_criteria_parser(reserved_expressions):
 
     productions = [
         ("START",         "BOOL", create_node),
-        ("BOOL",          "EQUALITY", proceed),
-        ("BOOL",          "EQUALITY where EQUALITY", infix),
-        ("BOOL",          "EQUALITY where EQUALITY_LIST", infix),
-        ("EQUALITY",      "OTHER = OTHER", infix),
-        ("EQUALITY",      "RESERVED = OTHER", infix),
-        ("EQUALITY",      "OTHER = RESERVED", infix),
-        ("EQUALITY",      "RESERVED = RESERVED", infix),
-        ("EQUALITY_LIST", "EQUALITY;EQUALITY", infix),
-        ("EQUALITY_LIST", "EQUALITY_LIST;EQUALITY", append_last),
+        ("BOOL",          "EQUAL", proceed),
+        ("BOOL",          "EQUAL where EQUAL", infix),
+        ("BOOL",          "EQUAL where EQUAL_LIST", infix),
         ("BOOL",          "RESERVED written as OTHER", infix),
         ("BOOL",          "RESERVED written as RESERVED", infix),
-        ("BOOL",          "RESERVED written as EQUALITY_LIST", infix),
-        ("BOOL",          "EQUALITY where OTHER", infix),
+        ("EQUAL_LIST", "EQUAL;EQUAL", infix),
+        ("EQUAL_LIST", "EQUAL_LIST;EQUAL", append_last),
+        ("EQUAL",      "OTHER = OTHER", infix),
+        ("EQUAL",      "RESERVED = OTHER", infix),
+        ("EQUAL",      "OTHER = RESERVED", infix),
+        ("EQUAL",      "RESERVED = RESERVED", infix),
         ("OTHER",         "RESERVED OTHER", join),
         ("OTHER",         "OTHER RESERVED", join),
-        ("OTHER",         "RESERVED RESERVED", infix),
+        ("OTHER",         "OTHER OTHER", join),
     ]
 
     return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
@@ -55,6 +55,7 @@ if __name__ == "__main__":
         "response = q+p where q = a*b; p = b*c",
         "response written as answer",
         "response written as a*b*c",
+        "response - answer = 0",
     ]
     reserved_expressions = {
         "learner":

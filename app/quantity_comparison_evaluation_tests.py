@@ -158,7 +158,8 @@ class TestEvaluationFunction():
             ("-10500 g m/s^2", "-10.5 kg m/s^2"),
             ("-10.5 mm^2", "-0.0000105 m^2"),
             ("5 GN", "5000000000 metre kilogram second^(-2)"),
-            ("10 pint", "5682.6 centimetre^3")
+            ("10 pint", "5682.6 centimetre^3"),
+            ("1 kg", "2.204 lb")
         ]
     )
     def test_convert_units(self, ans, res):

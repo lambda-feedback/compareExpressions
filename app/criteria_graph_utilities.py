@@ -1,10 +1,10 @@
 import json
 
-evaluation_style = ("([","])")
-starting_evaluation_style = (">","]")
-criterion_style = ("[","]")
-output_style = ("{{","}}")
-special_style = ("[[","]]")
+evaluation_style = ("([", "])")
+starting_evaluation_style = (">", "]")
+criterion_style = ("[", "]")
+output_style = ("{{", "}}")
+special_style = ("[[", "]]")
 
 class CriteriaGraph:
 

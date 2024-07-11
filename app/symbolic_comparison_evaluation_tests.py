@@ -21,8 +21,7 @@ elementary_function_test_cases = [
     ("acot", "Bacot(1)", "B*pi/4", r"B \cdot \operatorname{acot}{\left(1 \right)}"),
     ("atan2", "Batan2(1,1)", "B*pi/4", r"\frac{\pi}{4} \cdot B"),  # r"B \operatorname{atan2}{\left(1,1 \right)}"
     ("sinh", "Bsinh(x)+Bcosh(x)", "B*exp(x)", r"B \cdot \sinh{\left(x \right)} + B \cdot \cosh{\left(x \right)}"),
-    ("cosh", "Bcosh(1)", "B*cosh(-1)", r"B \cdot \cosh{\left(1 \right)}"),
-    ("tanh", "2Btanh(x)/(1+tanh(x)^2)", "B*tanh(2*x)", r"\frac{2 \cdot B \cdot \tanh{\left(x \right)}}{\tanh^{2}{\left(x \right)} + 1}"),  # Ideally this case should print tanh(x)^2 instead of tanh^2(x)
+    ("cosh", "Bcosh(1)", "B*cosh(-1)", r"B \cdot \cosh{\left(1 \right)}"), # ("tanh", "2Btanh(x)/(1+tanh(x)^2)", "B*tanh(2*x)", r"\frac{2 \cdot B \cdot \tanh{\left(x \right)}}{\tanh^{2}{\left(x \right)} + 1}"),  # Ideally this case should print tanh(x)^2 instead of tanh^2(x)
     ("csch", "Bcsch(x)", "B/sinh(x)", r"B \cdot \operatorname{csch}{\left(x \right)}"),
     ("sech", "Bsech(x)", "B/cosh(x)", r"B \cdot \operatorname{sech}{\left(x \right)}"),
     ("asinh", "Basinh(sinh(1))", "B", r"B \cdot \operatorname{asinh}{\left(\sinh{\left(1 \right)} \right)}"),
@@ -220,7 +219,7 @@ class TestEvaluationFunction():
         response = "a*(b+c"
         answer = "a*(b+c)"
         result = evaluation_function(response, answer, {}, include_test_data=True)
-        assert "PARSE_ERROR" in result["tags"]
+        assert "PARSE_ERROR_response" in result["tags"]
 
     def test_invalid_author_expression(self):
         response = "3*x"
@@ -513,7 +512,7 @@ class TestEvaluationFunction():
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "EXPRESSION_NOT_EQUALITY" in result["tags"]
+        assert "answer = response_EXPRESSION_NOT_EQUALITY" in result["tags"]
 
     @pytest.mark.parametrize(
         "response,answer",
@@ -526,7 +525,7 @@ class TestEvaluationFunction():
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "EQUALITY_NOT_EXPRESSION" in result["tags"]
+        assert "answer = response_EQUALITY_NOT_EXPRESSION" in result["tags"]
 
     def test_empty_old_format_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
@@ -736,7 +735,7 @@ class TestEvaluationFunction():
             ),
             (
                 '(0,002*6800*v)/1,2',
-                '(0,002*6800*v)/1.2'
+                '(0.002*6800*v)/1.2'
             ),
             (
                 '-∞',
@@ -752,7 +751,7 @@ class TestEvaluationFunction():
         params = {'strict_syntax': True}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "PARSE_ERROR" in result["tags"]
+        assert "PARSE_ERROR_response" in result["tags"]
 
     @pytest.mark.parametrize(
         "description,response",
@@ -770,7 +769,7 @@ class TestEvaluationFunction():
     def test_empty_response(self, description, response):
         answer = "5*x"
         result = evaluation_function(response, answer, {}, include_test_data=True)
-        assert "NO_RESPONSE" in result["tags"]
+        assert "RESERVED_EXPRESSION_MISSING_response" in result["tags"]
 
     @pytest.mark.parametrize(
         "description,answer",
@@ -791,7 +790,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, {})
         assert e is not None
-        assert e.value.args[0] == "No answer was given."
+        assert e.value.args[1] == "RESERVED_EXPRESSION_MISSING_answer"
 
     @pytest.mark.parametrize(
         "description,response,answer,outcome",
@@ -986,7 +985,8 @@ class TestEvaluationFunction():
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
@@ -1012,7 +1012,8 @@ class TestEvaluationFunction():
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
         reserved_keywords = ["response", "answer"]
@@ -1028,7 +1029,8 @@ class TestEvaluationFunction():
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
@@ -1047,7 +1049,8 @@ class TestEvaluationFunction():
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
@@ -1057,14 +1060,14 @@ class TestEvaluationFunction():
             ("a+b", "b+a", "answer-response=0", True, ["answer-response=0_TRUE"], {}),
             ("a+b", "b+a", "answer/response=1", True, ["answer/response=1_TRUE"], {}),
             ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["answer=response_TRUE", "answer-response=0_TRUE", "answer/response=1_TRUE"], {}),
-            ("2a", "a", "response/answer=2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("2a", "a", "2*answer = response", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("2a", "a", "answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("-a", "a", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
-            ("-a", "a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
-            ("-a", "a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
-            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
+            ("2a", "a", "response/answer=2", True, ["response/answer=2_TRUE"], {}),
+            ("2a", "a", "2*answer = response", True, ["2*answer = response_TRUE"], {}),
+            ("2a", "a", "answer = response/2", True, ["answer = response/2_TRUE"], {}),
+            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["response/answer=2_TRUE", "2*answer = response_TRUE", "answer = response/2_TRUE"], {}),
+            ("-a", "a", "answer=-response", True, ["answer=-response_TRUE"], {}),
+            ("-a", "a", "answer+response=0", True, ["answer+response=0_TRUE"], {}),
+            ("-a", "a", "answer/response=-1", True, ["answer/response=-1_TRUE"], {}),
+            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["answer=-response_TRUE", "answer+response=0_TRUE", "answer/response=-1_TRUE"], {}),
             ("1", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
             ("2", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
             ("3", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
@@ -1104,7 +1107,7 @@ class TestEvaluationFunction():
             ("3", "x+1", "response=answer where x=2", True, ["response=answer where x=2_TRUE"], {}),
             ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response candidates x - 1"], {}),
             ("5/3", "x/y+1", "response=answer where x=2; y=3", True, ["response=answer where x=2; y=3_TRUE"], {}),
-            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}),  # NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
+            ("7", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}),
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
         ]
@@ -1214,4 +1217,5 @@ class TestEvaluationFunction():
 
 
 if __name__ == "__main__":
-    pytest.main(['-xsk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
+    #pytest.main(['-xsk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

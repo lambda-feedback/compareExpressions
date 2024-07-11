@@ -29,8 +29,7 @@ class EvaluationResponse:
         for tag in tags:
             if tag not in self._feedback_tags.keys():
                 feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
-                if feedback_string is not None:
-                    self.add_feedback((tag, feedback_string))
+                self.add_feedback((tag, feedback_string))
 
     def add_criteria_graph(self, name, graph):
         self._criteria_graphs.update({name: graph.json()})
@@ -40,7 +39,7 @@ class EvaluationResponse:
         for x in self._feedback:
             if (isinstance(x, tuple) and len(x[1].strip())) > 0:
                 feedback.append(x[1].strip())
-            elif len(x.strip()) > 0:
+            elif x is not None and len(x.strip()) > 0:
                 feedback.append(x.strip())
         return "<br>".join(feedback)
 

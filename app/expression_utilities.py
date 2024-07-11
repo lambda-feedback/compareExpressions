@@ -66,11 +66,6 @@ special_symbols_names = [(x, []) for x in greek_letters]
 # -------- String Manipulation Utilities
 def create_expression_set(expr, params):
     expr_set = set()
-    if "plus_minus" in params.keys():
-        expr = expr.replace(params["plus_minus"], "plus_minus")
-
-    if "minus_plus" in params.keys():
-        expr = expr.replace(params["minus_plus"], "minus_plus")
 
     if ("plus_minus" in expr) or ("minus_plus" in expr):
         expr_set.add(expr.replace("plus_minus", "+").replace("minus_plus", "-"))
@@ -299,6 +294,7 @@ def substitute_input_symbols(exprs, params):
                 if len(alternative) > 0:
                     substitutions.append((alternative, input_symbol[0]))
 
+    substitutions = list(set(substitutions))
     if len(substitutions) > 0:
         substitutions.sort(key=lambda x: -len(x[0]))
         for k in range(0, len(exprs)):
@@ -508,7 +504,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
                         parse_expression function.
     '''
 
-    unsplittable_symbols = list(unsplittable_symbols)
+    unsplittable_symbols = params.get("reserved_keywords", [])
     if "symbols" in params.keys():
         for symbol in params["symbols"].keys():
             if len(symbol) > 1:
@@ -545,9 +541,6 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "E": E
     }
 
-#    for symbol in unsplittable_symbols:
-#        symbol_dict.update({symbol: Symbol(symbol)})
-
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
 
     strict_syntax = params.get("strict_syntax", True)
@@ -559,10 +552,11 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "extra_transformations": tuple(),
         "elementary_functions": params.get("elementary_functions", False),
         "convention": params.get("convention", None),
-        "simplify": params.get("simplify", False)
+        "simplify": params.get("simplify", False),
+        "rationalise": params.get("rationalise", True)
     }
 
-    symbol_assumptions = list(symbol_assumptions)
+    symbol_assumptions = []
     if "symbol_assumptions" in params.keys():
         symbol_assumptions_strings = params["symbol_assumptions"]
         index = symbol_assumptions_strings.find("(")
@@ -583,7 +577,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
     return parsing_params
 
 
-def parse_expression(expr, parsing_params):
+def parse_expression(expr_string, parsing_params):
     '''
     Input:
         expr           : string to be parsed into a sympy expression
@@ -593,38 +587,49 @@ def parse_expression(expr, parsing_params):
         to the parameters in parsing_params
     '''
 
-    expr = preprocess_according_to_chosen_convention(expr, parsing_params)
+    if "plus_minus" in expr_string or "minus_plus" in expr_string:
+        expr_set = create_expression_set(expr_string, parsing_params)
+    else:
+        expr_set = set([expr_string])
 
     strict_syntax = parsing_params.get("strict_syntax", False)
     extra_transformations = parsing_params.get("extra_transformations", ())
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
     separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
-    # new approach
     substitutions = separate_unsplittable_symbols
-    if parsing_params["elementary_functions"] is True:
-        alias_substitutions = []
-        for (name, alias_list) in elementary_functions_names+special_symbols_names:
-            if name in expr:
-                alias_substitutions += [(name, " "+name)]
-            for alias in alias_list:
-                if alias in expr:
-                    alias_substitutions += [(alias, " "+name)]
-        substitutions += alias_substitutions
-    substitutions.sort(key=lambda x: -len(x[0]))
-    expr = substitute(expr, substitutions)
-    can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
-    if strict_syntax is True:
-        transformations = parser_transformations[0:4]+extra_transformations
+
+    parsed_expr_set = set()
+    for expr in expr_set:
+        expr = preprocess_according_to_chosen_convention(expr, parsing_params)
+        if parsing_params["elementary_functions"] is True:
+            alias_substitutions = []
+            for (name, alias_list) in elementary_functions_names+special_symbols_names:
+                if name in expr:
+                    alias_substitutions += [(name, " "+name)]
+                for alias in alias_list:
+                    if alias in expr:
+                        alias_substitutions += [(alias, " "+name)]
+            substitutions += alias_substitutions
+        substitutions.sort(key=lambda x: -len(x[0]))
+        expr = substitute(expr, substitutions)
+        can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
+        if strict_syntax is True:
+            transformations = parser_transformations[0:4]+extra_transformations
+        else:
+            transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8, 9]
+        if parsing_params.get("rationalise", False):
+            transformations += parser_transformations[11]
+        if parsing_params.get("simplify", False):
+            parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
+            parsed_expr = parsed_expr.simplify()
+        else:
+            parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+        if not isinstance(parsed_expr, Basic):
+            raise ValueError(f"Failed to parse Sympy expression `{expr}`")
+        parsed_expr_set.add(parsed_expr)
+
+    if len(expr_set) == 1:
+        return parsed_expr_set.pop()
     else:
-        transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
-    if parsing_params.get("rationalise", False):
-        transformations += parser_transformations[11]
-    if parsing_params.get("simplify", False):
-        parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
-        parsed_expr = parsed_expr.simplify()
-    else:
-        parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-    if not isinstance(parsed_expr, Basic):
-        raise ValueError(f"Failed to parse Sympy expression `{expr}`")
-    return parsed_expr
+        return parsed_expr_set
