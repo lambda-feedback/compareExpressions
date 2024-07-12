@@ -131,13 +131,20 @@ def check_equality(criterion, parameters_dict):
     
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
-    
+
  #LHS is response
  #RHS is answer
     
     #Parses into a mathematical expression - the numerical value needs to be extracted
     expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
     result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
+
+    if parse_expression(rhs, parsing_params) != 0:
+        ratio = (parse_expression(lhs, parsing_params)) / (parse_expression(rhs, parsing_params))
+        ratio = ratio.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify()
+    
+        if ratio.free_symbols:
+            raise Exception("There are free symbols")
 
     if result is False:
         error_below_rtol = None
