@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='compareExpressionsDataAnalytics', 
+    name='cmp-exp-data', 
     version='0.1.0',  
     packages=find_packages(),  
     install_requires=[
@@ -12,7 +12,7 @@ setup(
         'antlr4-python3-runtime==4.7.2'
     ],
     dependency_links=[
-        'git+https://github.com/lambda-feedback/compareExpressions.git@tr141-temporary-data-analysis-modifications#egg=compareExpressions'
+        'git+https://github.com/lambda-feedback/compareExpressions.git@tr141-temporary-data-analysis-modifications#egg=cmp-exp-data'
     ],
     long_description=open('README.md').read(),  # Long description from a README file
     long_description_content_type='text/markdown',  # Content type of the long description
