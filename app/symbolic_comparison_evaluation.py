@@ -4,6 +4,13 @@ from sympy.printing.latex import LatexPrinter
 from copy import deepcopy
 import re
 
+
+class RatioException(Exception):
+    def __init__(self,message,free_symbols,ratio):
+        super().__init__(message)
+        self.free_symbols = free_symbols
+        self.ratio = ratio
+
 from .expression_utilities import (
     substitute_input_symbols,
     parse_expression,
@@ -145,8 +152,10 @@ def check_equality(criterion, parameters_dict):
     ratio = (parse_expression(lhs, parsing_params)) / (parse_expression(rhs, parsing_params))
     ratio = ratio.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify()
 
-    if ratio.free_symbols:
-        raise Exception("There are free symbols")
+    message = "Free Symbols" if ratio.free_symbols else "Constant Ratio"
+    raise RatioException("message", ratio.free_symbols, ratio)
+
+    ######################### END
 
     if result is False:
         error_below_rtol = None
