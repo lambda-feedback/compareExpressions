@@ -138,13 +138,15 @@ def check_equality(criterion, parameters_dict):
     #Parses into a mathematical expression - the numerical value needs to be extracted
     expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
     result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
-
-    if parse_expression(rhs, parsing_params) != 0:
-        ratio = (parse_expression(lhs, parsing_params)) / (parse_expression(rhs, parsing_params))
-        ratio = ratio.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify()
     
-        if ratio.free_symbols:
-            raise Exception("There are free symbols")
+    if parse_expression(rhs, parsing_params) == 0:
+        raise Exception("Answer is zero")
+    
+    ratio = (parse_expression(lhs, parsing_params)) / (parse_expression(rhs, parsing_params))
+    ratio = ratio.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify()
+
+    if ratio.free_symbols:
+        raise Exception("There are free symbols")
 
     if result is False:
         error_below_rtol = None
