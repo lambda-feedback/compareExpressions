@@ -153,7 +153,7 @@ def check_equality(criterion, parameters_dict):
     ratio = ratio.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify()
 
     message = "Free Symbols" if ratio.free_symbols else "Constant Ratio"
-    raise RatioException("message", ratio.free_symbols, ratio)
+    raise RatioException(message, ratio.free_symbols, ratio)
 
     ######################### END
 
