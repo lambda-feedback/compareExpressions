@@ -135,7 +135,7 @@ Here the answer is `2.00 km/h`. To restrict the answers to imperial units `stric
 ### 5 Polynomials
 The intended answer should be written out in the `input -> Response area Answer` tab. Add an extra criteria in the `Evaluate -> advanced - raw parameters` section by clicking the + and typing "criteria" into the pop-up box. 
 
-![Sreenshot of button to add criteria](add_parameters.svg)
+![Sreenshot of button to add criteria](add_parameters.png)
 
 
 A new "criteria (string)" entry line in the "Evaluation Function Parameters" section will appear. The code below is an example criteria to check if the entered response is the correct 3rd degree polnomial ($ax^3+bx^2+cx+d$). 
