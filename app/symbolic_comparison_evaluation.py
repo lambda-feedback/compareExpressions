@@ -147,7 +147,7 @@ def check_equality(criterion, parameters_dict):
     result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
     
     if parse_expression(rhs, parsing_params) == 0:
-        raise Exception("Answer is zero")
+        raise ZeroDivisionError("Answer is zero")
     
     ratio = (parse_expression(lhs, parsing_params)) / (parse_expression(rhs, parsing_params))
     ratio = ratio.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify()
