@@ -12,7 +12,9 @@ There are eight optional parameters that can be set: `complexNumbers`, `conventi
 
 ## `complexNumbers`
 
-If you want to use `I` for the imaginary constant, set the grading parameter `complexNumbers` to True.
+If you want to use `I` for the imaginary constant, add the parameter `complexNumbers` to "advanced - raw parameters" by clicking the green (+). Type in `complexNumbers` and press enter. Click the green edit button, type in "True" and a pop-up `bool - true` will appear. Click the green tick.
+
+![Sreenshot of button to add criteria](complexNumbers.png)
 
 ## `convention`
 
