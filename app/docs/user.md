@@ -16,6 +16,12 @@ If you want to use `I` for the imaginary constant, add the parameter `complexNum
 
 ![Sreenshot of button to add criteria](complexNumbersv2.png)
 
+You can denote `i` and `j` as `I` by using the input symbols below. 
+
+![Sreenshot of button to add criteria](complexNumbersv3.png)
+
+Furthermore, the system can equate `exp(Ix)` to `cos(x)+Isin(x)`.
+
 ## `convention`
 
 Changes the implicit multiplication convention. If unset it will default to `equal_precedence`.
