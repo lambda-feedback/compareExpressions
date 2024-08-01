@@ -8,7 +8,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are eight optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `physical_quantity`, `plus_minus`/`minus_plus` `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
+There are eight optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `physical_quantity`, `plus_minus`/`minus_plus`, `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
 
 ## `complexNumbers`
 
@@ -59,6 +59,100 @@ When `physical_quantity` the evaluation function will generate feedback based on
 **Remark:** In some browser it is necessary to right-click and open the image in a separate tab in order for the tooltips to show up on hover.
 
 ![A flowchart describing the criteria that are checked for physical quantities and what feedback they produce.](quantity_comparison_graph.svg)
+
+The supported units are listed in the tables below.
+
+### Table: Base SI units
+
+SI base units taken from Table 1 of the [NIST Guide to the SI, Chapter 4: The Two Classes of SI Units and the SI Prefixes](https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-4-two-classes-si-units-and-si-prefixes)
+
+Note that gram is used as a base unit instead of kilogram.
+
+| SI base unit | Symbol | Dimension name       |
+|--------------|:-------|:---------------------|
+| metre        |   m    | `length`             |
+| gram         |   g    | `mass`               |
+| second       |   s    | `time`               |
+| ampere       |   A    | `electric_current`   |
+| kelvin       |   k    | `temperature`        |
+| mole         |  mol   | `amountof_substance` |
+| candela      |  cd    | `luminous_intensity` |
+
+### Table: SI prefixes
+
+SI base units taken from Table 5 of [NIST Guide to the SI, Chapter 4: The Two Classes of SI Units and the SI Prefixes](https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-4-two-classes-si-units-and-si-prefixes)
+
+| SI Prefix | Symbol | Factor     | | SI Prefix | Symbol | Factor     |
+|-----------|:-------|:-----------|-|-----------|:-------|:-----------|
+| quetta    |   Q    | $10^{30}$  | | deci      |   d    | $10^{-1}$  |
+| ronna     |   R    | $10^{27}$  | | centi     |   c    | $10^{-2}$  |
+| yotta     |   Y    | $10^{24}$  | | milli     |   m    | $10^{-3}$  |
+| zetta     |   Z    | $10^{21}$  | | micro     |   mu   | $10^{-6}$  |
+| exa'      |   E    | $10^{18}$  | | nano      |   n    | $10^{-9}$  |
+| peta      |   P    | $10^{15}$  | | pico      |   p    | $10^{-12}$ |
+| tera      |   T    | $10^{12}$  | | femto     |   f    | $10^{-15}$ |
+| giga      |   G    | $10^{9}$   | | atto      |   a    | $10^{-18}$ |
+| mega      |   M    | $10^{6}$   | | zepto     |   z    | $10^{-21}$ |
+| kilo      |   k    | $10^{3}$   | | yocto     |   y    | $10^{-24}$ |
+| hecto     |   h    | $10^{2}$   | | ronto     |   r    | $10^{-27}$ |
+| deka      |   da   | $10^{1}$   | | quecto    |   q    | $10^{-30}$ |
+
+### Table: Common non-SI units
+
+Commonly used non-SI units taken from Table 6 and 7 of [NIST Guide to the SI, Chapter 5: Units Outside the SI](https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-4-two-classes-si-units-and-si-prefixes)
+
+Note that the function treats angles, neper and bel as dimensionless values.
+
+Note that only the first table in this section has short form symbols defined, the second table does not.
+
+| Unit name         | Symbol | Expressed in SI units                      |
+|-------------------|:-------|:-------------------------------------------|
+| minute            |  min   | $60~\mathrm{second}$                       |
+| hour              |   h    | $3600~\mathrm{second}$                     |
+| degree            |  deg   | $\frac{\pi}{180}$                          |
+| liter             |   l    | $10^{-3}~\mathrm{metre}^3$                 |
+| metric_ton        |   t    | $10^3~\mathrm{kilogram}$                   |
+| neper             |  Np    | $1$                                        |
+| bel               |   B    | $\frac{1}{2}~\ln(10)$                      |
+| electronvolt      |  eV    | $1.60218 \cdot 10^{-19}~\mathrm{joule}$    |
+| atomic_mass_unit  |   u    | $1.66054 \cdot 10^{-27}~\mathrm{kilogram}$ |
+| angstrom          |   å    | $10^{-10}~\mathrm{metre}$                  |
+
+| Unit name        | Expressed in SI units                                |
+|------------------|:-----------------------------------------------------|
+| day              | $86400~\mathrm{second}$                              |
+| angleminute      | $\frac{\pi}{10800}$                                  |
+| anglesecond      | $\frac{\pi}{648000}$                                 |
+| astronomicalunit | $149597870700~\mathrm{metre}$                        |
+| nauticalmile     | $1852~\mathrm{metre}$                                |
+| knot             | $\frac{1852}{3600}~\mathrm{metre~second}^{-1}$       |
+| are              | $10^2~\mathrm{metre}^2$                              |
+| hectare          | $10^4~\mathrm{metre}^2$                              |
+| bar              | $10^5~\mathrm{pascal}$                               |
+| barn             | $10^{-28}~\mathrm{metre}$                            |
+| curie            | $3.7 \cdot 10^{10}~\mathrm{becquerel}                |
+| roentgen         | $2.58 \cdot 10^{-4}~\mathrm{kelvin~(kilogram)}^{-1}$ |
+| rad              | $10^{-2}~\mathrm{gray}$                              |
+| rem              | $10^{-2}~\mathrm{sievert}$                           |
+
+### Table: Imperial units
+
+Commonly used imperial units taken from [Wikipedia: Imperial units](https://en.wikipedia.org/wiki/Imperial_units)
+
+| Unit name         | Symbol | Expressed in SI units                         |
+|-------------------|:-------|:----------------------------------------------|
+| inch              |   in   | $0.0254~\mathrm{metre}$                       |
+| foot              |   ft   | $0.3048~\mathrm{metre}$                       |
+| yard              |   yd   | $0.9144~\mathrm{metre}$                       |
+| mile              |   mi   | $1609.344~\mathrm{metre}$                     |
+| fluid ounce       |  fl oz | $28.4130625~\mathrm{millilitre}$              |
+| gill              |   gi   | $142.0653125~\mathrm{millilitre}$             |
+| pint              |   pt   | $568.26125~\mathrm{millilitre}$               |
+| quart             |   qt   | $1.1365225~\mathrm{litre}$                    |
+| gallon            |   gal  | $4546.09~\mathrm{litre}$                      |
+| ounce             |   oz   | $28.349523125~\mathrm{gram}$                  |
+| pound             |   lb   | $0.45359237~\mathrm{kilogram}$                |
+| stone             |   st   | $6.35029318~\mathrm{kilogram}$                |
 
 ## `plus_minus` and `minus_plus`
 
