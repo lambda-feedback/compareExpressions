@@ -387,7 +387,10 @@ class TestEvaluationFunction():
         )
     )
     def test_plus_minus_all_correct(self, response, answer):
-        params = {"strict_syntax": False}
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True
+        }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
@@ -512,7 +515,7 @@ class TestEvaluationFunction():
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "answer = response_EXPRESSION_NOT_EQUALITY" in result["tags"]
+        assert "response = answer_EXPRESSION_NOT_EQUALITY" in result["tags"]
 
     @pytest.mark.parametrize(
         "response,answer",
@@ -525,7 +528,7 @@ class TestEvaluationFunction():
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "answer = response_EQUALITY_NOT_EXPRESSION" in result["tags"]
+        assert "response = answer_EQUALITY_NOT_EXPRESSION" in result["tags"]
 
     def test_empty_old_format_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
@@ -1217,5 +1220,4 @@ class TestEvaluationFunction():
 
 
 if __name__ == "__main__":
-    #pytest.main(['-xsk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

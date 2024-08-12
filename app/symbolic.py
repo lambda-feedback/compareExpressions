@@ -8,15 +8,17 @@ from .expression_utilities import (
     create_sympy_parsing_params,
 )
 
+from .symbolic_comparison_preview import preview_function
 from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
-from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 
 from .syntactical_comparison_utilities import patterns as syntactical_forms
 from .syntactical_comparison_utilities import is_number as syntactical_is_number
 from .syntactical_comparison_utilities import response_and_answer_on_same_form
 from .syntactical_comparison_utilities import attach_form_criteria
 
+from .criteria_parsing import generate_criteria_parser
 from .criteria_graph_utilities import CriteriaGraph
+
 
 def expression_preprocess(expr, name, parameters):
     expr = substitute_input_symbols(expr.strip(), parameters)
@@ -27,7 +29,11 @@ def expression_preprocess(expr, name, parameters):
         success = False
     return success, expr, abs_feedback
 
-default_criteria = {"answer = response"}
+def expression_parse(name, expr, parameters, evaluation_result):
+    return parse_expression(expr, parameters)
+
+default_criteria = {"response = answer"}
+
 
 def check_criterion(criterion, parameters_dict, generate_feedback=True):
     label = criterion.label.strip()
@@ -49,6 +55,7 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
             local_subs.append((name, expr))
         result = check_criterion(crit, {**parameters_dict, **{"local_substitutions": local_subs}}, generate_feedback)
     return result
+
 
 def check_equality(criterion, parameters_dict, local_substitutions=[]):
     parsing_params = deepcopy(parameters_dict["parsing_parameters"])
@@ -110,8 +117,9 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
 
     return result
 
+
 def find_coords_for_node_type(expression, node_type):
-    stack = [(expression, tuple() )]
+    stack = [(expression, tuple())]
     node_coords = []
     while len(stack) > 0:
         (expr, coord) = stack.pop()
@@ -120,6 +128,7 @@ def find_coords_for_node_type(expression, node_type):
         for (k, arg) in enumerate(expr.args):
             stack.append((arg, coord+(k,)))
     return node_coords
+
 
 def replace_node_variations(expression, type_of_node, replacement_function):
     variations = []
@@ -136,26 +145,34 @@ def replace_node_variations(expression, type_of_node, replacement_function):
             variations.append(variation)
     return variations
 
+
 def one_addition_to_subtraction(expression):
     def addition_to_subtraction(node, k):
         return node - 2*node.args[k]
     variations = replace_node_variations(expression, Add, addition_to_subtraction)
     return variations
 
+
 def one_swap_addition_and_multiplication(expression):
+
     def addition_to_multiplication(node, k):
         return node - node.args[k-1] - node.args[k] + node.args[k-1] * node.args[k]
+
     def multiplication_to_addition(node, k):
         return node - 2*node.args[k]
+
     variations = replace_node_variations(expression, Add, addition_to_multiplication)
     variations += replace_node_variations(expression, Mul, addition_to_multiplication)
+
     return variations
+
 
 def one_exponent_flip(expression):
     def exponent_flip(node, k):
         return node**(-1)
     variations = replace_node_variations(expression, Pow, exponent_flip)
     return variations
+
 
 def criterion_equality_node(criterion, parameters_dict, label=None):
     if label is None:
@@ -164,9 +181,13 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     def mathematical_equivalence(unused_input):
         result = check_equality(criterion, parameters_dict)
         if result is True:
-            return {label+"_TRUE"}
+            return {
+                label+"_TRUE": None
+            }
         else:
-            return {label+"_FALSE"}
+            return {
+                label+"_FALSE": None
+            }
 
     def set_equivalence(unused_input):
         matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
@@ -181,18 +202,26 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         if parameters_dict["multiple_answers_criteria"] == "all":
             is_correct = all(matches["responses"]) and all(matches["answers"])
             if is_correct is False:
-                return {label+"_MULTIPLE_ANSWER_FAIL_ALL"}
+                return {
+                    label+"_MULTIPLE_ANSWER_FAIL_ALL": None
+                }
         elif parameters_dict["multiple_answers_criteria"] == "all_responses":
             is_correct = all(matches["responses"])
             if is_correct is False:
-                return {label+"_MULTIPLE_ANSWER_FAIL_RESPONSE"}
+                return {
+                    label+"_MULTIPLE_ANSWER_FAIL_RESPONSE": None
+                }
         elif parameters_dict["multiple_answers_criteria"] == "all_answers":
             is_correct = all(matches["answers"])
             if is_correct is False:
-                return {label+"_MULTIPLE_ANSWER_FAIL_ANSWER"}
+                return {
+                    label+"_MULTIPLE_ANSWER_FAIL_ANSWER": None
+                }
         else:
             raise SyntaxWarning(f"Unknown multiple_answers_criteria: {parameters_dict['multiple_answers_critera']}")
-        return {label+"_TRUE"}
+        return {
+            label+"_TRUE": None
+        }
 
     def equality_equivalence(unused_input):
         result = False
@@ -200,18 +229,26 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         ans = parameters_dict["reserved_expressions"]["answer"]
 
         if (not isinstance(res, Equality)) and isinstance(ans, Equality):
-            return {label+"_EXPRESSION_NOT_EQUALITY"}
+            return {
+                label+"_EXPRESSION_NOT_EQUALITY": None
+            }
 
         if isinstance(res, Equality) and (not isinstance(ans, Equality)):
-            return {label+"_EQUALITY_NOT_EXPRESSION"}
+            return {
+                label+"_EQUALITY_NOT_EXPRESSION": None
+            }
 
         # TODO: Remove when criteria for checking proportionality is implemented
         if isinstance(res, Equality) and isinstance(ans, Equality):
             result = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().is_constant()
         if result is True:
-            return {label+"_TRUE"}
+            return {
+                label+"_TRUE": None
+            }
         else:
-            return {label+"_FALSE"}
+            return {
+                label+"_FALSE": None
+            }
 
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
@@ -222,9 +259,13 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     def syntactical_equivalence(unused_input):
         result = parameters_dict["reserved_expressions_strings"]["task"]["answer"] == parameters_dict["reserved_expressions_strings"]["learner"]["response"]
         if result is True:
-            return {label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE"}
+            return {
+                label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE": None
+            }
         else:
-            return {label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE"}
+            return {
+                label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE": None
+            }
 
     def same_symbols(unused_input):
         parsing_params = deepcopy(parameters_dict["parsing_parameters"])
@@ -239,9 +280,13 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         rsym = parse_expression(rhs, parsing_params).subs(local_substitutions)
         result = lsym.free_symbols == rsym.free_symbols
         if result is True:
-            return {label+"_SAME_SYMBOLS"+"_TRUE"}
+            return {
+                label+"_SAME_SYMBOLS"+"_TRUE": None
+            }
         else:
-            return {label+"_SAME_SYMBOLS"+"_FALSE"}
+            return {
+                label+"_SAME_SYMBOLS"+"_FALSE": None
+            }
 
     use_set_equivalence = False
     if (lhs == "answer" and rhs == "response") or (lhs == "response" and rhs == "answer"):
@@ -389,7 +434,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                 for form_label in syntactical_forms.keys():
                     has_recognisable_form = has_recognisable_form or syntactical_forms[form_label]["matcher"](parameters_dict["reserved_expressions_strings"]["task"]["answer"])
                 if has_recognisable_form is True:
-    
+
                     graph.attach(
                         label+"_TRUE",
                         label+"_SYNTACTICAL_EQUIVALENCE",
@@ -427,7 +472,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                     for form_label in syntactical_forms.keys():
                         if syntactical_forms[form_label]["matcher"](parameters_dict["reserved_expressions_strings"]["task"]["answer"]) is True:
                             attach_form_criteria(graph, label+"_SAME_FORM", criterion, parameters_dict, form_label)
-    
+
                     graph.attach(
                         label+"_SAME_FORM",
                         label+"_SAME_FORM"+"_UNKNOWN",
@@ -442,6 +487,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         else:
             graph.attach(label+"_FALSE", END.label)
     return graph
+
 
 def criterion_where_node(criterion, parameters_dict, label=None):
     parsing_params = parameters_dict["parsing_parameters"]
@@ -458,13 +504,18 @@ def criterion_where_node(criterion, parameters_dict, label=None):
         local_subs.append((name, expr))
     if label is None:
         label = criterion.content_string()
+
     def create_expression_check(crit):
         def expression_check(unused_input):
             result = check_equality(crit, parameters_dict, local_substitutions=local_subs)
             if result is True:
-                return {label+"_TRUE"}
+                return {
+                    label+"_TRUE": None
+                }
             else:
-                return {label+"_FALSE"}
+                return {
+                    label+"_FALSE": None
+                }
         return expression_check
 
     graph = CriteriaGraph(label)
@@ -531,7 +582,9 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                     values_and_variations_group.update({str(value): values_and_variations_group.get(str(value), set()).union(set([group_label]))})
         if len(values_and_expressions) > 1:
             def identify_reason(unused_input):
-                reasons = {label+"_"+group_label for group_label in values_and_variations_group.get(str(response_value), {"UNKNOWN"})}
+                reasons = {
+                    label+"_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group.get(str(response_value), {"UNKNOWN"})
+                }
                 return reasons
             graph.attach(
                 label+"_FALSE",
@@ -550,7 +603,9 @@ def criterion_where_node(criterion, parameters_dict, label=None):
             graph.attach(label+"_UNKNOWN", END.label)
 
             def get_candidates(unused_input):
-                candidates = set(["response candidates "+", ".join([str(e) for e in values_and_expressions[str(response_value)]])])
+                candidates = {
+                    "response candidates "+", ".join([str(e) for e in values_and_expressions[str(response_value)]]): {'criterion': criterion}
+                }
                 return candidates
             for (group_label, group_info) in variation_groups.items():
                 graph.attach(
@@ -584,14 +639,19 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                         )
     return graph
 
+
 def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
     def evaluation_node_internal(unused_input):
         result = check_criterion(criterion, parameters_dict, generate_feedback)
         label = criterion.content_string()
         if result:
-            return {label+"_TRUE"}
+            return {
+                label+"_TRUE": None
+            }
         else:
-            return {label+"_FALSE"}
+            return {
+                label+"_FALSE": None
+            }
     label = criterion.content_string()
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
@@ -615,6 +675,7 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
     graph.attach(label+"_FALSE", END.label)
     return graph
 
+
 def feedback_procedure_generator(parameters_dict):
     graphs = dict()
     for (label, criterion) in parameters_dict["criteria"].items():
@@ -630,6 +691,7 @@ def feedback_procedure_generator(parameters_dict):
         graphs.update({label: graph})
     return graphs
 
+
 def feedback_string_generator(tags, graph, parameters_dict):
     strings = dict()
     for tag in tags:
@@ -639,9 +701,13 @@ def feedback_string_generator(tags, graph, parameters_dict):
             strings.update({tag: feedback_string})
     return
 
+
 context = {
+    "expression_preview": preview_function,
+    "generate_criteria_parser": generate_criteria_parser,
+    "generate_feedback": generate_criteria_parser,
     "expression_preprocess": expression_preprocess,
-    "expression_parse": parse_expression,
+    "expression_parse": expression_parse,
     "default_criteria": default_criteria,
     "feedback_procedure_generator": feedback_procedure_generator,
     "feedback_string_generator": feedback_string_generator,

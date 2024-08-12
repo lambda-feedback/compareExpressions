@@ -1,7 +1,7 @@
 import pytest
 import os
 
-from .slr_quantity import SLR_quantity_parser, SLR_quantity_parsing
+from .physical_quantity import SLR_quantity_parser, SLR_quantity_parsing
 from .unit_system_conversions import\
     set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
@@ -13,7 +13,7 @@ slr_strict_si_syntax_test_cases = [
      "q",  # Content of physical quantity after parsing
      "q",  # Expected LaTeX for value
      None,  # Expected LaTeX for unit
-     ["NO_UNIT"]),  # criteria
+     ["response = answer_QUANTITY_MATCH"]),  # criteria
     ("10",
      "10",
      None,
@@ -162,7 +162,7 @@ slr_strict_si_syntax_test_cases = [
      "10 gram/metresecond",
      None,
      "10 gram/metresecond",
-     r"\frac{10 \cdot a \cdot c \cdot d \cdot e \cdot e \cdot e \cdot g \cdot m \cdot n \cdot o \cdot r \cdot r \cdot s \cdot t}{m}",
+     r"\frac{10 \cdot e \cdot c \cdot d \cdot gram \cdot n \cdot o}{metres}",
      None,
      ["NO_UNIT", "EXPR_VALUE"]),
     ("10 g/sm",
@@ -175,7 +175,7 @@ slr_strict_si_syntax_test_cases = [
     ("10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
      "10 s/g + 5 gram*second^2 + 7 ms + 5", "gram/second^3",
      "10 s/g + 5 gram*second^2 + 7 ms + 5 gram/second^3",
-     r"5 \cdot a \cdot c \cdot d^{2} \cdot e \cdot g \cdot m \cdot n \cdot o \cdot r \cdot s + 7 \cdot m \cdot s + 5 + \frac{10 \cdot s}{g}",
+     r"5 \cdot gram \cdot second^{2} + 7 \cdot m \cdot s + 5 + \frac{10 \cdot s}{g}",
      r"\frac{\mathrm{gram}}{\mathrm{second}^{3}}",
      ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
     ("10 kg m/s^2 + 10 kg m/s^2",
@@ -196,14 +196,14 @@ slr_strict_si_syntax_test_cases = [
      "10 second/gram * 7 ms * 5",
      "gram/second",
      "10 second/gram * 7 ms * 5 gram/second",
-     r"10 \cdot s \cdot e \cdot c \cdot o \cdot n \cdot d \cdot \frac{1}{g} \cdot r \cdot a \cdot m \cdot 7 \cdot m \cdot s \cdot 5",
+     r"10 \cdot second \cdot \frac{1}{gram} \cdot 7 \cdot m \cdot s \cdot 5",
      r"\frac{\mathrm{gram}}{\mathrm{second}}",
      ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
     ("pi+metre second+pi",
      "pi+metre second+pi",
      None,
      "pi+metre second+pi",
-     r"c \cdot d \cdot e \cdot e \cdot e \cdot m \cdot n \cdot o \cdot r \cdot s \cdot t + \pi + \pi",
+     r"metre \cdot second + \pi + \pi",
      None,
      ["EXPR_VALUE", "NO_UNIT", "REVERTED_UNIT"]),
     ("1/s^2",
@@ -360,14 +360,14 @@ slr_natural_si_syntax_test_cases = [
      "(kilogrammegametre^2)/(fs^4daA)",
      None,
      "(kilogrammegametre^2)/(fs^4daA)",
-     r'\frac{a \cdot a \cdot e \cdot e \cdot e^{2} \cdot g \cdot g \cdot i \cdot k \cdot l \cdot m \cdot m \cdot m \cdot o \cdot r \cdot r \cdot t}{A \cdot a \cdot d \cdot f \cdot s^{4}}',
+     r'\frac{gram \cdot kilo \cdot mega \cdot metre^{2}}{A \cdot a \cdot d \cdot f \cdot s^{4}}',
      None,
      ["NO_UNIT"]),
     ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",
      "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",
      None,
      "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogrammegametre^2)/(fs^4daA)",
-     r"\frac{a \cdot a \cdot e \cdot e \cdot e^{2} \cdot g \cdot g \cdot i \cdot k \cdot l \cdot m \cdot m \cdot m \cdot o \cdot r \cdot r \cdot t \cdot \left(\frac{5.27 \cdot \pi}{\sqrt{11}} + 5 \cdot 7\right)^{4.3}}{A \cdot a \cdot d \cdot f \cdot s^{4}}",
+     r"\frac{gram \cdot kilo \cdot mega \cdot metre^{2} \cdot \left(\frac{5.27 \cdot \pi}{\sqrt{11}} + 5 \cdot 7\right)^{4.3}}{A \cdot a \cdot d \cdot f \cdot s^{4}}",
      None,
      ["NO_UNIT"]),
     ("mmg",
@@ -401,7 +401,7 @@ slr_natural_si_syntax_test_cases = [
     ("10 s/g + 5 gramsecond^2 + 7 ms + 5 gram/second^3",
      "10 s/g + 5 gramsecond^2 + 7 ms + 5", "gram/second^3",
      "10 s/g + 5 gramsecond^2 + 7 ms + 5 gram/second^3",
-     r"5 \cdot a \cdot c \cdot d^{2} \cdot e \cdot g \cdot m \cdot n \cdot o \cdot r \cdot s + 7 \cdot m \cdot s + 5 + \frac{10 \cdot s}{g}",
+     r"5 \cdot e \cdot c \cdot d^{2} \cdot grams \cdot n \cdot o + 7 \cdot m \cdot s + 5 + \frac{10 \cdot s}{g}",
      r"\frac{\mathrm{gram}}{\mathrm{second}^{3}}",
      ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
     ("10 kgm/s^2 + 10 kgm/s^2",
@@ -415,14 +415,14 @@ slr_natural_si_syntax_test_cases = [
      "10 second/gram * 7 ms * 5",
      "gram/second",
      "10 second/gram * 7 ms * 5 gram/second",
-     r"10 \cdot s \cdot e \cdot c \cdot o \cdot n \cdot d \cdot \frac{1}{g} \cdot r \cdot a \cdot m \cdot 7 \cdot m \cdot s \cdot 5",
+     r"10 \cdot second \cdot \frac{1}{gram} \cdot 7 \cdot m \cdot s \cdot 5",
      r"\frac{\mathrm{gram}}{\mathrm{second}}",
      ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
     ("pi+metre second+pi",
      "pi+metre second+pi",
      None,
      "pi+metre second+pi",
-     r"c \cdot d \cdot e \cdot e \cdot e \cdot m \cdot n \cdot o \cdot r \cdot s \cdot t + \pi + \pi",
+     r"metre \cdot second + \pi + \pi",
      None,
      ["EXPR_VALUE", "NO_UNIT", "REVERTED_UNIT"]),
     ("1/s^2",
@@ -452,7 +452,12 @@ slr_natural_si_syntax_test_cases = [
 class TestEvaluationFunction():
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
     def test_strict_si_syntax(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        parameters = {"strict_syntax": False, "units_string": "SI", "strictness": "strict"}
+        parameters = {
+            "strict_syntax": False,
+            "units_string": "SI",
+            "strictness": "strict",
+            "elementary_functions": True
+        }
         parser = SLR_quantity_parser(parameters)
         quantity = SLR_quantity_parsing(string, parameters, parser, "quantity")
         parsed_value = quantity.value.original_string() if quantity.value is not None else None
@@ -512,7 +517,12 @@ class TestEvaluationFunction():
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
     def test_natural_si_syntax(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        parameters = {"strict_syntax": False, "units_string": "SI common imperial", "strictness": "natural"}
+        parameters = {
+            "strict_syntax": False,
+            "units_string": "SI common imperial",
+            "strictness": "natural",
+            "elementary_functions": True
+        }
         parser = SLR_quantity_parser(parameters)
         quantity = SLR_quantity_parsing(string, parameters, parser, "quantity")
         parsed_unit_latex = quantity.unit_latex_string

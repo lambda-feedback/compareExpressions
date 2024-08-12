@@ -3,6 +3,7 @@ import os
 
 from .evaluation import evaluation_function
 
+
 class TestEvaluationFunction():
     """
     TestCase Class used to test the algorithm.
@@ -40,6 +41,7 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
+
 
 if __name__ == "__main__":
     pytest.main(['-k not slow', '--tb=line', '--durations=10', os.path.abspath(__file__)])

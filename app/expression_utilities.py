@@ -5,16 +5,19 @@ from .slr_parsing_utilities import (
     group,
     compose
 )
-
-from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
+from .syntactical_comparison_utilities import is_number_regex
 
 # (Sympy) Expression Parsing imports
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
 from sympy import Basic, Symbol
+
 import re
 from typing import Dict, List, TypedDict
+
+from .feedback.symbolic_comparison import feedback_generators as feedback_string_generators
+
 
 class ModifiedLatexPrinter(LatexPrinter):
     """Modified LatexPrinter class that prints logarithms other than the natural logarithm correctly.
@@ -34,6 +37,7 @@ class ModifiedLatexPrinter(LatexPrinter):
         else:
             return tex
 
+
 elementary_functions_names = [
     ('sin', []), ('sinc', []), ('csc', ['cosec']), ('cos', []), ('sec', []), ('tan', []), ('cot', ['cotan']),
     ('asin', ['arcsin']), ('acsc', ['arccsc', 'arccosec', 'acosec']), ('acos', ['arccos']), ('asec', ['arcsec']),
@@ -43,8 +47,10 @@ elementary_functions_names = [
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
     ('exp', ['Exp']), ('E', ['e']), ('log', ['ln']),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
+    # Special symbols to make usre plus_minus and minus_plus are nod destroyed during preprocessing
+    ('plus_minus', []), ('minus_plus', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
-    ('summation', ['sum','Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag'])
+    ('summation', ['sum', 'Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag'])
 ]
 for data in elementary_functions_names:
     upper_case_alternatives = [data[0].upper()]
@@ -55,7 +61,7 @@ for data in elementary_functions_names:
 
 greek_letters = [
     "Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta",
-    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda", # "lambda" removed to avoid collision with reserved keyword in python
+    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda",  # "lambda" removed to avoid collision with reserved keyword in python
     "Mu", "mu", "Nu", "nu",
     "Xi", "xi", "Omicron", "omicron", "Pi", "pi", "Rho", "rho", "Sigma", "sigma", "Tau", "tau", "Upsilon", "upsilon",
     "Phi", "phi", "Chi", "chi", "Psi", "psi", "Omega", "omega"
@@ -161,7 +167,7 @@ def convert_absolute_notation(expr, name):
     ambiguity_tag = "ABSOLUTE_VALUE_NOTATION_AMBIGUITY"
     remark = ""
     if n_expr > 2 and len(expr_ambiguous_abs_pos) > 0:
-        remark = symbolic_comparison_internal_messages[ambiguity_tag](name)
+        remark = feedback_string_generators["INTERNAL"](ambiguity_tag)({'name': name})
 
     feedback = None
     if len(remark) > 0:
@@ -215,7 +221,7 @@ def substitute_input_symbols(exprs, params):
     if isinstance(exprs, str):
         exprs = [exprs]
 
-    substitutions = [(expr, expr) for expr in params.get("reserved_keywords",[])]
+    substitutions = [(expr, expr) for expr in params.get("reserved_keywords", [])]
 
     if params.get("elementary_functions", False) is True:
         alias_substitutions = []
@@ -228,7 +234,7 @@ def substitute_input_symbols(exprs, params):
                         alias_substitutions += [(alias, " "+name)]
         substitutions += alias_substitutions
 
-    input_symbols = params.get("symbols",dict())
+    input_symbols = params.get("symbols", dict())
 
     if "symbols" in params.keys():
         # Removing invalid input symbols
@@ -305,7 +311,7 @@ def substitute_input_symbols(exprs, params):
 
 def find_matching_parenthesis(string, index, delimiters=None):
     depth = 0
-    if delimiters == None:
+    if delimiters is None:
         delimiters = ('(', ')')
     for k in range(index, len(string)):
         if string[k] == delimiters[0]:
@@ -391,23 +397,26 @@ def substitute(string, substitutions):
 def compute_relative_tolerance_from_significant_decimals(string):
     rtol = None
     string = string.strip()
-    separators = "e*^ "
-    separator_indices = []
-    for separator in separators:
-        if separator in string:
-            separator_indices.append(string.index(separator))
-        else:
-            separator_indices.append(len(string))
-    index = min(separator_indices)
-    significant_characters = string[0:index].replace(".", "")
-    index = 0
-    for c in significant_characters:
-        if c in "-0":
-            index += 1
-        else:
-            break
-    significant_characters = significant_characters[index:]
-    rtol = 5*10**(-len(significant_characters))
+    if re.fullmatch(is_number_regex, string) is None:
+        rtol = 0
+    else:
+        separators = "e*^ "
+        separator_indices = []
+        for separator in separators:
+            if separator in string:
+                separator_indices.append(string.index(separator))
+            else:
+                separator_indices.append(len(string))
+        index = min(separator_indices)
+        significant_characters = string[0:index].replace(".", "")
+        index = 0
+        for c in significant_characters:
+            if c in "-0":
+                index += 1
+            else:
+                break
+        significant_characters = significant_characters[index:]
+        rtol = 5*10**(-len(significant_characters))
     return rtol
 
 
@@ -504,7 +513,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
                         parse_expression function.
     '''
 
-    unsplittable_symbols = params.get("reserved_keywords", [])
+    unsplittable_symbols = list(unsplittable_symbols)+params.get("reserved_keywords", [])
     if "symbols" in params.keys():
         for symbol in params["symbols"].keys():
             if len(symbol) > 1:
@@ -522,7 +531,6 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         I = Symbol("I")
     if params.get("elementary_functions", False) is True:
         from sympy import E
-        e = E
     else:
         E = Symbol("E")
     N = Symbol("N")

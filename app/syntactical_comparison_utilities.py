@@ -47,13 +47,13 @@ def attach_form_criteria(graph, attachment_node, criterion, parameters_dict, for
 def response_and_answer_on_same_form(label, parameters_dict):
     local_answer = parameters_dict["reserved_expressions_strings"]["task"]["answer"]
     local_response = parameters_dict["reserved_expressions_strings"]["learner"]["response"]
-    matches_found = set()
+    matches_found = dict()
 
     def inner(unused_input):
         for form_label in patterns.keys():
             if patterns[form_label]["matcher"](local_answer) and patterns[form_label]["matcher"](local_response):
-                matches_found.add(label+"_"+form_label)
+                matches_found.update({label+"_"+form_label: None})
         if len(matches_found) == 0:
-            matches_found.add(label+"_UNKNOWN")
+            matches_found.update({label+"_UNKNOWN": None})
         return matches_found
     return inner

@@ -1,3 +1,4 @@
+import re
 from sympy.parsing.sympy_parser import T as parser_transformations
 from .expression_utilities import (
     extract_latex,
@@ -20,9 +21,10 @@ from .preview_utilities import (
     parse_latex
 )
 
-from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
+from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
 
 def parse_symbolic(response: str, params):
+    symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
     response_list_in = create_expression_set(response, params)
     response_list_out = []
     feedback = []
@@ -48,7 +50,7 @@ def parse_symbolic(response: str, params):
                 parsing_params.update({"rtol": params["rtol"]})
             res = parse_expression(response, parsing_params)
         except Exception as exc:
-            raise SyntaxError(symbolic_comparison_internal_messages["PARSE_ERROR"](response)) from exc
+            raise SyntaxError(symbolic_comparison_internal_messages("PARSE_ERROR")({"response": response})) from exc
         result_sympy_expression.append(res)
 
     return result_sympy_expression, feedback
@@ -83,7 +85,13 @@ def preview_function(response: str, params: Params) -> Result:
 
     try:
         if params.get("is_latex", False):
-            response = parse_latex(response, symbols)
+            if re.fullmatch('.+=.+', response):
+                sides = response.split('=')
+                lhs = parse_latex(sides[0], symbols)
+                rhs = parse_latex(sides[1], symbols)
+                response = f'Eq({lhs}, {rhs})'
+            else:
+                response = parse_latex(response, symbols)
 
         params.update({"rationalise": False})
         expression_list, _ = parse_symbolic(response, params)

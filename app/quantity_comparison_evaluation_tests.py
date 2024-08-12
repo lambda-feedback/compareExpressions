@@ -45,7 +45,13 @@ class TestEvaluationFunction():
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
     def test_strict_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "strict",
+            "elementary_functions": True
+        }
         answer = string
         response = string
         result = evaluation_function(response, answer, params)
@@ -54,7 +60,13 @@ class TestEvaluationFunction():
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
     def test_natural_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "natural"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "natural",
+            "elementary_functions": True
+        }
         answer = string
         response = string
         result = evaluation_function(response, answer, params)
@@ -82,8 +94,6 @@ class TestEvaluationFunction():
                                     result = evaluation_function(response, answer, params)
                                 except Exception as e:
                                     errors.append((answer, response))
-                                    print((answer, response))
-                                    print(e)
                                     continue
                                 if result["is_correct"] is False:
                                     incorrect.append((answer, response, result["response_latex"]))
@@ -170,10 +180,10 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "ans,res,tag",
         [
-            ("-10.5 kg m/s^2", "kg m/s^2",       "MISSING_VALUE"),
-            ("-10.5 kg m/s^2", "-10.5",          "MISSING_UNIT"),
-            ("kg m/s^2",       "-10.5 kg m/s^2", "UNEXPECTED_VALUE"),
-            ("-10.5",          "-10.5 kg m/s^2", "UNEXPECTED_UNIT")
+            ("-10.5 kg m/s^2", "kg m/s^2",       "response matches answer_MISSING_VALUE"),
+            ("-10.5 kg m/s^2", "-10.5",          "response matches answer_MISSING_UNIT"),
+            ("kg m/s^2",       "-10.5 kg m/s^2", "response matches answer_UNEXPECTED_VALUE"),
+            ("-10.5",          "-10.5 kg m/s^2", "response matches answer_UNEXPECTED_UNIT")
         ]
     )
     def test_si_units_check_tag(self, ans, res, tag):
@@ -187,29 +197,35 @@ class TestEvaluationFunction():
         res = "-10.5 kg m/s^"
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         result = evaluation_function(res, ans, params, include_test_data=True)
-        assert "PARSE_EXCEPTION" in result["tags"]
+        assert "PARSE_ERROR_response" in result["tags"]
         assert result["is_correct"] is False
 
     @pytest.mark.parametrize(
         "res,is_correct,tag",
         [
-            ("-10.5 kilogram metre/second^2",           True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.5 kilogram m/s^2",                    True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.5 kg m/s^2",                          True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-0.5 kg m/s^2+10 kg m/s^2",               False, "REVERTED_UNIT"),
-            ("-10500 g m/s^2",                          True,  "PREFIX_IS_SMALL"),
-            ("-10.46 kg m/s^2",                         True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.54 kg m/s^2",                         True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.44 kg m/s^2",                         False, "RESPONSE_MATCHES_ANSWER"),
-            ("-10.56 kg m/s^2",                         False, "RESPONSE_MATCHES_ANSWER"),
-            ("-10.5",                                   False, "MISSING_UNIT"),
-            ("kg m/s^2",                                False, "MISSING_VALUE"),
-            ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "RESPONSE_MATCHES_ANSWER"),
+            ("-10.5 kilogram metre/second^2",           True,  "response matches answer_TRUE"),
+            ("-10.5 kilogram m/s^2",                    True,  "response matches answer_TRUE"),
+            ("-10.5 kg m/s^2",                          True,  "response matches answer_TRUE"),
+            ("-0.5 kg m/s^2+10 kg m/s^2",               False, "response_REVERTED_UNIT_3"),
+            ("-10500 g m/s^2",                          True,  "response matches answer_UNIT_COMPARISON_PREFIX_IS_SMALL"),
+            ("-10.46 kg m/s^2",                         True,  "response matches answer_TRUE"),
+            ("-10.54 kg m/s^2",                         True,  "response matches answer_TRUE"),
+            ("-10.44 kg m/s^2",                         False, "response matches answer_FALSE"),
+            ("-10.56 kg m/s^2",                         False, "response matches answer_FALSE"),
+            ("-10.5",                                   False, "response matches answer_MISSING_UNIT"),
+            ("kg m/s^2",                                False, "response matches answer_MISSING_VALUE"),
+            ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "response matches answer_TRUE"),
         ]
     )
     def test_demo_si_units_demo_a(self, res, is_correct, tag):
         ans = "-10.5 kilogram metre/second^2"
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "strict",
+            "elementary_functions": True,
+        }
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert tag in result["tags"]
         assert result["is_correct"] is is_correct
@@ -217,10 +233,10 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "res,ans,is_correct,tag,latex",
         [
-            ("-10.5",          "-10.5",    True,  "RESPONSE_MATCHES_ANSWER", r"-10.5"),
-            ("-10.5 kg m/s^2", "-10.5",    False, "UNEXPECTED_UNIT",         r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
-            ("kg m/s^2",       "kg m/s^2", True,  "RESPONSE_MATCHES_ANSWER", r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
-            ("-10.5 kg m/s^2", "kg m/s^2", False, "UNEXPECTED_VALUE",        r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
+            ("-10.5",          "-10.5",    True,  "response matches answer_TRUE", r"-10.5"),
+            ("-10.5 kg m/s^2", "-10.5",    False, "response matches answer_UNEXPECTED_UNIT",         r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
+            ("kg m/s^2",       "kg m/s^2", True,  "response matches answer_TRUE", r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
+            ("-10.5 kg m/s^2", "kg m/s^2", False, "response matches answer_UNEXPECTED_VALUE",        r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
         ]
     )
     def test_demo_si_units_demo_b(self, res, ans, is_correct, tag, latex):
@@ -231,4 +247,4 @@ class TestEvaluationFunction():
         assert result["is_correct"] == is_correct
 
 if __name__ == "__main__":
-    pytest.main(['-xsk not slow', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])

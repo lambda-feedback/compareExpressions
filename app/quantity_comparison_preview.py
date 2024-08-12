@@ -1,15 +1,8 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
 from .expression_utilities import (
-    extract_latex,
-    convert_absolute_notation,
-    create_expression_set,
-    create_sympy_parsing_params,
     find_matching_parenthesis,
-    latex_symbols,
     parse_expression,
-    substitute_input_symbols,
     SymbolDict,
-    sympy_symbols,
     sympy_to_latex,
 )
 
@@ -17,13 +10,12 @@ from .preview_utilities import (
     Params,
     Preview,
     Result,
-    extract_latex,
     parse_latex,
     sanitise_latex,
 )
 
-from .slr_quantity import SLR_quantity_parser
-from .slr_quantity import SLR_quantity_parsing as quantity_parsing
+from .physical_quantity_utilities import SLR_quantity_parser as quantity_parser
+from .physical_quantity_utilities import SLR_quantity_parsing as quantity_parsing
 
 def fix_exponents(response):
     processed_response = []
@@ -78,13 +70,13 @@ def preview_function(response: str, params: Params) -> Result:
     latex_out = ""
     sympy_out = ""
 
-    quantity_parser = SLR_quantity_parser(params)
+    parser = quantity_parser(params)
 
     try:
         if params.get("is_latex", False):
             response = sanitise_latex(response)
             response = fix_exponents(response)
-            res_parsed = quantity_parsing(response, params, quantity_parser, "response")
+            res_parsed = quantity_parsing(response, params, parser, "response")
             value = res_parsed.value
             unit = res_parsed.unit
             value_latex = ""
@@ -104,7 +96,7 @@ def preview_function(response: str, params: Params) -> Result:
             unit_sympy = res_parsed.unit.content_string() if unit is not None else ""
             sympy_out = value_sympy+separator_sympy+unit_sympy
         else:
-            res_parsed = quantity_parsing(response, params, quantity_parser, "response")
+            res_parsed = quantity_parsing(response, params, parser, "response")
             latex_out = res_parsed.latex_string
             sympy_out = response
 

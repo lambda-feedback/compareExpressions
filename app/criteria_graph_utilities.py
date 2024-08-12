@@ -6,6 +6,7 @@ criterion_style = ("[", "]")
 output_style = ("{{", "}}")
 special_style = ("[[", "]]")
 
+
 class CriteriaGraph:
 
     class Node:
@@ -140,7 +141,7 @@ class CriteriaGraph:
         def json(self):
             return str(json.dumps(self.as_dictionary()))
 
-    def __init__(self, identifier, entry_evaluations = None):
+    def __init__(self, identifier, entry_evaluations=None):
         self.identifier = identifier
         self.evaluations = {}
         self.criteria = {}
@@ -168,7 +169,7 @@ class CriteriaGraph:
                 } for (label, node) in self.criteria.items()
             },
             "outputs": {
-                            label: {
+                label: {
                     "summary": node.summary,
                     "details": node.details,
                     "incoming": [n.source.label for n in node.incoming]
@@ -212,7 +213,7 @@ class CriteriaGraph:
         if label in self.criteria.keys():
             raise Exception(f"Criterion node {label} is already defined.")
         if sufficiencies is not None:
-            raise Exception(f"Criterion nodes cannot have sufficiencies.")
+            raise Exception("Criterion nodes cannot have sufficiencies.")
         node = CriteriaGraph.Criterion(label, summary=summary, details=details, feedback_string_generator=feedback_string_generator)
         self.criteria.update({label: node})
         self.sufficiencies.update({label: sufficiencies})
@@ -227,11 +228,11 @@ class CriteriaGraph:
         return node
 
     def add_node(self, node):
-        if isinstance(node,CriteriaGraph.Evaluation):
+        if isinstance(node, CriteriaGraph.Evaluation):
             self.add_evaluation_node(node.label, node.summary, node.details, node.sufficiencies)
-        elif isinstance(node,CriteriaGraph.Criterion):
+        elif isinstance(node, CriteriaGraph.Criterion):
             self.add_criterion_node(node.label, node.summary, node.details)
-        elif isinstance(node,CriteriaGraph.Output):
+        elif isinstance(node, CriteriaGraph.Output):
             self.add_output_node(node.label, node.summary, node.details)
         else:
             raise Exception("Can only add evaluation, criterion or output nodes to criteria graph.")
@@ -283,46 +284,6 @@ class CriteriaGraph:
             target.incoming.append(edge)
         return
 
-#    def get_source_and_target(self, source_label, target_label):
-#        source = self.evaluations.get(source_label, None)
-#        if source is None:
-#            source = self.criteria.get(source_label, None)
-#            if source is None:
-#                source = self.outputs.get(source_label, None)
-#                if source is None:
-#                    raise Exception(f"Unknown node {source_label}.")
-#
-#        target = self.evaluations.get(target_label, None)
-#        if target is None:
-#            target = self.criteria.get(target_label, None)
-#            if target is None:
-#                target = self.outputs.get(target_label, None)
-#                if target is None:
-#                    raise Exception(f"Unknown node {target_label}.")
-#
-#        source_edge_index = None
-#        for (k, edge) in enumerate(source.outgoing):
-#            if edge.target.label == target_label:
-#                source_edge_index = k
-#                break
-#        if source_edge_index is None:
-#            raise Exception(f"No edge with source {source_label} has target {target_label}")
-#
-#        target_edge_index = None
-#        for (k, edge) in enumerate(target.incoming):
-#            if edge.source.label == source_label:
-#                target_edge_index = k
-#
-#        edge = source.outgoing[source_edge_index]
-#
-#        return source, target, source_edge_index, target_edge_index
-#
-#    def detach(self, source_label, target_label):
-#        source, target, source_edge_index, target_edge_index = self.get_source_and_target(source_label, target_label)
-#        source.outgoing = source.outgoing[0:source_edge_index]+source.outgoing[source_edge_index+1:]
-#        target.incoming = target.incoming[0:target_edge_index]+target.incoming[target_edge_index+1:]
-#        return
-
     def add_sufficiencies(self, source_label, sufficiencies):
         if source_label in self.evaluations.keys():
             if self.sufficiencies.get(source_label, None) is None:
@@ -335,8 +296,8 @@ class CriteriaGraph:
         return
 
     def starting_evaluations(self, label):
-        #TODO: Consider if starting evaluations should only accept evaluation nodes
-        #      instead of guessing the intent when using criteria nodes as targets
+        # TODO: Consider if starting evaluations should only accept evaluation nodes
+        #       instead of guessing the intent when using criteria nodes as targets
         if label in self.criteria.keys():
             main_criteria = self.criteria[label]
             base_starting_evaluations = set(edge.source.label for edge in main_criteria.incoming)
@@ -356,72 +317,6 @@ class CriteriaGraph:
         if len(starting_evaluations) == 0:
             starting_evaluations = base_starting_evaluations
         return starting_evaluations
-
-#    def connect(self, source_label, new_target_label):
-#        source = self.criteria.get(source_label, None)
-#        if source is None:
-#            raise Exception(f"Unknown criteria node {source_label}.")
-#        starting_evaluations = self.starting_evaluations(new_target_label)
-#        for evaluation_label in starting_evaluations:
-#            if evaluation_label not in [edge.target.label for edge in source.outgoing]:
-#                self.attach(source_label, evaluation_label)
-#            self.add_sufficiencies(evaluation_label, [source_label])
-#        for edge in source.outgoing:
-#            if isinstance(edge.target, CriteriaGraph.Output):
-#                self.detach(source_label, edge.target.label)
-#        return
-#
-#    def redirect(self, source_label, target_label, new_target_label, summary=None, details=None, sufficiencies=None):
-#        source, target, source_edge_index, target_edge_index = self.get_source_and_target(source_label, target_label)
-#
-#        target.incoming = target.incoming[0:target_edge_index]+target.incoming[target_edge_index+1:]
-#
-#        self.attach(source_label, new_target_label, summary=summary, details=details, sufficiencies=sufficiencies)
-#        new_edge = source.outgoing.pop()
-#        source.outgoing[source_edge_index].target = new_edge.target
-#        return
-
-#    def join(self, graph):
-#        self_nodes = [self.evaluations, self.criteria, self.outputs]
-#        graph_nodes = [graph.evaluations, graph.criteria, graph.outputs]
-#
-#        # Check which nodes are common to both graphs and
-#        # confirm that there are no conflicting node definitions
-#        common_nodes = []
-#        for k in range(len(self_nodes)):
-#            for key in self_nodes[k].keys():
-#                if key in graph_nodes[k].keys():
-#                    if self_nodes[k][key] == graph_nodes[k][key]:
-#                        common_nodes.append(key)
-#                    else:
-#                        raise Exception(f"Node {key} does not match.")
-#
-#        # Join graphs
-#        for k in range(len(graph_nodes)):
-#            for key in graph_nodes[k].keys():
-#                if key in self_nodes[k].keys():
-#                    node = self_nodes[k][key]
-#                    other_node = graph_nodes[k][key]
-#                    for edge in other_node.incoming:
-#                        if edge not in node.incoming:
-#                            node.incoming.append(edge)
-#                    for edge in other_node.outgoing:
-#                        if edge not in node.outgoing:
-#                            node.outgoing.append(edge)
-#                else:
-#                    self_nodes[k].update({key: graph_nodes[k][key]})
-#
-#        # Add all depencies from joining graph
-#        for (evaluation_label, sufficiencies) in graph.sufficiencies.items():
-#            if self.sufficiencies.get(evaluation_label, None) is None:
-#                self.sufficiencies.update({evaluation_label: []})
-#            if sufficiencies is None:
-#                sufficiencies = []
-#            for sufficiency in sufficiencies:
-#                if sufficiency not in self.sufficiencies[evaluation_label]:
-#                    self.sufficiencies[evaluation_label].append(sufficiency)
-#
-#        return
 
     def build_tree(self, starting_evaluation, return_node=RETURN, main_criteria=None):
         node = self.evaluations.get(starting_evaluation, None)
@@ -451,7 +346,7 @@ class CriteriaGraph:
     def generate_feedback(self, response, main_criteria):
         evaluations = set().union(self.starting_evaluations(main_criteria))
         visited_evaluations = set()
-        feedback = set()
+        feedback = dict()
         while len(evaluations) > 0:
             e = evaluations.pop()
             if e in self.evaluations.keys() and self.evaluations[e].replacement is not None:
@@ -465,8 +360,8 @@ class CriteriaGraph:
                     print(e)
                     print(self.evaluations)
                     raise exc
-                feedback = feedback.union(results)
-                for criterion in results:
+                feedback.update(results)
+                for criterion in results.keys():
                     labels = {edge.target.label for edge in self.criteria[criterion].outgoing}
                     evaluations = evaluations.union(labels)
         return feedback

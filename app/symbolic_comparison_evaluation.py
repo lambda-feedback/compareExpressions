@@ -16,10 +16,7 @@ from .expression_utilities import (
 from .slr_parsing_utilities import SLR_Parser, catch_undefined, infix, create_node, operate, join, group, proceed, append_last
 
 from .evaluation_response_utilities import EvaluationResponse
-from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
-from .feedback.symbolic_comparison import criteria as symbolic_comparison_criteria
 from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_generators
-from .feedback.symbolic_comparison import equivalences as reference_criteria_strings
 
 from .syntactical_comparison_utilities import patterns as syntactical_forms
 from .syntactical_comparison_utilities import is_number as syntactical_is_number
@@ -558,6 +555,8 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     eval_response = EvaluationResponse()
     eval_response.is_correct = False
 
+    symbolic_comparison_internal_messages = symbolic_feedback_generators["INTERNAL"]
+
     # This code handles the plus_minus and minus_plus operators
     # actual symbolic comparison is done in check_equality
     if "multiple_answers_criteria" not in params.keys():
@@ -609,6 +608,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
 
 
 def symbolic_comparison(response, answer, params, eval_response) -> dict:
+    symbolic_comparison_internal_messages = symbolic_feedback_generators["INTERNAL"]
 
     if not isinstance(answer, str):
         raise Exception("No answer was given.")
@@ -702,8 +702,6 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     parameters_dict = {
         "parsing_params": parsing_params,
         "reserved_expressions": reserved_expressions,
-        "reference_criteria_strings": reference_criteria_strings,
-        "symbolic_comparison_criteria": symbolic_comparison_criteria,
         "eval_response": eval_response,
         "original_input": {"answer": answer, "response": response},
         "disabled_evaluation_nodes": params.get("disabled_evaluation_nodes", set()),
@@ -731,13 +729,6 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         result = main_criteria in criteria_feedback
         for item in criteria_feedback:
             eval_response.add_feedback((item, ""))
-        for (reference_tag, reference_strings) in reference_criteria_strings.items():
-            if reference_tag in eval_response.get_tags():
-                continue
-            if "".join(criterion_identifier.split()) in reference_strings:
-                feedback = symbolic_comparison_criteria[reference_tag].feedback[result]([])
-                eval_response.add_feedback((reference_tag, feedback))
-                break
     eval_response.is_correct = is_correct
 
     error_below_atol = None
