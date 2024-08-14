@@ -85,11 +85,11 @@ set_of_very_common_units_in_SI = {
     ('hour',              'h',   '(3600*second)',                 tuple(),                  ('hours',)),
     ('degree',            'deg', '(pi/180)',                      tuple(),                  ('degrees',)),
     ('litre',             'L',   '(10**(-3)*metre**3)',           ('liter',),               ('litres,liters',)),
-    ('metricton',         't',   '(10**3*kilogram)',             ('tonne',),               ('tonnes',)),
+    ('metricton',         't',   '(10**3*kilogram)',              ('tonne',),               ('tonnes',)),
     ('neper',             'Np',  '(1)',                           ('Neper',),               ('nepers', 'Nepers')),
-    ('bel',               'B',   '((1/2)*log(10))',               ('Bel',),                 ('bels', 'Bels')),
+    ('bel',               'B',   '((1/2)*2.30258509299405)',      ('Bel',),                 ('bels', 'Bels')), # Note: log(10) = 2.30258509299405 in base 2
     ('electronvolt',      'eV',  '(1.60218*10**(-19)*joule)',     tuple(),                  ('electronvolts',)),
-    ('atomic_mass_unit',  'u',   '(1.66054*10**(-27)*kilogram)', tuple(),                  ('atomic_mass_units',)),
+    ('atomic_mass_unit',  'u',   '(1.66054*10**(-27)*kilogram)',  tuple(),                  ('atomic_mass_units',)),
     ('angstrom',          'Å',   '(10**(-10)*metre)',             ('Angstrom', 'Ångström'), ('angstroms', 'Angstroms')),
 }
 

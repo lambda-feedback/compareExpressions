@@ -42,4 +42,4 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
 if __name__ == "__main__":
-    pytest.main(['-xsk not slow', '--tb=line', '--durations=10', os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', '--tb=line', '--durations=10', os.path.abspath(__file__)])
