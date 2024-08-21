@@ -69,13 +69,13 @@ feedback_generators["GENERIC"] = lambda tag: lambda inputs: {
     "UNKNOWN": f"Cannot determine if {inputs['criterion'].content_string()} is true or false.",
 }[tag]
 feedback_generators["response=answer"] = lambda tag: lambda inputs: {
-    "TRUE": "The response is equal to the expected answer.",
-    "FALSE": "The response is not equal to the expected answer.",
-    "UNKNOWN": "Cannot determine if answer is equal to response.",
+    "TRUE": None, #"The response is equal to the expected answer.",
+    "FALSE": None, #"The response is not equal to the expected answer.",
+    "UNKNOWN": None, #"Cannot determine if answer is equal to response.",
 }[tag]
 feedback_generators["response=answer_where"] = lambda tag: lambda inputs: {
-    "TRUE": "The response is equal to the expected value.",
-    "FALSE": "The response is not equal to the expected value.",
+    "TRUE": None, #"The response is equal to the expected value.",
+    "FALSE": None, #"The response is not equal to the expected value.",
 }[tag]
 feedback_generators["IDENTIFY_REASON"] = lambda tag: lambda inputs: {
     "UNKNOWN": None,
