@@ -246,5 +246,16 @@ class TestEvaluationFunction():
         assert tag in result["tags"]
         assert result["is_correct"] == is_correct
 
+    def test_MECH60001_dynamic_signals_error_with_dB(self):
+        ans = "48 dB"
+        res = "48 dB"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
