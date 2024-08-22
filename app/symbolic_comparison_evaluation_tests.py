@@ -419,7 +419,7 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response,answer",
         generate_input_variations(
-            response="-minus_plus x**2 - plus_minus y**2",
+            response="-x**2 + y**2",
             answer="plus_minus x**2 + minus_plus y**2"
         )
     )
@@ -717,6 +717,26 @@ class TestEvaluationFunction():
         params.update(tolerance)
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is outcome
+
+    def test_both_true_and_false_feedback_AERO4700_2_3_a(self):
+        response ="1/2*log(2)-j*(pi/4 + 2*n*pi)"
+        answer = "1/2*log(2)-I*(pi/4 plus_minus 2*n*pi)"
+        params = {
+            "rtol": 0,
+            "atol": 0,
+            "strict_syntax": False,
+            "physical_quantity": False,
+            "elementary_functions": True,
+            "multiple_answers_criteria": "all_responses",
+            "complexNumbers": True,
+            "symbols": {
+                "I": {"aliases": ["i", "j"], "latex": r"$I$"},
+                "n": {"aliases": [], "latex": r"$n$"},
+            }
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+        assert result["feedback"] == ""
 
     def test_warning_inappropriate_symbol(self):
         answer = 'factorial(2**4)'
@@ -1119,7 +1139,7 @@ class TestEvaluationFunction():
                 {
                     'symbols': {
                         'Ta': {'aliases': [], 'latex': r'\(T_a\)'},
-                        'gamma': {'aliases': [''], 'latex': r'\(\gamma\)'},
+                        'gamma': {'aliases': [], 'latex': r'\(\gamma\)'},
                         'T0b': {'aliases': [], 'latex': r'\(T_{0b}\)'},
                         'T0d': {'aliases': [], 'latex': r'\(T_{0d}\)'},
                         'QR': {'aliases': [], 'latex': r'\(Q_R\)'},
@@ -1137,6 +1157,17 @@ class TestEvaluationFunction():
                         'cp': {'aliases': [], 'latex': r'\(c_p\)'},
                     }
                 }),
+            ("log(2)/2+I*(7*pi/4)", "1-I", "im(exp(response))=im(answer), re(exp(response))=re(answer)", True, [], {'complexNumbers': True}),
+            ("log(2)/2+I*(7*pi/4 plus_minus 2*n*pi)", "1-I", "im(exp(response))=im(answer), re(exp(response))=re(answer)", True, [],
+                {
+                    'symbols': {
+                        'n': {'aliases': [], 'latex': r'\(n\)'},
+                        'I': {'aliases': ['i', 'j'], 'latex': r'\(I\)'},
+                    },
+                    'complexNumbers': True,
+                    'symbol_assumptions': "('n','integer')",
+                }
+            ),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):

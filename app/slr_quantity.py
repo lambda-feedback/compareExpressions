@@ -4,6 +4,7 @@
 
 import re
 from enum import Enum
+from .criteria_utilities import Criterion
 from .expression_utilities import parse_expression, compute_relative_tolerance_from_significant_decimals, create_sympy_parsing_params
 from .symbolic_comparison_evaluation import evaluation_function as symbolic_comparison
 from .symbolic_comparison_preview import preview_function as symbolic_preview
@@ -470,6 +471,10 @@ def quantity_comparison(response, answer, parameters, eval_response):
     quantities = dict()
     evaluated_criteria = dict()
     criteria = physical_quantities_criteria
+    parameters = dict(parameters)
+    input_criteria_string = parameters.pop("criteria", "")
+    input_criteria = {"INPUT_CRITERIA_"+str(k): Criterion(crit) for (k, crit) in enumerate(input_criteria_string.split("."))}
+    criteria.update(input_criteria)
     prefixes = [x[0] for x in set_of_SI_prefixes]
     fundamental_units = [x[0] for x in set_of_SI_base_unit_dimensions]
     dimensions = [x[2] for x in set_of_SI_base_unit_dimensions]
