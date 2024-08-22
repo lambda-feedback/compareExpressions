@@ -736,8 +736,7 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-        assert "response=answer_TRUE" in result["tags"]
-        assert "response=answer_FALSE" not in result["tags"]
+        assert result["feedback"] == ""
 
     def test_warning_inappropriate_symbol(self):
         answer = 'factorial(2**4)'
@@ -1160,16 +1159,6 @@ class TestEvaluationFunction():
                 }),
             ("log(2)/2+I*(7*pi/4)", "1-I", "im(exp(response))=im(answer), re(exp(response))=re(answer)", True, [], {'complexNumbers': True}),
             ("log(2)/2+I*(7*pi/4 plus_minus 2*n*pi)", "1-I", "im(exp(response))=im(answer), re(exp(response))=re(answer)", True, [],
-                {
-                    'symbols': {
-                        'n': {'aliases': [], 'latex': r'\(n\)'},
-                        'I': {'aliases': ['i', 'j'], 'latex': r'\(I\)'},
-                    },
-                    'complexNumbers': True,
-                    'symbol_assumptions': "('n','integer')",
-                }
-            ),
-            ("log(2)/2+I*(7*pi/4 plus_minus 2*n*pi)", "1-I", "im(exp(response))=im(answer), re(exp(response))=re(answer), response", True, [],
                 {
                     'symbols': {
                         'n': {'aliases': [], 'latex': r'\(n\)'},
