@@ -41,5 +41,14 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    def test_incorrect_response_with_custom_feedback(self):
+        response = "x+1"
+        answer = "x+2"
+
+        response = evaluation_function(response, answer, {"feedback_for_incorrect_case": "Custom feedback"})
+
+        assert response["is_correct"] is False
+        assert response["feedback"] == "Custom feedback"
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', '--tb=line', '--durations=10', os.path.abspath(__file__)])
