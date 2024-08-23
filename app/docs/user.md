@@ -8,7 +8,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are nine optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `feedback_for_incorrect_case`, `physical_quantity`, `plus_minus`/`minus_plus` `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
+There are nine optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `physical_quantity`, `plus_minus`/`minus_plus` `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
 
 ## `complexNumbers`
 
@@ -40,7 +40,7 @@ When using implicit multiplication function names with multiple characters are s
 
 `sin`, `sinc`, `csc` (alternative `cosec`), `cos`, `sec`, `tan`, `cot` (alternative `cotan`), `asin` (alternative `arcsin`), `acsc` (alternatives `arccsc`, `arccosec`), `acos` (alternative `arccos`), `asec` (alternative `arcsec`), `atan` (alternative `arctan`), `acot` (alternatives `arccot`, `arccotan`), `atan2` (alternative `arctan2`), `sinh`, `cosh`, `tanh`, `csch` (alternative `cosech`), `sech`, `asinh` (alternative `arcsinh`), `acosh` (alternative `arccosh`), `atanh` (alternative `arctanh`), `acsch` (alternatives `arccsch`, `arcosech`), `asech` (alternative `arcsech`), `exp` (alternative `Exp`), `E` (equivalent to `exp(1)`, alternative `e`), `log`, `sqrt`, `sign`, `Abs` (alternative `abs`), `Max` (alternative `max`), `Min` (alternative `min`), `arg`, `ceiling` (alternative `ceil`), `floor`
 
-## `feedback_for_incorrect_case`
+## `feedback_for_incorrect_response`
 All feedback for all incorrect responses will be replaced with the string that this parameter is set to.
 
 ## `multiple_answers_criteria`

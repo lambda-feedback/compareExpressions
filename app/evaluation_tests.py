@@ -45,7 +45,7 @@ class TestEvaluationFunction():
         response = "x+1"
         answer = "x+2"
 
-        response = evaluation_function(response, answer, {"feedback_for_incorrect_case": "Custom feedback"})
+        response = evaluation_function(response, answer, {"feedback_for_incorrect_response": "Custom feedback"})
 
         assert response["is_correct"] is False
         assert response["feedback"] == "Custom feedback"
