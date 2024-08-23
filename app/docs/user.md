@@ -8,7 +8,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are eight optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `physical_quantity`, `plus_minus`/`minus_plus` `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
+There are nine optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `feedback_for_incorrect_case`, `physical_quantity`, `plus_minus`/`minus_plus` `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
 
 ## `complexNumbers`
 
@@ -36,9 +36,12 @@ The `criteria` parameter reserves `response` and `answer` as keywords that will 
 
 ## `elementary_functions`
 
-When using implicit multiplication function names with mulitple characters are sometimes split and not interpreted properly. Setting `elementary_functions` to true will reserve the function names listed below and prevent them from being split. If a name is said to have one or more alternatives this means that it will accept the alternative names but the reserved name is what will be shown in the preview.
+When using implicit multiplication function names with multiple characters are sometimes split and not interpreted properly. Setting `elementary_functions` to true will reserve the function names listed below and prevent them from being split. If a name is said to have one or more alternatives this means that it will accept the alternative names but the reserved name is what will be shown in the preview.
 
 `sin`, `sinc`, `csc` (alternative `cosec`), `cos`, `sec`, `tan`, `cot` (alternative `cotan`), `asin` (alternative `arcsin`), `acsc` (alternatives `arccsc`, `arccosec`), `acos` (alternative `arccos`), `asec` (alternative `arcsec`), `atan` (alternative `arctan`), `acot` (alternatives `arccot`, `arccotan`), `atan2` (alternative `arctan2`), `sinh`, `cosh`, `tanh`, `csch` (alternative `cosech`), `sech`, `asinh` (alternative `arcsinh`), `acosh` (alternative `arccosh`), `atanh` (alternative `arctanh`), `acsch` (alternatives `arccsch`, `arcosech`), `asech` (alternative `arcsech`), `exp` (alternative `Exp`), `E` (equivalent to `exp(1)`, alternative `e`), `log`, `sqrt`, `sign`, `Abs` (alternative `abs`), `Max` (alternative `max`), `Min` (alternative `min`), `arg`, `ceiling` (alternative `ceil`), `floor`
+
+## `feedback_for_incorrect_case`
+All feedback for all incorrect responses will be replaced with the string that this parameter is set to.
 
 ## `multiple_answers_criteria`
 

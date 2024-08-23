@@ -46,4 +46,9 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     else:
         eval_response = symbolic_comparison(response, answer, parameters, eval_response)
 
+    if eval_response.is_correct is False and parameters.get("feedback_for_incorrect_case", None) is not None:
+        result_dict = eval_response.serialise(include_test_data)
+        result_dict["feedback"] = parameters["feedback_for_incorrect_case"]
+        return result_dict
+
     return eval_response.serialise(include_test_data)
