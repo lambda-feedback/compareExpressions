@@ -1128,12 +1128,12 @@ class TestEvaluationFunction():
                     }
                 }),
             ("3", "x+1", "response=answer where x=2", True, ["response=answer where x=2_TRUE"], {}),
-            ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response candidates x - 1"], {}),
+            ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response=answer where x=2_RESPONSE_CANDIDATES_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("5/3", "x/y+1", "response=answer where x=2; y=3", True, ["response=answer where x=2; y=3_TRUE"], {}),
             ("7", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}),
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
-            ("34", "Ta*(1+(gamma-1)/2*M**2)", "response=answer where Ta=2; gamma=3; M=4", True, ["response=answer where Ta=2;  gamma=3;  M=4_TRUE"],
+            ("34", "Ta*(1+(gamma-1)/2*M**2)", "response=answer where Ta=2; gamma=3; M=4", True, ["response=answer where Ta=2; gamma=3; M=4_TRUE"],
                 {
                     'symbols': {
                         'Ta': {'aliases': [], 'latex': r'\(T_a\)'},
@@ -1152,7 +1152,7 @@ class TestEvaluationFunction():
                         'cp': {'aliases': [], 'latex': r'\(c_p\)'},
                     }
                 }),
-            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d = Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d = Ta*(1+( gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
+            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d=Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d=Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
                 {
                     'symbols': {
                         'Ta': {'aliases': [], 'latex': r'\(T_a\)'},
@@ -1191,7 +1191,7 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params",
         [
-            ("8", "x+y*z**2-1", "response=answer where x=4; y=3; z=2", False, ["response=answer where x=4; y=3; z=2_GET_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response=answer where x=4; y=3; z=2_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response candidates -x + y*z**2"], {}),
+            ("8", "x+y*z**2-1", "response=answer where x=4; y=3; z=2", False, ["response=answer where x=4; y=3; z=2_GET_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response=answer where x=4; y=3; z=2_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response=answer where x=4; y=3; z=2_RESPONSE_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], {}),
         ]
     )
     def test_disabled_evaluation_nodes(self, response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params):

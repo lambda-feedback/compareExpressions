@@ -289,17 +289,16 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             }
 
     use_set_equivalence = False
-    if (lhs == "answer" and rhs == "response") or (lhs == "response" and rhs == "answer"):
-        response_list = parameters_dict["reserved_expressions"]["response"]
-        answer_list = parameters_dict["reserved_expressions"]["answer"]
-        if isinstance(response_list, set) and isinstance(answer_list, set):
-            use_set_equivalence = True
-        elif isinstance(response_list, set) and not isinstance(answer_list, set):
-            use_set_equivalence = True
-            answer_list = set([answer_list])
-        elif not isinstance(response_list, set) and isinstance(answer_list, set):
-            use_set_equivalence = True
-            response_list = set([response_list])
+    response_list = parameters_dict["reserved_expressions"]["response"]
+    answer_list = parameters_dict["reserved_expressions"]["answer"]
+    if isinstance(response_list, set) and isinstance(answer_list, set):
+        use_set_equivalence = True
+    elif isinstance(response_list, set) and not isinstance(answer_list, set):
+        use_set_equivalence = True
+        answer_list = set([answer_list])
+    elif not isinstance(response_list, set) and isinstance(answer_list, set):
+        use_set_equivalence = True
+        response_list = set([response_list])
 
     res = parameters_dict["reserved_expressions"]["response"]
     ans = parameters_dict["reserved_expressions"]["answer"]
@@ -549,8 +548,8 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     if expression.children[0].content_string().strip() == "response":
         expression_to_vary = expression.children[1]
     elif expression.children[1].content_string().strip() == "response":
-        expression_to_vary = expression.children[1]
-    if "response" in expression_to_vary.content_string():
+        expression_to_vary = expression.children[0]
+    if expression_to_vary is not None and "response" in expression_to_vary.content_string():
         expression_to_vary = None
     if expression_to_vary is not None:
         response_value = response.subs(local_subs)
@@ -572,8 +571,9 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                 "details": lambda expression, variations: "The following expressions are checked: "+", ".join([str(e) for e in variations]),
             }
         }
-        values_and_expressions = {expression_to_vary.subs(local_subs): set([expression_to_vary])}
-        values_and_variations_group = {expression_to_vary.subs(local_subs): set(["UNKNOWN"])}
+        value = expression_to_vary.subs(local_subs).simplify()
+        values_and_expressions = {str(value): set([expression_to_vary])}
+        values_and_variations_group = {str(value): set(["UNKNOWN"])}
         for (group_label, info) in variation_groups.items():
             for variation in info["variations"]:
                 value = variation.subs(local_subs).simplify()
@@ -604,9 +604,10 @@ def criterion_where_node(criterion, parameters_dict, label=None):
 
             def get_candidates(unused_input):
                 candidates = {
-                    "response candidates "+", ".join([str(e) for e in values_and_expressions[str(response_value)]]): {'criterion': criterion}
+                    label+"_RESPONSE_CANDIDATES_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group[str(response_value)]
                 }
                 return candidates
+
             for (group_label, group_info) in variation_groups.items():
                 graph.attach(
                     label+"_IDENTIFY_REASON",
@@ -627,16 +628,18 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                 expressions_string = ", ".join([str(e) for e in expressions])
                 for group_label in values_and_variations_group[value]:
                     if group_label != "UNKNOWN":
-                        graph.attach(
-                            label+"_GET_CANDIDATES_"+group_label,
-                            "response candidates "+expressions_string,
-                            summary="response = "+str(value),
-                            details="Response candidates: "+expressions_string
-                        )
-                        graph.attach(
-                            "response candidates "+expressions_string,
-                            END.label
-                        )
+                        group_candidates_eval = graph.evaluations[label+"_GET_CANDIDATES_"+group_label]
+                        if label+"_RESPONSE_CANDIDATES_"+group_label not in [edge.target.label for edge in group_candidates_eval.outgoing]:
+                            graph.attach(
+                                label+"_GET_CANDIDATES_"+group_label,
+                                label+"_RESPONSE_CANDIDATES_"+group_label,
+                                summary="response = "+str(value),
+                                details="Response candidates: "+expressions_string
+                            )
+                            graph.attach(
+                                label+"_RESPONSE_CANDIDATES_"+group_label,
+                                END.label
+                            )
     return graph
 
 
