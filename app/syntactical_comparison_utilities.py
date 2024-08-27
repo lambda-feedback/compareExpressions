@@ -4,14 +4,17 @@ from .criteria_graph_utilities import CriteriaGraph
 
 is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
 
+
 def is_number(string):
     match_content = re.fullmatch(is_number_regex, string)
     return match_content is not None and len(match_content.group(0)) > 0
+
 
 def is_complex_number_on_cartesian_form(string):
     string = "".join(string.split())
     result = re.fullmatch(is_number_regex+"?\+?"+is_number_regex+"?\*?I?", string)
     return result is not None
+
 
 def is_complex_number_on_exponential_form(string):
     string = "".join(string.split())

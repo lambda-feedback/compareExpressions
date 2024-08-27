@@ -17,6 +17,6 @@ feedback_string_generators["MATCHES"] = lambda tag: lambda inputs: {
     "PREFIX_IS_SMALL": "The quantity can be written with fewer digits by using a larger prefix.",
 }[tag]
 feedback_string_generators["COMPARISON"] = lambda tag: lambda inputs: {
-    "TRUE": "", # TODO: Replace with more specialised messages for different comparisons
-    "FALSE": "", # TODO: Replace with more specialised messages for different comparisons
+    "TRUE": "",  # TODO: Replace with more specialised messages for different comparisons
+    "FALSE": "",  # TODO: Replace with more specialised messages for different comparisons
 }[tag]

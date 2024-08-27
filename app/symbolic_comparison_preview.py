@@ -1,11 +1,9 @@
 import re
 from sympy.parsing.sympy_parser import T as parser_transformations
 from .expression_utilities import (
-    extract_latex,
     convert_absolute_notation,
     create_expression_set,
     create_sympy_parsing_params,
-    latex_symbols,
     parse_expression,
     substitute_input_symbols,
     SymbolDict,
@@ -17,11 +15,11 @@ from .preview_utilities import (
     Params,
     Preview,
     Result,
-    extract_latex,
     parse_latex
 )
 
 from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
+
 
 def parse_symbolic(response: str, params):
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
@@ -99,7 +97,7 @@ def preview_function(response: str, params: Params) -> Result:
         latex_out = []
         sympy_out = []
         for expression in expression_list:
-            latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
+            latex_out.append(sympy_to_latex(expression, symbols, settings={"mul_symbol": r" \cdot "}))
             sympy_out.append(str(expression))
 
         if len(sympy_out) == 1:

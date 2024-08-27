@@ -56,7 +56,7 @@ class TestEvaluationFunction():
         response = string
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-        assert result["response_latex"] == "~".join([latex for latex in [value_latex,unit_latex] if latex is not None])
+        assert result["response_latex"] == "~".join([latex for latex in [value_latex, unit_latex] if latex is not None])
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
     def test_natural_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
@@ -71,7 +71,7 @@ class TestEvaluationFunction():
         response = string
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-        assert result["response_latex"] == "~".join([latex for latex in [value_latex,unit_latex] if latex is not None])
+        assert result["response_latex"] == "~".join([latex for latex in [value_latex, unit_latex] if latex is not None])
 
     @pytest.mark.skip("Too resource intensive")
     def test_slow_quantity_alternative_names_natural_syntax(self):
@@ -92,7 +92,7 @@ class TestEvaluationFunction():
                                 response = prefix[0]+u1_alt+u2_alt
                                 try:
                                     result = evaluation_function(response, answer, params)
-                                except Exception as e:
+                                except Exception:
                                     errors.append((answer, response))
                                     continue
                                 if result["is_correct"] is False:
@@ -268,6 +268,7 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

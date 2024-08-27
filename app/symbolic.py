@@ -29,8 +29,10 @@ def expression_preprocess(expr, name, parameters):
         success = False
     return success, expr, abs_feedback
 
+
 def expression_parse(name, expr, parameters, evaluation_result):
     return parse_expression(expr, parameters)
+
 
 default_criteria = {"response = answer"}
 

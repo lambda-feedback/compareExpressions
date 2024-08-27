@@ -1,4 +1,3 @@
-from sympy.parsing.sympy_parser import T as parser_transformations
 from .expression_utilities import (
     find_matching_parenthesis,
     parse_expression,
@@ -17,9 +16,10 @@ from .preview_utilities import (
 from .physical_quantity_utilities import SLR_quantity_parser as quantity_parser
 from .physical_quantity_utilities import SLR_quantity_parsing as quantity_parsing
 
+
 def fix_exponents(response):
     processed_response = []
-    exponents_notation = ['^','**']
+    exponents_notation = ['^', '**']
     for notation in exponents_notation:
         index = 0
         while index < len(response):
@@ -28,7 +28,7 @@ def fix_exponents(response):
                 processed_response.append(response[index:exponent_start])
                 exponent_start += len(notation)
                 processed_response.append("**")
-                exponent_end = find_matching_parenthesis(response, exponent_start, delimiters=('{','}'))
+                exponent_end = find_matching_parenthesis(response, exponent_start, delimiters=('{', '}'))
                 if exponent_end > 0:
                     inside_exponent = '('+response[(exponent_start+len(notation)):exponent_end]+')'
                     processed_response.append(inside_exponent)
@@ -41,6 +41,7 @@ def fix_exponents(response):
         response = "".join(processed_response)
         processed_response = []
     return response
+
 
 def preview_function(response: str, params: Params) -> Result:
     """
@@ -101,8 +102,8 @@ def preview_function(response: str, params: Params) -> Result:
             sympy_out = response
 
     except SyntaxError as e:
-        raise ValueError("Failed to parse Sympy expression") from e
+        raise Exception("Failed to parse Sympy expression") from e
     except ValueError as e:
-        raise ValueError("Failed to parse LaTeX expression") from e
+        raise Exception("Failed to parse LaTeX expression") from e
 
     return Result(preview=Preview(latex=latex_out, sympy=sympy_out))

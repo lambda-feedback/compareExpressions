@@ -1,7 +1,6 @@
 import os
 import pytest
 
-from .preview_utilities import Params, extract_latex
 from .quantity_comparison_preview import preview_function
 from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 
@@ -27,7 +26,13 @@ class TestPreviewFunction():
 
     @pytest.mark.parametrize("response,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
     def test_strict_syntax_cases(self, response, value, unit, content, value_latex, unit_latex, criteria):
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "strict",
+            "elementary_functions": True
+        }
         result = preview_function(response, params)["preview"]
         latex = ""
         if value_latex is None and unit_latex is not None:
@@ -40,7 +45,13 @@ class TestPreviewFunction():
 
     @pytest.mark.parametrize("response,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
     def test_natural_syntax_cases(self, response, value, unit, content, value_latex, unit_latex, criteria):
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "natural"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "natural",
+            "elementary_functions": True
+        }
         result = preview_function(response, params)["preview"]
         latex = ""
         if value_latex is None and unit_latex is not None:
@@ -51,7 +62,8 @@ class TestPreviewFunction():
             latex = value_latex+"~"+unit_latex
         assert result["latex"] == latex
 
-    @pytest.mark.parametrize("response,preview_latex,preview_sympy",
+    @pytest.mark.parametrize(
+        "response,preview_latex,preview_sympy",
         [
             ("sin(123)", r"\sin{\left(123 \right)}", "sin(123)"),
             ("sqrt(162)", r"\sqrt{162}", "sqrt(162)"),
@@ -74,8 +86,9 @@ class TestPreviewFunction():
         }
         response = "162 \\mathrm{~N} / \\mathrm{m}^{2}"
         result = preview_function(response, params)["preview"]
-        assert result["latex"] == r'162~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}' # TODO: Fix so that unnecessary parenthesis are simplified away
+        assert result["latex"] == r'162~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}'  # TODO: Fix so that unnecessary parenthesis are simplified away
         assert result["sympy"] == "162 newton/metre**(2)"
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])

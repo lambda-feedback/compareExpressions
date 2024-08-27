@@ -4,8 +4,6 @@
 
 from copy import deepcopy
 from .physical_quantity_utilities import (
-    PhysicalQuantity,
-    QuantityTags,
     SLR_quantity_parser,
     SLR_quantity_parsing
 )
@@ -21,9 +19,8 @@ from .physical_quantity_utilities import (
     units_sets_dictionary,
     set_of_SI_prefixes,
     set_of_SI_base_unit_dimensions,
-    conversion_to_base_si_units
 )
-from .slr_parsing_utilities import create_node, infix, operate, group, catch_undefined, SLR_Parser
+from .slr_parsing_utilities import create_node, infix, operate, catch_undefined, SLR_Parser
 from sympy import Symbol
 
 from .criteria_graph_utilities import CriteriaGraph
@@ -70,31 +67,6 @@ def generate_criteria_parser(reserved_expressions):
     end_symbol = "END"
     null_symbol = "NULL"
 
-    def matches(inputs):
-        if isinstance(inputs[0], PhysicalQuantity) and isinstance(inputs[1], PhysicalQuantity):
-            value0 = inputs[0].standard_value
-            unit0 = inputs[0].standard_unit
-            value1 = inputs[1].standard_value
-            unit1 = inputs[1].standard_unit
-            value_match = False
-            unit_match = False
-            if value0 is None and value1 is None:
-                value_match = True
-            elif value0 is not None and value1 is not None:
-                value_match = symbolic_comparison(value0, value1, parameters)["is_correct"]
-            if unit0 is None and unit0 is None:
-                unit_match = True
-            elif unit0 is not None and unit1 is not None:
-                unit_match = bool((unit0 - unit1).simplify() == 0)
-            return value_match and unit_match
-        elif isinstance(inputs[0], Basic) and isinstance(inputs[1], Basic):
-            if inputs[0] is not None and inputs[1] is not None:
-                dimension_match = bool((inputs[0] - inputs[1]).cancel().simplify().simplify() == 0)  # TODO: Make separate function for checking equality of expressions that can be parsed
-            else:
-                dimension_match = False
-            return dimension_match
-        return False
-
     def compare(comparison):
         comparison_dict = {
             "=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() == 0),
@@ -112,22 +84,13 @@ def generate_criteria_parser(reserved_expressions):
         return wrap
 
     criteria_operations = {
-        "and": lambda x: x[0] and x[1],
-        "not": lambda x: not x[0],
-        "has": lambda x: x[0] is not None,
-        "unit": lambda quantity: quantity[0].unit,
-        "expanded_unit": lambda quantity: quantity[0].expanded_unit,
-        "base_unit": lambda quantity: quantity[0].standard_unit,
-        "value": lambda quantity: quantity[0].value,
-        "is_number": lambda value: value[0] is not None and value[0].tags == {QuantityTags.N},
-        "is_expression": lambda value: value[0] is not None and QuantityTags.V in value[0].tags,
-        "matches": matches,
-        "dimension": lambda quantity: quantity[0].dimension,
-        "=": compare("="),
-        "<=": compare("<="),
-        ">=": compare(">="),
-        "<": compare("<"),
-        ">": compare(">"),
+        "matches",
+        "dimension",
+        "=",
+        "<=",
+        ">=",
+        "<",
+        ">",
     }
 
     token_list = [
@@ -135,8 +98,6 @@ def generate_criteria_parser(reserved_expressions):
         (end_symbol,     end_symbol),
         (null_symbol,    null_symbol),
         (" *BOOL *",     "BOOL"),
-        (" *UNIT *",     "UNIT"),
-        (" *VALUE *",    "VALUE"),
         (" *QUANTITY *", "QUANTITY"),
         (" *DIMENSION *", "DIMENSION"),
         ("\( *",         "START_DELIMITER"),
@@ -145,36 +106,23 @@ def generate_criteria_parser(reserved_expressions):
         ("answer",       "QUANTITY"),
         ("INPUT",        "INPUT", catch_undefined),
     ]
-    token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations.keys()]
+    token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations]
 
     productions = [
         ("START",     "BOOL", create_node),
-        ("BOOL",      "BOOL and BOOL", infix),
-        ("BOOL",      "UNIT matches UNIT", infix),
-        ("BOOL",      "VALUE matches VALUE", infix),
         ("BOOL",      "QUANTITY matches QUANTITY", infix),
         ("BOOL",      "DIMENSION matches DIMENSION", infix),
-        ("BOOL",      "not(BOOL)", operate(1)),
-        ("BOOL",      "has(UNIT)", operate(1)),
-        ("BOOL",      "has(VALUE)", operate(1)),
-        ("BOOL",      "is_number(VALUE)", operate(1)),
-        ("BOOL",      "is_expression(VALUE)", operate(1)),
         ("BOOL",      "QUANTITY=QUANTITY", infix),
         ("BOOL",      "QUANTITY<=QUANTITY", infix),
         ("BOOL",      "QUANTITY>=QUANTITY", infix),
         ("BOOL",      "QUANTITY<QUANTITY", infix),
         ("BOOL",      "QUANTITY>QUANTITY", infix),
-        ("UNIT",      "unit(QUANTITY)", operate(1)),
-        ("UNIT",      "base_unit(QUANTITY)", operate(1)),
-        ("UNIT",      "expanded_unit(QUANTITY)", operate(1)),
-        ("UNIT",      "INPUT UNIT", group(2, empty=True)),
-        ("UNIT",      "UNIT INPUT", group(2, empty=True)),
-        ("VALUE",     "value(QUANTITY)", operate(1)),
         ("QUANTITY",  "INPUT", create_node),
         ("DIMENSION", "dimension(QUANTITY)", operate(1)),
     ]
 
     return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
+
 
 def comparison_function(comparison_operator):
     none_placeholder = Symbol('NONE_PLACEHOLDER')
@@ -186,6 +134,7 @@ def comparison_function(comparison_operator):
         "<=": lambda a, b: bool(a <= b),
     }
     comparison = comparison_type_dictionary[comparison_operator]
+
     def comparison_function_inner(lhs, rhs, substitutions):
         local_substitutions = [(key, none_placeholder) if expr is None else (key, expr) for (key, expr) in substitutions]
         expr0 = lhs.subs(local_substitutions)
@@ -194,13 +143,14 @@ def comparison_function(comparison_operator):
         return result
     return comparison_function_inner
 
+
 def comparison_base_graph(criterion, parameters, comparison_operator="=", label=None):
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
     graph.add_node(END)
     reserved_expressions = parameters["reserved_expressions"].items()
     parsing_params = deepcopy(parameters["parsing_parameters"])
-    if parameters.get('atol',0) == 0 and parameters.get('rtol',0) == 0:
+    if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
         ans = parameters["reserved_expressions"]["answer"]["quantity"].value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
@@ -218,6 +168,7 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
 
     stardard_forms = [(key, expr["standard"]["value"]*expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
     compare = comparison_function(comparison_operator)
+
     def compare_evaluate(unused_input):
         if compare(lhs, rhs, stardard_forms) is True:
             return {label+"_TRUE": None}
@@ -246,25 +197,30 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
         feedback_string_generator=physical_quantity_feedback_string_generators["COMPARISON"]("FALSE")
     )
     graph.attach(label+"_FALSE", END.label)
-    #TODO: Consider adding node for cases where comparison cannot be done / cannot be determined
+    # TODO: Consider adding node for cases where comparison cannot be done / cannot be determined
 
     return graph
+
 
 def greater_than_node(criterion, parameters, label=None):
     return comparison_base_graph(criterion, parameters, comparison_operator=">", label=label)
 
+
 def greater_than_or_equal_node(criterion, parameters, label=None):
-    #TODO: Add nodes for the equal case
+    # TODO: Add nodes for the equal case
     graph = comparison_base_graph(criterion, parameters, comparison_operator=">=", label=label)
     return graph
+
 
 def less_than_node(criterion, parameters, label=None):
     return comparison_base_graph(criterion, parameters, comparison_operator="<", label=label)
 
+
 def less_than_or_equal_node(criterion, parameters, label=None):
-    #TODO: Add nodes for the equal case
+    # TODO: Add nodes for the equal case
     graph = comparison_base_graph(criterion, parameters, comparison_operator=">=", label=label)
     return graph
+
 
 def criterion_match_node(criterion, parameters, label=None):
     graph = CriteriaGraph(label)
@@ -272,7 +228,7 @@ def criterion_match_node(criterion, parameters, label=None):
     graph.add_node(END)
     reserved_expressions = parameters["reserved_expressions"].items()
     parsing_params = deepcopy(parameters["parsing_parameters"])
-    if parameters.get('atol',0) == 0 and parameters.get('rtol',0) == 0:
+    if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
         ans = parameters["reserved_expressions"]["answer"]["quantity"].value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
@@ -289,7 +245,6 @@ def criterion_match_node(criterion, parameters, label=None):
     rhs = parse_expression(rhs_string, parsing_params)
 
     is_equal = comparison_function("=")
-    is_greater_than = comparison_function(">")
 
     def is_proportional(lhs, rhs, substitutions):
         none_placeholder = Symbol('NONE_PLACEHOLDER')
@@ -542,10 +497,10 @@ def expression_preprocess(expr, name, parameters):
             for unit in units_sets_dictionary[key]:
                 valid_units = valid_units.union(set((unit[0], unit[1])+unit[3]+unit[4]))
     dimensions = set(x[2] for x in set_of_SI_base_unit_dimensions)
-    unsplittable_symbols = list(prefixes|fundamental_units|valid_units|dimensions)
+    unsplittable_symbols = list(prefixes | fundamental_units | valid_units | dimensions)
     preprocess_parameters = deepcopy(parameters)
     # TODO: find better way to add reserved keywords for physical quantity criteria added to prevent preprocessing to mangle them
-    preprocess_parameters.update({"reserved_keywords": preprocess_parameters.get("reserved_keywords",[])+unsplittable_symbols+['matches']})
+    preprocess_parameters.update({"reserved_keywords": preprocess_parameters.get("reserved_keywords", [])+unsplittable_symbols+['matches']})
     expr = substitute_input_symbols(expr.strip(), preprocess_parameters)[0]
     success = True
     return success, expr, None

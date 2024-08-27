@@ -1,8 +1,9 @@
 import os
 import pytest
 
-from .preview_utilities import Params, extract_latex
+from .preview_utilities import Params
 from .preview import preview_function
+
 
 class TestPreviewFunction():
     """
@@ -75,5 +76,6 @@ class TestPreviewFunction():
         preview = result["preview"]
         assert preview["latex"] == r"\ln{\left(x \right)}"
 
+
 if __name__ == "__main__":
-    pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])

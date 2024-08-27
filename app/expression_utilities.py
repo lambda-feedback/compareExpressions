@@ -621,6 +621,7 @@ def parse_expression(expr_string, parsing_params):
             substitutions += alias_substitutions
         substitutions.sort(key=lambda x: -len(x[0]))
         expr = substitute(expr, substitutions)
+        # NOTE: for some unknown reason this does not work unless this is a lambda instead of a def
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
         if strict_syntax is True:
             transformations = parser_transformations[0:4]+extra_transformations

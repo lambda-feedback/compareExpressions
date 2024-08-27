@@ -10,6 +10,7 @@ from .expression_utilities import (
     find_matching_parenthesis,
 )
 
+
 class Params(TypedDict):
     is_latex: bool
     simplify: NotRequired[bool]
@@ -67,10 +68,11 @@ def parse_latex(response: str, symbols: SymbolDict) -> str:
     except Exception as e:
         raise ValueError(str(e))
 
+
 def sanitise_latex(response):
     response = "".join(response.split())
-    response = response.replace('~',' ')
-    wrappers = [r"\mathrm",r"\text"]
+    response = response.replace('~', ' ')
+    wrappers = [r"\mathrm", r"\text"]
     for wrapper in wrappers:
         processed_response = []
         index = 0
@@ -78,7 +80,7 @@ def sanitise_latex(response):
             wrapper_start = response.find(wrapper+"{", index)
             if wrapper_start > -1:
                 processed_response.append(response[index:wrapper_start])
-                wrapper_end = find_matching_parenthesis(response, wrapper_start+1, delimiters=('{','}'))
+                wrapper_end = find_matching_parenthesis(response, wrapper_start+1, delimiters=('{', '}'))
                 inside_wrapper = response[(wrapper_start+len(wrapper+"{")):wrapper_end]
                 processed_response.append(inside_wrapper)
                 index = wrapper_end+1

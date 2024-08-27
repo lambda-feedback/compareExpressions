@@ -44,10 +44,9 @@ class PhysicalQuantity:
         for key in units_sets_dictionary.keys():
             if key in units_string:
                 for unit in units_sets_dictionary[key]:
-                    #valid_units = valid_units.union(set((unit[0], unit[1])+unit[3]+unit[4]))
                     valid_units = valid_units.union(set((unit[0],)))
         dimensions = set(x[2] for x in set_of_SI_base_unit_dimensions)
-        unsplittable_symbols = list(prefixes|fundamental_units|valid_units|dimensions)
+        unsplittable_symbols = list(prefixes | fundamental_units | valid_units | dimensions)
         symbol_assumptions = tuple((f'{s}', 'positive') for s in unsplittable_symbols)
         self.parsing_params = create_sympy_parsing_params(
             parameters,
@@ -165,8 +164,8 @@ class PhysicalQuantity:
                     for unit in units_sets_dictionary[key]:
                         valid_units = valid_units.union(set((unit[0], unit[1])+unit[3]+unit[4]))
             dimensions = set(x[2] for x in set_of_SI_base_unit_dimensions)
-            unsplittable_symbols = list(prefixes|fundamental_units|valid_units|dimensions)
-            preview_parameters.update({"reserved_keywords": preview_parameters.get("reserved_keywords",[])+unsplittable_symbols})
+            unsplittable_symbols = list(prefixes | fundamental_units | valid_units | dimensions)
+            preview_parameters.update({"reserved_keywords": preview_parameters.get("reserved_keywords", [])+unsplittable_symbols})
             if "rtol" not in preview_parameters.keys():
                 preview_parameters.update({"rtol": 1e-12})
             original_string = self.value.original_string()

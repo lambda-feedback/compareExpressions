@@ -185,7 +185,7 @@ slr_strict_si_syntax_test_cases = [
      r"\frac{10 \cdot g \cdot k \cdot m}{s^{2}} + 10",
      r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}",
      ["FULL_QUANTITY", "EXPR_VALUE", "REVERTED_UNIT"]),
-    #("-0.5 kg m/s^2-10 kg m/s^2",
+    # ("-0.5 kg m/s^2-10 kg m/s^2",
     # "-0.5 kg m/s^2-10",
     # "kg m/s^2",
     # "-0.5 kg m/s^2-10 kilogram metre/second^2",

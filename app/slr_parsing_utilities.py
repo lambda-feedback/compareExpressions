@@ -22,6 +22,7 @@ def catch_undefined(label, content, original, start, end):
 def proceed(production, output, tag_handler):
     return output
 
+
 def package(production, output, tag_handler):
     label = production[0].label
     handle = production[1]
@@ -56,7 +57,7 @@ def join(production, output, tag_handler):
     for node in output[-len(handle):]:
         try:
             content.append(node.content_string())
-        except:
+        except Exception:
             content.append(node.content)
     joined_content = "".join(content)
     joined_end = output[-1].end
@@ -127,7 +128,7 @@ def operate(number_of_elements, empty=False):
             end_index = end_delim.end
             content = output[-number_of_elements:]
             output = output[0:-number_of_elements]
-            start_delim = output.pop()
+            _ = output.pop()
         for k, elem in enumerate(content):
             if isinstance(elem, Token) and not isinstance(elem, ExprNode):
                 content[k] = ExprNode(elem, [], tag_handler=tag_handler)
@@ -638,7 +639,8 @@ class SLR_Parser:
         token_list = self.token_list
         tokens = []
 
-        new_token = lambda l, c, s, e: Token(l, c, expr, s, e)
+        def new_token(token_label, token_content, token_start, token_end):
+            return Token(token_label, token_content, expr, token_start, token_end)
 
         token_catch_undefined = [x for x in token_list if len(x) > 2 and x[2] == catch_undefined]
         if len(token_catch_undefined) > 1:
@@ -841,46 +843,3 @@ class SLR_Parser:
                 raise Exception(f"{'-'*m}\nINVALID ENTRY:\n{'-'*m}\naccepted: {input_tokens[:-len(tokens)]}\ncurrent: {a}\nremaining: {tokens}\nstack: {stack}\noutput: {output}\n{'-'*m}")
                 break
         return output
-
-# -------
-# -------
-# TESTING
-# -------
-# -------
-
-
-if __name__ == "__main__":
-
-    productions = [
-        ("S", "E",   create_node),
-        ("E", "E+E", infix),
-        ("E", "E*E", infix),
-        ("E", "(E)", group),
-        ("E", "I",   relabel)
-    ]
-
-    start_symbol = "S"
-    end_symbol = "$"
-    null_symbol = "e"
-
-    infix_operators = ["+", "*"]
-    delimiters = ["(", ")"]
-    token_list = [(start_symbol, "START"), ("E", "EXPRESSION"), ("I", "IDENTIFIER")]\
-        + [(x, "INFIX"+x) for x in infix_operators]\
-        + [("(", "START_DELIMITER"), (")", "END_DELIMITER")]\
-        + [(end_symbol, "END"), (null_symbol, "NULL")]
-
-    test_parser = SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
-    print(test_parser.parsing_table_to_string())
-
-    ref_string = '\t+\t*\t(\t)\tI\t$\te\tS\tE\n0\tx\tx\ts2\tx\ts3\tx\tx\tx\ts1\t\n1\ts4\ts5\tx\tx\tx\tr0\tx\tx\tx\t\n2\tx\tx\ts2\tx\ts3\tx\tx\tx\ts6\t\n3\tr4\tr4\tx\tr4\tx\tr4\tx\tx\tx\t\n4\tx\tx\ts2\tx\ts3\tx\tx\tx\ts7\t\n5\tx\tx\ts2\tx\ts3\tx\tx\tx\ts8\t\n6\ts4\ts5\tx\ts9\tx\tx\tx\tx\tx\t\n7\tr1\ts5\tx\tr1\tx\tr1\tx\tx\tx\t\n8\tr2\tr2\tx\tr2\tx\tr2\tx\tx\tx\t\n9\tr3\tr3\tx\tr3\tx\tr3\tx\tx\tx\t\n'
-
-    if ref_string != test_parser.parsing_table_to_string():
-        print(" ***************************************\n * WARNING: test parsing table changed *\n ***************************************")
-
-    test_tokens = test_parser.scan("(I+I)*I+I")
-    print([str(token.label) for token in test_tokens])
-
-    output = test_parser.parse(test_tokens)
-    print(output)
-    print(output[0].tree_string())
