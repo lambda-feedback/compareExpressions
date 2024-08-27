@@ -257,5 +257,17 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    def test_quantity_with_multiple_of_positive_value(self):
+        ans = "5 Hz"
+        res = "10 Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response > answer"
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
 if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

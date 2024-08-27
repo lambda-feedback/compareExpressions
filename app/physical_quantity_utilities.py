@@ -44,10 +44,11 @@ class PhysicalQuantity:
         for key in units_sets_dictionary.keys():
             if key in units_string:
                 for unit in units_sets_dictionary[key]:
-                    valid_units = valid_units.union(set((unit[0], unit[1])+unit[3]+unit[4]))
+                    #valid_units = valid_units.union(set((unit[0], unit[1])+unit[3]+unit[4]))
+                    valid_units = valid_units.union(set((unit[0],)))
         dimensions = set(x[2] for x in set_of_SI_base_unit_dimensions)
         unsplittable_symbols = list(prefixes|fundamental_units|valid_units|dimensions)
-        symbol_assumptions = tuple((f'{s}', 'positive') for s in fundamental_units|dimensions)
+        symbol_assumptions = tuple((f'{s}', 'positive') for s in unsplittable_symbols)
         self.parsing_params = create_sympy_parsing_params(
             parameters,
             unsplittable_symbols=unsplittable_symbols,

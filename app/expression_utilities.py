@@ -564,7 +564,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "rationalise": params.get("rationalise", True)
     }
 
-    symbol_assumptions = []
+    symbol_assumptions = list(symbol_assumptions)
     if "symbol_assumptions" in params.keys():
         symbol_assumptions_strings = params["symbol_assumptions"]
         index = symbol_assumptions_strings.find("(")

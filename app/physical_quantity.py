@@ -159,11 +159,11 @@ def generate_criteria_parser(reserved_expressions):
         ("BOOL",      "has(VALUE)", operate(1)),
         ("BOOL",      "is_number(VALUE)", operate(1)),
         ("BOOL",      "is_expression(VALUE)", operate(1)),
-        ("BOOL",      "UNIT=UNIT", infix),
-        ("BOOL",      "UNIT<=UNIT", infix),
-        ("BOOL",      "UNIT>=UNIT", infix),
-        ("BOOL",      "UNIT<UNIT", infix),
-        ("BOOL",      "UNIT>UNIT", infix),
+        ("BOOL",      "QUANTITY=QUANTITY", infix),
+        ("BOOL",      "QUANTITY<=QUANTITY", infix),
+        ("BOOL",      "QUANTITY>=QUANTITY", infix),
+        ("BOOL",      "QUANTITY<QUANTITY", infix),
+        ("BOOL",      "QUANTITY>QUANTITY", infix),
         ("UNIT",      "unit(QUANTITY)", operate(1)),
         ("UNIT",      "base_unit(QUANTITY)", operate(1)),
         ("UNIT",      "expanded_unit(QUANTITY)", operate(1)),
@@ -176,6 +176,95 @@ def generate_criteria_parser(reserved_expressions):
 
     return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
 
+def comparison_function(comparison_operator):
+    none_placeholder = Symbol('NONE_PLACEHOLDER')
+    comparison_type_dictionary = {
+        "=": lambda a, b: bool(a == b),
+        ">": lambda a, b: bool(a > b),
+        "<": lambda a, b: bool(a < b),
+        ">=": lambda a, b: bool(a >= b),
+        "<=": lambda a, b: bool(a <= b),
+    }
+    comparison = comparison_type_dictionary[comparison_operator]
+    def comparison_function_inner(lhs, rhs, substitutions):
+        local_substitutions = [(key, none_placeholder) if expr is None else (key, expr) for (key, expr) in substitutions]
+        expr0 = lhs.subs(local_substitutions)
+        expr1 = rhs.subs(local_substitutions)
+        result = comparison((expr0-expr1).cancel().simplify().simplify(), 0)
+        return result
+    return comparison_function_inner
+
+def comparison_base_graph(criterion, parameters, comparison_operator="=", label=None):
+    graph = CriteriaGraph(label)
+    END = CriteriaGraph.END
+    graph.add_node(END)
+    reserved_expressions = parameters["reserved_expressions"].items()
+    parsing_params = deepcopy(parameters["parsing_parameters"])
+    if parameters.get('atol',0) == 0 and parameters.get('rtol',0) == 0:
+        ans = parameters["reserved_expressions"]["answer"]["quantity"].value
+        if ans is not None:
+            rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
+            parsing_params.update({'rtol': rtol})
+    parsing_params.update({"simplify": False, "evaluate": False})
+
+    if label is None:
+        label = criterion.content_string()
+
+    inputs = criterion.children
+    lhs_string = criterion.children[0].content_string()
+    rhs_string = criterion.children[1].content_string()
+    lhs = parse_expression(lhs_string, parsing_params)
+    rhs = parse_expression(rhs_string, parsing_params)
+
+    stardard_forms = [(key, expr["standard"]["value"]*expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
+    compare = comparison_function(comparison_operator)
+    def compare_evaluate(unused_input):
+        if compare(lhs, rhs, stardard_forms) is True:
+            return {label+"_TRUE": None}
+        else:
+            return {label+"_FALSE": None}
+
+    graph.add_evaluation_node(
+        label,
+        summary=f"Is {inputs[0]} {comparison_operator} {inputs[1]}?",
+        details=f"checks if {inputs[0]} {comparison_operator} {inputs[1]}.",
+        evaluate=compare_evaluate
+    )
+    graph.attach(
+        label,
+        label+"_TRUE",
+        summary=f"{inputs[0]} {comparison_operator} {inputs[1]} is true.",
+        details=f"{inputs[0]} {comparison_operator} {inputs[1]} is true.",
+        feedback_string_generator=physical_quantity_feedback_string_generators["COMPARISON"]("TRUE")
+    )
+    graph.attach(label+"_TRUE", END.label)
+    graph.attach(
+        label,
+        label+"_FALSE",
+        summary=f"{inputs[0]} {comparison_operator} {inputs[1]} is false.",
+        details=f"{inputs[0]} {comparison_operator} {inputs[1]} is false.",
+        feedback_string_generator=physical_quantity_feedback_string_generators["COMPARISON"]("FALSE")
+    )
+    graph.attach(label+"_FALSE", END.label)
+    #TODO: Consider adding node for cases where comparison cannot be done / cannot be determined
+
+    return graph
+
+def greater_than_node(criterion, parameters, label=None):
+    return comparison_base_graph(criterion, parameters, comparison_operator=">", label=label)
+
+def greater_than_or_equal_node(criterion, parameters, label=None):
+    #TODO: Add nodes for the equal case
+    graph = comparison_base_graph(criterion, parameters, comparison_operator=">=", label=label)
+    return graph
+
+def less_than_node(criterion, parameters, label=None):
+    return comparison_base_graph(criterion, parameters, comparison_operator="<", label=label)
+
+def less_than_or_equal_node(criterion, parameters, label=None):
+    #TODO: Add nodes for the equal case
+    graph = comparison_base_graph(criterion, parameters, comparison_operator=">=", label=label)
+    return graph
 
 def criterion_match_node(criterion, parameters, label=None):
     graph = CriteriaGraph(label)
@@ -199,19 +288,8 @@ def criterion_match_node(criterion, parameters, label=None):
     lhs = parse_expression(lhs_string, parsing_params)
     rhs = parse_expression(rhs_string, parsing_params)
 
-    def is_equal(lhs, rhs, substitutions, rtol=0, atol=0):
-        none_placeholder = Symbol('NONE_PLACEHOLDER')
-        local_substitutions = [(key, none_placeholder) if expr is None else (key, expr) for (key, expr) in substitutions]
-        expr0 = lhs.subs(local_substitutions)
-        expr1 = rhs.subs(local_substitutions)
-        return bool((expr0-expr1).cancel().simplify().simplify() == 0)
-
-    def is_greater_than(lhs, rhs, substitutions):
-        none_placeholder = Symbol('NONE_PLACEHOLDER')
-        local_substitutions = [(key, none_placeholder) if expr is None else (key, expr) for (key, expr) in substitutions]
-        expr0 = lhs.subs(local_substitutions)
-        expr1 = rhs.subs(local_substitutions)
-        return bool((expr0-expr1).cancel().simplify().simplify() > 0)
+    is_equal = comparison_function("=")
+    is_greater_than = comparison_function(">")
 
     def is_proportional(lhs, rhs, substitutions):
         none_placeholder = Symbol('NONE_PLACEHOLDER')
@@ -440,6 +518,10 @@ def feedback_procedure_generator(parameters_dict):
     for (label, criterion) in parameters_dict["criteria"].items():
         graph_templates = {
             "matches": criterion_match_node,
+            ">": greater_than_node,
+            ">=": greater_than_or_equal_node,
+            "<": less_than_node,
+            "<=": less_than_or_equal_node,
         }
         graph_template = graph_templates.get(criterion.label.strip(), criterion_match_node)
         graph = graph_template(criterion, parameters_dict)

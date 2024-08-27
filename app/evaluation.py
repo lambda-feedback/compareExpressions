@@ -173,7 +173,8 @@ def create_criteria_dict(criteria_parser, parsing_params):
     for criterion in criteria_string_list:
         try:
             criterion_tokens = criteria_parser.scan(criterion)
-            criteria_parsed.update({criterion: criteria_parser.parse(criterion_tokens)[0]})
+            criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+            criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
     return criteria_parsed
@@ -253,7 +254,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     context = determine_context(parameters)
     try:
         preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
-    except:
+    except Exception:
         evaluation_result.latex = response
         evaluation_result.simplified = response
     else:
