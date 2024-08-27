@@ -1,5 +1,5 @@
 import re
-from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_generators
+from ..feedback.symbolic_comparison import feedback_generators as symbolic_feedback_generators
 from .criteria_graph_utilities import CriteriaGraph
 
 is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'

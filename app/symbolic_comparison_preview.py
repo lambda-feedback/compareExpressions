@@ -1,6 +1,6 @@
 import re
 from sympy.parsing.sympy_parser import T as parser_transformations
-from .expression_utilities import (
+from .utility.expression_utilities import (
     convert_absolute_notation,
     create_expression_set,
     create_sympy_parsing_params,
@@ -11,7 +11,7 @@ from .expression_utilities import (
     sympy_to_latex,
 )
 
-from .preview_utilities import (
+from .utility.preview_utilities import (
     Params,
     Preview,
     Result,

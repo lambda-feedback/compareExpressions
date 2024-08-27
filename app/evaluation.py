@@ -1,9 +1,9 @@
 from copy import deepcopy
 
-from .evaluation_response_utilities import EvaluationResponse
-from .preview_utilities import parse_latex
-from .symbolic import context as symbolic_context
-from .physical_quantity import context as quantity_context
+from .utility.evaluation_result_utilities import EvaluationResult
+from .utility.preview_utilities import parse_latex
+from .context.symbolic import context as symbolic_context
+from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
 
 from collections.abc import Mapping
@@ -214,7 +214,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     """
 
     # TODO: Top-down restructuring in progress, code below is not yet functional
-    evaluation_result = EvaluationResponse()
+    evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]

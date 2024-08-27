@@ -16,7 +16,7 @@ from sympy import Basic, Symbol
 import re
 from typing import Dict, List, TypedDict
 
-from .feedback.symbolic_comparison import feedback_generators as feedback_string_generators
+from ..feedback.symbolic_comparison import feedback_generators as feedback_string_generators
 
 
 class ModifiedLatexPrinter(LatexPrinter):

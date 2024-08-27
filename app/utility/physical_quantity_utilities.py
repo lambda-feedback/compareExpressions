@@ -19,9 +19,9 @@ from .slr_parsing_utilities import (
 from .unit_system_conversions import\
     set_of_SI_prefixes, set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
     set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units, conversion_to_base_si_units
-from .feedback.quantity_comparison import feedback_string_generators as physical_quantity_feedback_string_generators
+from ..feedback.quantity_comparison import feedback_string_generators as physical_quantity_feedback_string_generators
 
-from .symbolic_comparison_preview import preview_function as symbolic_preview
+from ..symbolic_comparison_preview import preview_function as symbolic_preview
 
 QuantityTags = Enum("QuantityTags", {v: i for i, v in enumerate("UVNR", 1)})
 

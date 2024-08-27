@@ -3,27 +3,27 @@
 # -------
 
 from copy import deepcopy
-from .physical_quantity_utilities import (
+from ..utility.physical_quantity_utilities import (
     SLR_quantity_parser,
     SLR_quantity_parsing
 )
-from .quantity_comparison_preview import preview_function
-from .feedback.quantity_comparison import feedback_string_generators as physical_quantity_feedback_string_generators
-from .expression_utilities import (
+from ..quantity_comparison_preview import preview_function
+from ..feedback.quantity_comparison import feedback_string_generators as physical_quantity_feedback_string_generators
+from ..utility.expression_utilities import (
     substitute_input_symbols,
     create_sympy_parsing_params,
     compute_relative_tolerance_from_significant_decimals,
     parse_expression
 )
-from .physical_quantity_utilities import (
+from ..utility.physical_quantity_utilities import (
     units_sets_dictionary,
     set_of_SI_prefixes,
     set_of_SI_base_unit_dimensions,
 )
-from .slr_parsing_utilities import create_node, infix, operate, catch_undefined, SLR_Parser
+from ..utility.slr_parsing_utilities import create_node, infix, operate, catch_undefined, SLR_Parser
 from sympy import Symbol
 
-from .criteria_graph_utilities import CriteriaGraph
+from ..utility.criteria_graph_utilities import CriteriaGraph
 
 
 def parse_quantity(name, expr, parameters, evaluation_result):

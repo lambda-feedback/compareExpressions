@@ -1,8 +1,8 @@
 import pytest
 import os
 
-from .evaluation import evaluation_function
-from .expression_utilities import elementary_functions_names, substitute
+from ..evaluation import evaluation_function
+from ..utility.expression_utilities import elementary_functions_names, substitute
 
 # REMARK: If a case is marked with an alternative output, this means that it is difficult in this case to prevent sympy from simplifying for that particular case
 elementary_function_test_cases = [

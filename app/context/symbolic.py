@@ -1,23 +1,23 @@
 from copy import deepcopy
 from sympy import Add, Pow, Mul, Equality, pi, N
 
-from .expression_utilities import (
+from ..utility.expression_utilities import (
     parse_expression,
     substitute_input_symbols,
     convert_absolute_notation,
     create_sympy_parsing_params,
 )
 
-from .symbolic_comparison_preview import preview_function
-from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
+from ..symbolic_comparison_preview import preview_function
+from ..feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
 
-from .syntactical_comparison_utilities import patterns as syntactical_forms
-from .syntactical_comparison_utilities import is_number as syntactical_is_number
-from .syntactical_comparison_utilities import response_and_answer_on_same_form
-from .syntactical_comparison_utilities import attach_form_criteria
+from ..utility.syntactical_comparison_utilities import patterns as syntactical_forms
+from ..utility.syntactical_comparison_utilities import is_number as syntactical_is_number
+from ..utility.syntactical_comparison_utilities import response_and_answer_on_same_form
+from ..utility.syntactical_comparison_utilities import attach_form_criteria
 
-from .criteria_parsing import generate_criteria_parser
-from .criteria_graph_utilities import CriteriaGraph
+from ..utility.criteria_parsing import generate_criteria_parser
+from ..utility.criteria_graph_utilities import CriteriaGraph
 
 
 def expression_preprocess(expr, name, parameters):

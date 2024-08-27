@@ -1,4 +1,4 @@
-class EvaluationResponse:
+class EvaluationResult:
     def __init__(self):
         self.is_correct = False
         self.latex = None

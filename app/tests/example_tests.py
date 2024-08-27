@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from .evaluation import evaluation_function
-from .preview import preview_function
+from ..evaluation import evaluation_function
+from ..preview import preview_function
 
 
 class TestEvaluationFunction():
