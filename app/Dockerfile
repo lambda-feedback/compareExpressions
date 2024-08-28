@@ -25,8 +25,8 @@ COPY feedback/physical_quantity.py ./app/feedback/
 COPY feedback/symbolic.py ./app/feedback/
 
 # Copy preview implementations
-COPY preview_implementations/physical_quantity.py ./app/preview_implementations/
-COPY preview_implementations/symbolic.py ./app/preview_implementations/
+COPY preview_implementations/physical_quantity_preview.py ./app/preview_implementations/
+COPY preview_implementations/symbolic_preview.py ./app/preview_implementations/
 
 # Copy tests
 COPY tests/example_tests.py ./app/tests/
@@ -37,15 +37,15 @@ COPY tests/symbolic_evaluation_tests.py ./app/tests/
 COPY tests/symbolic_preview_tests.py ./app/tests/
 
 # Copy utility code
-COPY criteria_graph_utilities.py ./app/utility/
-COPY criteria_parsing.py ./app/utility/
-COPY evaluation_result_utilities.py ./app/utility/
-COPY expression_utilities.py ./app/utility/
-COPY physical_quantity_utilities.py ./app/utility/
-COPY preview_utilities.py ./app/utility/
-COPY slr_parsing_utilities.py ./app/utility/
-COPY syntactical_comparison_utilities.py ./app/utility/
-COPY unit_system_conversions.py ./app/utility/
+COPY utility/criteria_graph_utilities.py ./app/utility/
+COPY utility/criteria_parsing.py ./app/utility/
+COPY utility/evaluation_result_utilities.py ./app/utility/
+COPY utility/expression_utilities.py ./app/utility/
+COPY utility/physical_quantity_utilities.py ./app/utility/
+COPY utility/preview_utilities.py ./app/utility/
+COPY utility/slr_parsing_utilities.py ./app/utility/
+COPY utility/syntactical_comparison_utilities.py ./app/utility/
+COPY utility/unit_system_conversions.py ./app/utility/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
