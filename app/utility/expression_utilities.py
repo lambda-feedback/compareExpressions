@@ -234,6 +234,12 @@ def substitute_input_symbols(exprs, params):
 
     substitutions = [(expr, expr) for expr in params.get("reserved_keywords", [])]
 
+    if "plus_minus" in params.keys():
+        substitutions += [(params["plus_minus"], "plus_minus")]
+
+    if "minus_plus" in params.keys():
+        substitutions += [(params["minus_plus"], "minus_plus")]
+
     if params.get("elementary_functions", False) is True:
         for expr in exprs:
             substitutions += protect_elementary_functions_substitutions(expr)

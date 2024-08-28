@@ -228,14 +228,6 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if parameters.get("is_latex", False):
         response = parse_latex(response, parameters.get("symbols", {}))
 
-    if "plus_minus" in params.keys():
-        response = response.replace(params["plus_minus"], "plus_minus")
-        answer = answer.replace(params["plus_minus"], "plus_minus")
-
-    if "minus_plus" in params.keys():
-        response = response.replace(params["minus_plus"], "minus_plus")
-        answer = answer.replace(params["minus_plus"], "minus_plus")
-
     if params.get("strict_syntax", True):
         if "^" in response:
             evaluation_result.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict())))
