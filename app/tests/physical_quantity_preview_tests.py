@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from ..quantity_comparison_preview import preview_function
+from ..preview_implementations.physical_quantity_preview import preview_function
 from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 
 

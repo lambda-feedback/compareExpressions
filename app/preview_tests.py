@@ -25,10 +25,10 @@ class TestPreviewFunction():
     """
 
     # Import tests that makes sure that mathematical expression comparison works as expected
-    from .tests.symbolic_comparison_preview_tests import TestPreviewFunction as TestSymbolicComparison
+    from .tests.symbolic_preview_tests import TestPreviewFunction as TestSymbolicComparison
 
     # Import tests that makes sure that physical quantities are handled as expected
-    from .tests.quantity_comparison_preview_tests import TestPreviewFunction as TestQuantityComparison
+    from .tests.physical_quantity_preview_tests import TestPreviewFunction as TestQuantityComparison
 
     def test_empty_latex_expression(self):
         response = ""

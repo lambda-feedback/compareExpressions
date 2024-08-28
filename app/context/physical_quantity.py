@@ -7,8 +7,8 @@ from ..utility.physical_quantity_utilities import (
     SLR_quantity_parser,
     SLR_quantity_parsing
 )
-from ..quantity_comparison_preview import preview_function
-from ..feedback.quantity_comparison import feedback_string_generators as physical_quantity_feedback_string_generators
+from ..preview_implementations.physical_quantity_preview import preview_function
+from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 from ..utility.expression_utilities import (
     substitute_input_symbols,
     create_sympy_parsing_params,

@@ -304,6 +304,10 @@ def substitute_input_symbols(exprs, params):
                 if len(alternative) > 0:
                     substitutions.append((alternative, input_symbol[0]))
 
+    # Since 'lambda' is a reserved keyword in python
+    # we need to make sure it is not substituted back in
+    substitutions = [(original, subs.replace("lambda", "lamda")) for (original, subs) in substitutions]
+
     substitutions = list(set(substitutions))
     if len(substitutions) > 0:
         substitutions.sort(key=substitutions_sort_key)

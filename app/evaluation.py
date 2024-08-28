@@ -4,7 +4,7 @@ from .utility.evaluation_result_utilities import EvaluationResult
 from .utility.preview_utilities import parse_latex
 from .context.symbolic import context as symbolic_context
 from .context.physical_quantity import context as quantity_context
-from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
+from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 from collections.abc import Mapping
 
@@ -39,9 +39,9 @@ class FrozenValuesDictionary(dict):
 
 def determine_context(parameters):
     if parameters.get("physical_quantity", False) is True:
-        context = quantity_context
+        context = deepcopy(quantity_context)
     else:
-        context = symbolic_context
+        context = deepcopy(symbolic_context)
 
     input_symbols_reserved_words = [key for key in parameters.get("symbols", dict()).keys() if len(key.strip()) > 0]
 

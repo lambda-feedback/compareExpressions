@@ -104,7 +104,7 @@ class TestEvaluationFunction():
             ("5.56 dm/s", "0.556 metre/second", r"5.56~\frac{\mathrm{decimetre}}{\mathrm{second}}", True, "strict", "SI", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
             ("55.6 centimetre second^(-1)", "0.556 metre/second", r"55.6~\mathrm{centimetre}~\mathrm{second}^{(-1)}", True, "strict", "SI", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
             ("1.24 mile/hour", "1.24 mile/hour", r"1.24~\frac{\mathrm{mile}}{\mathrm{hour}}", True, "strict", "imperial common", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_IDENTICAL"}),
-            ("2 km/h", "1.24 mile/hour", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, "strict", "imperial common", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),  # This should be False, but due to SI units being used as base it still works in this case...
+            ("2 km/h", "1.24 mile/hour", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, "strict", "imperial common", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),  # Ideally False but works with base SI units
             ("109.12 foot/minute", "1.24 mile/hour", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, "strict", "imperial common", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
         ]
     )

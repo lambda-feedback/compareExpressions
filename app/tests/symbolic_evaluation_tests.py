@@ -1152,7 +1152,7 @@ class TestEvaluationFunction():
                         'cp': {'aliases': [], 'latex': r'\(c_p\)'},
                     }
                 }),
-            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d=Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d=Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
+            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d=Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d=Ta*(1+( gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
                 {
                     'symbols': {
                         'Ta': {'aliases': [], 'latex': r'\(T_a\)'},

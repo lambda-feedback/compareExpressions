@@ -8,8 +8,8 @@ from ..utility.expression_utilities import (
     create_sympy_parsing_params,
 )
 
-from ..symbolic_comparison_preview import preview_function
-from ..feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
+from ..preview_implementations.symbolic_preview import preview_function
+from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 from ..utility.syntactical_comparison_utilities import patterns as syntactical_forms
 from ..utility.syntactical_comparison_utilities import is_number as syntactical_is_number

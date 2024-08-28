@@ -1,6 +1,6 @@
 import re
 from sympy.parsing.sympy_parser import T as parser_transformations
-from .utility.expression_utilities import (
+from ..utility.expression_utilities import (
     convert_absolute_notation,
     create_expression_set,
     create_sympy_parsing_params,
@@ -11,14 +11,14 @@ from .utility.expression_utilities import (
     sympy_to_latex,
 )
 
-from .utility.preview_utilities import (
+from ..utility.preview_utilities import (
     Params,
     Preview,
     Result,
     parse_latex
 )
 
-from .feedback.symbolic_comparison import feedback_generators as symbolic_feedback_string_generators
+from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
 def parse_symbolic(response: str, params):

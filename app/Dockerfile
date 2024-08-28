@@ -10,34 +10,42 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-# Copy scripts
-COPY comparison_utilities.py ./app/
-COPY criteria_utilities.py ./app/
-COPY criteria_graph_utilities.py ./app/
+# Copy main scripts
 COPY evaluation.py ./app/
-COPY evaluation_response_utilities.py ./app/
 COPY evaluation_tests.py ./app/
-COPY example_tests.py ./app/
-COPY symbolic_comparison_preview.py ./app/
-COPY symbolic_comparison_preview_tests.py ./app/
-COPY expression_utilities.py ./app/
 COPY preview.py ./app/
 COPY preview_tests.py ./app/
-COPY preview_utilities.py ./app/
-COPY quantity_comparison_preview.py ./app/
-COPY quantity_comparison_preview_tests.py ./app/
-COPY quantity_comparison_evaluation_tests.py ./app/
-COPY slr_parsing_utilities.py ./app/
-COPY slr_quantity.py ./app/
-COPY slr_quantity_tests.py ./app/
-COPY syntactical_comparison_utilities.py ./app/
-COPY symbolic_comparison_evaluation.py ./app/
-COPY symbolic_comparison_evaluation_tests.py ./app/
-COPY unit_system_conversions.py ./app/
+
+# Copy contexts
+COPY context/physical_quantity.py ./app/context/
+COPY context/symbolic.py ./app/context/
 
 # Copy feedback messages
-COPY feedback/quantity_comparison.py ./app/feedback/
-COPY feedback/symbolic_comparison.py ./app/feedback/
+COPY feedback/physical_quantity.py ./app/feedback/
+COPY feedback/symbolic.py ./app/feedback/
+
+# Copy preview implementations
+COPY preview_implementations/physical_quantity.py ./app/preview_implementations/
+COPY preview_implementations/symbolic.py ./app/preview_implementations/
+
+# Copy tests
+COPY tests/example_tests.py ./app/tests/
+COPY tests/physical_quantity_evaluation_tests.py ./app/tests/
+COPY tests/physical_quantity_preview_tests.py ./app/tests/
+COPY tests/slr_quantity_tests.py ./app/tests/
+COPY tests/symbolic_evaluation_tests.py ./app/tests/
+COPY tests/symbolic_preview_tests.py ./app/tests/
+
+# Copy utility code
+COPY criteria_graph_utilities.py ./app/utility/
+COPY criteria_parsing.py ./app/utility/
+COPY evaluation_result_utilities.py ./app/utility/
+COPY expression_utilities.py ./app/utility/
+COPY physical_quantity_utilities.py ./app/utility/
+COPY preview_utilities.py ./app/utility/
+COPY slr_parsing_utilities.py ./app/utility/
+COPY syntactical_comparison_utilities.py ./app/utility/
+COPY unit_system_conversions.py ./app/utility/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md

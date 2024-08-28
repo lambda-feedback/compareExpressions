@@ -1,11 +1,11 @@
-from .utility.expression_utilities import (
+from ..utility.expression_utilities import (
     find_matching_parenthesis,
     parse_expression,
     SymbolDict,
     sympy_to_latex,
 )
 
-from .utility.preview_utilities import (
+from ..utility.preview_utilities import (
     Params,
     Preview,
     Result,
@@ -13,8 +13,8 @@ from .utility.preview_utilities import (
     sanitise_latex,
 )
 
-from .utility.physical_quantity_utilities import SLR_quantity_parser as quantity_parser
-from .utility.physical_quantity_utilities import SLR_quantity_parsing as quantity_parsing
+from ..utility.physical_quantity_utilities import SLR_quantity_parser as quantity_parser
+from ..utility.physical_quantity_utilities import SLR_quantity_parsing as quantity_parsing
 
 
 def fix_exponents(response):
