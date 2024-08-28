@@ -16,7 +16,7 @@ from sympy import Basic, Symbol
 import re
 from typing import Dict, List, TypedDict
 
-from ..feedback.symbolic_comparison import feedback_generators as feedback_string_generators
+from ..feedback.symbolic import feedback_generators as feedback_string_generators
 
 
 class ModifiedLatexPrinter(LatexPrinter):
@@ -206,6 +206,15 @@ def preprocess_according_to_chosen_convention(expression, parameters):
         expression = parser.parse(parser.scan(expression))[0].content_string()
     return expression
 
+def protect_elementary_functions_substitutions(expr):
+    alias_substitutions = []
+    for (name, alias_list) in elementary_functions_names+special_symbols_names:
+        if name in expr:
+            alias_substitutions += [(name, " "+name)]
+        for alias in alias_list:
+            if alias in expr:
+                alias_substitutions += [(alias, " "+name)]
+    return alias_substitutions
 
 def substitute_input_symbols(exprs, params):
     '''
@@ -224,15 +233,8 @@ def substitute_input_symbols(exprs, params):
     substitutions = [(expr, expr) for expr in params.get("reserved_keywords", [])]
 
     if params.get("elementary_functions", False) is True:
-        alias_substitutions = []
         for expr in exprs:
-            for (name, alias_list) in elementary_functions_names+special_symbols_names:
-                if name in expr:
-                    alias_substitutions += [(name, " "+name)]
-                for alias in alias_list:
-                    if alias in expr:
-                        alias_substitutions += [(alias, " "+name)]
-        substitutions += alias_substitutions
+            substitutions += protect_elementary_functions_substitutions(expr)
 
     input_symbols = params.get("symbols", dict())
 
@@ -302,9 +304,10 @@ def substitute_input_symbols(exprs, params):
 
     substitutions = list(set(substitutions))
     if len(substitutions) > 0:
-        substitutions.sort(key=lambda x: -len(x[0]))
+        substitutions.sort(key=substitutions_sort_key)
         for k in range(0, len(exprs)):
             exprs[k] = substitute(exprs[k], substitutions)
+            exprs[k] = " ".join(exprs[k].split(" "))
 
     return exprs
 
@@ -584,6 +587,16 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
 
     return parsing_params
 
+def substitutions_sort_key(x):
+#    if ord(x[0][0]) == ord(" "):
+#        if len(x[0]) > 1:
+#            alphabet_order = ord(x[0][1])/(10**(1+len(str(ord(x[0][1])))))
+#        else:
+#            alphabet_order = 0
+#    else:
+#        alphabet_order = ord(x[0][0])/(10**(1+len(str(ord(x[0][0])))))
+#    return -len(x[0])-alphabet_order
+    return -len(x[0])-len(x[1])/(10**(1+len(str(len(x[1])))))
 
 def parse_expression(expr_string, parsing_params):
     '''
@@ -611,16 +624,11 @@ def parse_expression(expr_string, parsing_params):
     for expr in expr_set:
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
         if parsing_params["elementary_functions"] is True:
-            alias_substitutions = []
-            for (name, alias_list) in elementary_functions_names+special_symbols_names:
-                if name in expr:
-                    alias_substitutions += [(name, " "+name)]
-                for alias in alias_list:
-                    if alias in expr:
-                        alias_substitutions += [(alias, " "+name)]
-            substitutions += alias_substitutions
-        substitutions.sort(key=lambda x: -len(x[0]))
+            substitutions += protect_elementary_functions_substitutions(expr)
+        substitutions = list(set(substitutions))
+        substitutions.sort(key=substitutions_sort_key)
         expr = substitute(expr, substitutions)
+        expr = " ".join(expr.split(" "))
         # NOTE: for some unknown reason this does not work unless this is a lambda instead of a def
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
         if strict_syntax is True:
