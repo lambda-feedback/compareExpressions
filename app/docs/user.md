@@ -10,10 +10,6 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 There are nine optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `physical_quantity`, `plus_minus`/`minus_plus` `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
 
-## `complexNumbers`
-
-If you want to use `I` for the imaginary constant, set the grading parameter `complexNumbers` to True.
-
 ## `convention`
 
 Changes the implicit multiplication convention. If unset it will default to `equal_precedence`.
@@ -134,3 +130,16 @@ Here the answer is `2.00 km/h`. To restrict the answers to SI units `strictness`
 #### Example (c)
 
 Here the answer is `2.00 km/h`. To restrict the answers to imperial units `strictness` is set to `strict` and `units_string` is set to `imperial common`. Accepted response: `1.24 mile/hour`
+
+### 5 Polynomials
+
+The code below is an example criteria to check if the entered response is the correct 3rd degree polnomial ($ax^3+bx^2+cx+d$). 
+
+```
+response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0
+```
+
+Commas seperate tests criteria (so in this example 4 tests will be run to check if a,b,c and d are correct)
+```diff(response,x,2)=diff(answer,x,3) where x=0```
+
+`diff(response,x,2)` and `diff(answer,x,2)` differentiates the response and answer n-times (i.e $6ax+2b$) and `where x=0` tests what the response and answer in the equation would equal if $x = 0$ (i.e $6a(0)+2b=2b$). This check if the $b$ constant in the answer and question are equal
