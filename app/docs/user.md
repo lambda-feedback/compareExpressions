@@ -10,18 +10,6 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 There are eight optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `multiple_answers_criteria`, `elementary_functions`, `physical_quantity`, `plus_minus`/`minus_plus` `specialFunctions`, `strict_syntax`, `symbol_assumptions`.
 
-## `complexNumbers`
-
-If you want to use `I` for the imaginary constant, add the parameter `complexNumbers` to "advanced - raw parameters" by clicking the green (+). Type in `complexNumbers` and press enter. Click the green edit button, type in "True" and a pop-up `bool - true` will appear. Click the green tick.
-
-![Sreenshot of button to add criteria](complexNumbersv2.png)
-
-You can denote `i` and `j` as `I` by using the input symbols below. 
-
-![Sreenshot of button to add criteria](complexNumbersv3.png)
-
-Furthermore, the system can equate `exp(Ix)` to `cos(x)+Isin(x)`.
-
 ## `convention`
 
 Changes the implicit multiplication convention. If unset it will default to `equal_precedence`.
@@ -141,12 +129,8 @@ Here the answer is `2.00 km/h`. To restrict the answers to SI units `strictness`
 Here the answer is `2.00 km/h`. To restrict the answers to imperial units `strictness` is set to `strict` and `units_string` is set to `imperial common`. Accepted response: `1.24 mile/hour`
 
 ### 5 Polynomials
-The intended answer should be written out in the `input -> Response area Answer` tab. Add an extra criteria in the `Evaluate -> advanced - raw parameters` section by clicking the + and typing "criteria" into the pop-up box. 
 
-![Sreenshot of button to add criteria](add_parameters.png)
-
-
-A new "criteria (string)" entry line in the "Evaluation Function Parameters" section will appear. The code below is an example criteria to check if the entered response is the correct 3rd degree polnomial ($ax^3+bx^2+cx+d$). 
+The code below is an example criteria to check if the entered response is the correct 3rd degree polnomial ($ax^3+bx^2+cx+d$). 
 
 ```
 response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0
@@ -156,4 +140,3 @@ Commas seperate tests criteria (so in this example 4 tests will be run to check 
 ```diff(response,x,2)=diff(answer,x,3) where x=0```
 
 `diff(response,x,2)` and `diff(answer,x,2)` differentiates the response and answer n-times (i.e $6ax+2b$) and `where x=0` tests what the response and answer in the equation would equal if $x = 0$ (i.e $6a(0)+2b=2b$). This check if the $b$ constant in the answer and question are equal
-- Remember to set rtol $\ne 0$ if a,b,c... are not integers.
