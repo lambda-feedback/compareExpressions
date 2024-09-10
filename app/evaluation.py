@@ -261,7 +261,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
 
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:
-        return evaluation_result
+        return evaluation_result.serialise(include_test_data)
     reserved_expressions_parsed = {**reserved_expressions["learner"], **reserved_expressions["task"]}
     parameters.update({"reserved_keywords": parameters["context"]["reserved_keywords"]+list(reserved_expressions_parsed.keys())})
 

@@ -424,13 +424,7 @@ def compute_relative_tolerance_from_significant_decimals(string):
                 separator_indices.append(len(string))
         index = min(separator_indices)
         significant_characters = string[0:index].replace(".", "")
-        index = 0
-        for c in significant_characters:
-            if c in "-0":
-                index += 1
-            else:
-                break
-        significant_characters = significant_characters[index:]
+        significant_characters = significant_characters.lstrip("-0")
         rtol = 5*10**(-len(significant_characters))
     return rtol
 
