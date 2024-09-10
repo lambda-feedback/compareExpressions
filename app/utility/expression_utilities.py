@@ -47,7 +47,7 @@ elementary_functions_names = [
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
     ('exp', ['Exp']), ('E', ['e']), ('log', ['ln']),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
-    # Special symbols to make usre plus_minus and minus_plus are nod destroyed during preprocessing
+    # Special symbols to make sure plus_minus and minus_plus are not destroyed during preprocessing
     ('plus_minus', []), ('minus_plus', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
     ('summation', ['sum', 'Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag'])
