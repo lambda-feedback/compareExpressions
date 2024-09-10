@@ -606,10 +606,7 @@ def parse_expression(expr_string, parsing_params):
         to the parameters in parsing_params
     '''
 
-    if "plus_minus" in expr_string or "minus_plus" in expr_string:
-        expr_set = create_expression_set(expr_string, parsing_params)
-    else:
-        expr_set = set([expr_string])
+    expr_set = create_expression_set(expr_string, parsing_params)
 
     strict_syntax = parsing_params.get("strict_syntax", False)
     extra_transformations = parsing_params.get("extra_transformations", ())
