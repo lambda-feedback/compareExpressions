@@ -748,21 +748,21 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     eval_response.latex = LatexPrinter({"symbol_names": latex_symbols(symbols), "mul_symbol": r" \cdot "}).doprint(res)
     eval_response.simplified = str(res)
 
-    if (not isinstance(res, Equality)) and isinstance(ans, Equality):
+    if (not isinstance(res_original, Equality)) and isinstance(ans_original, Equality):
         eval_response.is_correct = False
         tag = "EXPRESSION_NOT_EQUALITY"
         eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
         return eval_response
 
-    if isinstance(res, Equality) and (not isinstance(ans, Equality)):
+    if isinstance(res_original, Equality) and (not isinstance(ans_original, Equality)):
         eval_response.is_correct = False
         tag = "EQUALITY_NOT_EXPRESSION"
         eval_response.add_feedback((tag, symbolic_comparison_internal_messages[tag]))
         return eval_response
 
     # TODO: Remove when criteria for checking proportionality is implemented
-    if isinstance(res, Equality) and isinstance(ans, Equality):
-        eval_response.is_correct = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().is_constant()
+    if isinstance(res_original, Equality) and isinstance(ans_original, Equality):
+        eval_response.is_correct = ((res_original.args[0]-res_original.args[1])/(ans_original.args[0]-ans_original.args[1])).simplify().is_constant()
         return eval_response
 
     # Parse criteria
