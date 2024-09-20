@@ -81,34 +81,42 @@ def preview_function(response: str, params: Params) -> Result:
     if not response:
         return Result(preview=Preview(latex="", sympy=""))
 
-    try:
-        if params.get("is_latex", False):
-            response = parse_latex(response, symbols)
+    response_list = response.split("=")
+    response_latex = []
+    response_sympy = []
 
-        params.update({"rationalise": False})
-        expression_list, _ = parse_symbolic(response, params)
+    for response in response_list:
+        try:
+            if params.get("is_latex", False):
+                response = parse_latex(response, symbols)
 
-        latex_out = []
-        sympy_out = []
-        for expression in expression_list:
-            latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
-            sympy_out.append(str(expression))
+            params.update({"rationalise": False})
+            expression_list, _ = parse_symbolic(response, params)
 
-        if len(sympy_out) == 1:
-            sympy_out = sympy_out[0]
-        sympy_out = str(sympy_out)
+            latex_out = []
+            sympy_out = []
+            for expression in expression_list:
+                latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
+                sympy_out.append(str(expression))
+    
+            if len(sympy_out) == 1:
+                sympy_out = sympy_out[0]
+            sympy_out = str(sympy_out)
+    
+            if not params.get("is_latex", False):
+                sympy_out = response
+    
+            if len(latex_out) > 1:
+                latex_out = "\\left\\{"+",~".join(latex_out)+"\\right\\}"
+            else:
+                latex_out = latex_out[0]
 
-        if not params.get("is_latex", False):
-            sympy_out = response
+        except SyntaxError as exc:
+            raise ValueError(f"Failed to parse SymPy expression: {original_response}") from exc
+        except ValueError as exc:
+            raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from exc
 
-        if len(latex_out) > 1:
-            latex_out = "\\left\\{"+",~".join(latex_out)+"\\right\\}"
-        else:
-            latex_out = latex_out[0]
+        response_latex.append(latex_out)
+        response_sympy.append(sympy_out)
 
-    except SyntaxError as exc:
-        raise ValueError(f"Failed to parse SymPy expression: {original_response}") from exc
-    except ValueError as exc:
-        raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from exc
-
-    return Result(preview=Preview(latex=latex_out, sympy=sympy_out))
+    return Result(preview=Preview(latex="=".join(response_latex), sympy="=".join(response_sympy)))
