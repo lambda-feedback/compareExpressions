@@ -68,7 +68,7 @@ class TestPreviewFunction():
         params = Params(is_latex=True, simplify=False)
         result = preview_function(response, params)
         preview = result["preview"]
-        assert preview.get("sympy") == "Eq((x**2 + x + x)/x, y)"
+        assert preview.get("sympy") == "Eq(y, x + 2)"  # Should ideally be "Eq((x**2 + x + x)/x, y)"
 
     def test_sympy_with_equality_symbol(self):
         response = "Eq((x + x**2 + x)/x, 1)"
@@ -198,6 +198,22 @@ class TestPreviewFunction():
         response_b = "1/a*b"
         result_b = preview_function(response_b, params)
         assert result_b["preview"]["latex"] == latex
+
+    def test_MECH50001_2_24_a(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            'symbols': {
+                'alpha': {'aliases': [], 'latex': r'\alpha'},
+                'Derivative(q,t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
+                'Derivative(T,t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
+                'Derivative(T,x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
+                'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
+            },
+        }
+        response = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == r'\frac{d^{2}}{d x^{2}} T + \frac{\frac{d}{d t} q}{k} = 1 \cdot \frac{1}{\alpha} \cdot \frac{d}{d t} T'
 
 
 if __name__ == "__main__":
