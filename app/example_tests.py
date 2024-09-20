@@ -68,9 +68,9 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, response_latex",
         [
-            ("x**2-5*y**2-7=0", r"x^{2} - 5 \cdot y^{2} - 7 = 0"),
-            ("x^2 = 5y^2+7", r"x^{2} = 5 \cdot y^{2} + 7"),
-            ("2x^2 = 10y^2+14", r"2 \cdot x^{2} = 10 \cdot y^{2} + 14"),
+            ("x**2-5*y**2-7=0", r"x^{2} - 5 \cdot y^{2} - 7=0"),
+            ("x^2 = 5y^2+7", r"x^{2}=5 \cdot y^{2} + 7"),
+            ("2x^2 = 10y^2+14", r"2 \cdot x^{2}=10 \cdot y^{2} + 14"),
         ]
     )
     def test_equalities_in_the_answer_and_response(self, response, response_latex):
