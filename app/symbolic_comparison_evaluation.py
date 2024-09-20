@@ -745,7 +745,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     # Add how res was interpreted to the response
     # eval_response.latex = latex(res)
     symbols = params.get("symbols", {})
-    eval_response.latex = LatexPrinter({"symbol_names": latex_symbols(symbols), "mul_symbol": r" \cdot "}).doprint(res)
+    eval_response.latex = LatexPrinter({"symbol_names": latex_symbols(symbols), "mul_symbol": r" \cdot "}).doprint(res_original)
     eval_response.simplified = str(res)
 
     if (not isinstance(res_original, Equality)) and isinstance(ans_original, Equality):

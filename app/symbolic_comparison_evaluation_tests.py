@@ -1437,7 +1437,7 @@ class TestEvaluationFunction():
                 'Derivative(q,t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
                 'Derivative(T,t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
                 'Derivative(T,x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
-                'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
+                'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
             },
         }
         response = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
