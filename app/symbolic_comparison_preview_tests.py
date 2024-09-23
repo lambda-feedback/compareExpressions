@@ -211,7 +211,7 @@ class TestPreviewFunction():
                 'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
             },
         }
-        response = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
+        response = "d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)"
         result = preview_function(response, params)
         assert result["preview"]["latex"] == r'\frac{d^{2}}{d x^{2}} T + \frac{\frac{d}{d t} q}{k}=1 \cdot \frac{1}{\alpha} \cdot \frac{d}{d t} T'
 

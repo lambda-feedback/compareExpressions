@@ -1428,10 +1428,21 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-    def test_MECH50001_2_24_a(self):
+    @pytest.mark.parametrize(
+        "response",
+        [
+            "k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) - alpha*q_dot",
+            "d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)",
+            "d^2 T/dx^2 + q_dot/k = 1/alpha*(dT/dt)",
+            "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)",
+            "Derivative(T,x,x) + Derivative(q,t)/k = 1/alpha*Derivative(T,t)"
+        ]
+    )
+    def test_MECH50001_2_24_a(self, response):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
+            "symbol_assumptions": "('alpha','constant') ('k','constant')",
             'symbols': {
                 'alpha': {'aliases': [], 'latex': r'\alpha'},
                 'Derivative(q,t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
@@ -1440,10 +1451,9 @@ class TestEvaluationFunction():
                 'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
             },
         }
-        response = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
         answer = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
 if __name__ == "__main__":
-    pytest.main(['-xsk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

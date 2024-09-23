@@ -762,7 +762,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     # TODO: Remove when criteria for checking proportionality is implemented
     if isinstance(res_original, Equality) and isinstance(ans_original, Equality):
-        eval_response.is_correct = ((res_original.args[0]-res_original.args[1])/(ans_original.args[0]-ans_original.args[1])).simplify().is_constant()
+        symbols_in_equality_ratio = ((res_original.args[0]-res_original.args[1])/(ans_original.args[0]-ans_original.args[1])).simplify().free_symbols
+        eval_response.is_correct = {str(s) for s in symbols_in_equality_ratio}.issubset(parsing_params["constants"])
         return eval_response
 
     # Parse criteria
