@@ -85,8 +85,10 @@ By default `strict_syntax` is set to true.
 
 This input parameter allows the author to set an extra assumption each symbol. Each assumption should be written on the form `('symbol','assumption name')` and all pairs concatenated into a single string.
 
-The possible assumption names can be found in this list: 
+The possible assumption `constant`, `function` as well as those listed here: 
 [`SymPy Assumption Predicates`](https://docs.sympy.org/latest/guides/assumptions.html#predicates)
+
+**Note:** Writing a symbol which denotes a function without its arguments, e.g. `T` instead of `T(x,t)`, is prone to cause errors.
 
 ## Examples
 
