@@ -12,7 +12,7 @@ from .feedback.symbolic_comparison import internal as symbolic_comparison_intern
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
-from sympy import Basic, Symbol
+from sympy import Basic, Symbol, Function, Equality
 import re
 from typing import Dict, List, TypedDict
 
@@ -545,9 +545,6 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "E": E
     }
 
-#    for symbol in unsplittable_symbols:
-#        symbol_dict.update({symbol: Symbol(symbol)})
-
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
 
     strict_syntax = params.get("strict_syntax", True)
@@ -577,8 +574,10 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
             index = symbol_assumptions_strings.find('(', index_match+1)
     for symbol, assumption in symbol_assumptions:
         try:
-            if assumption == "constant":
+            if assumption.lower() == "constant":
                 parsing_params["constants"] = parsing_params["constants"].union({symbol})
+            if assumption.lower() == "function":
+                parsing_params["symbol_dict"].update({symbol: eval("Function('"+symbol+"')")})
             else:
                 parsing_params["symbol_dict"].update({symbol: eval("Symbol('"+symbol+"',"+assumption+"=True)")})
         except Exception as e:
@@ -606,7 +605,7 @@ def parse_expression(expr, parsing_params):
     separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
     # new approach
     substitutions = separate_unsplittable_symbols
-    if parsing_params["elementary_functions"] is True:
+    if parsing_params.get("elementary_functions", False) is True:
         alias_substitutions = []
         for (name, alias_list) in elementary_functions_names+special_symbols_names:
             if name in expr:
@@ -626,7 +625,8 @@ def parse_expression(expr, parsing_params):
         transformations += parser_transformations[11]
     if parsing_params.get("simplify", False):
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
-        parsed_expr = parsed_expr.simplify()
+        if not isinstance(parsed_expr,Equality):
+            parsed_expr = parsed_expr.simplify()
     else:
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
     if not isinstance(parsed_expr, Basic):
