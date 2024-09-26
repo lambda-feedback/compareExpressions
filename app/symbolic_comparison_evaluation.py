@@ -1,5 +1,6 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow, Mul,N
+from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow, Mul, N
+from sympy.core.function import UndefinedFunction
 from sympy.printing.latex import LatexPrinter
 from copy import deepcopy
 import re
@@ -742,10 +743,24 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     except Exception as e:
         raise Exception(f"SymPy was unable to parse the answer: {answer}.") from e
 
-    # Add how res was interpreted to the response
-    # eval_response.latex = latex(res)
+    # Convert parsed_response into LaTeX.
+    # Symbols that denote undefined functions are replaced with placeholders since these symbols causes issues with printing
     symbols = params.get("symbols", {})
-    eval_response.latex = LatexPrinter({"symbol_names": latex_symbols(symbols), "mul_symbol": r" \cdot "}).doprint(res_original)
+    printing_symbols = dict()
+    for key in parsing_params["symbol_dict"].keys():
+        if key in symbols.keys():
+            printing_symbols.update({key: symbols[key]["latex"]})
+    printing_params = {**params}
+    if "symbol_assumptions" in printing_params.keys():
+        del printing_params["symbol_assumptions"]
+    if "=" in response:
+        response_parts = response.split("=")
+        lhs_print = parse_expression(response_parts[0], create_sympy_parsing_params(printing_params))
+        rhs_print = parse_expression(response_parts[1], create_sympy_parsing_params(printing_params))
+        res_print = Equality(lhs_print, rhs_print)
+    else:
+        res_print = parse_expression(response, create_sympy_parsing_params(printing_params))
+    eval_response.latex = LatexPrinter({"symbol_names": printing_symbols, "mul_symbol": r" \cdot "}).doprint(res_print)
     eval_response.simplified = str(res)
 
     if (not isinstance(res_original, Equality)) and isinstance(ans_original, Equality):
@@ -762,7 +777,8 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     # TODO: Remove when criteria for checking proportionality is implemented
     if isinstance(res_original, Equality) and isinstance(ans_original, Equality):
-        eval_response.is_correct = ((res_original.args[0]-res_original.args[1])/(ans_original.args[0]-ans_original.args[1])).simplify().is_constant()
+        symbols_in_equality_ratio = ((res_original.args[0]-res_original.args[1])/(ans_original.args[0]-ans_original.args[1])).simplify().free_symbols
+        eval_response.is_correct = {str(s) for s in symbols_in_equality_ratio}.issubset(parsing_params["constants"])
         return eval_response
 
     # Parse criteria

@@ -1428,22 +1428,33 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-    def test_MECH50001_2_24_a(self):
+    @pytest.mark.parametrize(
+        "response,value",
+        [
+            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) - alpha*q_dot", True),
+            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) + alpha*q_dot", False),
+            ("d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
+            ("d^2 T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
+            ("(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)", True),
+            ("Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)", True),
+        ]
+    )
+    def test_MECH50001_2_24_a(self, response, value):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
+            "symbol_assumptions": "('alpha','constant') ('k','constant') ('T','function') ('q','function')",
             'symbols': {
                 'alpha': {'aliases': [], 'latex': r'\alpha'},
-                'Derivative(q,t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
-                'Derivative(T,t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
-                'Derivative(T,x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
-                'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
+                'Derivative(q(x,t),t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
+                'Derivative(T(x,t),t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
+                'Derivative(T(x,t),x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
+                'Derivative(T(x,t),x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
             },
         }
-        response = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
         answer = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
         result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is True
+        assert result["is_correct"] is value
 
 if __name__ == "__main__":
-    pytest.main(['-xsk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
