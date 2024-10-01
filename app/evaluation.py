@@ -3,6 +3,8 @@ from .symbolic_comparison_evaluation import evaluation_function as symbolic_comp
 from .slr_quantity import quantity_comparison
 from .preview import preview_function
 
+from .benchmarking import benchmarks
+from timeit import default_timer as timer
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
@@ -11,6 +13,33 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     strict_SI_syntax:
         - if set to True, use basic dimensional analysis functionality.
     """
+
+    if response.lower().startswith("benchmark"):
+        arg = response.split()
+        n = 1
+        val = True
+        if len(arg) > 1:
+            n = int(arg[1])
+        if len(arg) > 2:
+            if arg[2].lower().startswith("f"):
+                val = False
+        results = []
+        total = 0
+        for k, test in enumerate(benchmarks,1):
+            avg = 0
+            for i in range(0,n):
+                start = timer()
+                result = evaluation_function(
+                    test["response"],
+                    test["answer"],
+                    test["params"]
+                )
+                end = timer()
+                avg += end-start
+            total += avg
+            avg = avg/n
+            results.append(f"Time for test {k}: {avg}")
+        return {"is_correct": val, "feedback": r"<br>".join(results)+r"<br>"+"Total: "+str(total)}
 
     eval_response = EvaluationResponse()
     eval_response.is_correct = False

@@ -50,5 +50,13 @@ class TestEvaluationFunction():
         assert response["is_correct"] is False
         assert response["feedback"] == "Custom feedback"
 
+    def test_benchmark(self):
+        response = "BENCHMARK 10"
+        result = evaluation_function(response, "placeholder", {})
+        assert result["is_correct"] is True
+        response = "BENCHMARK 10 FALSE"
+        result = evaluation_function(response, "placeholder", {})
+        assert result["is_correct"] is False
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', '--tb=line', '--durations=10', os.path.abspath(__file__)])
