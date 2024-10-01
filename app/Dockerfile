@@ -11,6 +11,7 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 # Copy scripts
+COPY benchmarking.py ./app/
 COPY comparison_utilities.py ./app/
 COPY criteria_utilities.py ./app/
 COPY criteria_graph_utilities.py ./app/
