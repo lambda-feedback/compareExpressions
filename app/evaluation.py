@@ -44,7 +44,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     eval_response = EvaluationResponse()
     eval_response.is_correct = False
 
-    input_symbols_reserved_words = list(params.get("symbols", dict()).keys())
+    input_symbols_reserved_words = []
 
     for input_symbol in params.get("symbols", dict()).values():
         input_symbols_reserved_words += input_symbol.get("aliases",[])
@@ -58,7 +58,10 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         if keyword in input_symbols_reserved_words:
             reserved_keywords_collisions.append(keyword)
     if len(reserved_keywords_collisions) > 0:
-        raise Exception("`"+"`, `".join(reserved_keywords_collisions)+"` are reserved keyword and cannot be used as input symbol codes or alternatives.")
+        if len(reserved_keywords_collisions) == 1:
+            raise Exception("`"+"`, `".join(reserved_keywords_collisions)+"` is a reserved keyword and cannot be used as an input symbol alternative.")
+        else:
+            raise Exception("`"+"`, `".join(reserved_keywords_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
 
     parameters = {
         "comparison": "expression",
