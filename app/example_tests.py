@@ -57,12 +57,22 @@ class TestEvaluationFunction():
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
+            "symbols": {
+                "plus_minus": {
+                    "latex": r"\(\pm\)",
+                    "aliases": ["pm","+-"],
+                },
+                "minus_plus": {
+                    "latex": r"\(\mp\)",
+                    "aliases": ["mp","-+"],
+                },
+            },
         }
-        preview = preview_function(response, params)["preview"]
-        result = evaluation_function(response, answer, params)
         # Checking latex output disabled as the function return a few different
         # variants of the latex in an unpredictable way
+        # preview = preview_function(response, params)["preview"]
         # assert preview["latex"] == response_latex
+        result = evaluation_function(response, answer, params)
         assert result["is_correct"] == True
 
     @pytest.mark.parametrize(

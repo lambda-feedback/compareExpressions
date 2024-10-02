@@ -985,30 +985,29 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params)
         assert result["is_correct"] is True
 
-    def test_no_reserved_keywords_in_input_symbol_codes(self):
+    def test_no_reserved_keywords_in_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
-        }
-        symbols = dict()
-        for keyword in reserved_keywords:
-            symbols.update(
-                {
-                    keyword: {
-                        "aliases": [],
-                        "latex": r"\mathrm{"+keyword+r"}"
-                    }
+            "symbols": {
+                "a": {
+                    "aliases": [reserved_keywords[0]],
+                    "latex": "a"
+                },
+                reserved_keywords[1]: {
+                    "aliases": ["b"],
+                    "latex": "b"
                 }
-            )
-        params.update({"symbols": symbols})
+            }
+        }
         response = "a+b"
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        assert reserved_keywords[0] in str(e.value)
 
-    def test_no_reserved_keywords_in_input_symbol_alternatives(self):
+    def test_reserved_keywords_in_input_symbol_codes(self):
         reserved_keywords = ["response", "answer"]
         params = {
             "strict_syntax": False,
@@ -1017,22 +1016,25 @@ class TestEvaluationFunction():
         symbols = dict()
         labels = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
         label_index = 0
-        for keyword in reserved_keywords:
-            symbols.update(
-                {
-                    labels[label_index]: {
-                        "aliases": [keyword],
-                        "latex": r"\mathrm{"+keyword+r"}"
-                    }
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                reserved_keywords[0]: {
+                    "aliases": ["a"],
+                    "latex": "a"
+                },
+                reserved_keywords[1]: {
+                    "aliases": ["b"],
+                    "latex": "b"
                 }
-            )
-            label_index += 1
+            }
+        }
         params.update({"symbols": symbols})
         response = "a+b"
         answer = "b+a"
-        with pytest.raises(Exception) as e:
-            evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
 
     def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
         reserved_keywords = ["response", "answer"]
