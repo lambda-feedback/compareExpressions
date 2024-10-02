@@ -65,6 +65,7 @@ special_symbols_names = [(x, []) for x in greek_letters]
 
 # -------- String Manipulation Utilities
 def create_expression_set(expr, params):
+    expr = substitute_input_symbols(expr, params)[0]
     expr_set = set()
     if "plus_minus" in params.keys():
         expr = expr.replace(params["plus_minus"], "plus_minus")

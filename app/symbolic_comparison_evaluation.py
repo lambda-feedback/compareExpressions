@@ -706,7 +706,6 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
 
     # Makes everything symbolic
-    
     answer, response = substitute_input_symbols([answer, response], params)
     parsing_params = create_sympy_parsing_params(params)
     parsing_params.update({"rationalise": True, "simplify": True})
