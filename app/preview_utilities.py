@@ -26,7 +26,7 @@ class Result(TypedDict):
     preview: Preview
 
 
-def parse_latex(response: str, symbols: SymbolDict) -> str:
+def parse_latex(response: str, symbols: SymbolDict, simplify : bool) -> str:
     """Parse a LaTeX string to a sympy string while preserving custom symbols.
 
     Args:
@@ -79,6 +79,8 @@ def parse_latex(response: str, symbols: SymbolDict) -> str:
         expression = latex2sympy(response, substitutions)
         if isinstance(expression, list):
             expression = expression.pop()
+        if simplify is True:
+            expression = expression.simplify()
     except Exception as e:
         raise ValueError(str(e))
 

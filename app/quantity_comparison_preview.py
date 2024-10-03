@@ -89,7 +89,7 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
             unit = res_parsed.unit
             value_latex = ""
             if value is not None:
-                value_string = parse_latex(value.content_string(), symbols)
+                value_string = parse_latex(value.content_string(), symbols, params.get("simplify", False))
                 params.update({"is_latex": False})
                 value = parse_expression(value_string, params)
                 value_latex = sympy_to_latex(value, symbols)
