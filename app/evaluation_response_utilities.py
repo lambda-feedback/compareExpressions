@@ -52,6 +52,8 @@ class EvaluationResponse:
         if self.latex is not None:
             out.update(dict(response_latex=self.latex))
         if self.simplified is not None:
+            if isinstance(self.simplified, list):
+                self.simplified = ", ".join(self.simplified)
             out.update(dict(response_simplified=self.simplified))
         return out
 

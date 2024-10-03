@@ -31,7 +31,7 @@ class TestPreviewFunction():
         result = preview_function(response, params)
         preview = result["preview"]
 
-        assert preview.get("sympy")[0] == "(x**2 + x + x)/x"
+        assert preview.get("sympy") == "(x**2 + x + x)/x"
 
     def test_doesnt_simplify_sympy_by_default(self):
         response = "(x + x**2 + x)/x"
@@ -46,7 +46,7 @@ class TestPreviewFunction():
         result = preview_function(response, params)
         preview = result["preview"]
 
-        assert preview.get("sympy")[0] == "x + 2"
+        assert preview.get("sympy") == "x + 2"
 
     def test_simplifies_sympy_on_param(self):
         response = "(x + x**2 + x)/x"
@@ -82,7 +82,7 @@ class TestPreviewFunction():
         params = Params(is_latex=True, simplify=False)
         result = preview_function(response, params)
         preview = result["preview"]
-        assert preview.get("sympy")[0] in "mu + x + 1"
+        assert preview.get("sympy") in "mu + x + 1"
 
     def test_sympy_conversion_preserves_default_symbols(self):
         response = "mu + x + 1"
@@ -109,7 +109,7 @@ class TestPreviewFunction():
         )
         result = preview_function(response, params)
         preview = result["preview"]
-        assert preview.get("sympy")[0] == "m_table + test - x + 1"
+        assert preview.get("sympy") == "m_table + test - x + 1"
 
     def test_sympy_conversion_preserves_optional_symbols(self):
         response = "m_table + test + x + 1"

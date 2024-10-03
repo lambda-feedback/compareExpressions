@@ -54,7 +54,7 @@ def parse_symbolic(response: str, params):
     return result_sympy_expression, feedback
 
 
-def preview_function(response: str, params: Params) -> Result:
+def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     """
     Function used to preview a student response.
     ---
@@ -126,5 +126,7 @@ def preview_function(response: str, params: Params) -> Result:
         response_sympy = "=".join(response_sympy)
     else:
         response_latex = "".join(response_latex)
+        if join_sympy is True and isinstance(response_sympy, list):
+            response_sympy = ", ".join(response_sympy)
 
     return Result(preview=Preview(latex=response_latex, sympy=response_sympy))
