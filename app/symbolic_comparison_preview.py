@@ -81,33 +81,29 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     if not response:
         return Result(preview=Preview(latex="", sympy=""))
 
-    is_equality = False
-    if "=" in response:
-        response_list = response.split("=")
-        is_equality = True
-    else:
-        response_list = [response]
-
+    response_list = response.split("=")
     response_latex = []
     response_sympy = []
 
     for response in response_list:
         try:
             if params.get("is_latex", False):
-                response = parse_latex(response, symbols)
+                sympy_out = [parse_latex(response, symbols, params.get("simplify", False))]
+                latex_out = [response]
+            else:
+                params.update({"rationalise": False})
+                expression_list, _ = parse_symbolic(response, params)
 
-            params.update({"rationalise": False})
-            expression_list, _ = parse_symbolic(response, params)
+                latex_out = []
+                sympy_out = []
+                for expression in expression_list:
+                    latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
+                    sympy_out.append(str(expression))
 
-            latex_out = []
-            sympy_out = []
-            for expression in expression_list:
-                latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
-                sympy_out.append(str(expression))
+            if len(sympy_out) == 1:
+                sympy_out = sympy_out[0]
+            sympy_out = str(sympy_out)
 
-            if not params.get("is_latex", False):
-                sympy_out = response
-    
             if len(latex_out) > 1:
                 latex_out = "\\left\\{"+",~".join(latex_out)+"\\right\\}"
             else:
@@ -119,14 +115,6 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
             raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from exc
 
         response_latex.append(latex_out)
-        response_sympy += sympy_out
+        response_sympy.append(sympy_out)
 
-    if is_equality is True:
-        response_latex = "=".join(response_latex)
-        response_sympy = "=".join(response_sympy)
-    else:
-        response_latex = "".join(response_latex)
-        if join_sympy is True and isinstance(response_sympy, list):
-            response_sympy = ", ".join(response_sympy)
-
-    return Result(preview=Preview(latex=response_latex, sympy=response_sympy))
+    return Result(preview=Preview(latex="=".join(response_latex), sympy="=".join(response_sympy)))

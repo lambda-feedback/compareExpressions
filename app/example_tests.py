@@ -72,7 +72,11 @@ class TestEvaluationFunction():
             },
         }
         if is_latex is True:
+            processed_response = preview_function(response, {**params, **{"is_latex": True}})["preview"]["sympy"]
+            result = evaluation_function(processed_response, answer, params)
+            assert result["is_correct"] == True
             params.update({"is_latex": True})
+
         # Checking latex output disabled as the function return a few different
         # variants of the latex in an unpredictable way
         # preview = preview_function(response, params)["preview"]
