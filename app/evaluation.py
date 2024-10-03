@@ -71,7 +71,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     parameters.update(params)
 
     if params.get("is_latex", False):
-        response = preview_function(response, params)["preview"]["sympy"]
+        response = preview_function(response, params, join_sympy=False)["preview"]["sympy"]
 
     if parameters.get("physical_quantity", False) is True:
         eval_response = quantity_comparison(response, answer, parameters, eval_response)

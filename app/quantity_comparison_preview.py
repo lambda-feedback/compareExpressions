@@ -50,7 +50,7 @@ def fix_exponents(response):
         processed_response = []
     return response
 
-def preview_function(response: str, params: Params) -> Result:
+def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     """
     Function used to preview a student response.
     ---

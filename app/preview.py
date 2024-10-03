@@ -7,7 +7,7 @@ from .preview_utilities import (
 from .quantity_comparison_preview import preview_function as quantity_preview
 from .symbolic_comparison_preview import preview_function as symbolic_comparison_preview
 
-def preview_function(response: str, params: Params) -> Result:
+def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     """
     Function used to preview a student response.
     ---
@@ -29,8 +29,8 @@ def preview_function(response: str, params: Params) -> Result:
     """
 
     if params.get("physical_quantity", False):
-        result = quantity_preview(response, params)
+        result = quantity_preview(response, params, join_sympy)
     else:
-        result = symbolic_comparison_preview(response, params)
+        result = symbolic_comparison_preview(response, params, join_sympy)
 
     return result
