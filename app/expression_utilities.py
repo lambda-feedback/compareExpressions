@@ -64,20 +64,23 @@ special_symbols_names = [(x, []) for x in greek_letters]
 
 
 # -------- String Manipulation Utilities
-def create_expression_set(expr, params):
-    expr = substitute_input_symbols(expr, params)[0]
+def create_expression_set(exprs, params):
+    if isinstance(exprs, str):
+        exprs = [exprs]
     expr_set = set()
-    if "plus_minus" in params.keys():
-        expr = expr.replace(params["plus_minus"], "plus_minus")
-
-    if "minus_plus" in params.keys():
-        expr = expr.replace(params["minus_plus"], "minus_plus")
-
-    if ("plus_minus" in expr) or ("minus_plus" in expr):
-        expr_set.add(expr.replace("plus_minus", "+").replace("minus_plus", "-"))
-        expr_set.add(expr.replace("plus_minus", "-").replace("minus_plus", "+"))
-    else:
-        expr_set.add(expr)
+    for expr in exprs:
+        expr = substitute_input_symbols(expr, params)[0]
+        if "plus_minus" in params.keys():
+            expr = expr.replace(params["plus_minus"], "plus_minus")
+    
+        if "minus_plus" in params.keys():
+            expr = expr.replace(params["minus_plus"], "minus_plus")
+    
+        if ("plus_minus" in expr) or ("minus_plus" in expr):
+            expr_set.add(expr.replace("plus_minus", "+").replace("minus_plus", "-"))
+            expr_set.add(expr.replace("plus_minus", "-").replace("minus_plus", "+"))
+        else:
+            expr_set.add(expr)
 
     return list(expr_set)
 

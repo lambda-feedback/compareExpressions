@@ -81,7 +81,13 @@ def preview_function(response: str, params: Params) -> Result:
     if not response:
         return Result(preview=Preview(latex="", sympy=""))
 
-    response_list = response.split("=")
+    is_equality = False
+    if "=" in response:
+        response_list = response.split("=")
+        is_equality = True
+    else:
+        response_list = [response]
+
     response_latex = []
     response_sympy = []
 
@@ -98,11 +104,7 @@ def preview_function(response: str, params: Params) -> Result:
             for expression in expression_list:
                 latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
                 sympy_out.append(str(expression))
-    
-            if len(sympy_out) == 1:
-                sympy_out = sympy_out[0]
-            sympy_out = str(sympy_out)
-    
+
             if not params.get("is_latex", False):
                 sympy_out = response
     
@@ -117,6 +119,12 @@ def preview_function(response: str, params: Params) -> Result:
             raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from exc
 
         response_latex.append(latex_out)
-        response_sympy.append(sympy_out)
+        response_sympy += sympy_out
 
-    return Result(preview=Preview(latex="=".join(response_latex), sympy="=".join(response_sympy)))
+    if is_equality is True:
+        response_latex = "=".join(response_latex)
+        response_sympy = "=".join(response_sympy)
+    else:
+        response_latex = "".join(response_latex)
+
+    return Result(preview=Preview(latex=response_latex, sympy=response_sympy))

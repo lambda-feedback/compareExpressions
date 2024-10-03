@@ -630,7 +630,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     Function used to symbolically compare two expressions.
     """
 
-    eval_response = EvaluationResponse() #Initiayion
+    eval_response = EvaluationResponse()
     eval_response.is_correct = False
 
     # This code handles the plus_minus and minus_plus operators
@@ -642,7 +642,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     answer_list = create_expression_set(answer, params)
 
     if len(response_list) == 1 and len(answer_list) == 1:
-        eval_response = symbolic_comparison(response, answer, params, eval_response)
+        eval_response = symbolic_comparison(response_list[0], answer_list[0], params, eval_response)
     else:
         matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         interp = []
