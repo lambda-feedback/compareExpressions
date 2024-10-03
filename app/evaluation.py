@@ -39,7 +39,11 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             total += avg
             avg = avg/n
             results.append(f"Time for test {k}: {avg}")
-        return {"is_correct": val, "feedback": r"<br>".join(results)+r"<br>"+"Total: "+str(total)}
+        submissions_per_student_per_response_area = ""
+        if "submission_context" in params.keys():
+            if "submissions_per_student_per_response_area" in params["submission_context"].keys():
+                submissions_per_student_per_response_area = " Submissions processed before this one: "+str(params["submission_context"]["submissions_per_student_per_response_area"])
+        return {"is_correct": val, "feedback": r"<br>".join(results)+r"<br>"+"Total: "+str(total)+submissions_per_student_per_response_area}
 
     eval_response = EvaluationResponse()
     eval_response.is_correct = False
