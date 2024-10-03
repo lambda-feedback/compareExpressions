@@ -45,16 +45,17 @@ class TestEvaluationFunction():
         assert result["is_correct"] == value
 
     @pytest.mark.parametrize(
-        "response, response_latex",
+        "response, is_latex, response_latex",
         [
-            ("plus_minus x**2 + minus_plus y**2", r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
-            ("- minus_plus x^2 minus_plus y^2", r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}"),
-            ("- minus_plus x^2 - plus_minus y^2", r"\left\{x^{2} - y^{2},~- x^{2} - - y^{2}\right\}"),
-            ("pm x**2 + mp y**2", r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
-            ("+- x**2 + -+ y**2", r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
+            (r"\pm x^{2}+\mp y^{2}", True, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
+            ("plus_minus x**2 + minus_plus y**2", False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
+            ("- minus_plus x^2 minus_plus y^2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}"),
+            ("- minus_plus x^2 - plus_minus y^2", False, r"\left\{x^{2} - y^{2},~- x^{2} - - y^{2}\right\}"),
+            ("pm x**2 + mp y**2", False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
+            ("+- x**2 + -+ y**2",  False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
         ]
     )
-    def test_using_plus_minus_symbols(self, response, response_latex):
+    def test_using_plus_minus_symbols(self, response, is_latex, response_latex):
         answer = "plus_minus x**2 + minus_plus y**2"
         params = {
             "strict_syntax": False,
@@ -70,6 +71,8 @@ class TestEvaluationFunction():
                 },
             },
         }
+        if is_latex is True:
+            params.update({"is_latex": True})
         # Checking latex output disabled as the function return a few different
         # variants of the latex in an unpredictable way
         # preview = preview_function(response, params)["preview"]
