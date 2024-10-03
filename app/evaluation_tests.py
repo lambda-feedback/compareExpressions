@@ -52,11 +52,13 @@ class TestEvaluationFunction():
 
     def test_benchmark(self):
         response = "BENCHMARK 10"
-        result = evaluation_function(response, "placeholder", {})
+        result = evaluation_function(response, "placeholder", {"submission_context": {"submissions_per_student_per_response_area": 0}})
         assert result["is_correct"] is True
+        assert "Submissions processed before this one: 0" in result["feedback"]
         response = "BENCHMARK 10 FALSE"
-        result = evaluation_function(response, "placeholder", {})
+        result = evaluation_function(response, "placeholder", {"submission_context": {"submissions_per_student_per_response_area": 1}})
         assert result["is_correct"] is False
+        assert "Submissions processed before this one: 1" in result["feedback"]
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', '--tb=line', '--durations=10', os.path.abspath(__file__)])
