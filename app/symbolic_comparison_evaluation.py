@@ -129,12 +129,10 @@ def check_equality(criterion, parameters_dict):
     #Define atol and rtol
     
     #Gets the LHS and RHS of the equation
-    
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
-    
- #LHS is response
- #RHS is answer
+    #LHS is response
+    #RHS is answer
     
     #Parses into a mathematical expression - the numerical value needs to be extracted
     expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
@@ -227,8 +225,6 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
     graph.attach(label+"_FALSE", END.label)
     return graph
 
-
-#Not the issue
 def criterion_equality_node(criterion, parameters_dict, label=None):
     if label is None:
         label = criterion.content_string()
@@ -729,16 +725,34 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     parsing_params_original = {**parsing_params}
     parsing_params_original.update({"rationalise": False, "simplify": False})
     try:
-        res = parse_expression(response, parsing_params)
-        res_original = parse_expression(response, parsing_params_original)
+        if "=" in response:
+            response_parts = response.split("=")
+            res_lhs = parse_expression(response_parts[0], parsing_params)
+            res_rhs = parse_expression(response_parts[1], parsing_params)
+            res = Equality(res_lhs, res_rhs)
+            res_lhs_original = parse_expression(response_parts[0], parsing_params_original)
+            res_rhs_original = parse_expression(response_parts[1], parsing_params_original)
+            res_original = Equality(res_lhs_original, res_rhs_original, evaluate=False)
+        else:
+            res = parse_expression(response, parsing_params)
+            res_original = parse_expression(response, parsing_params_original)
     except Exception as e:
         eval_response.is_correct = False
         eval_response.add_feedback(("PARSE_ERROR", symbolic_comparison_internal_messages["PARSE_ERROR"](response)))
         return eval_response
 
     try:
-        ans = parse_expression(answer, parsing_params)
-        ans_original = parse_expression(answer, parsing_params_original)
+        if "=" in answer:
+            answer_parts = answer.split("=")
+            ans_lhs = parse_expression(answer_parts[0], parsing_params)
+            ans_rhs = parse_expression(answer_parts[1], parsing_params)
+            ans = Equality(ans_lhs, ans_rhs)
+            ans_lhs_original = parse_expression(answer_parts[0], parsing_params_original)
+            ans_rhs_original = parse_expression(answer_parts[1], parsing_params_original)
+            ans_original = Equality(ans_lhs_original, ans_rhs_original, evaluate=False)
+        else:
+            ans = parse_expression(answer, parsing_params)
+            ans_original = parse_expression(answer, parsing_params_original)
     except Exception as e:
         raise Exception(f"SymPy was unable to parse the answer: {answer}.") from e
 
@@ -756,7 +770,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         response_parts = response.split("=")
         lhs_print = parse_expression(response_parts[0], create_sympy_parsing_params(printing_params))
         rhs_print = parse_expression(response_parts[1], create_sympy_parsing_params(printing_params))
-        res_print = Equality(lhs_print, rhs_print)
+        res_print = Equality(lhs_print, rhs_print, evaluate=False)
     else:
         res_print = parse_expression(response, create_sympy_parsing_params(printing_params))
     eval_response.latex = LatexPrinter({"symbol_names": printing_symbols, "mul_symbol": r" \cdot "}).doprint(res_print)
