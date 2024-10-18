@@ -1458,5 +1458,18 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value
 
+    def test_AERO40007_1_6_instance_2024_25(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "rtol": 0.01,
+        }
+        response = "231*16.4/1000*14=4"
+        answer = "53"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+        assert "EQUALITY_NOT_EXPRESSION" in result["tags"]
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
