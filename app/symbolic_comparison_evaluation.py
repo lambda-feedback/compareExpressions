@@ -135,7 +135,9 @@ def check_equality(criterion, parameters_dict):
     #RHS is answer
     
     #Parses into a mathematical expression - the numerical value needs to be extracted
-    expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
+    lhs_expr = parse_expression(lhs, parsing_params)
+    rhs_expr = parse_expression(rhs, parsing_params)
+    expression = (lhs_expr - rhs_expr)
     result = bool(expression.subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
 
     if result is False:
