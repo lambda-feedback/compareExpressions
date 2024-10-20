@@ -12,7 +12,8 @@ from .feedback.symbolic_comparison import internal as symbolic_comparison_intern
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
-from sympy import Basic, Symbol, Function, Equality
+from sympy import Basic, Symbol, Function, Equality, I, im
+from sympy import re as real_part
 import re
 from typing import Dict, List, TypedDict
 
@@ -561,7 +562,8 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "elementary_functions": params.get("elementary_functions", False),
         "convention": params.get("convention", None),
         "simplify": params.get("simplify", False),
-        "constants": set()
+        "constants": set(),
+        "complexNumbers": params.get("complexNumbers", False),
     }
 
     symbol_assumptions = list(symbol_assumptions)
@@ -635,4 +637,7 @@ def parse_expression(expr, parsing_params):
         parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
     if not isinstance(parsed_expr, Basic):
         raise ValueError(f"Failed to parse Sympy expression `{expr}`")
+    if parsing_params.get("complexNumbers", False):
+        if im(parsed_expr) != 0:
+            parsed_expr = real_part(parsed_expr) + I*im(parsed_expr)
     return parsed_expr

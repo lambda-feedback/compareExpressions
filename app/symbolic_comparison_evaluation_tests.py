@@ -1470,6 +1470,19 @@ class TestEvaluationFunction():
         assert result["is_correct"] is False
         assert "EQUALITY_NOT_EXPRESSION" in result["tags"]
 
+    def test_CHEM40002_1_5_instance_2024_25(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "complexNumbers": True,
+            "symbols": {
+                "I": {"aliases": ["i"], "latex": r"I"},
+            },
+        }
+        response = "6 exp(5pi/6*I)"
+        answer = "6(cos(5pi/6)+isin(5pi/6))"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
