@@ -79,7 +79,7 @@ Note that radian and steradian from Table 3 have been moved here to reduce colli
 This is the subset of common symbols whose short form symbols are allowed
 """
 set_of_very_common_units_in_SI = {
-    ('radian',    'r',   '(1)',                                   tuple(),                  ('radians',)),  # Note: here 'r' is used instead of the more common 'rad' to avoid collision
+    ('radian',             'r',   '(1/(2*pi))',                   tuple(),                  ('radians',)),  # Note: here 'r' is used instead of the more common 'rad' to avoid collision
     ('steradian', 'sr',  '(1)',                                   tuple(),                  ('steradians',)),
     ('minute',            'min', '(60*second)',                   tuple(),                  ('minutes',)),
     ('hour',              'h',   '(3600*second)',                 tuple(),                  ('hours',)),
