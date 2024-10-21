@@ -240,5 +240,16 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    def test_radians_to_frequency(self):
+        ans = "2*pi*f radian/second"
+        res = "f Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
