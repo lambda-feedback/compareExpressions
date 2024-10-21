@@ -79,8 +79,8 @@ Note that radian and steradian from Table 3 have been moved here to reduce colli
 This is the subset of common symbols whose short form symbols are allowed
 """
 set_of_very_common_units_in_SI = {
-    ('radian',             'r',   '(1/(2*pi))',                   tuple(),                  ('radians',)),  # Note: here 'r' is used instead of the more common 'rad' to avoid collision
-    ('steradian', 'sr',  '(1)',                                   tuple(),                  ('steradians',)),
+    ('radian',            'rad',   '(1/(2*pi))',                  tuple(),                  ('radians',)),  # Note: here 'r' is used instead of the more common 'rad' to avoid collision
+    ('steradian', 'sr',   '(1)',                                  tuple(),                  ('steradians',)),
     ('minute',            'min', '(60*second)',                   tuple(),                  ('minutes',)),
     ('hour',              'h',   '(3600*second)',                 tuple(),                  ('hours',)),
     ('degree',            'deg', '(pi/180)',                      tuple(),                  ('degrees',)),
@@ -111,7 +111,8 @@ set_of_common_units_in_SI = {
     ('barn',              'b',   '(10**(-28)*metre**2)',               tuple(),                 ('barns',)),
     ('curie',             'Ci',  '(3.7*10**10*becquerel)',             ('Curie',),              ('curies',)),
     ('roentgen',          'R',   '(2.58*10**(-4)*kelvin/(kilogram))', ('Roentgen', 'Röntgen'), ('roentgens', 'Roentgens')),
-    ('rad',               'rad', '(10**(-2)*gray)',                    tuple(),                 ('rads',)),
+    # Removed rad since it collides with the short form for radian.
+    #('rad',               'rad', '(10**(-2)*gray)',                    tuple(),                 ('rads',)),
     ('rem',               'rem', '(10**(-2)*sievert)',                 tuple(),                 ('rems',)),
 }
 
