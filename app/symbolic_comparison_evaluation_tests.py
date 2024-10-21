@@ -1170,6 +1170,7 @@ class TestEvaluationFunction():
                     'symbol_assumptions': "('n','integer')",
                 }
             ),
+            ("-2525", "-2525", "response = a*50 + d*51*25 where a=77; d=-5", True, [], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
