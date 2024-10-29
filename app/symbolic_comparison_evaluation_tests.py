@@ -359,7 +359,9 @@ class TestEvaluationFunction():
         generate_input_variations(response="1", answer="re(1+2*I)") +
         generate_input_variations(response="2", answer="im(1+2*I)") +
         generate_input_variations(response="2+I", answer="conjugate(2-I)") +
-        generate_input_variations(response="conjugate(2-I)", answer="2+I")
+        generate_input_variations(response="conjugate(2-I)", answer="2+I") +
+        generate_input_variations(response="re(2-I)-im(2-I)*I", answer="2+I") +
+        generate_input_variations(response="2+I", answer="re(2-I)-im(2-I)*I")
     )
     def test_complex_numbers(self, response, answer):
         params = {"complexNumbers": True, "strict_syntax": False, "elementary_functions": True}
