@@ -1,5 +1,5 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow, Mul, N
+from sympy import Abs, Equality, latex, pi, Symbol, Add, Pow, Mul, N, nfloat
 from sympy.core.function import UndefinedFunction
 from sympy.printing.latex import LatexPrinter
 from copy import deepcopy
@@ -776,7 +776,10 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
     else:
         res_print = parse_expression(response, create_sympy_parsing_params(printing_params))
     eval_response.latex = LatexPrinter({"symbol_names": printing_symbols, "mul_symbol": r" \cdot "}).doprint(res_print)
-    eval_response.simplified = str(res)
+    try:
+        eval_response.simplified = str(res)
+    except ValueError:
+        eval_response.simplified = str(nfloat(res, n=6))
 
     if (not isinstance(res_original, Equality)) and isinstance(ans_original, Equality):
         eval_response.is_correct = False
