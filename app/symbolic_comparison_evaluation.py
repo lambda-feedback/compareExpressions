@@ -543,12 +543,16 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                 candidates = set(["response candidates "+", ".join([str(e) for e in values_and_expressions[response_value]])])
                 return candidates
             for (group_label, group_info) in variation_groups.items():
+                if local_parameters.get("detailed_feedback", False) is True:
+                    feedback_generator_label = group_label
+                else:
+                    feedback_generator_label = "UNKNOWN"
                 graph.attach(
                     label+"_IDENTIFY_REASON",
                     label+"_"+group_label,
                     summary=group_info["summary"](expression_to_vary, group_info["variations"]),
                     details=group_info["details"](expression_to_vary, group_info["variations"]),
-                    feedback_string_generator=symbolic_feedback_generators["IDENTIFY_REASON"]("UNKNOWN")
+                    feedback_string_generator=symbolic_feedback_generators["IDENTIFY_REASON"](feedback_generator_label)
                 )
                 graph.attach(
                     label+"_"+group_label,

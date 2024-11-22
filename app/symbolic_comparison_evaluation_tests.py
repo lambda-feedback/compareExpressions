@@ -1175,6 +1175,8 @@ class TestEvaluationFunction():
                 }
             ),
             ("-2525", "-2525", "response = a*50 + d*51*25 where a=77; d=-5", True, [], {}),
+            ("4/9", "(2/9*(3*b-2)^(3/2)-b^2/4-b)-(2/9*(3*a-2)^(3/2)-a^2/4-a)", "response = answer where a=2; b=6", True, [], {}),
+            ("0", "0", "2*tan(response)*tan(response) = 0", True, [], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
