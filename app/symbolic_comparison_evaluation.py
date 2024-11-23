@@ -833,7 +833,7 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
         "atol": (params.get("atol", 0)),
         "rtol": (params.get("rtol", 0)),
         "numerical": params.get("numerical", False),
-        
+        "detailed_feedback": params.get("detailed_feedback", False),
     }
     criteria_graphs = create_criteria_graphs(criteria_parsed, parameters_dict)
 

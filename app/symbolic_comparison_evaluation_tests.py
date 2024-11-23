@@ -1388,6 +1388,7 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
+            ("-10225", "-2525", "response = a*50 + d*51*25 where a=77; d=-5", False, ["response candidates 50*a - 1275*d", "response = a*50 + d*51*25 where a=77; d=-5_FALSE", "response = a*50 + d*51*25 where a=77; d=-5_ONE_ADDITION_TO_SUBTRACTION"], {'detailed_feedback': True}),
         ]
     )
     def test_criteria_where_numerical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
