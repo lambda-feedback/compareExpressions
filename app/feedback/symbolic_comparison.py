@@ -79,9 +79,9 @@ feedback_generators["response=answer_where"] = lambda tag: lambda inputs: {
 }[tag]
 feedback_generators["IDENTIFY_REASON"] = lambda tag: lambda inputs: {
     "UNKNOWN": None,
-    "ONE_ADDITION_TO_SUBTRACTION": f"{inputs['criterion'].children[0].content_string()} is true if one addition is changed to a subtraction or vice versa.",
-    "ONE_EXPONENT_FLIP": f"{inputs['criterion'].children[0].content_string()} is true if one exponent has its sign changed.",
-    "ONE_SWAP_ADDITION_AND_MULTIPLICATION": f"{inputs['criterion'].children[0].content_string()} is true if one addition is replaced with a multiplication or vice versa.",
+    "ONE_ADDITION_TO_SUBTRACTION": f"It is likely that an addition was replaced with a subtraction (or vice versa) when calculating the response.",
+    "ONE_EXPONENT_FLIP": f"It is likely that some exponent had the incorrect sign, or that a multiplication was replaced by a division (or vice versa).",
+    "ONE_SWAP_ADDITION_AND_MULTIPLICATION": f"It is likely that an addition was replaced with a multiplication or vice versa.",
 }[tag]
 feedback_generators["GET_CANDIDATES"] = lambda tag: lambda inputs: None
 feedback_generators["SYNTACTICAL_EQUIVALENCE"] = lambda tag: lambda inputs: {
