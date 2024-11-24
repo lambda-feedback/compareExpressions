@@ -70,7 +70,9 @@ feedback_generators["GENERIC"] = lambda tag: lambda inputs: {
 }[tag]
 feedback_generators["response=answer"] = lambda tag: lambda inputs: {
     "TRUE": None, #"The response is equal to the expected answer.",
+    "TRUE_DETAILED": "The response matches the expected expression", #"The response is equal to the expected answer.",
     "FALSE": None, #"The response is not equal to the expected answer.",
+    "FALSE_DETAILED": "The response does not match the expected expression", #"The response is not equal to the expected answer.",
     "UNKNOWN": None, #"Cannot determine if answer is equal to response.",
 }[tag]
 feedback_generators["response=answer_where"] = lambda tag: lambda inputs: {
