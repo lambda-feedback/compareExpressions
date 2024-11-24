@@ -18,6 +18,32 @@ def is_complex_number_on_exponential_form(string):
     result = re.fullmatch(is_number_regex+"?\*?(E\^|E\*\*|exp)\(?"+is_number_regex+"*\*?I\)?", string)
     return result is not None
 
+def escape_regex_reserved_characters(string):
+    list = '+*?^$.[]{}()|/'
+    string = string.replace('\\','\\\\')
+    for s in list:
+        string = string.replace(s,'\\'+s)
+    return string
+
+def generate_arbitrary_number_pattern_matcher(string):
+    non_numbers = []
+    number = re.search(is_number_regex, string)
+    start = 0
+    end = 0
+    offset = 0
+    while number is not None:
+        start, end = number.span()
+        start += offset
+        end += offset
+        non_numbers.append(escape_regex_reserved_characters(string[offset:start]))
+        offset = end
+        number = re.search(is_number_regex, string[offset:])
+    non_numbers.append(string[offset:])
+    pattern = is_number_regex.join(non_numbers)
+    def matcher(comp_string):
+        result = re.fullmatch(pattern, comp_string)
+        return result is not None
+    return matcher
 
 patterns = {
     "CARTESIAN": {
@@ -55,5 +81,20 @@ def response_and_answer_on_same_form(label, parameters_dict):
                 matches_found.add(label+"_"+form_label)
         if len(matches_found) == 0:
             matches_found.add(label+"_UNKNOWN")
+        return matches_found
+    return inner
+
+
+def written_as_answer(label, parameters_dict):
+    local_answer = parameters_dict["original_input"]["answer"]
+    local_response = parameters_dict["original_input"]["response"]
+    matches_found = set()
+
+    def inner(unused_input):
+        matcher = generate_arbitrary_number_pattern_matcher(local_answer)
+        if matcher(local_response):
+            matches_found.add(label+"_TRUE")
+        else:
+            matches_found.add(label+"_FALSE")
         return matches_found
     return inner
