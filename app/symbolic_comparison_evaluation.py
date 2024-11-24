@@ -25,6 +25,7 @@ from .feedback.symbolic_comparison import equivalences as reference_criteria_str
 from .syntactical_comparison_utilities import patterns as syntactical_forms
 from .syntactical_comparison_utilities import is_number as syntactical_is_number
 from .syntactical_comparison_utilities import response_and_answer_on_same_form
+from .syntactical_comparison_utilities import written_as_answer
 from .syntactical_comparison_utilities import attach_form_criteria
 
 from .criteria_graph_utilities import CriteriaGraph
@@ -321,7 +322,6 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             for form_label in syntactical_forms.keys():
                 has_recognisable_form = has_recognisable_form or syntactical_forms[form_label]["matcher"](parameters_dict["original_input"]["answer"])
             if has_recognisable_form is True:
-
                 graph.attach(
                     label+"_TRUE",
                     label+"_SYNTACTICAL_EQUIVALENCE",
@@ -347,7 +347,6 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                     feedback_string_generator=symbolic_feedback_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
                 )
                 graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
-
                 graph.attach(
                     label+"_TRUE",
                     label+"_SAME_FORM",
@@ -355,11 +354,9 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                     details=str(lhs)+" is written in the same form as "+str(rhs)+".",
                     evaluate=response_and_answer_on_same_form(label+"_SAME_FORM", parameters_dict)
                 )
-
                 for form_label in syntactical_forms.keys():
                     if syntactical_forms[form_label]["matcher"](parameters_dict["original_input"]["answer"]) is True:
                         attach_form_criteria(graph, label+"_SAME_FORM", criterion, parameters_dict, form_label)
-
                 graph.attach(
                     label+"_SAME_FORM",
                     label+"_SAME_FORM"+"_UNKNOWN",
@@ -367,10 +364,42 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                     details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form.",
                     feedback_string_generator=symbolic_feedback_generators["SAME_FORM"]("UNKNOWN"),
                 )
-
                 graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)
-
                 graph.attach(label+"_FALSE", label+"_SAME_FORM")
+            else:
+                graph.attach(
+                    label+"_TRUE",
+                    label+"_WRITTEN_AS_ANSWER",
+                    summary=str(lhs)+" is written in the same form as "+str(rhs),
+                    details=str(lhs)+" is written in the same form as "+str(rhs)+".",
+                    evaluate=written_as_answer(label+"_WRITTEN_AS_ANSWER", parameters_dict)
+                )
+                graph.attach(
+                    label+"_WRITTEN_AS_ANSWER",
+                    label+"_WRITTEN_AS_ANSWER"+"_UNKNOWN",
+                    summary="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form",
+                    details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form.",
+                    feedback_string_generator=symbolic_feedback_generators["SAME_FORM"]("UNKNOWN"),
+                )
+                graph.attach(label+"_WRITTEN_AS_ANSWER"+"_UNKNOWN", END.label)
+                graph.attach(
+                    label+"_WRITTEN_AS_ANSWER",
+                    label+"_WRITTEN_AS_ANSWER"+"_TRUE",
+                    summary=str(lhs)+" is written in the same form as "+str(rhs),
+                    details=str(lhs)+" is written in the same form as "+str(rhs)+".",
+                    feedback_string_generator=symbolic_feedback_generators["SAME_FORM"]("WRITTEN_AS_TRUE"),
+                )
+                graph.attach(label+"_WRITTEN_AS_ANSWER"+"_TRUE", END.label)
+                graph.attach(
+                    label+"_WRITTEN_AS_ANSWER",
+                    label+"_WRITTEN_AS_ANSWER"+"_FALSE",
+                    summary=str(lhs)+" is written in the same form as "+str(rhs),
+                    details=str(lhs)+" is written in the same form as "+str(rhs)+".",
+                    feedback_string_generator=symbolic_feedback_generators["SAME_FORM"]("WRITTEN_AS_FALSE"),
+                )
+                graph.attach(label+"_WRITTEN_AS_ANSWER"+"_FALSE", END.label)
+
+                graph.attach(label+"_FALSE", label+"_WRITTEN_AS_ANSWER")
     else:
         graph.attach(label+"_FALSE", END.label)
     return graph
@@ -846,6 +875,9 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
         # TODO: Implement way to define completeness of task other than "all main criteria satisfied"
         is_correct = is_correct and main_criteria in criteria_feedback
+        for tag in criteria_feedback:
+            if "WRITTEN_AS_ANSWER_FALSE" in tag:
+                is_correct = False
         eval_response.add_criteria_graph(criterion_identifier, graph)
 
         # Generate feedback strings from found feedback

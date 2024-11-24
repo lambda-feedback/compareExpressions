@@ -1234,6 +1234,9 @@ class TestEvaluationFunction():
             ("2*e**(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
             ("e**(2*I)", "1*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
             ("0.48+0.88*I", "1*e^(0.5*I)", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
+            ("(x-4)^2-5", "(x-4)^2-5", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_WRITTEN_AS_ANSWER_TRUE"], {}),
+            ("x^2-8x+11", "(x-4)^2-5", "answer=response", False, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_WRITTEN_AS_ANSWER_FALSE"], {}),
+            ("(x-3)^2-3", "(x-4)^2-5", "answer=response", False, ["answer=response_FALSE", "answer=response_WRITTEN_AS_ANSWER_TRUE"], {}),
         ]
     )
     def test_syntactical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
