@@ -269,6 +269,14 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         else:
             return {label+"_SAME_SYMBOLS"+"_FALSE"}
 
+
+    if parameters_dict.get("detailed_feedback", False) is True:
+        math_eq_label_TRUE = "TRUE_DETAILED"
+        math_eq_label_FALSE = "FALSE_DETAILED"
+    else:
+        math_eq_label_TRUE = "TRUE"
+        math_eq_label_FALSE = "FALSE"
+
     # Check for mathematical equivalence
     graph.add_evaluation_node(
         label,
@@ -281,7 +289,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         label+"_TRUE",
         summary=str(lhs)+"="+str(rhs),
         details=str(lhs)+" is equal to "+str(rhs)+".",
-        feedback_string_generator=symbolic_feedback_generators["response=answer"]("TRUE")
+        feedback_string_generator=symbolic_feedback_generators["response=answer"](math_eq_label_TRUE)
     )
 
     graph.attach(
@@ -313,7 +321,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         label+"_FALSE",
         summary=str(lhs)+"=\\="+str(rhs),
         details=str(lhs)+" is not equal to"+str(rhs)+".",
-        feedback_string_generator=symbolic_feedback_generators["response=answer"]("FALSE")
+        feedback_string_generator=symbolic_feedback_generators["response=answer"](math_eq_label_FALSE)
     )
 
     if parameters_dict["syntactical_comparison"] is True:
