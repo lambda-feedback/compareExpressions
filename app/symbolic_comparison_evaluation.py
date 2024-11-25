@@ -26,6 +26,7 @@ from .syntactical_comparison_utilities import patterns as syntactical_forms
 from .syntactical_comparison_utilities import is_number as syntactical_is_number
 from .syntactical_comparison_utilities import response_and_answer_on_same_form
 from .syntactical_comparison_utilities import written_as_answer
+from .syntactical_comparison_utilities import written_as
 from .syntactical_comparison_utilities import attach_form_criteria
 
 from .criteria_graph_utilities import CriteriaGraph
@@ -54,6 +55,7 @@ def generate_criteria_parser():
         (" *; *",        "SEPARATOR"),
         ("response",     "EXPR"),
         (" *where *",    "WHERE"),
+        (" *written +as *","WRITTENAS"),
         ("answer",       "EXPR"),
         ("EQUAL",        "EQUAL"),
         ("EQUALS",       "EQUALS"),
@@ -69,6 +71,7 @@ def generate_criteria_parser():
         ("EQUAL",  "EQUAL where EQUALS", infix),
         ("EQUALS", "EQUAL;EQUAL", infix),
         ("EQUALS", "EQUALS;EQUAL", append_last),
+        ("BOOL", "EXPR written as EXPR", infix),
         ("EQUAL", "EXPR=EXPR", infix),
         ("EXPR",  "-EXPR", join),
         ("EXPR",  "EXPR-EXPR", infix),
@@ -116,12 +119,13 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
             expr = parse_expression(sub.children[1].content_string(), parsing_params)
             local_subs.append((name, expr))
         result = check_criterion(crit, {**parameters_dict, **{"local_substitutions": local_subs}}, generate_feedback)
+    elif label == "WRITTENAS":
+        result = written_as(criterion.children[0].content, criterion.children[1].content, parameters_dict)
     elif label in criteria_operations.keys():
         result = criteria_operations[label](criterion.children, parameters_dict)
     return result
 
 def check_equality(criterion, parameters_dict):
-    
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     local_substitutions = parameters_dict.get("local_substitutions",[])
     parsing_params = {key: value for (key,value) in parameters_dict["parsing_params"].items()}
@@ -842,7 +846,9 @@ def symbolic_comparison(response, answer, params, eval_response) -> dict:
 
     # Parse criteria
     criteria_parser = generate_criteria_parser()
-    parsing_params["unsplittable_symbols"] += ("response", "answer", "where")
+    reserved_keywords = ("response", "answer", "where", "written as")
+    parsing_params["unsplittable_symbols"] += reserved_keywords
+    params["reserved_keywords"] += reserved_keywords
     reserved_expressions = {
         "response": res,
         "answer": ans,
