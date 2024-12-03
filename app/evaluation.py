@@ -43,30 +43,47 @@ def determine_context(parameters):
     else:
         context = deepcopy(symbolic_context)
 
-    input_symbols_reserved_words = [key for key in parameters.get("symbols", dict()).keys() if len(key.strip()) > 0]
+    input_symbols_reserved_codes = list(parameters.get("symbols", dict()))
+    input_symbols_reserved_aliases = []
 
     for input_symbol in parameters.get("symbols", dict()).values():
-        input_symbols_reserved_words += [alias for alias in input_symbol.get("aliases", []) if len(alias.strip()) > 0]
+        input_symbols_reserved_aliases += [alias for alias in input_symbol.get("aliases", []) if len(alias.strip()) > 0]
 
     # This code is to ensure compatibility with legacy system for defining input symbols
     for input_symbol in parameters.get("input_symbols", []):
         if len(input_symbol[0].strip()) > 0:
-            input_symbols_reserved_words += [input_symbol[0]]+[ip for ip in input_symbol[1] if len(ip.strip()) > 0]
+            input_symbols_reserved_codes.append(input_symbol[0])
+            input_symbols_reserved_aliases += [ip for ip in input_symbol[1] if len(ip.strip()) > 0]
 
-    reserved_keywords = {"plus_minus", "minus_plus", "where", "written as"}
+    reserved_keywords_codes = {"where", "written as"}
+    reserved_keywords_aliases = {"plus_minus", "minus_plus"}
     for re in parameters["reserved_expressions_strings"].values():
-        reserved_keywords = reserved_keywords.union(set(re.keys()))
-    reserved_keywords_collisions = []
-    for keyword in reserved_keywords:
-        if keyword in input_symbols_reserved_words:
-            reserved_keywords_collisions.append(keyword)
-    if len(reserved_keywords_collisions) > 0:
-        raise Exception("`"+"`, `".join(reserved_keywords_collisions)+"` are reserved keyword and cannot be used as input symbol codes or alternatives.")
+        reserved_keywords_aliases = reserved_keywords_aliases.union(set(re.keys()))
 
-    reserved_keywords = reserved_keywords.union(set(input_symbols_reserved_words))
     for value in parameters["reserved_expressions_strings"].values():
-        reserved_keywords = reserved_keywords.union(set(value.keys()))
+        reserved_keywords = reserved_keywords_aliases.union(set(value.keys()))
 
+    reserved_keywords_codes_collisions = []
+    for keyword in reserved_keywords_codes:
+        if keyword in input_symbols_reserved_codes:
+            reserved_keywords_codes_collisions.append(keyword)
+    if len(reserved_keywords_codes_collisions) > 0:
+        if len(reserved_keywords_codes_collisions) == 1:
+            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` is a reserved keyword and cannot be used as an input symbol code.")
+        else:
+            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` are reserved keywords and cannot be used as input symbol codes.")
+    reserved_keywords_aliases_collisions = []
+    for keyword in reserved_keywords_aliases:
+        if keyword in input_symbols_reserved_aliases:
+            print("Collision found")
+            reserved_keywords_aliases_collisions.append(keyword)
+    if len(reserved_keywords_aliases_collisions) > 0:
+        if len(reserved_keywords_aliases_collisions) == 1:
+            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` is a reserved keyword and cannot be used as an input symbol alternative.")
+        else:
+            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
+
+    reserved_keywords = reserved_keywords_codes
     context.update({"reserved_keywords": list(reserved_keywords)})
     return context
 
@@ -97,7 +114,7 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
         reserved_expressions_dict.update({key: FrozenValuesDictionary()})
         for (label, expr) in reserved_expressions[key].items():
             expr_parsed = None
-            preprocess_success, expr, preprocess_feedback = preprocess(expr, key, parameters)
+            preprocess_success, expr, preprocess_feedback = preprocess(key, expr, parameters)
             if preprocess_success is False:
                 if key == "learner":
                     result.add_feedback(preprocess_feedback)
@@ -141,13 +158,15 @@ def get_criteria_string(parameters):
     criteria = parameters.get("criteria", None)
     if criteria is None:
         criteria = ",".join(parameters["context"]["default_criteria"])
+    if (parameters.get("syntactical_comparison", False) is True) and ("responsewrittenasanswer" not in "".join(criteria.split())):
+        criteria = criteria+", response written as answer"
     return criteria
 
 
 def create_criteria_dict(criteria_parser, parsing_params):
     preprocess = parsing_params["context"]["expression_preprocess"]
     criteria_string = get_criteria_string(parsing_params)
-    preprocess_success, criteria_string, preprocess_feedback = preprocess(criteria_string, "criteria", parsing_params)
+    preprocess_success, criteria_string, preprocess_feedback = preprocess("criteria", criteria_string, parsing_params)
     if preprocess_success is False:
         raise Exception(preprocess_feedback[1], preprocess_feedback[0])
     criteria_string_list = []
@@ -226,7 +245,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     parameters.update(params)
 
     if parameters.get("is_latex", False):
-        response = parse_latex(response, parameters.get("symbols", {}))
+        response = parse_latex(response, parameters.get("symbols", {}), False)
 
     if params.get("strict_syntax", True):
         if "^" in response:
@@ -291,4 +310,9 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     feedback_procedures = parameters["context"]["feedback_procedure_generator"](evaluation_parameters)
     generate_feedback(criteria, feedback_procedures, evaluation_parameters)
 
-    return evaluation_result.serialise(include_test_data)
+    result = evaluation_result.serialise(include_test_data)
+
+    if parameters.get("feedback_for_incorrect_response", None) is not None:
+        result["feedback"] = parameters["feedback_for_incorrect_response"]
+
+    return result

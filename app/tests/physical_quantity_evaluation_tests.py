@@ -269,6 +269,62 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    def test_radians_to_frequency(self):
+        ans = "2*pi*f radian/second"
+        res = "f Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_print_floating_point_approximation_of_very_large_numbers(self):
+        ans = "2.47*10^4 kg/s"
+        res = "2.47**10^4 kg/s"  # This number is large enough than attempting to turn it into a string will cause an error
+        params = {
+            'rtol': 0.005,
+            'comparison': 'expression',
+            'strict_syntax': False,
+            'physical_quantity': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_legacy_strictness(self):
+        ans = "100*kilo*pascal*ohm"
+        res = "100 kilopascal ohm"
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'strictness': 'legacy',
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        ans = "8650*watt"
+        res = "8.65kW"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "8650W"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "8650*W"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "8.65 k   W"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "8.65 k*W"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "(8.65)kW"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "(8650)W"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

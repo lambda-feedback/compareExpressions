@@ -79,11 +79,11 @@ Note that radian and steradian from Table 3 have been moved here to reduce colli
 This is the subset of common symbols whose short form symbols are allowed
 """
 set_of_very_common_units_in_SI = {
-    ('radian',    'r',   '(1)',                                   tuple(),                  ('radians',)),  # Note: here 'r' is used instead of the more common 'rad' to avoid collision
-    ('steradian', 'sr',  '(1)',                                   tuple(),                  ('steradians',)),
+    ('radian',    'r',   '(1/(2*pi))',                            tuple(),                  ('radians',)),  # Note: here 'r' is used instead of the more common 'rad' to avoid collision
+    ('steradian', 'sr',  '(1/(4*pi))',                            tuple(),                  ('steradians',)),
     ('minute',            'min', '(60*second)',                   tuple(),                  ('minutes',)),
     ('hour',              'h',   '(3600*second)',                 tuple(),                  ('hours',)),
-    ('degree',            'deg', '(pi/180)',                      tuple(),                  ('degrees',)),
+    ('degree',            'deg', '(1/360)',                       tuple(),                  ('degrees',)),
     ('litre',             'L',   '(10**(-3)*metre**3)',           ('liter',),               ('litres,liters',)),
     ('metricton',         't',   '(10**3*kilogram)',              ('tonne',),               ('tonnes',)),
     ('neper',             'Np',  '(1)',                           ('Neper',),               ('nepers', 'Nepers')),

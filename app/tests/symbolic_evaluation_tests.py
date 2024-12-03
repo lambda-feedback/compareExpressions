@@ -357,7 +357,11 @@ class TestEvaluationFunction():
         generate_input_variations(response="e^(Ix)", answer="cos(x)+I*sin(x)") +
         generate_input_variations(response="e^(Ix)+e^(-Ix)", answer="2cos(x)") +
         generate_input_variations(response="1", answer="re(1+2*I)") +
-        generate_input_variations(response="2", answer="im(1+2*I)")
+        generate_input_variations(response="2", answer="im(1+2*I)") +
+        generate_input_variations(response="2+I", answer="conjugate(2-I)") +
+        generate_input_variations(response="conjugate(2-I)", answer="2+I") +
+        generate_input_variations(response="re(2-I)-im(2-I)*I", answer="2+I") +
+        generate_input_variations(response="2+I", answer="re(2-I)-im(2-I)*I")
     )
     def test_complex_numbers(self, response, answer):
         params = {"complexNumbers": True, "strict_syntax": False, "elementary_functions": True}
@@ -989,7 +993,7 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     def test_no_reserved_keywords_in_input_symbol_codes(self):
-        reserved_keywords = ["response", "answer"]
+        reserved_keywords = ["where", "written as"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1040,7 +1044,7 @@ class TestEvaluationFunction():
             assert "`"+keyword+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
-        reserved_keywords = ["response", "answer"]
+        reserved_keywords = ["where", "written as"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1179,6 +1183,10 @@ class TestEvaluationFunction():
                     'symbol_assumptions': "('n','integer')",
                 }
             ),
+            ("-2525", "-2525", "response = a*50 + d*51*25 where a=77; d=-5", True, [], {}),
+            ("-3150", "-3150", "response = a*50 + d*50*25 where a=373/4; d=-25/4", True, [], {}),
+            ("4/9", "(2/9*(3*b-2)^(3/2)-b^2/4-b)-(2/9*(3*a-2)^(3/2)-a^2/4-a)", "response = answer where a=2; b=6", True, [], {}),
+            ("0", "0", "2*tan(response)*tan(response) = 0", True, [], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
@@ -1232,10 +1240,11 @@ class TestEvaluationFunction():
                 "response=answer",
                 True,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "answer_WRITTEN_AS_NUMBER",
+                    "response written as answer_TRUE",
                     "response=answer_TRUE",
-                    "response=answer_SYNTACTICAL_EQUIVALENCE_TRUE",
                     "response=answer_SAME_SYMBOLS_TRUE",
-                    "response=answer_SAME_FORM_CARTESIAN"
                 ],
                 {}
             ),
@@ -1243,12 +1252,13 @@ class TestEvaluationFunction():
                 "4/2",
                 "2",
                 "answer=response",
-                True,
+                False,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "answer_WRITTEN_AS_NUMBER",
+                    "response written as answer_FALSE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_UNKNOWN"
                 ],
                 {}
             ),
@@ -1256,11 +1266,12 @@ class TestEvaluationFunction():
                 "2+x-x",
                 "2",
                 "answer=response",
-                True,
+                False,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "answer_WRITTEN_AS_NUMBER",
+                    "response written as answer_FALSE",
                     "answer=response_TRUE",
-                    "answer=response_SAME_FORM_UNKNOWN",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
                     "answer=response_SAME_SYMBOLS_FALSE"
                 ],
                 {}
@@ -1271,10 +1282,10 @@ class TestEvaluationFunction():
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE",
-                    "answer=response_SAME_FORM_CARTESIAN"
                 ],
                 {}
             ),
@@ -1284,35 +1295,22 @@ class TestEvaluationFunction():
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE",
-                    "answer=response_SAME_FORM_CARTESIAN"
                 ],
                 {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}}),
-            (
-                "2+2I",
-                "2+2*I",
-                "answer=response",
-                True,
-                [
-                    "answer=response_TRUE",
-                    "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_CARTESIAN"
-                ],
-                {}
-            ),
             (
                 "2.00+2.00*I",
                 "2+2*I",
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_CARTESIAN"
                 ],
                 {}
             ),
@@ -1322,8 +1320,9 @@ class TestEvaluationFunction():
                 "answer=response",
                 False,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
                     "answer=response_FALSE",
-                    "answer=response_SAME_FORM_CARTESIAN"
                 ],
                 {}
             ),
@@ -1331,12 +1330,12 @@ class TestEvaluationFunction():
                 "2(1+I)",
                 "2+2*I",
                 "answer=response",
-                True,
+                False,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_UNKNOWN"
                 ],
                 {}
             ),
@@ -1344,12 +1343,12 @@ class TestEvaluationFunction():
                 "2(1+I)",
                 "2+2*I",
                 "answer=response",
-                True,
+                False,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_UNKNOWN"
                 ],
                 {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}}
             ),
@@ -1357,12 +1356,12 @@ class TestEvaluationFunction():
                 "2I+2",
                 "2+2*I",
                 "answer=response",
-                True,
+                False,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_UNKNOWN"
                 ],
                 {}
             ),
@@ -1370,12 +1369,12 @@ class TestEvaluationFunction():
                 "4/2+6/3*I",
                 "2+2*I",
                 "answer=response",
-                True,
+                False,
                 [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_UNKNOWN"
                 ],
                 {}
             ),
@@ -1385,10 +1384,10 @@ class TestEvaluationFunction():
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE",
-                    "answer=response_SAME_FORM_EXPONENTIAL"
                 ],
                 {}
             ),
@@ -1398,10 +1397,10 @@ class TestEvaluationFunction():
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE",
-                    "answer=response_SAME_FORM_EXPONENTIAL"
                 ],
                 {}
             ),
@@ -1411,10 +1410,10 @@ class TestEvaluationFunction():
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_EXPONENTIAL"
                 ],
                 {}
             ),
@@ -1424,10 +1423,10 @@ class TestEvaluationFunction():
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_EXPONENTIAL"
                 ],
                 {}
             ),
@@ -1437,10 +1436,10 @@ class TestEvaluationFunction():
                 "answer=response",
                 True,
                 [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
                     "answer=response_TRUE",
                     "answer=response_SAME_SYMBOLS_TRUE",
-                    "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE",
-                    "answer=response_SAME_FORM_EXPONENTIAL"
                 ],
                 {}
             ),
@@ -1450,10 +1449,117 @@ class TestEvaluationFunction():
                 "answer=response",
                 False,
                 [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_FALSE",
                     "answer=response_FALSE",
-                    "answer=response_SAME_FORM_UNKNOWN"
                 ],
                 {}
+            ),
+            (
+                "(x-4)^2-5",
+                "(x-4)^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-5)^2-6",
+                "(x-4)^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2-5",
+                "(x-4)^2-5",
+                "answer=response",
+                True,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2 - 5",
+                "(x-4)^2-5",
+                "answer=response",
+                True,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "x^2-8x+11",
+                "(x-4)^2-5",
+                "answer=response",
+                False,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_FALSE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-3)^2-3",
+                "(x-4)^2-5",
+                "answer=response",
+                False,
+                [
+                    "answer=response_FALSE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x+4)^2-5",
+                "(x+(-4))^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2+5",
+                "(x-4)^2+(-5)",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x+4)^2+5",
+                "(x+(-4))^2+(-5)",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
             ),
         ]
     )
@@ -1644,6 +1750,18 @@ class TestEvaluationFunction():
                     'rtol': 0.005,
                     'atol': 0,
                 }
+            ),
+            (
+                "-10225",
+                "-2525",
+                "response = a*50 + d*51*25 where a=77; d=-5",
+                False,
+                [
+                    "response = a*50 + d*51*25 where a=77; d=-5_ONE_ADDITION_TO_SUBTRACTION",
+                    'response = a*50 + d*51*25 where a=77; d=-5_RESPONSE_CANDIDATES_ONE_ADDITION_TO_SUBTRACTION',
+                    "response = a*50 + d*51*25 where a=77; d=-5_FALSE"
+                ],
+                {'detailed_feedback': True}
             ),
         ]
     )

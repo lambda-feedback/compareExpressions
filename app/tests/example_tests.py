@@ -46,32 +46,50 @@ class TestEvaluationFunction():
         assert result["is_correct"] == value
 
     @pytest.mark.parametrize(
-        "response, response_latex",
+        "response, is_latex, response_latex",
         [
-            ("plus_minus x**2 + minus_plus y**2", r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
-            ("-minus_plus x^2 minus_plus y^2", r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}"),
-            ("-minus_plus x^2 - plus_minus y^2", r"\left\{x^{2} - y^{2},~- x^{2} - - y^{2}\right\}"),
+            (r"\pm x^{2}+\mp y^{2}", True, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
+            ("plus_minus x**2 + minus_plus y**2", False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
+            ("- minus_plus x^2 minus_plus y^2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}"),
+            ("- minus_plus x^2 - plus_minus y^2", False, r"\left\{x^{2} - y^{2},~- x^{2} - - y^{2}\right\}"),
+            ("pm x**2 + mp y**2", False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
+            ("+- x**2 + -+ y**2",  False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
         ]
     )
-    def test_using_plus_minus_symbols(self, response, response_latex):
+    def test_using_plus_minus_symbols(self, response, is_latex, response_latex):
         answer = "plus_minus x**2 + minus_plus y**2"
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
+            "symbols": {
+                "plus_minus": {
+                    "latex": r"\(\pm\)",
+                    "aliases": ["pm", "+-"],
+                },
+                "minus_plus": {
+                    "latex": r"\(\mp\)",
+                    "aliases": ["mp", "-+"],
+                },
+            },
         }
-        result = evaluation_function(response, answer, params)
+        if is_latex is True:
+            processed_response = preview_function(response, {**params, **{"is_latex": True}})["preview"]["sympy"]
+            result = evaluation_function(processed_response, answer, params)
+            assert result["is_correct"] is True
+            params.update({"is_latex": True})
         # Checking latex output disabled as the function return a few different
         # variants of the latex in an unpredictable way
         # preview = preview_function(response, params)["preview"]
         # assert preview["latex"] == response_latex
+        result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
     @pytest.mark.parametrize(
         "response, response_latex",
         [
-            ("x**2-5*y**2-7=0", r"x^{2} - 5 \cdot y^{2} - 7 = 0"),
-            ("x^2 = 5y^2+7", r"x^{2} = 5 \cdot y^{2} + 7"),
-            ("2x^2 = 10y^2+14", r"2 \cdot x^{2} = 10 \cdot y^{2} + 14"),
+            ("x**2-5*y**2-7=0", r"x^{2} - 5 \cdot y^{2} - 7=0"),
+            ("x^2 = 5y^2+7", r"x^{2}=5 \cdot y^{2} + 7"),
+            ("2x^2 = 10y^2+14", r"2 \cdot x^{2}=10 \cdot y^{2} + 14"),
         ]
     )
     def test_equalities_in_the_answer_and_response(self, response, response_latex):

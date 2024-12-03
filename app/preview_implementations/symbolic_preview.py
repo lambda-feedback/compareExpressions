@@ -1,4 +1,3 @@
-import re
 from sympy.parsing.sympy_parser import T as parser_transformations
 from ..utility.expression_utilities import (
     convert_absolute_notation,
@@ -9,15 +8,14 @@ from ..utility.expression_utilities import (
     SymbolDict,
     sympy_symbols,
     sympy_to_latex,
+    preprocess_expression,
 )
-
 from ..utility.preview_utilities import (
     Params,
     Preview,
     Result,
     parse_latex
 )
-
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
@@ -81,40 +79,47 @@ def preview_function(response: str, params: Params) -> Result:
     if not response:
         return Result(preview=Preview(latex="", sympy=""))
 
-    try:
-        if params.get("is_latex", False):
-            if re.fullmatch('.+=.+', response):
-                sides = response.split('=')
-                lhs = parse_latex(sides[0], symbols)
-                rhs = parse_latex(sides[1], symbols)
-                response = f'Eq({lhs}, {rhs})'
+    response_list = response.split("=")
+    response_latex = []
+    response_sympy = []
+
+    for response in response_list:
+        try:
+            if params.get("is_latex", False) is True:
+                sympy_out = [parse_latex(response, symbols, params.get("simplify", False))]
+                latex_out = [response]
             else:
-                response = parse_latex(response, symbols)
+                params.update({"rationalise": False})
+                _, response, _ = preprocess_expression("response", response, params)
+                expression_list, _ = parse_symbolic(response, params)
 
-        params.update({"rationalise": False})
-        expression_list, _ = parse_symbolic(response, params)
+                parsing_params = create_sympy_parsing_params(params)
+                printing_symbols = dict()
+                for key in parsing_params["symbol_dict"].keys():
+                    if key in symbols.keys():
+                        printing_symbols.update({key: symbols[key]["latex"]})
 
-        latex_out = []
-        sympy_out = []
-        for expression in expression_list:
-            latex_out.append(sympy_to_latex(expression, symbols, settings={"mul_symbol": r" \cdot "}))
-            sympy_out.append(str(expression))
+                latex_out = []
+                sympy_out = []
+                for expression in expression_list:
+                    latex_out.append(sympy_to_latex(expression, symbols, settings={"mul_symbol": r" \cdot "}))
+                    sympy_out.append(str(expression))
 
-        if len(sympy_out) == 1:
-            sympy_out = sympy_out[0]
-        sympy_out = str(sympy_out)
+            if len(sympy_out) == 1:
+                sympy_out = sympy_out[0]
+            sympy_out = str(sympy_out)
 
-        if not params.get("is_latex", False):
-            sympy_out = response
+            if len(latex_out) > 1:
+                latex_out = "\\left\\{"+",~".join(latex_out)+"\\right\\}"
+            else:
+                latex_out = latex_out[0]
 
-        if len(latex_out) > 1:
-            latex_out = "\\left\\{"+",~".join(latex_out)+"\\right\\}"
-        else:
-            latex_out = latex_out[0]
+        except SyntaxError as exc:
+            raise ValueError(f"Failed to parse SymPy expression: {original_response}") from exc
+        except ValueError as exc:
+            raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from exc
 
-    except SyntaxError as exc:
-        raise ValueError(f"Failed to parse SymPy expression: {original_response}") from exc
-    except ValueError as exc:
-        raise ValueError(f"Failed to parse LaTeX expression: {original_response}") from exc
+        response_latex.append(latex_out)
+        response_sympy.append(sympy_out)
 
-    return Result(preview=Preview(latex=latex_out, sympy=sympy_out))
+    return Result(preview=Preview(latex="=".join(response_latex), sympy="=".join(response_sympy)))

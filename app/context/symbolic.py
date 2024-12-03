@@ -1,33 +1,25 @@
 from copy import deepcopy
-from sympy import Add, Pow, Mul, Equality, pi, N
+from sympy import Add, Pow, Mul, Equality, pi, im, I, N
+from sympy import re as real_part
 
 from ..utility.expression_utilities import (
     parse_expression,
-    substitute_input_symbols,
-    convert_absolute_notation,
     create_sympy_parsing_params,
+    preprocess_expression,
 )
 
 from ..preview_implementations.symbolic_preview import preview_function
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 from ..utility.syntactical_comparison_utilities import patterns as syntactical_forms
-from ..utility.syntactical_comparison_utilities import is_number as syntactical_is_number
-from ..utility.syntactical_comparison_utilities import response_and_answer_on_same_form
-from ..utility.syntactical_comparison_utilities import attach_form_criteria
+from ..utility.syntactical_comparison_utilities import generate_arbitrary_number_pattern_matcher
 
 from ..utility.criteria_parsing import generate_criteria_parser
 from ..utility.criteria_graph_utilities import CriteriaGraph
 
 
-def expression_preprocess(expr, name, parameters):
-    expr = substitute_input_symbols(expr.strip(), parameters)
-    expr = expr[0]
-    expr, abs_feedback = convert_absolute_notation(expr, name)
-    success = True
-    if abs_feedback is not None:
-        success = False
-    return success, expr, abs_feedback
+def expression_preprocess(name, expr, parameters):
+    return preprocess_expression(name, expr, parameters)
 
 
 def expression_parse(name, expr, parameters, evaluation_result):
@@ -41,7 +33,7 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
     label = criterion.label.strip()
     parsing_params = deepcopy(parameters_dict["parsing_parameters"])
     parsing_params.update({"simplify": False})
-    if label == "EQUALITY":
+    if label in {"EQUALITY", "WRITTEN_AS"}:
         result = check_equality(criterion, parameters_dict)
     elif label == "WHERE":
         crit = criterion.children[0]
@@ -56,24 +48,34 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
             expr = parse_expression(sub.children[1].content_string(), parsing_params)
             local_subs.append((name, expr))
         result = check_criterion(crit, {**parameters_dict, **{"local_substitutions": local_subs}}, generate_feedback)
+    else:
+        raise Exception(label)
     return result
 
 
 def check_equality(criterion, parameters_dict, local_substitutions=[]):
     parsing_params = deepcopy(parameters_dict["parsing_parameters"])
-    parsing_params.update({"simplify": False, "evaluate": False})
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     parsing_params.update(
         {
             "simplify": False,
+            "evaluate": False,
             "unsplittable_symbols": parsing_params["unsplittable_symbols"]+list((parameters_dict["reserved_expressions"].keys())),
         }
     )
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
 
-    expression = (parse_expression(lhs, parsing_params)) - (parse_expression(rhs, parsing_params))
-    result = bool(expression.subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions).cancel().simplify().simplify() == 0)
+    lhs_expr = parse_expression(lhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
+    rhs_expr = parse_expression(rhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
+    if parsing_params.get("complexNumbers", False):
+        simplified_lhs_expr = lhs_expr.cancel().simplify()
+        simplified_rhs_expr = rhs_expr.cancel().simplify()
+        if (im(lhs_expr) != 0) or (im(lhs_expr) != 0):
+            lhs_expr = real_part(simplified_lhs_expr) + I*im(simplified_lhs_expr)
+            rhs_expr = real_part(simplified_rhs_expr) + I*im(simplified_rhs_expr)
+    expression = (lhs_expr - rhs_expr)
+    result = bool(expression.cancel().simplify().simplify() == 0)
 
     # TODO: Make numerical comparison its own context
     if result is False:
@@ -93,8 +95,8 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
 
             # NOTE: This code assumes that the left hand side is the response and the right hand side is the answer
             # Separates LHS and RHS, parses and evaluates them
-            res = N(replace_pi(parse_expression(lhs, parsing_params).subs(reserved_expressions).subs(local_substitutions)))
-            ans = N(replace_pi(parse_expression(rhs, parsing_params).subs(reserved_expressions).subs(local_substitutions)))
+            res = N(replace_pi(lhs_expr))
+            ans = N(replace_pi(rhs_expr))
 
             if float(parameters_dict.get("atol", 0)) > 0:
                 try:
@@ -242,7 +244,8 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
 
         # TODO: Remove when criteria for checking proportionality is implemented
         if isinstance(res, Equality) and isinstance(ans, Equality):
-            result = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().is_constant()
+            symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
+            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"]["constants"])
         if result is True:
             return {
                 label+"_TRUE": None
@@ -257,17 +260,6 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     graph.add_node(END)
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
-
-    def syntactical_equivalence(unused_input):
-        result = parameters_dict["reserved_expressions_strings"]["task"]["answer"] == parameters_dict["reserved_expressions_strings"]["learner"]["response"]
-        if result is True:
-            return {
-                label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE": None
-            }
-        else:
-            return {
-                label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE": None
-            }
 
     def same_symbols(unused_input):
         parsing_params = deepcopy(parameters_dict["parsing_parameters"])
@@ -428,65 +420,110 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             details=str(lhs)+" is not equal to"+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("FALSE")
         )
+        graph.attach(label+"_FALSE", END.label)
+    return graph
 
-        if parameters_dict["syntactical_comparison"] is True:
-            if set([lhs, rhs]) == set(["response", "answer"]):
-                has_recognisable_form = syntactical_is_number(parameters_dict["reserved_expressions_strings"]["task"]["answer"])
-                for form_label in syntactical_forms.keys():
-                    has_recognisable_form = has_recognisable_form or syntactical_forms[form_label]["matcher"](parameters_dict["reserved_expressions_strings"]["task"]["answer"])
-                if has_recognisable_form is True:
 
-                    graph.attach(
-                        label+"_TRUE",
-                        label+"_SYNTACTICAL_EQUIVALENCE",
-                        summary="response is written like answer",
-                        details="Checks if "+str(lhs)+" is written exactly the same as "+str(rhs)+".",
-                        evaluate=syntactical_equivalence
-                    )
-                    graph.attach(
-                        label+"_SYNTACTICAL_EQUIVALENCE",
-                        label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
-                        summary="response is written like answer",
-                        details=""+str(lhs)+" is written exactly the same as "+str(rhs)+".",
-                        feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("TRUE")
-                    )
-                    graph.attach(
-                        label+"_SYNTACTICAL_EQUIVALENCE"+"_TRUE",
-                        END.label
-                    )
-                    graph.attach(
-                        label+"_SYNTACTICAL_EQUIVALENCE",
-                        label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE",
-                        summary="response is not written like answer", details=""+str(lhs)+" is not written exactly the same as "+str(rhs)+".",
-                        feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
-                    )
-                    graph.attach(label+"_SYNTACTICAL_EQUIVALENCE"+"_FALSE", END.label)
+def criterion_written_as_node(criterion, parameters_dict, label=None):
+    if label is None:
+        label = criterion.content_string()
 
-                    graph.attach(
-                        label+"_TRUE",
-                        label+"_SAME_FORM",
-                        summary=str(lhs)+" is written in the same form as "+str(rhs),
-                        details=str(lhs)+" is written in the same form as "+str(rhs)+".",
-                        evaluate=response_and_answer_on_same_form(label+"_SAME_FORM", parameters_dict)
-                    )
+    def written_as_known_form(string, name):
+        def find_form(unused_input):
+            forms = set()
+            for form_label in syntactical_forms.keys():
+                if syntactical_forms[form_label]["matcher"](string) is True:
+                    forms.add(form_label)
+            if len(forms) > 0:
+                return {name+"_WRITTEN_AS_"+form_label: None for form_label in forms}
+            else:
+                return {name+"_WRITTEN_AS_UNKNOWN": None}
+        return find_form
 
-                    for form_label in syntactical_forms.keys():
-                        if syntactical_forms[form_label]["matcher"](parameters_dict["reserved_expressions_strings"]["task"]["answer"]) is True:
-                            attach_form_criteria(graph, label+"_SAME_FORM", criterion, parameters_dict, form_label)
+    def compare_to_form(string, form_label):
+        def inner(unused_input):
+            result = dict()
+            if syntactical_forms[form_label]["matcher"](string) is True:
+                result.update({label+"_TRUE": None})
+            else:
+                result.update({label+"_FALSE": None})
+            return result
+        return inner
 
-                    graph.attach(
-                        label+"_SAME_FORM",
-                        label+"_SAME_FORM"+"_UNKNOWN",
-                        summary="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form",
-                        details="Cannot determine if "+str(lhs)+" and "+str(rhs)+" are written on the same form.",
-                        feedback_string_generator=symbolic_feedback_string_generators["SAME_FORM"]("UNKNOWN"),
-                    )
+    graph = CriteriaGraph(label)
+    END = CriteriaGraph.END
+    graph.add_node(END)
 
-                    graph.attach(label+"_SAME_FORM"+"_UNKNOWN", END.label)
+    lhs = criterion.children[0].content_string()
+    rhs = criterion.children[1].content_string()
 
-                    graph.attach(label+"_FALSE", label+"_SAME_FORM")
-        else:
-            graph.attach(label+"_FALSE", END.label)
+    if set([lhs, rhs]) == set(["response", "answer"]):
+
+        # TODO: Make a version that can compare the forms of any two reserved expressions
+        answer = parameters_dict["reserved_expressions_strings"]["task"]["answer"]
+        response = parameters_dict["reserved_expressions_strings"]["learner"]["response"]
+
+        def response_written_as_answer(unused_input):
+            matcher = generate_arbitrary_number_pattern_matcher(answer)
+            if matcher(response):
+                return {label+"_TRUE": None}
+            else:
+                return {label+"_FALSE": None}
+
+        graph.add_evaluation_node(
+            str(rhs)+"_WRITTEN_AS_KNOWN_FORM",
+            summary=label,
+            details=f"Checks if {rhs} is written in a known form.",
+            evaluate=written_as_known_form(answer, rhs)
+        )
+        graph.attach(
+            str(rhs)+"_WRITTEN_AS_KNOWN_FORM",
+            str(rhs)+"_WRITTEN_AS_UNKNOWN",
+            summary=str(rhs)+" is not written in a known form.",
+            details=str(rhs)+" is not written in a known form.",
+            feedback_string_generator=symbolic_feedback_string_generators["WRITTEN_AS"]("UNKNOWN")
+        )
+        graph.attach(
+            str(rhs)+"_WRITTEN_AS_UNKNOWN",
+            label,
+            summary="Is "+str(lhs)+" written in the same form as "+str(rhs)+".",
+            details="Checks if "+str(lhs)+" is written in the same form as "+str(rhs)+".",
+            evaluate=response_written_as_answer,
+            sufficiencies={str(rhs)+"_WRITTEN_AS_UNKNOWN"}
+        )
+        graph.attach(
+            label,
+            label+"_TRUE",
+            summary=str(rhs)+" written in the same form as "+str(rhs)+".",
+            details=str(rhs)+" written in the same form as "+str(rhs)+".",
+            feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("TRUE")
+        )
+        graph.attach(
+            label,
+            label+"_FALSE",
+            summary=str(rhs)+" written in the same form as "+str(rhs)+".",
+            details=str(rhs)+" written in the same form as "+str(rhs)+".",
+            feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
+        )
+
+        for form_label in syntactical_forms.keys():
+            graph.attach(
+                str(rhs)+"_WRITTEN_AS_KNOWN_FORM",
+                str(rhs)+"_WRITTEN_AS_"+form_label,
+                summary=str(rhs)+" in written in "+syntactical_forms[form_label]["name"]+" form.",
+                details=str(rhs)+" in written in "+syntactical_forms[form_label]["name"]+" form.",
+                feedback_string_generator=symbolic_feedback_string_generators["WRITTEN_AS"](form_label),
+            )
+            graph.attach(
+                str(rhs)+"_WRITTEN_AS_"+form_label,
+                str(lhs)+"_COMPARE_FORM_TO_"+form_label,
+                summary="Is "+str(lhs)+" written in "+syntactical_forms[form_label]["name"]+" form.",
+                details="Checks if "+str(lhs)+" is written in "+syntactical_forms[form_label]["name"]+" form.",
+                evaluate=compare_to_form(response, form_label),
+                sufficiencies={str(rhs)+"_WRITTEN_AS_"+form_label}
+            )
+            graph.attach(str(lhs)+"_COMPARE_FORM_TO_"+form_label, label+"_TRUE")
+            graph.attach(str(lhs)+"_COMPARE_FORM_TO_"+form_label, label+"_FALSE")
     return graph
 
 
@@ -683,10 +720,12 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
 
 def feedback_procedure_generator(parameters_dict):
     graphs = dict()
-    for (label, criterion) in parameters_dict["criteria"].items():
+    criteria = set(parameters_dict["criteria"].items())
+    for (label, criterion) in criteria:
         graph_templates = {
             "EQUALITY": criterion_equality_node,
-            "WHERE": criterion_where_node
+            "WHERE": criterion_where_node,
+            "WRITTEN_AS": criterion_written_as_node,
         }
         graph_template = graph_templates.get(criterion.label, criterion_eval_node)
         graph = graph_template(criterion, parameters_dict)

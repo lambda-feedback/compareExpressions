@@ -2,6 +2,7 @@
 # IMPORTS
 # -------
 
+import re
 from copy import deepcopy
 from ..utility.physical_quantity_utilities import (
     SLR_quantity_parser,
@@ -19,6 +20,10 @@ from ..utility.physical_quantity_utilities import (
     units_sets_dictionary,
     set_of_SI_prefixes,
     set_of_SI_base_unit_dimensions,
+    set_of_derived_SI_units_in_SI_base_units,
+    set_of_common_units_in_SI,
+    set_of_very_common_units_in_SI,
+    set_of_imperial_units,
 )
 from ..utility.slr_parsing_utilities import create_node, infix, operate, catch_undefined, SLR_Parser
 from sympy import Symbol
@@ -66,22 +71,6 @@ def generate_criteria_parser(reserved_expressions):
     start_symbol = "START"
     end_symbol = "END"
     null_symbol = "NULL"
-
-    def compare(comparison):
-        comparison_dict = {
-            "=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() == 0),
-            "<=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() <= 0),
-            ">=": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() >= 0),
-            "<": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() < 0),
-            ">": lambda inputs: bool((inputs[0] - inputs[1]).cancel().simplify().simplify() > 0),
-        }
-
-        def wrap(inputs):
-            if inputs[0] is not None and inputs[1] is not None:
-                return comparison_dict[comparison](inputs)
-            else:
-                return False
-        return wrap
 
     criteria_operations = {
         "matches",
@@ -487,7 +476,70 @@ def feedback_procedure_generator(parameters_dict):
     return graphs
 
 
-def expression_preprocess(expr, name, parameters):
+def expression_preprocess(name, expr, parameters):
+    if parameters.get("strictness", "natural") == "legacy":
+        prefix_data = {(p[0], p[1], tuple(), p[3]) for p in set_of_SI_prefixes}
+        prefixes = []
+        for prefix in prefix_data:
+            prefixes = prefixes+[prefix[0]] + list(prefix[-1])
+        prefix_short_forms = [prefix[1] for prefix in prefix_data]
+        unit_data = set_of_SI_base_unit_dimensions \
+            | set_of_derived_SI_units_in_SI_base_units \
+            | set_of_common_units_in_SI \
+            | set_of_very_common_units_in_SI \
+            | set_of_imperial_units
+        unit_long_forms = prefixes
+        for unit in unit_data:
+            unit_long_forms = unit_long_forms+[unit[0]] + list(unit[-2]) + list(unit[-1])
+        unit_long_forms = "("+"|".join(unit_long_forms)+")"
+        # Rewrite any expression on the form "*UNIT" (but not "**UNIT") as " UNIT"
+        # Example: "newton*metre" ---> "newton metre"
+        search_string = r"(?<!\*)\* *"+unit_long_forms
+        match_content = re.search(search_string, expr[1:])
+        while match_content is not None:
+            expr = expr[0:match_content.span()[0]+1]+match_content.group().replace("*", " ")+expr[match_content.span()[1]+1:]
+            match_content = re.search(search_string, expr[1:])
+        prefixes = "("+"|".join(prefixes)+")"
+        # Rewrite any expression on the form "PREFIX UNIT" as "PREFIXUNIT"
+        # Example: "kilo metre" ---> "kilometre"
+        search_string = prefixes+" "+unit_long_forms
+        match_content = re.search(search_string, expr)
+        while match_content is not None:
+            expr = expr[0:match_content.span()[0]]+" "+"".join(match_content.group().split())+expr[match_content.span()[1]:]
+            match_content = re.search(search_string, expr)
+        unit_short_forms = [u[1] for u in unit_data]
+        short_forms = "("+"|".join(list(set(prefix_short_forms+unit_short_forms)))+")"
+        # Add space before short forms of prefixes or unit names if they are preceded by numbers or multiplication
+        # Example: "100Pa" ---> "100 Pa"
+        search_string = r"[0-9\*\(\)]"+short_forms
+        match_content = re.search(search_string, expr)
+        while match_content is not None:
+            expr = expr[0:match_content.span()[0]+1]+" "+expr[match_content.span()[0]+1:]
+            match_content = re.search(search_string, expr)
+        # Remove space after prefix short forms if they are preceded by numbers, multiplication or space
+        # Example: "100 m Pa" ---> "100 mPa"
+        prefix_short_forms = "("+"|".join(prefix_short_forms)+")"
+        search_string = r"[0-9\*\(\) ]"+prefix_short_forms+" "
+        match_content = re.search(search_string, expr)
+        while match_content is not None:
+            expr = expr[0:match_content.span()[0]+1]+match_content.group()[0:-1]+expr[match_content.span()[1]:]
+            match_content = re.search(search_string, expr)
+        # Remove multiplication and space after prefix short forms if they are preceded by numbers, multiplication or space
+        # Example:  "100 m* Pa" ---> "100 mPa"
+        search_string = r"[0-9\*\(\) ]"+prefix_short_forms+"\* "
+        match_content = re.search(search_string, expr)
+        while match_content is not None:
+            expr = expr[0:match_content.span()[0]+1]+match_content.group()[0:-2]+expr[match_content.span()[1]:]
+            match_content = re.search(search_string, expr)
+        # Replace multiplication followed by space before unit short forms with only spaces if they are preceded by numbers or space
+        # Example:  "100* Pa" ---> "100 Pa"
+        unit_short_forms = "("+"|".join(unit_short_forms)+")"
+        search_string = r"[0-9\(\) ]\* "+unit_short_forms
+        match_content = re.search(search_string, expr)
+        while match_content is not None:
+            expr = expr[0:match_content.span()[0]]+match_content.group().replace("*"," ")+expr[match_content.span()[1]:]
+            match_content = re.search(search_string, expr)
+
     prefixes = set(x[0] for x in set_of_SI_prefixes)
     fundamental_units = set(x[0] for x in set_of_SI_base_unit_dimensions)
     units_string = parameters.get("units_string", "SI common imperial")
@@ -499,7 +551,7 @@ def expression_preprocess(expr, name, parameters):
     dimensions = set(x[2] for x in set_of_SI_base_unit_dimensions)
     unsplittable_symbols = list(prefixes | fundamental_units | valid_units | dimensions)
     preprocess_parameters = deepcopy(parameters)
-    # TODO: find better way to add reserved keywords for physical quantity criteria added to prevent preprocessing to mangle them
+    # TODO: find better way to prevent preprocessing from mangling reserved keywords for physical quantity criteria
     preprocess_parameters.update({"reserved_keywords": preprocess_parameters.get("reserved_keywords", [])+unsplittable_symbols+['matches']})
     expr = substitute_input_symbols(expr.strip(), preprocess_parameters)[0]
     success = True
@@ -516,6 +568,14 @@ def feedback_string_generator(tags, graph, parameters_dict):
     return
 
 
+def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
+    parsing_parameters = create_sympy_parsing_params(params)
+    parsing_parameters.update({
+        "strictness": params.get("strictness", "natural")
+    })
+    return parsing_parameters
+
+
 context = {
     "expression_preview": preview_function,
     "generate_criteria_parser": generate_criteria_parser,
@@ -524,5 +584,5 @@ context = {
     "default_criteria": {"response matches answer"},
     "feedback_procedure_generator": feedback_procedure_generator,
     "feedback_string_generator": feedback_string_generator,
-    "parsing_parameters_generator": create_sympy_parsing_params,
+    "parsing_parameters_generator": parsing_parameters_generator,
 }

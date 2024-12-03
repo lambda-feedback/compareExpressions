@@ -49,6 +49,12 @@ feedback_generators["IDENTIFY_REASON"] = lambda tag: lambda inputs: {
     "ONE_SWAP_ADDITION_AND_MULTIPLICATION": f"{inputs['criterion'].children[0].content_string()} is true if one addition is replaced with a multiplication or vice versa.",
 }[tag]
 feedback_generators["GET_CANDIDATES"] = lambda tag: lambda inputs: None
+feedback_generators["WRITTEN_AS"] = lambda tag: lambda inputs: {
+    "NUMBER": None,
+    "CARTESIAN": None,
+    "EXPONENTIAL": None,
+    "UNKNOWN": None,
+}[tag]
 feedback_generators["SYNTACTICAL_EQUIVALENCE"] = lambda tag: lambda inputs: {
     "TRUE": None,
     "FALSE": None,

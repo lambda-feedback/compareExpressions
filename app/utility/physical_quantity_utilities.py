@@ -217,7 +217,7 @@ class PhysicalQuantity:
             expanded_unit = self._expand_units(converted_unit)
             converted_unit_string = expanded_unit.content_string()
             try:
-                expanded_unit = parse_expression(expanded_unit.content_string(), parsing_params)
+                expanded_unit = parse_expression(converted_unit_string, parsing_params)
                 converted_unit = expanded_unit
             except Exception as e:
                 raise Exception("SymPy was unable to parse the "+self.name+" unit") from e
@@ -235,6 +235,9 @@ class PhysicalQuantity:
 
 
 def SLR_generate_unit_dictionaries(units_string, strictness):
+
+    if strictness == "legacy":
+        strictness = "natural"
 
     units_tuples = set()
     for key in units_sets_dictionary.keys():
@@ -328,6 +331,8 @@ def set_tags(strictness):
 def SLR_quantity_parser(parameters):
     units_string = parameters.get("units_string", "SI common imperial")
     strictness = parameters.get("strictness", "natural")
+    if strictness == "legacy":
+        strictness = "natural"
     units_dictionary, prefixed_units_dictionary, units_end_dictionary, prefixed_units_end_dictionary = \
         SLR_generate_unit_dictionaries(units_string, strictness)
     max_unit_name_length = max(len(x) for x in [units_dictionary.keys()]+[units_end_dictionary.keys()])

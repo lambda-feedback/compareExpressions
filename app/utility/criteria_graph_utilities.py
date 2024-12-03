@@ -175,7 +175,7 @@ class CriteriaGraph:
                     "incoming": [n.source.label for n in node.incoming]
                 } for (label, node) in self.outputs.items()
             },
-            "sufficiencies": {label: sufficiency for (label, sufficiency) in self.sufficiencies.items() if sufficiency is not None},
+            "sufficiencies": {label: list(suffs) for (label, suffs) in self.sufficiencies.items() if suffs is not None},
         }
         return str(json.dumps(graph))
 

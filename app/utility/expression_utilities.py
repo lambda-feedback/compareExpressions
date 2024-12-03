@@ -11,7 +11,7 @@ from .syntactical_comparison_utilities import is_number_regex
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
-from sympy import Basic, Symbol
+from sympy import Basic, Symbol, Equality, Function
 
 import re
 from typing import Dict, List, TypedDict
@@ -50,7 +50,7 @@ elementary_functions_names = [
     # Special symbols to make sure plus_minus and minus_plus are not destroyed during preprocessing
     ('plus_minus', []), ('minus_plus', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
-    ('summation', ['sum', 'Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag'])
+    ('summation', ['sum', 'Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag']), ('conjugate', ['conj'])
 ]
 for data in elementary_functions_names:
     upper_case_alternatives = [data[0].upper()]
@@ -70,14 +70,22 @@ special_symbols_names = [(x, []) for x in greek_letters]
 
 
 # -------- String Manipulation Utilities
-def create_expression_set(expr, params):
+def create_expression_set(exprs, params):
+    if isinstance(exprs, str):
+        exprs = [exprs]
     expr_set = set()
 
-    if ("plus_minus" in expr) or ("minus_plus" in expr):
-        expr_set.add(expr.replace("plus_minus", "+").replace("minus_plus", "-"))
-        expr_set.add(expr.replace("plus_minus", "-").replace("minus_plus", "+"))
-    else:
-        expr_set.add(expr)
+    for expr in exprs:
+        expr = substitute_input_symbols(expr, params)[0]
+        if "plus_minus" in params.keys():
+            expr = expr.replace(params["plus_minus"], "plus_minus")
+        if "minus_plus" in params.keys():
+            expr = expr.replace(params["minus_plus"], "minus_plus")
+        if ("plus_minus" in expr) or ("minus_plus" in expr):
+            expr_set.add(expr.replace("plus_minus", "+").replace("minus_plus", "-"))
+            expr_set.add(expr.replace("plus_minus", "-").replace("minus_plus", "+"))
+        else:
+            expr_set.add(expr)
 
     return list(expr_set)
 
@@ -233,6 +241,7 @@ def substitute_input_symbols(exprs, params):
         exprs = [exprs]
 
     substitutions = [(expr, expr) for expr in params.get("reserved_keywords", [])]
+    substitutions += [(expr, expr) for expr in params.get("unsplittable_symbols", [])]
 
     if "plus_minus" in params.keys():
         substitutions += [(params["plus_minus"], "plus_minus")]
@@ -570,7 +579,9 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "elementary_functions": params.get("elementary_functions", False),
         "convention": params.get("convention", None),
         "simplify": params.get("simplify", False),
-        "rationalise": params.get("rationalise", True)
+        "rationalise": params.get("rationalise", True),
+        "constants": set(),
+        "complexNumbers": params.get("complexNumbers", False),
     }
 
     symbol_assumptions = list(symbol_assumptions)
@@ -585,16 +596,33 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
             except (SyntaxError, TypeError) as e:
                 raise Exception("List of symbol assumptions not written correctly.") from e
             index = symbol_assumptions_strings.find('(', index_match+1)
-    for sym, ass in symbol_assumptions:
+    for symbol, assumption in symbol_assumptions:
         try:
-            parsing_params["symbol_dict"].update({sym: eval("Symbol('"+sym+"',"+ass+"=True)")})
+            if assumption.lower() == "constant":
+                parsing_params["constants"] = parsing_params["constants"].union({symbol})
+            if assumption.lower() == "function":
+                parsing_params["symbol_dict"].update({symbol: eval("Function('"+symbol+"')")})
+            else:
+                parsing_params["symbol_dict"].update({symbol: eval("Symbol('"+symbol+"',"+assumption+"=True)")})
         except Exception as e:
-            raise Exception(f"Assumption {ass} for symbol {sym} caused a problem.") from e
+            raise Exception(f"Assumption {assumption} for symbol {symbol} caused a problem.") from e
 
     return parsing_params
 
+
 def substitutions_sort_key(x):
     return -len(x[0])-len(x[1])/(10**(1+len(str(len(x[1])))))
+
+
+def preprocess_expression(name, expr, parameters):
+    expr = substitute_input_symbols(expr.strip(), parameters)
+    expr = expr[0]
+    expr, abs_feedback = convert_absolute_notation(expr, name)
+    success = True
+    if abs_feedback is not None:
+        success = False
+    return success, expr, abs_feedback
+
 
 def parse_expression(expr_string, parsing_params):
     '''
@@ -632,9 +660,15 @@ def parse_expression(expr_string, parsing_params):
             transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8, 9]
         if parsing_params.get("rationalise", False):
             transformations += parser_transformations[11]
-        if parsing_params.get("simplify", False):
+        if "=" in expr:
+            expr_parts = expr.split("=")
+            lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
+            rhs = parse_expr(expr_parts[1], transformations=transformations, local_dict=symbol_dict)
+            parsed_expr = Equality(lhs, rhs, evaluate=False)
+        elif parsing_params.get("simplify", False):
             parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
-            parsed_expr = parsed_expr.simplify()
+            if not isinstance(parsed_expr, Equality):
+                parsed_expr = parsed_expr.simplify()
         else:
             parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
         if not isinstance(parsed_expr, Basic):
