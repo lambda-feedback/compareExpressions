@@ -144,6 +144,22 @@ class TestEvaluationFunction():
         assert result["is_correct"] == value
 
     @pytest.mark.parametrize(
+        "res,ans,convention,value",
+        [
+            ("1/ab", "1/(ab)", "implicit_higher_precedence", True),
+            ("1/ab", "1/a*b", "implicit_higher_precedence", False),
+            ("1/ab", "(1/a)*b", "implicit_higher_precedence", False),
+            ("1/ab", "1/(ab)", "equal_precedence", False),
+            ("1/ab", "1/a*b", "equal_precedence", True),
+            ("1/ab", "(1/a)*b", "equal_precedence", True),
+        ]
+    )
+    def test_implicit_multiplication_convention(self, res, ans, convention, value):
+        params = {"strict_syntax": False, "convention": convention}
+        result = evaluation_function(res, ans, params)
+        assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
         "answer, atol_response_true, atol_response_false, rtol_response_true, rtol_response_false",
         [
             (
@@ -280,6 +296,216 @@ class TestEvaluationFunction():
         assert preview["latex"] == r"\epsilon_r"
         assert result["is_correct"] is True
 
+    @pytest.mark.parametrize(
+        "response,value",
+        [
+            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) - alpha*q_dot", True),
+            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) + alpha*q_dot", False),
+            ("d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
+            ("d^2 T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
+            ("(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)", True),
+            ("Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)", True),
+        ]
+    )
+    def test_MECH50001_2_24_a(self, response, value):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbol_assumptions": "('alpha','constant') ('k','constant') ('T','function') ('q','function')",
+            'symbols': {
+                'alpha': {'aliases': [], 'latex': r'\alpha'},
+                'Derivative(q(x,t),t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
+                'Derivative(T(x,t),t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
+                'Derivative(T(x,t),x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
+                'Derivative(T(x,t),x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
+            },
+        }
+        answer = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    def test_incorrect_response_with_custom_feedback(self):
+        response = "x+1"
+        answer = "x+2"
+        response = evaluation_function(response, answer, {"feedback_for_incorrect_response": "Custom feedback"})
+        assert response["is_correct"] is False
+        assert response["feedback"] == "Custom feedback"
+
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value, feedback_tags, additional_params",
+        [
+            (
+                "2+2*I",
+                "2+2*I",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {
+                    "symbols": {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}},
+                    "complexNumbers": True,
+                }
+            ),
+            (
+                "2+2I",
+                "2+2*I",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {
+                    "symbols": {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}},
+                    "complexNumbers": True,
+                }
+            ),
+            (
+                "2.00+2.00*I",
+                "2+2*I",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {
+                    "symbols": {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}},
+                    "complexNumbers": True,
+                }
+            ),
+            (
+                "2*I+2",
+                "2+2*I",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {
+                    "symbols": {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}},
+                    "complexNumbers": True,
+                }
+            ),
+            (
+                "(x-5)^2-6",
+                "(x-4)^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2-5",
+                "(x-4)^2-5",
+                "answer=response",
+                True,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2 - 5",
+                "(x-4)^2-5",
+                "answer=response",
+                True,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "x^2-8x+11",
+                "(x-4)^2-5",
+                "answer=response",
+                False,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_FALSE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-3)^2-3",
+                "(x-4)^2-5",
+                "answer=response",
+                False,
+                [
+                    "answer=response_FALSE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x+4)^2-5",
+                "(x+(-4))^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2+5",
+                "(x-4)^2+(-5)",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x+4)^2+5",
+                "(x+(-4))^2+(-5)",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+        ]
+    )
+    def test_syntactical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "syntactical_comparison": True,
+            "criteria": criteria,
+        }
+        params.update(additional_params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        assert set(feedback_tags) == set(result["tags"])
 
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

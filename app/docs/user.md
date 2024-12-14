@@ -254,7 +254,7 @@ The example given in the example problem set uses an EXPRESSION response area th
 
 ### Equalities in the answer and response
 
-There is (limited) support for using equalities in the response and answer.
+There is (limited) support for using equalities in the response and answer. More precisely, if the answer is of the form $f(x_1,\ldots,x_n) = g(x_1,\ldots,x_n)$ and the response is of the form $\tilde{f}(x_1,\ldots,x_n) = \tilde{g}(x_1,\ldots,x_n)$ then the function checks if $f(x_1,\ldots,x_n) - g(x_1,\ldots,x_n)$ is a multiple of $\tilde{f}(x_1,\ldots,x_n) / \tilde{g}(x_1,\ldots,x_n)$.
 
 The example given in the example problem set uses an EXPRESSION response area that uses `compareExpression` with answer `x**2-5*y**2-7=0`. Some examples of expressions that are accepted as correct:
 `x**2-5*y**2-7=0`, `x^2 = 5y^2+7`, `2x^2 = 10y^2+14`
@@ -308,3 +308,96 @@ In the following response area the absolute tolerance (`atol`) has been set to $
 #### Setting the relative tolerance
 
 In the following response area the absolute tolerance (`atol`) has been set to $0.5$. There are three correct answers: $\sqrt{47}+\pi$ (approx. 9.9997), $\frac{13}{3}^{\pi}$ (approx. 99.228) and $9^{e+\ln(1.5305)}$ (approx. 1000.05). Any answer within the set absolute tolerance (i.e. $5<$`response`$<15$, $95<$`response`$<105$ or $995<$`response`$<1005$) of either answer will be considered correct.
+
+### Using complex numbers
+
+If the parameter `complexNumbers` is set to true then `I` will be interpreted as the imaginary constant $i$.
+
+In the example set there is a response area with `complexNumbers` set to `true` and answer `2+I`. An input symbols has also been added so that `I` can be replaced with `i` or `j`.
+
+Any response that is mathematically equivalent to $2+i$ will be accepted, e.g. `2+I`, `2+(-1)^(1/2)`, `conjugate(2-I)`, `2sqrt(2)e^(I*pi/4)+e^(I*3*pi/2)` or `re(2-I)-im(2-I)*I`.
+
+**Note:** If the particular way that the answer is written matter, e.g. only answers on cartesian form should be accepted, then that requires further configuration, see the example *Syntactical comparison*.
+
+### Using `constant` and `function` assumptions
+
+Examples of how to use the `constant` and `function` assumptions for symbols.
+
+#### Comparing equalities involving partial derivatives
+
+The response should be some expression that is equivalent to this equation (i.e. `answer`): 
+
+$$\frac{\partial^2 T}{\partial x^2}+\frac{\dot{q}}{k}=\frac{1}{\alpha}\frac{\partial T}{\partial t}$$
+
+Here is an example of another valid response:
+
+$$\alpha k \frac{\partial^2 T}{\partial x^2}+ \alpha \dot{q} = k \frac{\partial T}{\partial t}$$
+
+In general, if both the response and the answer are equalities, i.e. the response is $a=b$, and the answer is $c=d$, `compareExpressions` compares the answer and respose by checking if $\dfrac{a-b}{c-d}$ is a constant, i.e. it is assumed that $a-b$ and $c-d$ are not simplifyable to zero without assuming $a-b=c-d=0$.
+
+By default `compareExpressions` assumes that symbols are independent of each other, a consequence of this is that derivatives will become zero, e.g. $\dfrac{\mathrm{d}T}{\mathrm{d}t} = 0$. This can be prevented by assuming that some symbols are functions (a symbol assumed to be a function is assumed to depend on all other symbols). In this example we want to take derivatives of $T$ and $q$ so we add `('T','function') ('q','function')` to the `symbol_assumptions` parameter. 
+
+Taking the ratio of the given answer and the example response gives:
+$$ \frac{\frac{\partial^2 T}{\partial x^2}+\frac{\dot{q}}{k} - \frac{1}{\alpha}\frac{\partial T}{\partial t}}{\alpha k \frac{\partial^2 T}{\partial x^2}+ \alpha \dot{q} - k \frac{\partial T}{\partial t}} = \alpha k $$
+
+By default $\alpha$ and $k$ are assumed to be variables so the ratio is not seen as a constant. This can be fixed by addding `('alpha','constant') ('k','constant')` to the `symbol_asssumptions` parameter.
+
+The make it simpler and more intuitive to write valid reponses we add the following input symbols:
+
+| Symbol                                  | Code                    | Alternatives                |
+| --------------------------------------- | ----------------------- | --------------------------- |
+| $\dot{q}$                               | `Derivative(q(x,t),t)`  | `q_{dot}, q_dot`            |
+| $\dfrac{\mathrm{d}T}{\mathrm{d}t}$      | `Derivative(T(x,t),t)`  | `dT/dt`                     |
+| $\dfrac{\mathrm{d}T}{\mathrm{d}x}$      | `Derivative(T(x,t),x)`  | `dT/dx`                     |
+| $\dfrac{\mathrm{d}^2 T}{\mathrm{d}x^2}$ | `Derivative(T(x,t),x,x)`| `(d^2T)/(dx^2),  d^2T/dx^2` |
+
+Suggestions of correct responses to try:
+
+`Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)`
+
+`alpha*k*(d^2T)/(dx^2) = k*(dT/dt) - alpha*q_dot`
+
+`d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)`
+
+`(d^2T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)`
+
+A simple example of an incorrect expression:
+
+`k*alpha*(d^2T)/(dx^2) = k*(dT/dt) + alpha*q_dot`
+
+Note that omitting the arguments of functions (when not using an alias) can cause errors.
+
+Compare what happens with response
+
+`Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)`
+
+and
+
+`Derivative(T,x,x) + Derivative(q,t)/k = 1/alpha*Derivative(T,t)`
+
+### Syntactical comparison
+
+Typically `compareExpressions` only checks if the response is mathematically equivalent to the answer. If we want to require that the answer is written in a cetain way, e.g. Cartesian form vs. exponential form of a complex number or standard form vs factorized form of a polynomial, further comparsions need to be done. There are some built in standard forms that can be detected, as well as a method that tries to match the way that the response is written in a limited fashion. Either method can be activated either by setting the flag `syntactical_comparison` to `true`, or by using the criteria `response written as answer`.
+
+#### Standard forms for complex numbers
+
+For complex numbers there are two known forms, Cartesian form, $a+bi$, and exponential form, $ae^{bi}$.
+
+For either form the pattern detection only works if $a$ and $b$ are written as numbers on decimal form, i.e. no fractions or other mathematical expressions.
+
+The example set has two response areas, one with an answer written in Cartesian form ($2+2i$) and one with the answer written in exponential form ($2e^{2i}$). For both response areas the parameter `complexNumbers` is set to `true` (so that `I` will be treated as the imaginary constant) and `syntactical_comparison` is set to `true` (to activate the syntactical comparison). There is also an input symbol that makes `I`, `i` and `j` all be interpreted as the imaginary constant $i$. The evaluation function automatically detects the form of the answer and uses it as the basis of the comparison.
+
+#### Arbitrary syntactical comparison by comparing the form of the response to the form of the answer
+
+If the answer is not written in a known form the evaluation function assumes that any response that we can get by taking the answer and replacing any numbers in it with other numbers is considered to be written in the same form. For example, if the answer is `(x-4)^2+5` then any expression written as `(x-A)^B-C` where `A`, `B` and `C` are replaced with non-negative numbers will be considered to be written in the correct form, see the table below for some examples.
+
+| Response       | Correct   | Mathematically equivalent | Syntactically equivalent  |
+| -------------- | ----------| ------------------------- | ------------------------- |
+| `(x-4)^2+5`    | Correct   | True                      | True                      |
+| `5+(x-4)^2`    | Incorrect | True                      | False                     |
+| `(x-4)^2-(-5)` | Incorrect | True                      | False                     |
+| `(x+(-4))^2+5` | Incorrect | True                      | False                     |
+| `x^2-8x+11`    | Incorrect | True                      | False                     |
+| `(x-2)^3+4`    | Incorrect | False                     | True                      |
+
+**Note:** This type of comparison is quite limited in many cases and may need to be augmented with extra feedback cases or customised feedback for incorrect responses that clarifies the specifics of the expected form.

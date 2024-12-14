@@ -42,34 +42,6 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-    @pytest.mark.parametrize(
-        "response,value",
-        [
-            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) - alpha*q_dot", True),
-            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) + alpha*q_dot", False),
-            ("d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
-            ("d^2 T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
-            ("(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)", True),
-            ("Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)", True),
-        ]
-    )
-    def test_MECH50001_2_24_a(self, response, value):
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-            "symbol_assumptions": "('alpha','constant') ('k','constant') ('T','function') ('q','function')",
-            'symbols': {
-                'alpha': {'aliases': [], 'latex': r'\alpha'},
-                'Derivative(q(x,t),t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
-                'Derivative(T(x,t),t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
-                'Derivative(T(x,t),x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
-                'Derivative(T(x,t),x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
-            },
-        }
-        answer = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is value
-
     def test_AERO40007_1_6_instance_2024_25(self):
         params = {
             "strict_syntax": False,
@@ -95,13 +67,6 @@ class TestEvaluationFunction():
         answer = "6(cos(5pi/6)+isin(5pi/6))"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-
-    def test_incorrect_response_with_custom_feedback(self):
-        response = "x+1"
-        answer = "x+2"
-        response = evaluation_function(response, answer, {"feedback_for_incorrect_response": "Custom feedback"})
-        assert response["is_correct"] is False
-        assert response["feedback"] == "Custom feedback"
 
 
 if __name__ == "__main__":
