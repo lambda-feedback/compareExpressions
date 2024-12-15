@@ -1781,6 +1781,32 @@ class TestEvaluationFunction():
             assert feedback_tag in result["tags"]
 
     @pytest.mark.parametrize(
+        "response, answer, criteria, value",
+        [
+            ("1", "2", "response > answer", False),
+            ("2", "2", "response > answer", False),
+            ("3", "2", "response > answer", True),
+            ("1", "2", "response >= answer", False),
+            ("2", "2", "response >= answer", True),
+            ("3", "2", "response >= answer", True),
+            ("1", "2", "response < answer", True),
+            ("2", "2", "response < answer", False),
+            ("3", "2", "response < answer", False),
+            ("1", "2", "response <= answer", True),
+            ("2", "2", "response <= answer", True),
+            ("3", "2", "response <= answer", False),
+        ]
+    )
+    def test_criteria_order_comparison(self, response, answer, criteria, value):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
         "response, answer, value",
         [
             ("summation(2*k - 1, (k, 1, n))",          "summation(2*k - 1, (k, 1, n))",    True),

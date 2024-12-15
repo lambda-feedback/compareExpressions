@@ -14,6 +14,7 @@ base_token_list = [
     (" *EQUAL_LIST *", "EQUAL_LIST"),
     (" *RESERVED *", "RESERVED"),
     (" *= *", "EQUALITY"),
+    (" *(>=?|<=?|ORDER) *", "ORDER"),  # less than (or equal), < (<=), greater than (or equal), > (>=)
     (" *where *", "WHERE"),
     (" *written as *", "WRITTEN_AS"),
     (" *; *", "SEPARATOR"),
@@ -23,6 +24,7 @@ base_token_list = [
 base_productions = [
     ("START", "BOOL", create_node),
     ("BOOL", "EQUAL", proceed),
+    ("BOOL", "ORDER", proceed),
     ("BOOL", "EQUAL where EQUAL", infix),
     ("BOOL", "EQUAL where EQUAL_LIST", infix),
     ("BOOL", "RESERVED written as OTHER", infix),
@@ -33,6 +35,10 @@ base_productions = [
     ("EQUAL", "RESERVED = OTHER", infix),
     ("EQUAL", "OTHER = RESERVED", infix),
     ("EQUAL", "RESERVED = RESERVED", infix),
+    ("EQUAL", "OTHER ORDER OTHER", infix),
+    ("EQUAL", "RESERVED ORDER OTHER", infix),
+    ("EQUAL", "OTHER ORDER RESERVED", infix),
+    ("EQUAL", "RESERVED ORDER RESERVED", infix),
     ("OTHER", "RESERVED OTHER", join),
     ("OTHER", "OTHER RESERVED", join),
     ("OTHER", "OTHER OTHER", join),
@@ -48,11 +54,15 @@ def generate_criteria_parser(reserved_expressions, token_list=base_token_list, p
 
 
 if __name__ == "__main__":
-    test_criteria = [
-        "a = b",
-        "response = b",
-        "a = response",
-        "response = answer",
+    test_criteria = []
+    for comparison in ["=", ">", "<", ">=", "<="]:
+        test_criteria += [
+            f"a {comparison} b",
+            f"response {comparison} b",
+            f"a {comparison} response",
+            f"response {comparison} answer",
+        ]
+    test_criteria += [
         "response = b*answer",
         "response = q where q = a*b",
         "response = q+p where q = a*b; p = b*c",

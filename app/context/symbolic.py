@@ -35,6 +35,8 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
     parsing_params.update({"simplify": False})
     if label in {"EQUALITY", "WRITTEN_AS"}:
         result = check_equality(criterion, parameters_dict)
+    if label == "ORDER":
+        result = check_order(criterion, parameters_dict)
     elif label == "WHERE":
         crit = criterion.children[0]
         subs = criterion.children[1]
@@ -53,7 +55,7 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
     return result
 
 
-def check_equality(criterion, parameters_dict, local_substitutions=[]):
+def create_expressions_for_comparison(criterion, parameters_dict, local_substitutions=[]):
     parsing_params = deepcopy(parameters_dict["parsing_parameters"])
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     parsing_params.update(
@@ -65,7 +67,6 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
     )
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
-
     lhs_expr = parse_expression(lhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
     rhs_expr = parse_expression(rhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
     if parsing_params.get("complexNumbers", False):
@@ -74,15 +75,31 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
         if (im(lhs_expr) != 0) or (im(lhs_expr) != 0):
             lhs_expr = real_part(simplified_lhs_expr) + I*im(simplified_lhs_expr)
             rhs_expr = real_part(simplified_rhs_expr) + I*im(simplified_rhs_expr)
-    expression = (lhs_expr - rhs_expr)
-    result = bool(expression.cancel().simplify().simplify() == 0)
+    return lhs_expr, rhs_expr
+
+
+def do_comparison(comparison_symbol, expression):
+    comparisons = {
+        "=": lambda expr: bool(expression.cancel().simplify().simplify() == 0),
+        ">": lambda expr: bool(expression.cancel().simplify().simplify() > 0),
+        ">=": lambda expr: bool(expression.cancel().simplify().simplify() >= 0),
+        "<": lambda expr: bool(expression.cancel().simplify().simplify() < 0),
+        "<=": lambda expr: bool(expression.cancel().simplify().simplify() <= 0),
+    }
+    comparison = comparisons[comparison_symbol.strip()]
+    result = comparison(expression)
+    return result
+
+
+def check_equality(criterion, parameters_dict, local_substitutions=[]):
+    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+    result = do_comparison(criterion.content, lhs_expr-rhs_expr)
 
     # TODO: Make numerical comparison its own context
     if result is False:
         error_below_rtol = None
         error_below_atol = None
         if parameters_dict.get("numerical", False) or float(parameters_dict.get("rtol", 0)) > 0 or float(parameters_dict.get("atol", 0)) > 0:
-
             # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
             # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
             # are other reserved symbols.
@@ -92,12 +109,10 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
                     if str(s) == 'pi':
                         pi_symbol = s
                 return expr.subs(pi_symbol, float(pi))
-
             # NOTE: This code assumes that the left hand side is the response and the right hand side is the answer
             # Separates LHS and RHS, parses and evaluates them
             res = N(replace_pi(lhs_expr))
             ans = N(replace_pi(rhs_expr))
-
             if float(parameters_dict.get("atol", 0)) > 0:
                 try:
                     absolute_error = abs(float(ans-res))
@@ -119,6 +134,12 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
             elif error_below_atol is True and error_below_rtol is True:
                 result = True
 
+    return result
+
+
+def check_order(criterion, parameters_dict, local_substitutions=[]):
+    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+    result = do_comparison(criterion.content, lhs_expr-rhs_expr)
     return result
 
 
@@ -683,16 +704,18 @@ def criterion_where_node(criterion, parameters_dict, label=None):
 
 
 def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
+    feedback_string_generator_inputs = {'criterion': criterion}
+
     def evaluation_node_internal(unused_input):
         result = check_criterion(criterion, parameters_dict, generate_feedback)
         label = criterion.content_string()
         if result:
             return {
-                label+"_TRUE": None
+                label+"_TRUE": feedback_string_generator_inputs
             }
         else:
             return {
-                label+"_FALSE": None
+                label+"_FALSE": feedback_string_generator_inputs
             }
     label = criterion.content_string()
     graph = CriteriaGraph(label)
