@@ -1795,9 +1795,33 @@ class TestEvaluationFunction():
             ("1", "2", "response <= answer", True),
             ("2", "2", "response <= answer", True),
             ("3", "2", "response <= answer", False),
+            ("5", "9", "response > 3", True),
         ]
     )
     def test_criteria_order_comparison(self, response, answer, criteria, value):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
+        "criteria, value",
+        [
+            ("response contains c", False),
+            ("response contains a", True),
+            ("response contains x", True),
+            ("response contains pi", True),
+            ("response contains 23", True),
+            ("response contains 3", False),
+            ("response contains answer", True),
+        ]
+    )
+    def test_contains_symbol(self, criteria, value):
+        response = "a+23+pi+sin(x)+y"
+        answer = "y"
         params = {
             "strict_syntax": False,
             "elementary_functions": True,

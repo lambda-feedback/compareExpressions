@@ -35,8 +35,10 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
     parsing_params.update({"simplify": False})
     if label in {"EQUALITY", "WRITTEN_AS"}:
         result = check_equality(criterion, parameters_dict)
-    if label == "ORDER":
+    elif label == "ORDER":
         result = check_order(criterion, parameters_dict)
+    elif label == "CONTAINS":
+        result = check_contains_symbol(criterion, parameters_dict)
     elif label == "WHERE":
         crit = criterion.children[0]
         subs = criterion.children[1]
@@ -140,6 +142,12 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
 def check_order(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+    return result
+
+
+def check_contains_symbol(criterion, parameters_dict, local_substitutions=[]):
+    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+    result = rhs_expr in lhs_expr.atoms()
     return result
 
 
