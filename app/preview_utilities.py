@@ -8,6 +8,7 @@ from .expression_utilities import (
     extract_latex,
     SymbolDict,
     find_matching_parenthesis,
+    create_expression_set,
 )
 
 class Params(TypedDict):
@@ -26,7 +27,7 @@ class Result(TypedDict):
     preview: Preview
 
 
-def parse_latex(response: str, symbols: SymbolDict, simplify : bool) -> str:
+def parse_latex(response: str, symbols: SymbolDict, simplify : bool, parameters=None) -> str:
     """Parse a LaTeX string to a sympy string while preserving custom symbols.
 
     Args:
@@ -40,6 +41,9 @@ def parse_latex(response: str, symbols: SymbolDict, simplify : bool) -> str:
     Returns:
         str: The expression in sympy syntax.
     """
+    if parameters is None:
+        parameters = dict()
+
     substitutions = {}
 
     pm_placeholder = None
@@ -56,8 +60,10 @@ def parse_latex(response: str, symbols: SymbolDict, simplify : bool) -> str:
 
     if pm_placeholder is not None:
         response = response.replace(r"\pm ", pm_placeholder)
+        substitutions[pm_placeholder] = sympy.Symbol(pm_placeholder, commutative=False)
     if mp_placeholder is not None:
         response = response.replace(r"\mp ", mp_placeholder)
+        substitutions[mp_placeholder] = sympy.Symbol(mp_placeholder, commutative=False)
 
     for sympy_symbol_str in symbols:
         symbol_str = symbols[sympy_symbol_str]["latex"]
@@ -73,8 +79,6 @@ def parse_latex(response: str, symbols: SymbolDict, simplify : bool) -> str:
                 )
             substitutions[latex_symbol] = sympy.Symbol(sympy_symbol_str)
 
-    substitutions.update({r"\pm ": pm_placeholder, r"\mp ": mp_placeholder})
-
     try:
         expression = latex2sympy(response, substitutions)
         if isinstance(expression, list):
@@ -84,13 +88,20 @@ def parse_latex(response: str, symbols: SymbolDict, simplify : bool) -> str:
     except Exception as e:
         raise ValueError(str(e))
 
-    result_str = str(expression.xreplace(substitutions))
-    for ph in [(pm_placeholder, "plus_minus"), (mp_placeholder, "minus_plus")]:
-        if ph[0] is not None:
-            result_str = result_str.replace("*"+ph[0]+"*", " "+ph[1]+" ")
-            result_str = result_str.replace(ph[0]+"*", " "+ph[1]+" ")
-            result_str = result_str.replace("*"+ph[0], " "+ph[1]+" ")
-            result_str = result_str.replace(ph[0], " "+ph[1]+" ")
+    if (pm_placeholder is not None) or (mp_placeholder is not None):
+        result_str_set = set()
+        result_str = str(expression)
+        for ph in [(pm_placeholder, "plus_minus"), (mp_placeholder, "minus_plus")]:
+            if ph[0] is not None:
+                result_str = result_str.replace("*"+ph[0]+"*", " "+ph[1]+" ")
+                result_str = result_str.replace(ph[0]+"*", " "+ph[1]+" ")
+                result_str = result_str.replace("*"+ph[0], " "+ph[1]+" ")
+                result_str = result_str.replace(ph[0], " "+ph[1]+" ")
+        for expr in create_expression_set(result_str, parameters):
+            result_str_set.add(expr)
+        result_str = '{'+', '.join(result_str_set)+'}'
+    else:
+        result_str = str(expression.xreplace(substitutions))
 
     return result_str
 
