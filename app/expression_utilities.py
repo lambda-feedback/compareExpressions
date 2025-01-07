@@ -78,8 +78,11 @@ def create_expression_set(exprs, params):
             expr = expr.replace(params["minus_plus"], "minus_plus")
     
         if ("plus_minus" in expr) or ("minus_plus" in expr):
-            expr_set.add(expr.replace("plus_minus", "+").replace("minus_plus", "-"))
-            expr_set.add(expr.replace("plus_minus", "-").replace("minus_plus", "+"))
+            for pm_mp_ops in [("+","-"),("-","+")]:
+                expr_string = expr.replace("plus_minus", pm_mp_ops[0]).replace("minus_plus", pm_mp_ops[1]).strip()
+                while expr_string[0] == "+":
+                    expr_string = expr_string[1:]
+                expr_set.add(expr_string.strip())
         else:
             expr_set.add(expr)
 
