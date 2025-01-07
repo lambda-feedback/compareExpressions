@@ -96,7 +96,7 @@ class TestPreviewFunction():
         )
         result = preview_function(response, params)
         preview = result["preview"]
-        assert preview.get("sympy") in ['{3*i/sqrt(5), - 3*i/sqrt(5)}', '{- 3*i/sqrt(5), 3*i/sqrt(5)}']
+        assert preview.get("sympy") == ' plus_minus 3*i/sqrt(5)'
         assert preview.get("latex") == r'\pm \frac{3}{\sqrt{5}} i'
 
     def test_latex_conversion_preserves_default_symbols(self):

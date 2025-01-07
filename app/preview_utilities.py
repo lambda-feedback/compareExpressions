@@ -89,7 +89,6 @@ def parse_latex(response: str, symbols: SymbolDict, simplify : bool, parameters=
         raise ValueError(str(e))
 
     if (pm_placeholder is not None) or (mp_placeholder is not None):
-        result_str_set = set()
         result_str = str(expression)
         for ph in [(pm_placeholder, "plus_minus"), (mp_placeholder, "minus_plus")]:
             if ph[0] is not None:
@@ -97,9 +96,6 @@ def parse_latex(response: str, symbols: SymbolDict, simplify : bool, parameters=
                 result_str = result_str.replace(ph[0]+"*", " "+ph[1]+" ")
                 result_str = result_str.replace("*"+ph[0], " "+ph[1]+" ")
                 result_str = result_str.replace(ph[0], " "+ph[1]+" ")
-        for expr in create_expression_set(result_str, parameters):
-            result_str_set.add(expr)
-        result_str = '{'+', '.join(result_str_set)+'}'
     else:
         result_str = str(expression.xreplace(substitutions))
 
