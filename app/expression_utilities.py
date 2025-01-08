@@ -67,7 +67,10 @@ special_symbols_names = [(x, []) for x in greek_letters]
 # -------- String Manipulation Utilities
 def create_expression_set(exprs, params):
     if isinstance(exprs, str):
-        exprs = [exprs]
+        if exprs.startswith('{') and exprs.endswith('}'):
+            exprs = [expr.strip() for expr in exprs[1:-1].split(',')]
+        else:
+            exprs = [exprs]
     expr_set = set()
     for expr in exprs:
         expr = substitute_input_symbols(expr, params)[0]
