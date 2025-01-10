@@ -77,6 +77,44 @@ class TestPreviewFunction():
         preview = result["preview"]
         assert preview.get("latex") == "\\frac{x^{2} + x + x}{x} = 1"
 
+    def test_latex_with_plus_minus(self):
+        response = r"\pm \frac{3}{\sqrt{5}} i"
+        params = Params(
+            is_latex=True,
+            simplify=False,
+            complexNumbers=True,
+            symbols={
+                "I": {
+                    "latex": "$i$",
+                    "aliases": ["i"],
+                },
+                "plus_minus": {
+                    "latex": "$\\pm$",
+                    "aliases": ["pm", "+-"],
+                },
+            }
+        )
+        result = preview_function(response, params)
+        preview = result["preview"]
+        assert preview.get("sympy") in {'{3*(sqrt(5)/5)*I, -3*sqrt(5)/5*I}', '{-3*sqrt(5)/5*I, 3*(sqrt(5)/5)*I}'}
+        assert preview.get("latex") == r'\pm \frac{3}{\sqrt{5}} i'
+        response = r"4 \pm \sqrt{6}}"
+        params = Params(
+            is_latex=True,
+            simplify=False,
+            complexNumbers=True,
+            symbols={
+                "plus_minus": {
+                    "latex": "$\\pm$",
+                    "aliases": ["pm", "+-"],
+                },
+            }
+        )
+        result = preview_function(response, params)
+        preview = result["preview"]
+        assert preview.get("sympy") in {'{sqrt(6) + 4, 4 - sqrt(6)}', '{4 - sqrt(6), sqrt(6) + 4}'}
+        assert preview.get("latex") == r'4 \pm \sqrt{6}}'
+
     def test_latex_conversion_preserves_default_symbols(self):
         response = "\\mu + x + 1"
         params = Params(is_latex=True, simplify=False)

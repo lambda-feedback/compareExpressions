@@ -1,13 +1,14 @@
 from typing import TypedDict
 from typing_extensions import NotRequired
 
-import sympy
+from sympy import Symbol
 from latex2sympy2 import latex2sympy
 
 from .expression_utilities import (
     extract_latex,
     SymbolDict,
     find_matching_parenthesis,
+    create_expression_set,
 )
 
 
@@ -27,13 +28,19 @@ class Result(TypedDict):
     preview: Preview
 
 
-def parse_latex(response: str, symbols: SymbolDict, simplify: bool) -> str:
+def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=None) -> str:
     """Parse a LaTeX string to a sympy string while preserving custom symbols.
 
     Args:
         response (str): The LaTeX expression to parse.
         symbols (SymbolDict): A mapping of sympy symbol strings and LaTeX
-        symbol strings.
+            symbol strings.
+        simplify (bool): If set to false the preview will attempt to preserve
+            the way that the response was written as much as possible. If set
+            to True the response will be simplified before the preview string
+            is generated.
+        parameters (dict): parameters used when generating sympy output when
+            the response is written in LaTeX
 
     Raises:
         ValueError: If the LaTeX string or symbol couldn't be parsed.
@@ -41,24 +48,30 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool) -> str:
     Returns:
         str: The expression in sympy syntax.
     """
+    if parameters is None:
+        parameters = dict()
+
     substitutions = {}
 
     pm_placeholder = None
     mp_placeholder = None
 
     if r"\pm " in response or r"\mp " in response:
+        response_set = set()
         for char in 'abcdefghjkoqrtvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ':
             if char not in response and pm_placeholder is None:
                 pm_placeholder = char
+                substitutions[pm_placeholder] = Symbol(pm_placeholder, commutative=False)
             elif char not in response and mp_placeholder is None:
                 mp_placeholder = char
+                substitutions[mp_placeholder] = Symbol(mp_placeholder, commutative=False)
             if pm_placeholder is not None and mp_placeholder is not None:
                 break
-
-    if pm_placeholder is not None:
-        response = response.replace(r"\pm ", pm_placeholder)
-    if mp_placeholder is not None:
-        response = response.replace(r"\mp ", mp_placeholder)
+        for expr in create_expression_set(response.replace(r"\pm ",'plus_minus').replace(r"\mp ",'minus_plus'), parameters):
+            response_set.add(expr)
+        response = response_set
+    else:
+        response_set = {response}
 
     for sympy_symbol_str in symbols:
         symbol_str = symbols[sympy_symbol_str]["latex"]
@@ -72,28 +85,25 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool) -> str:
                     f"Couldn't parse latex symbol {latex_symbol_str} "
                     f"to sympy symbol."
                 )
-            substitutions[latex_symbol] = sympy.Symbol(sympy_symbol_str)
+            substitutions[latex_symbol] = Symbol(sympy_symbol_str)
 
-    substitutions.update({r"\pm ": pm_placeholder, r"\mp ": mp_placeholder})
+    parsed_responses = set()
+    for expression in response_set:
+        try:
+            expression = latex2sympy(expression, substitutions)
+            if isinstance(expression, list):
+                expression = expression.pop()
+            if simplify is True:
+                expression = expression.simplify()
+        except Exception as e:
+            raise ValueError(str(e))
 
-    try:
-        expression = latex2sympy(response, substitutions)
-        if isinstance(expression, list):
-            expression = expression.pop()
-        if simplify is True:
-            expression = expression.simplify()
-    except Exception as e:
-        raise ValueError(str(e))
+        parsed_responses.add(str(expression.xreplace(substitutions)))
 
-    result_str = str(expression.xreplace(substitutions))
-    for ph in [(pm_placeholder, "plus_minus"), (mp_placeholder, "minus_plus")]:
-        if ph[0] is not None:
-            result_str = result_str.replace("*"+ph[0]+"*", " "+ph[1]+" ")
-            result_str = result_str.replace(ph[0]+"*", " "+ph[1]+" ")
-            result_str = result_str.replace("*"+ph[0], " "+ph[1]+" ")
-            result_str = result_str.replace(ph[0], " "+ph[1]+" ")
-
-    return result_str
+    if len(parsed_responses) < 2:
+        return parsed_responses.pop()
+    else:
+        return '{'+', '.join(parsed_responses)+'}'
 
 
 def sanitise_latex(response):

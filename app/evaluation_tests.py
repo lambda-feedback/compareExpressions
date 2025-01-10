@@ -42,6 +42,17 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    def test_eval_function_preserves_order_in_latex_input(self):
+        response = r"c + a + b"
+        answer = "c + a + b"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "is_latex": True
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
     def test_AERO40007_1_6_instance_2024_25(self):
         params = {
             "strict_syntax": False,
