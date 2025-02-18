@@ -3,7 +3,7 @@ import re
 is_nonnegative_number_regex = '((0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
 
 
-is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)(e-?(0|[1-9]\d*))?)'
+is_number_regex = '(-?(0|[1-9]\d*)?(\.\d+)?(?<=\d)( *(e|E|\*10^|\*10\*\*)-?(0|[1-9]\d*))?)'
 
 
 def is_number(string):

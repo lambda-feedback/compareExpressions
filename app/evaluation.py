@@ -232,26 +232,18 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         - if set to True, use basic dimensional analysis functionality.
     """
 
-    # TODO: Top-down restructuring in progress, code below is not yet functional
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
 
-    parameters = {
-        "comparison": "expression",
-        "strict_syntax": True,
-    }
-    parameters.update(params)
+    parameters = deepcopy(params)
 
+    # CONSIDER: Can this be moved into the preprocessing procedures in a consistent way?
+    # Can it be turned into its own context? Or moved into the determine_context procedure?
+    # What solution will be most consistently reusable?
     if parameters.get("is_latex", False):
         response = parse_latex(response, parameters.get("symbols", {}), False)
-
-    if params.get("strict_syntax", True):
-        if "^" in response:
-            evaluation_result.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict())))
-        if "!" in response:
-            evaluation_result.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict())))
 
     reserved_expressions_strings = {
         "learner": {
@@ -263,6 +255,12 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     }
     parameters.update({"reserved_expressions_strings": reserved_expressions_strings})
     context = determine_context(parameters)
+    default_parameters = context["default_parameters"]
+    for (key, value) in default_parameters.items():
+        if key not in parameters.keys():
+            parameters.update({key: value})
+    if "criteria" not in parameters.keys():
+        parameters.update({"criteria": ",".join(context["default_criteria"])})
     try:
         preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
     except Exception:
@@ -277,6 +275,13 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "parsing_parameters": context["parsing_parameters_generator"](parameters),
         }
     )
+
+    # FIXME: Move this into expression_utilities
+    if params.get("strict_syntax", True):
+        if "^" in response:
+            evaluation_result.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict())))
+        if "!" in response:
+            evaluation_result.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict())))
 
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:

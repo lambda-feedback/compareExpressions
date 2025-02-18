@@ -142,20 +142,20 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "value,unit,small_diff,large_diff",
         [
-            ("10.5",   "kg m/s^2", 0.04,    0.06),
-            ("10.55",  "kg m/s^2", 0.004,   0.006),
-            ("0.105",  "kg m/s^2", 0.0004,  0.0006),
-            ("0.0010", "kg m/s^2", 0.00004, 0.00006),
-            ("100",    "kg m/s^2", 0.4,     0.6),
-            ("100e10", "kg m/s^2", 4e9,     6e9)
+            ("10.5",       "kg m/s^2", 0.04,    0.06),
+            ("10.55",      "kg m/s^2", 0.004,   0.006),
+            ("0.105",      "kg m/s^2", 0.0004,  0.0006),
+            ("0.0010",     "kg m/s^2", 0.00004, 0.00006),
+            ("100",        "kg m/s^2", 0.4,     0.6),
+            ("100*10**10", "kg m/s^2", 4*10**9, 6*10**9)
         ]
     )
     def test_compute_relative_tolerance_from_significant_digits(self, value, unit, small_diff, large_diff):
         ans = value+" "+unit
-        res_correct_under = str(float(value)-small_diff)+" "+unit
-        res_correct_over = str(float(value)+small_diff)+" "+unit
-        res_incorrect_under = str(float(value)-large_diff)+" "+unit
-        res_incorrect_over = str(float(value)+large_diff)+" "+unit
+        res_correct_under = str(eval(value)-small_diff)+" "+unit
+        res_correct_over = str(eval(value)+small_diff)+" "+unit
+        res_incorrect_under = str(eval(value)-large_diff)+" "+unit
+        res_incorrect_over = str(eval(value)+large_diff)+" "+unit
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         assert evaluation_function(res_correct_under, ans, params)["is_correct"] is True
         assert evaluation_function(res_correct_over, ans, params)["is_correct"] is True

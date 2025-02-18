@@ -8,7 +8,10 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are twelve optional parameters that can be set: `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
+There are 15 optional parameters that can be set: `atol`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
+
+## `atol`
+Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $|x-\tilde{x}| \leq e_aBy default `atol` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
 
 ## `complexNumbers`
 
@@ -55,16 +58,19 @@ If unset, `physical_quantity` will default to `false`.
 
 If `physical_quantity` is set to `true` the answer and response will interpreted as a physical quantity using units and conventions decided by the `strictness` and `units_string` parameters.
 
-**Remark:** Setting `physical_quantity` to `true` will also mean that comparisons will be done numerically. If neither the `atol` nor `rtol` parameters are set, the evaluation function will choose a relative error based on the number of sigificant digits given in the answer.
+**Remark:** Setting `physical_quantity` to `true` will also mean that comparisons will be done numerically. If neither the `atol` nor `rtol` parameters are set, the evaluation function will choose a relative error based on the number of significant digits given in the answer.
 
 
 When `physical_quantity` the evaluation function will generate feedback based on the flowchart below.
 
 **TODO:** Generate new flowchart for updated physical quantity feedback generation procedure.
 
+## `rtol`
+Sets the relative tolerance, $e_r$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $\left|\frac{x-\tilde{x}}{x}\right| \leq e_r$. By default `rtol` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
+
 ## `strictness`
 
-Constrols the conventions used when parsing physical quantities.
+Controls the conventions used when parsing physical quantities.
 
 **Remark:** If `physical_quantity` is set to `false`, this parameter will be ignored. 
 
@@ -80,7 +86,9 @@ Controls what sets of units are used. There are three values `SI`, `common` and 
 
 If `SI` is chosen then only units from the tables `Base SI units` and `Derived SI units` (below) are allowed (in combinations with prefixes). If `common` is chosen then all the units allowed by `SI` as well as those listed in the tables for `Common non-SI units`. If `imperial` is chosen the base SI units and the units listed in the `Imperial units` table are allowed.
 
-**Remark:** The different settings can also be combine, e.g. `SI common imperial` will allow all units.
+**Remark:** The different settings can also be combined, e.g. `SI common imperial` will allow all units.
+
+The default setting is to allow all units, i.e. `units_string` is set to `SI common imperial`.
 
 ### Notation and definition of units
 
@@ -317,7 +325,7 @@ In the example set there is a response area with `complexNumbers` set to `true` 
 
 Any response that is mathematically equivalent to $2+i$ will be accepted, e.g. `2+I`, `2+(-1)^(1/2)`, `conjugate(2-I)`, `2sqrt(2)e^(I*pi/4)+e^(I*3*pi/2)` or `re(2-I)-im(2-I)*I`.
 
-**Note:** If the particular way that the answer is written matter, e.g. only answers on cartesian form should be accepted, then that requires further configuration, see the example *Syntactical comparison*.
+**Note:** If the particular way that the answer is written matter, e.g. only answers on Cartesian form should be accepted, then that requires further configuration, see the example *Syntactical comparison*.
 
 ### Using `constant` and `function` assumptions
 
@@ -340,9 +348,9 @@ By default `compareExpressions` assumes that symbols are independent of each oth
 Taking the ratio of the given answer and the example response gives:
 $$ \frac{\frac{\partial^2 T}{\partial x^2}+\frac{\dot{q}}{k} - \frac{1}{\alpha}\frac{\partial T}{\partial t}}{\alpha k \frac{\partial^2 T}{\partial x^2}+ \alpha \dot{q} - k \frac{\partial T}{\partial t}} = \alpha k $$
 
-By default $\alpha$ and $k$ are assumed to be variables so the ratio is not seen as a constant. This can be fixed by addding `('alpha','constant') ('k','constant')` to the `symbol_asssumptions` parameter.
+By default $\alpha$ and $k$ are assumed to be variables so the ratio is not seen as a constant. This can be fixed by adding `('alpha','constant') ('k','constant')` to the `symbol_asssumptions` parameter.
 
-The make it simpler and more intuitive to write valid reponses we add the following input symbols:
+The make it simpler and more intuitive to write valid responses we add the following input symbols:
 
 | Symbol                                  | Code                    | Alternatives                |
 | --------------------------------------- | ----------------------- | --------------------------- |
@@ -377,7 +385,7 @@ and
 
 ### Syntactical comparison
 
-Typically `compareExpressions` only checks if the response is mathematically equivalent to the answer. If we want to require that the answer is written in a cetain way, e.g. Cartesian form vs. exponential form of a complex number or standard form vs factorized form of a polynomial, further comparsions need to be done. There are some built in standard forms that can be detected, as well as a method that tries to match the way that the response is written in a limited fashion. Either method can be activated either by setting the flag `syntactical_comparison` to `true`, or by using the criteria `response written as answer`.
+Typically `compareExpressions` only checks if the response is mathematically equivalent to the answer. If we want to require that the answer is written in a certain way, e.g. Cartesian form vs. exponential form of a complex number or standard form vs factorized form of a polynomial, further comparisons need to be done. There are some built in standard forms that can be detected, as well as a method that tries to match the way that the response is written in a limited fashion. Either method can be activated either by setting the flag `syntactical_comparison` to `true`, or by using the criteria `response written as answer`.
 
 #### Standard forms for complex numbers
 

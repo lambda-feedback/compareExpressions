@@ -1,3 +1,14 @@
+# Default parameters for expression handling
+# Any contexts that use this collection of utility functions
+# must define values for theses parameters
+default_parameters = {
+    "complexNumbers": False,
+    "convention": "equal_precedence",
+    "elementary_functions": False,
+    "strict_syntax": True,
+    "multiple_answers_criteria": "all",
+}
+
 # -------- String Manipulation imports
 from .slr_parsing_utilities import (
     SLR_expression_parser,
@@ -81,12 +92,12 @@ def create_expression_set(exprs, params):
         expr = substitute_input_symbols(expr, params)[0]
         if "plus_minus" in params.keys():
             expr = expr.replace(params["plus_minus"], "plus_minus")
-    
+
         if "minus_plus" in params.keys():
             expr = expr.replace(params["minus_plus"], "minus_plus")
-    
+
         if ("plus_minus" in expr) or ("minus_plus" in expr):
-            for pm_mp_ops in [("+","-"),("-","+")]:
+            for pm_mp_ops in [("+", "-"), ("-", "+")]:
                 expr_string = expr.replace("plus_minus", pm_mp_ops[0]).replace("minus_plus", pm_mp_ops[1]).strip()
                 while expr_string[0] == "+":
                     expr_string = expr_string[1:]
@@ -256,7 +267,7 @@ def substitute_input_symbols(exprs, params):
     if "minus_plus" in params.keys():
         substitutions += [(params["minus_plus"], "minus_plus")]
 
-    if params.get("elementary_functions", False) is True:
+    if params["elementary_functions"] is True:
         for expr in exprs:
             substitutions += protect_elementary_functions_substitutions(expr)
 
@@ -431,6 +442,8 @@ def compute_relative_tolerance_from_significant_decimals(string):
     if re.fullmatch(is_number_regex, string) is None:
         rtol = 0
     else:
+        if "e" in string.casefold():
+            string = "".join(string.split())
         separators = "e*^ "
         separator_indices = []
         for separator in separators:
@@ -550,11 +563,11 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         beta = Symbol("beta")
         gamma = Symbol("gamma")
         zeta = Symbol("zeta")
-    if params.get("complexNumbers", False) is True:
+    if params["complexNumbers"] is True:
         from sympy import I
     else:
         I = Symbol("I")
-    if params.get("elementary_functions", False) is True:
+    if params["elementary_functions"] is True:
         from sympy import E
     else:
         E = Symbol("E")
@@ -583,12 +596,12 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "strict_syntax": strict_syntax,
         "symbol_dict": symbol_dict,
         "extra_transformations": tuple(),
-        "elementary_functions": params.get("elementary_functions", False),
-        "convention": params.get("convention", None),
+        "elementary_functions": params["elementary_functions"],
+        "convention": params["convention"],
         "simplify": params.get("simplify", False),
         "rationalise": params.get("rationalise", True),
         "constants": set(),
-        "complexNumbers": params.get("complexNumbers", False),
+        "complexNumbers": params["complexNumbers"],
     }
 
     symbol_assumptions = list(symbol_assumptions)
@@ -659,7 +672,6 @@ def parse_expression(expr_string, parsing_params):
         substitutions.sort(key=substitutions_sort_key)
         expr = substitute(expr, substitutions)
         expr = " ".join(expr.split())
-        # NOTE: for some unknown reason this does not work unless this is a lambda instead of a def
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
         if strict_syntax is True:
             transformations = parser_transformations[0:4]+extra_transformations

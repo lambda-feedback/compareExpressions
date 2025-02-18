@@ -10,6 +10,7 @@ from ..utility.physical_quantity_utilities import (
 )
 from ..preview_implementations.physical_quantity_preview import preview_function
 from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
+from ..utility.expression_utilities import default_parameters as symbolic_default_parameters
 from ..utility.expression_utilities import (
     substitute_input_symbols,
     create_sympy_parsing_params,
@@ -537,12 +538,12 @@ def expression_preprocess(name, expr, parameters):
         search_string = r"[0-9\(\) ]\* "+unit_short_forms
         match_content = re.search(search_string, expr)
         while match_content is not None:
-            expr = expr[0:match_content.span()[0]]+match_content.group().replace("*"," ")+expr[match_content.span()[1]:]
+            expr = expr[0:match_content.span()[0]]+match_content.group().replace("*", " ")+expr[match_content.span()[1]:]
             match_content = re.search(search_string, expr)
 
     prefixes = set(x[0] for x in set_of_SI_prefixes)
     fundamental_units = set(x[0] for x in set_of_SI_base_unit_dimensions)
-    units_string = parameters.get("units_string", "SI common imperial")
+    units_string = parameters["units_string"]
     valid_units = set()
     for key in units_sets_dictionary.keys():
         if key in units_string:
@@ -576,12 +577,28 @@ def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_as
     return parsing_parameters
 
 
+# CONSIDER: Move these to separate file so that they can be shared with
+# the preview function implementation (or move preview implementation here)
+default_parameters = deepcopy(symbolic_default_parameters)
+default_parameters.update(
+    {
+        "physical_quantity": True,
+        "strictness": "natural",
+        "units_string": "SI common imperial",
+    }
+)
+
+
+default_criteria = ["response matches answer"]
+
+
 context = {
     "expression_preview": preview_function,
     "generate_criteria_parser": generate_criteria_parser,
     "expression_preprocess": expression_preprocess,
     "expression_parse": parse_quantity,
-    "default_criteria": {"response matches answer"},
+    "default_parameters": default_parameters,
+    "default_criteria": default_criteria,
     "feedback_procedure_generator": feedback_procedure_generator,
     "feedback_string_generator": feedback_string_generator,
     "parsing_parameters_generator": parsing_parameters_generator,

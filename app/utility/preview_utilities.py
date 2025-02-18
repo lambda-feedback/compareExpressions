@@ -4,7 +4,10 @@ from typing_extensions import NotRequired
 from sympy import Symbol
 from latex2sympy2 import latex2sympy
 
+from copy import deepcopy
+
 from .expression_utilities import (
+    default_parameters,
     extract_latex,
     SymbolDict,
     find_matching_parenthesis,
@@ -48,8 +51,12 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
     Returns:
         str: The expression in sympy syntax.
     """
-    if parameters is None:
-        parameters = dict()
+    if parameters is not None:
+        for (key, value) in default_parameters.items():
+            if key not in parameters.keys():
+                parameters.update({key: value})
+    else:
+        parameters = deepcopy(default_parameters)
 
     substitutions = {}
 
@@ -67,7 +74,7 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
                 substitutions[mp_placeholder] = Symbol(mp_placeholder, commutative=False)
             if pm_placeholder is not None and mp_placeholder is not None:
                 break
-        for expr in create_expression_set(response.replace(r"\pm ",'plus_minus').replace(r"\mp ",'minus_plus'), parameters):
+        for expr in create_expression_set(response.replace(r"\pm ", 'plus_minus').replace(r"\mp ", 'minus_plus'), parameters):
             response_set.add(expr)
         response = response_set
     else:

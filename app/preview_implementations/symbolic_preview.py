@@ -1,5 +1,6 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
 from ..utility.expression_utilities import (
+    default_parameters,
     convert_absolute_notation,
     create_expression_set,
     create_sympy_parsing_params,
@@ -72,6 +73,10 @@ def preview_function(response: str, params: Params) -> Result:
     The way you wish to structure you code (all in this function, or
     split into many) is entirely up to you.
     """
+    for (key, value) in default_parameters.items():
+        if key not in params.keys():
+            params.update({key: value})
+
     original_response = response
 
     symbols: SymbolDict = params.get("symbols", {})

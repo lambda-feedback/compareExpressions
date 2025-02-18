@@ -507,5 +507,6 @@ class TestEvaluationFunction():
         assert result["is_correct"] is value
         assert set(feedback_tags) == set(result["tags"])
 
+
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

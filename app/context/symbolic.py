@@ -3,6 +3,7 @@ from sympy import Add, Pow, Mul, Equality, pi, im, I, N
 from sympy import re as real_part
 
 from ..utility.expression_utilities import (
+    default_parameters,
     parse_expression,
     create_sympy_parsing_params,
     preprocess_expression,
@@ -26,7 +27,7 @@ def expression_parse(name, expr, parameters, evaluation_result):
     return parse_expression(expr, parameters)
 
 
-default_criteria = {"response = answer"}
+default_criteria = ["response = answer"]
 
 
 def check_criterion(criterion, parameters_dict, generate_feedback=True):
@@ -783,6 +784,7 @@ context = {
     "generate_feedback": generate_criteria_parser,
     "expression_preprocess": expression_preprocess,
     "expression_parse": expression_parse,
+    "default_parameters": default_parameters,
     "default_criteria": default_criteria,
     "feedback_procedure_generator": feedback_procedure_generator,
     "feedback_string_generator": feedback_string_generator,
