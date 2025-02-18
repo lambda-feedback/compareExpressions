@@ -295,13 +295,16 @@ def substitute_input_symbols(exprs, params):
         for code in input_symbols_to_remove:
             del input_symbols[code]
 
-    # Since 'lambda' is a reserved keyword in python
-    # it needs to be replaced with 'lamda' for expression
-    # parsing to work properly
+    # Since 'lambda' and 'as' are reserved keywords in python they
+    # have to be replaced for expression parsing to work properly
     lambda_value = input_symbols.pop("lambda", {"latex": r"\lambda", "aliases": ["lambda"]})
     if lambda_value is not None:
         lambda_value["aliases"].append("lambda")
     input_symbols.update({"lamda": lambda_value})
+    as_value = input_symbols.pop("as", {"latex": r"as", "aliases": ["as"]})
+    if as_value is not None:
+        as_value["aliases"].append("as")
+        input_symbols.update({"a s": as_value})
     params.update({"symbols": input_symbols})
 
     for (code, symbol_data) in input_symbols.items():

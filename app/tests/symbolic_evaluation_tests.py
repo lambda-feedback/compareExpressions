@@ -1865,6 +1865,29 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    def test_as_in_expression(self):
+        response = "A/s(e^(-as)-e^(-bs))"
+        answer = "A/s(e^(-a*s)-e^(-b*s))"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_as_in_input_symbols(self):
+        response = "A/s(e^(-as)-e^(-bs))"
+        answer = "A/s(e^(-as)-e^(-bs))"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "as": {"aliases": ["a_s"], "latex": r"$a_s$"},
+                "bs": {"aliases": ["b_s"], "latex": r"$b_s$"},
+            },
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
