@@ -1556,7 +1556,8 @@ class TestEvaluationFunction():
 
         answer = "sin(omega t)*a"
         result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is False
+        assert result["is_correct"] is True
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

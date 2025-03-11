@@ -343,7 +343,7 @@ def substitute(string, substitutions):
         substitutions (required) : a list with elements of the form (string,string)
                                    or ((string,list of strings),string)
     Output:
-        A string that is the input string where any occurence of the left element
+        A string that is the input string where any occurrence of the left element
         of each pair in substitutions have been replaced with the corresponding right element.
         If the first element in the substitution is of the form (string,list of strings) then the substitution will only happen if the first element followed by one of the strings in the list in the second element.
     Remarks:
