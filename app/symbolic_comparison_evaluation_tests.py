@@ -1536,5 +1536,27 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    def test_as_substring_in_expression(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+
+        response = "asin(omega t)"
+
+        answer = "a*sin(omega t)"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+        answer = "a sin(omega t)"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+        response = "a*sin(omega t)"
+
+        answer = "sin(omega t)*a"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
