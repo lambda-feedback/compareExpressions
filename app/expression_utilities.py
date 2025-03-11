@@ -274,10 +274,10 @@ def substitute_input_symbols(exprs, params):
     if lambda_value is not None:
         lambda_value["aliases"].append("lambda")
     input_symbols.update({"lamda": lambda_value})
-    as_value = input_symbols.pop("as", {"latex": r"as", "aliases": ["as"]})
+    as_value = input_symbols.pop("as", None)
     if as_value is not None:
         as_value["aliases"].append("as")
-        input_symbols.update({"a s": as_value})
+        input_symbols.update({"a*s": as_value})
     params.update({"symbols": input_symbols})
 
     for (code, symbol_data) in input_symbols.items():
@@ -618,7 +618,7 @@ def parse_expression(expr, parsing_params):
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
     separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
-    # new approach
+
     substitutions = separate_unsplittable_symbols
     if parsing_params.get("elementary_functions", False) is True:
         alias_substitutions = []
@@ -629,6 +629,8 @@ def parse_expression(expr, parsing_params):
                 if alias in expr:
                     alias_substitutions += [(alias, " "+name)]
         substitutions += alias_substitutions
+    # Special substitution to avoid 'as' being a reserved keyword in python
+    substitutions += [("as", "a*s")]
     substitutions.sort(key=lambda x: -len(x[0]))
     expr = substitute(expr, substitutions)
     can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
