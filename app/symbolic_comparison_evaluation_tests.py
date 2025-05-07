@@ -1558,6 +1558,21 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    def test_alternatives_to_input_symbols_takes_priority_over_elementary_function_alternatives(self):
+        answer = "Ef*a/b"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "Ef": {"aliases": ["E"], "latex": r"$E$"},
+            },
+        }
+        response = "E*a/b"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+        response = "e*a/b"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
