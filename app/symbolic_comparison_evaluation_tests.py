@@ -1559,7 +1559,7 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     def test_alternatives_to_input_symbols_takes_priority_over_elementary_function_alternatives(self):
-        answer = "Ef*a/b"
+        answer = "Ef*exp(x)"
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1567,10 +1567,10 @@ class TestEvaluationFunction():
                 "Ef": {"aliases": ["E"], "latex": r"$E$"},
             },
         }
-        response = "E*a/b"
+        response = "E*e^x"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-        response = "e*a/b"
+        response = "e*e^x"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
