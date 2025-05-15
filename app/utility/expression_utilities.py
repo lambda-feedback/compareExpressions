@@ -267,11 +267,25 @@ def substitute_input_symbols(exprs, params):
     if "minus_plus" in params.keys():
         substitutions += [(params["minus_plus"], "minus_plus")]
 
-    if params["elementary_functions"] is True:
-        for expr in exprs:
-            substitutions += protect_elementary_functions_substitutions(expr)
+    input_symbols = params.get("symbols",dict())
 
-    input_symbols = params.get("symbols", dict())
+    input_symbols_alternatives = []
+    for (code, definition) in input_symbols.items():
+        input_symbols_alternatives += definition["aliases"]
+
+    if params.get("elementary_functions", False) is True:
+        alias_substitutions = []
+        for expr in exprs:
+            for (name, alias_list) in elementary_functions_names+special_symbols_names:
+                if name in input_symbols_alternatives:
+                    continue
+                else:
+                    if (name in expr) and not (name in input_symbols_alternatives):
+                        alias_substitutions += [(name, " "+name)]
+                    for alias in alias_list:
+                        if (alias in expr) and not (alias in input_symbols_alternatives):
+                            alias_substitutions += [(alias, " "+name)]
+        substitutions += alias_substitutions
 
     if "symbols" in params.keys():
         # Removing invalid input symbols
