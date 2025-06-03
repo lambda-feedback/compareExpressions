@@ -507,6 +507,54 @@ class TestEvaluationFunction():
         assert result["is_correct"] is value
         assert set(feedback_tags) == set(result["tags"])
 
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value, feedback_tags, additional_params",
+        [
+            (
+                "2*x^2+0.5+0.25*sin(x)^2",
+                "2*x^2",
+                "answer <= response, 2+answer > response",
+                False,
+                [
+                    "answer <= response_TRUE",
+                    "2+answer > response_UNKNOWN",
+                ],
+                {
+                    "symbol_assumptions": "('x', 'real')"
+                }
+            ),
+            (
+                "pi*n",
+                "0",
+                "sin(response)=0, response contains n",
+                True,
+                [
+                    "sin(response)=0_TRUE",
+                    "sin(response)=0_SAME_SYMBOLS_TRUE",
+                    "response contains n_TRUE",
+                ],
+                {
+                    "symbols": {
+                        "n": {
+                            "latex": r"\(n\)",
+                            "aliases": ["i", "k", "N", "I", "K"],
+                        },
+                    },
+                    "symbol_assumptions": "('n', 'integer')"
+                }
+            ),
+        ]
+    )
+    def test_custom_comparison_with_criteria(self, response, answer, criteria, value, feedback_tags, additional_params):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        params.update(additional_params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        assert set(feedback_tags) == set(result["tags"])
 
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

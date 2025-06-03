@@ -616,6 +616,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "rationalise": params.get("rationalise", True),
         "constants": set(),
         "complexNumbers": params["complexNumbers"],
+        "reserved_keywords": params.get("reserved_keywords",[]),
     }
 
     symbol_assumptions = list(symbol_assumptions)

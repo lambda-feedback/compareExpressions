@@ -90,7 +90,10 @@ def do_comparison(comparison_symbol, expression):
         "<=": lambda expr: bool(expression.cancel().simplify().simplify() <= 0),
     }
     comparison = comparisons[comparison_symbol.strip()]
-    result = comparison(expression)
+    try:
+        result = comparison(expression)
+    except Exception:
+        result = None
     return result
 
 
@@ -218,9 +221,13 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             return {
                 label+"_TRUE": None
             }
-        else:
+        elif result is False:
             return {
                 label+"_FALSE": None
+            }
+        else:
+            return {
+                label+"_UNKNOWN": None
             }
 
     def set_equivalence(unused_input):
@@ -718,14 +725,19 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
     def evaluation_node_internal(unused_input):
         result = check_criterion(criterion, parameters_dict, generate_feedback)
         label = criterion.content_string()
-        if result:
+        if result is True:
             return {
                 label+"_TRUE": feedback_string_generator_inputs
             }
-        else:
+        elif result is False:
             return {
                 label+"_FALSE": feedback_string_generator_inputs
             }
+        else:
+            return {
+                label+"_UNKNOWN": feedback_string_generator_inputs
+            }
+
     label = criterion.content_string()
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
@@ -747,6 +759,14 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
     )
     graph.attach(label+"_FALSE", END.label)
+    graph.attach(
+        label,
+        label+"_UNKNOWN",
+        summary="True",
+        details=label+" is false.",
+        feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
+    )
+    graph.attach(label+"_UNKNOWN", END.label)
     return graph
 
 

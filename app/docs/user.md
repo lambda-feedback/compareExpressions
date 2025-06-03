@@ -37,6 +37,20 @@ The `criteria` parameter reserves `response` and `answer` as keywords that will 
 
 **Note:** The `criteria` parameters functionality is currently under development and will rarely produce appropriate feedback and can be quite difficult to debug.
 
+### Available criteria
+
+**Note:** In the table below EXPRESSION is used to denote some mathematical expression, i.e. a string that contains mathematical symbols and operators, but no equal signs `=` or inequality signs `>`, '<'.
+
+| Name  | Syntax                         | Description                         | Example             |
+|-------|:-------------------------------|:------------------------------------|:--------------------|
+| EQUAL | `EXPRESSION = EXPRESSION`      | Checks if the expressions are equal | `answer = response` - Default way to check equality of expressions |
+| ORDER | `EXPRESSION ORDER EXPRESSION`  | Checks if the expressions have the given order. ORDER operators can be `>`, `<`, `>=`, `<=` | `answer > response` - Checks if the answer is greater than the response |
+| WHERE | `EXPRESSION = EXPRESSION where EXPRESSION = EXPRESSION; ... ; EXPRESSION = EXPRESSION` | Checks if the equality on the left side of `where` are equal if the equalities in the comma-separated list on the right side of `where` | `answer = response where x = 0` - Checks if the curves given by the answer and the response intersect when $x=0$. |
+| WRITTEN_AS | `EXPRESSION written as EXPRESSION` | Syntactical comparison, checks if the two expressions are written the same way. | `response written as answer` - Checks if the response is written in the same for as the answer (e.g. if answer is `(x+1)(x+2)` then the response `x^2+3x+2` will not satisfy the criteria but `(x+3)(x+4)` will). |
+| PROPORTIONAL | `EXPRESSION proportional to EXPRESSION` | Checks if one expression can be written is equivalent to the other expression multiplied by some constant. | `answer proportional to response` |
+| CONTAINS | `EXPRESSION contains EXPRESSION` | Checks if the left expression has the right expression as a subexpression. | `response contains x` - Checks if the response contains the symbol x |
+
+
 ## `elementary_functions`
 
 When using implicit multiplication function names with multiple characters are sometimes split and not interpreted properly. Setting `elementary_functions` to true will reserve the function names listed below and prevent them from being split. If a name is said to have one or more alternatives this means that it will accept the alternative names but the reserved name is what will be shown in the preview.
