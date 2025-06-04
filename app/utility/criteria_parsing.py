@@ -17,6 +17,7 @@ base_token_list = [
     (" *(>=?|<=?|ORDER) *", "ORDER"),  # less than (or equal), < (<=), greater than (or equal), > (>=)
     (" *where *", "WHERE"),
     (" *written +as *", "WRITTEN_AS"),
+    (" *proportional +to *", "PROPORTIONAL_TO"),
     (" *contains *", "CONTAINS"),
     (" *; *", "SEPARATOR"),
     (" *OTHER *", "OTHER", catch_undefined),
@@ -30,6 +31,10 @@ base_productions = [
     ("BOOL", "EQUAL where EQUAL_LIST", infix),
     ("BOOL", "RESERVED written as OTHER", infix),
     ("BOOL", "RESERVED written as RESERVED", infix),
+    ("EQUAL", "OTHER proportional to OTHER", infix),
+    ("EQUAL", "RESERVED proportional to OTHER", infix),
+    ("EQUAL", "OTHER proportional to RESERVED", infix),
+    ("EQUAL", "RESERVED proportional to RESERVED", infix),
     ("BOOL", "RESERVED contains OTHER", infix),
     ("BOOL", "RESERVED contains RESERVED", infix),
     ("EQUAL_LIST", "EQUAL;EQUAL", infix),

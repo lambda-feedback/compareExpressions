@@ -69,3 +69,8 @@ feedback_generators["SAME_FORM"] = lambda tag: lambda inputs: {
     "EXPONENTIAL": "Response and answer are both written on exponential form.",  # None,
     "UNKNOWN": "The response is not written on the expected form.",
 }[tag]
+feedback_generators["PROPORTIONAL_TO"] = lambda tag: lambda inputs: {
+    "TRUE": None,
+    "FALSE": None,
+    "UNKNOWN": None,
+}[tag]

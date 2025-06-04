@@ -55,7 +55,7 @@ def determine_context(parameters):
             input_symbols_reserved_codes.append(input_symbol[0])
             input_symbols_reserved_aliases += [ip for ip in input_symbol[1] if len(ip.strip()) > 0]
 
-    reserved_keywords_codes = {"where", "written as", "contains"}
+    reserved_keywords_codes = {"where", "written as", "contains", "proportional to"}
     reserved_keywords_aliases = {"plus_minus", "minus_plus"}
     for re in parameters["reserved_expressions_strings"].values():
         reserved_keywords_aliases = reserved_keywords_aliases.union(set(re.keys()))

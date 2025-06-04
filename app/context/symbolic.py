@@ -40,6 +40,8 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
         result = check_order(criterion, parameters_dict)
     elif label == "CONTAINS":
         result = check_contains_symbol(criterion, parameters_dict)
+    elif label == "PROPORTIONAL_TO":
+        result = check_proportionality(criterion, parameters_dict)
     elif label == "WHERE":
         crit = criterion.children[0]
         subs = criterion.children[1]
@@ -146,6 +148,20 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
 def check_order(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+    return result
+
+
+def check_proportionality(criterion, parameters_dict, local_substitutions=[]):
+    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+    result = None
+    if lhs_expr.cancel().simplify().simplify() != 0:
+        result = (rhs_expr/lhs_expr).cancel().simplify()
+    elif rhs_expr.cancel().simplify().simplify() != 0:
+        result = (lhs_expr/rhs_expr).cancel().simplify()
+    if result == 0 or result is None:
+        result = False
+    else:
+        result = result.is_constant()
     return result
 
 
@@ -335,7 +351,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     ans = parameters_dict["reserved_expressions"]["answer"]
     use_equality_equivalence = isinstance(res, Equality) or isinstance(ans, Equality)
 
-    # TODO: Make checking set quivalence its own context that calls symbolic comparisons instead
+    # TODO: Make checking set equivalence its own context that calls symbolic comparisons instead
     if use_set_equivalence is True:
         graph.add_evaluation_node(
             label,
