@@ -205,6 +205,7 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
     response = evaluation_parameters["reserved_expressions"]["response"]
     criteria_feedback = set()
     is_correct = True
+    custom_feedback = evaluation_parameters.get("custom_feedback",{})
     for (criterion_identifier, graph) in criteria_graphs.items():
         # TODO: Find better way to identify main criteria for criteria graph
         main_criteria = criterion_identifier+"_TRUE"
@@ -219,7 +220,7 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
         #       assumption that some way to return partial feedback
         #       before script has executed completely will be available
         #       in the future
-        evaluation_result.add_feedback_from_tags(criteria_feedback, graph)
+        evaluation_result.add_feedback_from_tags(criteria_feedback, graph, custom_feedback=custom_feedback)
     evaluation_result.is_correct = is_correct
     return
 
@@ -317,6 +318,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "numerical": parameters.get("numerical", False),
             "atol": parameters.get("atol", 0),
             "rtol": parameters.get("rtol", 0),
+            "custom_feedback": parameters.get("custom_feedback",{}),
         }
     )
 

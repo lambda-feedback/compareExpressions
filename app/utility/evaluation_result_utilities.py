@@ -25,13 +25,18 @@ class EvaluationResult:
             raise TypeError("Feedback must be on the form (tag, feedback).")
         self._feedback_tags
 
-    def add_feedback_from_tags(self, tags, graph):
+    def add_feedback_from_tags(self, tags, graph, custom_feedback=None):
+        if custom_feedback is None:
+            custom_feedback = {}
         for (tag, inputs) in tags.items():
             if tag not in self._feedback_tags.keys():
-                if inputs is None:
-                    feedback_string = graph.criteria[tag].feedback_string_generator(dict())
+                if tag in custom_feedback.keys():
+                    feedback_string = custom_feedback[tag]
                 else:
-                    feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
+                    if inputs is None:
+                        feedback_string = graph.criteria[tag].feedback_string_generator(dict())
+                    else:
+                        feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
                 self.add_feedback((tag, feedback_string))
 
     def add_criteria_graph(self, name, graph):

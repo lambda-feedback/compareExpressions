@@ -608,5 +608,41 @@ class TestEvaluationFunction():
         assert result["is_correct"] is value
         assert set(tags) == set(result["tags"])
 
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value, feedback_tags, custom_feedback, additional_params",
+        [
+            (
+                "2*x^2+0.5+0.25*sin(x)^2",
+                "2x^2",
+                "answer <= response, 2+answer > response",
+                False,
+                [
+                    "answer <= response_TRUE",
+                    "2+answer > response_UNKNOWN",
+                ],
+                {
+                    "answer <= response_TRUE": "AAA",
+                    "2+answer > response_UNKNOWN": "BBB",
+                },
+                {
+                    "symbol_assumptions": "('x', 'real')",
+                }
+            ),
+        ]
+    )
+    def test_criteria_custom_feedback(self, response, answer, criteria, value, feedback_tags, custom_feedback, additional_params):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+            "custom_feedback": custom_feedback,
+        }
+        params.update(additional_params)
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        assert set(feedback_tags) == set(result["tags"])
+        for string in custom_feedback.values():
+            assert string in result["feedback"]
+
 if __name__ == "__main__":
     pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])
