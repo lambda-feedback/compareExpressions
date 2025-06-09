@@ -208,7 +208,7 @@ def less_than_node(criterion, parameters, label=None):
 
 def less_than_or_equal_node(criterion, parameters, label=None):
     # TODO: Add nodes for the equal case
-    graph = comparison_base_graph(criterion, parameters, comparison_operator=">=", label=label)
+    graph = comparison_base_graph(criterion, parameters, comparison_operator="<=", label=label)
     return graph
 
 

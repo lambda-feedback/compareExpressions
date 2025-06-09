@@ -135,3 +135,5 @@ app/benchmark.py
 *.wpr
 *.wpu
 app/profiling_examples.py
+
+.idea/

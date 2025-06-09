@@ -269,6 +269,66 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    def test_quantity_response_less_than_answer(self):
+        ans = "15 Hz"
+        res = "10 Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response < answer"
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_quantity_response_greater_than_equal_answer(self):
+        ans = "5 Hz"
+        res = "10 Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response >= answer"
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_quantity_response_greater_than_equal_answer_equal(self):
+        ans = "10 Hz"
+        res = "10 Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response >= answer"
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_quantity_response_less_than_equal_answer(self):
+        ans = "15 Hz"
+        res = "10 Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response <= answer"
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_quantity_response_less_than_equal_answer_equal(self):
+        ans = "10 Hz"
+        res = "10 Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response <= answer"
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
     def test_radians_to_frequency(self):
         ans = "2*pi*f radian/second"
         res = "f Hz"
