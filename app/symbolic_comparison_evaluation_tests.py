@@ -1574,5 +1574,25 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
+    def test_integral(self):
+        response = "6y"
+        answer = "int(3*x*y, (x, 0, 2))"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_abstract_integral(self):
+        response = "int(f(x)+g(x), (x, a, b))"
+        answer = "int(g(x)+f(x), (x, a, b))"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

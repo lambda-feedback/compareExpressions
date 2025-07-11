@@ -45,7 +45,7 @@ elementary_functions_names = [
     ('exp', ['Exp']), ('E', ['e']), ('log', ['ln']),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
-    ('summation', ['sum','Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag']), ('conjugate', ['conj'])
+    ('summation', ['sum','Sum']), ('Derivative', ['diff']), ('Integral', ['int']), ('re', ['real']), ('im', ['imag']), ('conjugate', ['conj'])
 ]
 for data in elementary_functions_names:
     upper_case_alternatives = [data[0].upper()]
