@@ -1,3 +1,14 @@
+# Default parameters for expression handling
+# Any contexts that use this collection of utility functions
+# must define values for theses parameters
+default_parameters = {
+    "complexNumbers": False,
+    "convention": "equal_precedence",
+    "elementary_functions": False,
+    "strict_syntax": True,
+    "multiple_answers_criteria": "all",
+}
+
 # -------- String Manipulation imports
 from .slr_parsing_utilities import (
     SLR_expression_parser,
@@ -5,17 +16,19 @@ from .slr_parsing_utilities import (
     group,
     compose
 )
-
-from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
+from .syntactical_comparison_utilities import is_number_regex
 
 # (Sympy) Expression Parsing imports
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
-from sympy import Basic, Symbol, Function, Equality, I, im
-from sympy import re as real_part
+from sympy import Basic, Symbol, Equality, Function
+
 import re
 from typing import Dict, List, TypedDict
+
+from ..feedback.symbolic import feedback_generators as feedback_string_generators
+
 
 class ModifiedLatexPrinter(LatexPrinter):
     """Modified LatexPrinter class that prints logarithms other than the natural logarithm correctly.
@@ -35,6 +48,7 @@ class ModifiedLatexPrinter(LatexPrinter):
         else:
             return tex
 
+
 elementary_functions_names = [
     ('sin', []), ('sinc', []), ('csc', ['cosec']), ('cos', []), ('sec', []), ('tan', []), ('cot', ['cotan']),
     ('asin', ['arcsin']), ('acsc', ['arccsc', 'arccosec', 'acosec']), ('acos', ['arccos']), ('asec', ['arcsec']),
@@ -44,8 +58,11 @@ elementary_functions_names = [
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
     ('exp', ['Exp']), ('E', ['e']), ('log', ['ln']),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
+    ('oo',['Infinity', 'inf', 'infinity']),
+    # Special symbols to make sure plus_minus and minus_plus are not destroyed during preprocessing
+    ('plus_minus', []), ('minus_plus', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
-    ('summation', ['sum','Sum']), ('Derivative', ['diff']), ('Integral', ['int']), ('re', ['real']), ('im', ['imag']), ('conjugate', ['conj'])
+    ('summation', ['sum', 'Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag']), ('conjugate', ['conj'])
 ]
 for data in elementary_functions_names:
     upper_case_alternatives = [data[0].upper()]
@@ -56,7 +73,7 @@ for data in elementary_functions_names:
 
 greek_letters = [
     "Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta",
-    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda", # "lambda" removed to avoid collision with reserved keyword in python
+    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda",  # "lambda" removed to avoid collision with reserved keyword in python
     "Mu", "mu", "Nu", "nu",
     "Xi", "xi", "Omicron", "omicron", "Pi", "pi", "Rho", "rho", "Sigma", "sigma", "Tau", "tau", "Upsilon", "upsilon",
     "Phi", "phi", "Chi", "chi", "Psi", "psi", "Omega", "omega"
@@ -76,12 +93,12 @@ def create_expression_set(exprs, params):
         expr = substitute_input_symbols(expr, params)[0]
         if "plus_minus" in params.keys():
             expr = expr.replace(params["plus_minus"], "plus_minus")
-    
+
         if "minus_plus" in params.keys():
             expr = expr.replace(params["minus_plus"], "minus_plus")
-    
+
         if ("plus_minus" in expr) or ("minus_plus" in expr):
-            for pm_mp_ops in [("+","-"),("-","+")]:
+            for pm_mp_ops in [("+", "-"), ("-", "+")]:
                 expr_string = expr.replace("plus_minus", pm_mp_ops[0]).replace("minus_plus", pm_mp_ops[1]).strip()
                 while expr_string[0] == "+":
                     expr_string = expr_string[1:]
@@ -177,7 +194,7 @@ def convert_absolute_notation(expr, name):
     ambiguity_tag = "ABSOLUTE_VALUE_NOTATION_AMBIGUITY"
     remark = ""
     if n_expr > 2 and len(expr_ambiguous_abs_pos) > 0:
-        remark = symbolic_comparison_internal_messages[ambiguity_tag](name)
+        remark = feedback_string_generators["INTERNAL"](ambiguity_tag)({'name': name})
 
     feedback = None
     if len(remark) > 0:
@@ -217,6 +234,17 @@ def preprocess_according_to_chosen_convention(expression, parameters):
     return expression
 
 
+def protect_elementary_functions_substitutions(expr):
+    alias_substitutions = []
+    for (name, alias_list) in elementary_functions_names+special_symbols_names:
+        if name in expr:
+            alias_substitutions += [(name, " "+name+" ")]
+        for alias in alias_list:
+            if alias in expr:
+                alias_substitutions += [(alias, " "+name+" ")]
+    return alias_substitutions
+
+
 def substitute_input_symbols(exprs, params):
     '''
     Input:
@@ -231,7 +259,14 @@ def substitute_input_symbols(exprs, params):
     if isinstance(exprs, str):
         exprs = [exprs]
 
-    substitutions = [(expr, expr) for expr in params.get("reserved_keywords",[])]
+    substitutions = [(expr, expr) for expr in params.get("reserved_keywords", [])]
+    substitutions += [(expr, expr) for expr in params.get("unsplittable_symbols", [])]
+
+    if "plus_minus" in params.keys():
+        substitutions += [(params["plus_minus"], "plus_minus")]
+
+    if "minus_plus" in params.keys():
+        substitutions += [(params["minus_plus"], "minus_plus")]
 
     input_symbols = params.get("symbols",dict())
 
@@ -275,16 +310,13 @@ def substitute_input_symbols(exprs, params):
         for code in input_symbols_to_remove:
             del input_symbols[code]
 
-    # Since 'lambda' and 'as' are reserved keywords in python they
-    # have to be replaced for expression parsing to work properly
+    # Since 'lambda' is a reserved keyword in python
+    # it needs to be replaced with 'lamda' for expression
+    # parsing to work properly
     lambda_value = input_symbols.pop("lambda", {"latex": r"\lambda", "aliases": ["lambda"]})
     if lambda_value is not None:
         lambda_value["aliases"].append("lambda")
     input_symbols.update({"lamda": lambda_value})
-    as_value = input_symbols.pop("as", None)
-    if as_value is not None:
-        as_value["aliases"].append("as")
-        input_symbols.update({"a*s": as_value})
     params.update({"symbols": input_symbols})
 
     for (code, symbol_data) in input_symbols.items():
@@ -320,17 +352,23 @@ def substitute_input_symbols(exprs, params):
                 if len(alternative) > 0:
                     substitutions.append((alternative, input_symbol[0]))
 
+    # Since 'lambda' is a reserved keyword in python
+    # we need to make sure it is not substituted back in
+    substitutions = [(original, subs.replace("lambda", "lamda")) for (original, subs) in substitutions]
+
+    substitutions = list(set(substitutions))
     if len(substitutions) > 0:
-        substitutions.sort(key=lambda x: -len(x[0]))
+        substitutions.sort(key=substitutions_sort_key)
         for k in range(0, len(exprs)):
             exprs[k] = substitute(exprs[k], substitutions)
+            exprs[k] = " ".join(exprs[k].split())
 
     return exprs
 
 
 def find_matching_parenthesis(string, index, delimiters=None):
     depth = 0
-    if delimiters == None:
+    if delimiters is None:
         delimiters = ('(', ')')
     for k in range(index, len(string)):
         if string[k] == delimiters[0]:
@@ -350,9 +388,11 @@ def substitute(string, substitutions):
         substitutions (required) : a list with elements of the form (string,string)
                                    or ((string,list of strings),string)
     Output:
-        A string that is the input string where any occurrence of the left element
+        A string that is the input string where any occurence of the left element
         of each pair in substitutions have been replaced with the corresponding right element.
-        If the first element in the substitution is of the form (string,list of strings) then the substitution will only happen if the first element followed by one of the strings in the list in the second element.
+        If the first element in the substitution is of the form (string,list of strings) then
+        the substitution will only happen if the first element followed by one of the strings
+        in the list in the second element.
     Remarks:
         Substitutions are made in the input order but if a substitutions left element is a
         substring of a preceding substitutions right element there will be no substitution.
@@ -416,23 +456,22 @@ def substitute(string, substitutions):
 def compute_relative_tolerance_from_significant_decimals(string):
     rtol = None
     string = string.strip()
-    separators = "e*^ "
-    separator_indices = []
-    for separator in separators:
-        if separator in string:
-            separator_indices.append(string.index(separator))
-        else:
-            separator_indices.append(len(string))
-    index = min(separator_indices)
-    significant_characters = string[0:index].replace(".", "")
-    index = 0
-    for c in significant_characters:
-        if c in "-0":
-            index += 1
-        else:
-            break
-    significant_characters = significant_characters[index:]
-    rtol = 5*10**(-len(significant_characters))
+    if re.fullmatch(is_number_regex, string) is None:
+        rtol = 0
+    else:
+        if "e" in string.casefold():
+            string = "".join(string.split())
+        separators = "e*^ "
+        separator_indices = []
+        for separator in separators:
+            if separator in string:
+                separator_indices.append(string.index(separator))
+            else:
+                separator_indices.append(len(string))
+        index = min(separator_indices)
+        significant_characters = string[0:index].replace(".", "")
+        significant_characters = significant_characters.lstrip("-0")
+        rtol = 5*10**(-len(significant_characters))
     return rtol
 
 
@@ -529,7 +568,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
                         parse_expression function.
     '''
 
-    unsplittable_symbols = list(unsplittable_symbols)
+    unsplittable_symbols = list(unsplittable_symbols)+params.get("reserved_keywords", [])
     if "symbols" in params.keys():
         for symbol in params["symbols"].keys():
             if len(symbol) > 1:
@@ -541,13 +580,12 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         beta = Symbol("beta")
         gamma = Symbol("gamma")
         zeta = Symbol("zeta")
-    if params.get("complexNumbers", False) is True:
+    if params["complexNumbers"] is True:
         from sympy import I
     else:
         I = Symbol("I")
-    if params.get("elementary_functions", False) is True:
+    if params["elementary_functions"] is True:
         from sympy import E
-        e = E
     else:
         E = Symbol("E")
     N = Symbol("N")
@@ -575,11 +613,13 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "strict_syntax": strict_syntax,
         "symbol_dict": symbol_dict,
         "extra_transformations": tuple(),
-        "elementary_functions": params.get("elementary_functions", False),
-        "convention": params.get("convention", None),
+        "elementary_functions": params["elementary_functions"],
+        "convention": params["convention"],
         "simplify": params.get("simplify", False),
+        "rationalise": params.get("rationalise", True),
         "constants": set(),
-        "complexNumbers": params.get("complexNumbers", False),
+        "complexNumbers": params["complexNumbers"],
+        "reserved_keywords": params.get("reserved_keywords",[]),
     }
 
     symbol_assumptions = list(symbol_assumptions)
@@ -608,7 +648,21 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
     return parsing_params
 
 
-def parse_expression(expr, parsing_params):
+def substitutions_sort_key(x):
+    return -len(x[0])-len(x[1])/(10**(1+len(str(len(x[1])))))
+
+
+def preprocess_expression(name, expr, parameters):
+    expr = substitute_input_symbols(expr.strip(), parameters)
+    expr = expr[0]
+    expr, abs_feedback = convert_absolute_notation(expr, name)
+    success = True
+    if abs_feedback is not None:
+        success = False
+    return success, expr, abs_feedback
+
+
+def parse_expression(expr_string, parsing_params):
     '''
     Input:
         expr           : string to be parsed into a sympy expression
@@ -618,44 +672,49 @@ def parse_expression(expr, parsing_params):
         to the parameters in parsing_params
     '''
 
-    expr = preprocess_according_to_chosen_convention(expr, parsing_params)
+    expr_set = create_expression_set(expr_string, parsing_params)
 
     strict_syntax = parsing_params.get("strict_syntax", False)
     extra_transformations = parsing_params.get("extra_transformations", ())
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
-    separate_unsplittable_symbols = [(x, " "+x+" ") for x in unsplittable_symbols]
-
+    separate_unsplittable_symbols = [(x, " "+x) for x in unsplittable_symbols]
     substitutions = separate_unsplittable_symbols
-    if parsing_params.get("elementary_functions", False) is True:
-        alias_substitutions = []
-        for (name, alias_list) in elementary_functions_names+special_symbols_names:
-            if name in expr:
-                alias_substitutions += [(name, " "+name)]
-            for alias in alias_list:
-                if alias in expr:
-                    alias_substitutions += [(alias, " "+name)]
-        substitutions += alias_substitutions
-    # Special substitution to avoid 'as' being a reserved keyword in python
-    substitutions += [("as", "a*s")]
-    substitutions.sort(key=lambda x: -len(x[0]))
-    expr = substitute(expr, substitutions)
-    can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
-    if strict_syntax is True:
-        transformations = parser_transformations[0:4]+extra_transformations
+
+    parsed_expr_set = set()
+    for expr in expr_set:
+        expr = preprocess_according_to_chosen_convention(expr, parsing_params)
+        substitutions = list(set(substitutions))
+        substitutions.sort(key=substitutions_sort_key)
+        if parsing_params["elementary_functions"] is True:
+            substitutions += protect_elementary_functions_substitutions(expr)
+        substitutions = list(set(substitutions))
+        substitutions.sort(key=substitutions_sort_key)
+        expr = substitute(expr, substitutions)
+        expr = " ".join(expr.split())
+        can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
+        if strict_syntax is True:
+            transformations = parser_transformations[0:4]+extra_transformations
+        else:
+            transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8, 9]
+        if parsing_params.get("rationalise", False):
+            transformations += parser_transformations[11]
+        if "=" in expr:
+            expr_parts = expr.split("=")
+            lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
+            rhs = parse_expr(expr_parts[1], transformations=transformations, local_dict=symbol_dict)
+            parsed_expr = Equality(lhs, rhs, evaluate=False)
+        elif parsing_params.get("simplify", False):
+            parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
+            if not isinstance(parsed_expr, Equality):
+                parsed_expr = parsed_expr.simplify()
+        else:
+            parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+        if not isinstance(parsed_expr, Basic):
+            raise ValueError(f"Failed to parse Sympy expression `{expr}`")
+        parsed_expr_set.add(parsed_expr)
+
+    if len(expr_set) == 1:
+        return parsed_expr_set.pop()
     else:
-        transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8]
-    if parsing_params.get("rationalise", False):
-        transformations += parser_transformations[11]
-    if parsing_params.get("simplify", False):
-        parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
-        if not isinstance(parsed_expr,Equality):
-            parsed_expr = parsed_expr.simplify()
-    else:
-        parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-    if not isinstance(parsed_expr, Basic):
-        raise ValueError(f"Failed to parse Sympy expression `{expr}`")
-    if parsing_params.get("complexNumbers", False):
-        if im(parsed_expr) != 0:
-            parsed_expr = real_part(parsed_expr) + I*im(parsed_expr)
-    return parsed_expr
+        return parsed_expr_set

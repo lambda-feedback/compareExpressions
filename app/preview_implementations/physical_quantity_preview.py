@@ -1,33 +1,39 @@
-from sympy.parsing.sympy_parser import T as parser_transformations
-from .expression_utilities import (
-    extract_latex,
-    convert_absolute_notation,
-    create_expression_set,
-    create_sympy_parsing_params,
+from copy import deepcopy
+
+from ..utility.expression_utilities import (
     find_matching_parenthesis,
-    latex_symbols,
     parse_expression,
-    substitute_input_symbols,
     SymbolDict,
-    sympy_symbols,
     sympy_to_latex,
 )
 
-from .preview_utilities import (
+from ..utility.preview_utilities import (
     Params,
     Preview,
     Result,
-    extract_latex,
     parse_latex,
     sanitise_latex,
 )
 
-from .slr_quantity import SLR_quantity_parser
-from .slr_quantity import SLR_quantity_parsing as quantity_parsing
+from ..utility.expression_utilities import default_parameters as symbolic_default_parameters
+from ..utility.physical_quantity_utilities import SLR_quantity_parser as quantity_parser
+from ..utility.physical_quantity_utilities import SLR_quantity_parsing as quantity_parsing
+
+# CONSIDER: Move these to separate file so that they can be shared with
+# the physical quantity context (or move preview implementation into context file)
+default_parameters = deepcopy(symbolic_default_parameters)
+default_parameters.update(
+    {
+        "physical_quantity": True,
+        "strictness": "natural",
+        "units_string": "SI common imperial",
+    }
+)
+
 
 def fix_exponents(response):
     processed_response = []
-    exponents_notation = ['^','**']
+    exponents_notation = ['^', '**']
     for notation in exponents_notation:
         index = 0
         while index < len(response):
@@ -36,7 +42,7 @@ def fix_exponents(response):
                 processed_response.append(response[index:exponent_start])
                 exponent_start += len(notation)
                 processed_response.append("**")
-                exponent_end = find_matching_parenthesis(response, exponent_start, delimiters=('{','}'))
+                exponent_end = find_matching_parenthesis(response, exponent_start, delimiters=('{', '}'))
                 if exponent_end > 0:
                     inside_exponent = '('+response[(exponent_start+len(notation)):exponent_end]+')'
                     processed_response.append(inside_exponent)
@@ -50,7 +56,8 @@ def fix_exponents(response):
         processed_response = []
     return response
 
-def preview_function(response: str, params: Params, join_sympy=True) -> Result:
+
+def preview_function(response: str, params: Params) -> Result:
     """
     Function used to preview a student response.
     ---
@@ -70,6 +77,9 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     The way you wish to structure you code (all in this function, or
     split into many) is entirely up to you.
     """
+    for (key, value) in default_parameters.items():
+        if key not in params.keys():
+            params.update({key: value})
     symbols: SymbolDict = params.get("symbols", {})
 
     if not response:
@@ -78,13 +88,13 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     latex_out = ""
     sympy_out = ""
 
-    quantity_parser = SLR_quantity_parser(params)
+    parser = quantity_parser(params)
 
     try:
         if params.get("is_latex", False):
             response = sanitise_latex(response)
             response = fix_exponents(response)
-            res_parsed = quantity_parsing(response, params, quantity_parser, "response")
+            res_parsed = quantity_parsing(response, params, parser, "response")
             value = res_parsed.value
             unit = res_parsed.unit
             value_latex = ""
@@ -104,13 +114,13 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
             unit_sympy = res_parsed.unit.content_string() if unit is not None else ""
             sympy_out = value_sympy+separator_sympy+unit_sympy
         else:
-            res_parsed = quantity_parsing(response, params, quantity_parser, "response")
+            res_parsed = quantity_parsing(response, params, parser, "response")
             latex_out = res_parsed.latex_string
             sympy_out = response
 
     except SyntaxError as e:
-        raise ValueError("Failed to parse Sympy expression") from e
+        raise Exception("Failed to parse Sympy expression") from e
     except ValueError as e:
-        raise ValueError("Failed to parse LaTeX expression") from e
+        raise Exception("Failed to parse LaTeX expression") from e
 
     return Result(preview=Preview(latex=latex_out, sympy=sympy_out))

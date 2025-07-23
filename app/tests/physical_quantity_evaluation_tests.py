@@ -3,8 +3,8 @@ import os
 
 # Import necessary data and reference cases for tests
 from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
-from .evaluation import evaluation_function
-from .unit_system_conversions import (
+from ..evaluation import evaluation_function
+from ..utility.unit_system_conversions import (
     set_of_SI_prefixes,
     set_of_SI_base_unit_dimensions,
     set_of_derived_SI_units_in_SI_base_units,
@@ -45,21 +45,33 @@ class TestEvaluationFunction():
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
     def test_strict_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "strict",
+            "elementary_functions": True
+        }
         answer = string
         response = string
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-        assert result["response_latex"] == "~".join([latex for latex in [value_latex,unit_latex] if latex is not None])
+        assert result["response_latex"] == "~".join([latex for latex in [value_latex, unit_latex] if latex is not None])
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
     def test_natural_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "natural"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "natural",
+            "elementary_functions": True
+        }
         answer = string
         response = string
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-        assert result["response_latex"] == "~".join([latex for latex in [value_latex,unit_latex] if latex is not None])
+        assert result["response_latex"] == "~".join([latex for latex in [value_latex, unit_latex] if latex is not None])
 
     @pytest.mark.skip("Too resource intensive")
     def test_slow_quantity_alternative_names_natural_syntax(self):
@@ -80,10 +92,8 @@ class TestEvaluationFunction():
                                 response = prefix[0]+u1_alt+u2_alt
                                 try:
                                     result = evaluation_function(response, answer, params)
-                                except Exception as e:
+                                except Exception:
                                     errors.append((answer, response))
-                                    print((answer, response))
-                                    print(e)
                                     continue
                                 if result["is_correct"] is False:
                                     incorrect.append((answer, response, result["response_latex"]))
@@ -132,20 +142,20 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "value,unit,small_diff,large_diff",
         [
-            ("10.5",   "kg m/s^2", 0.04,    0.06),
-            ("10.55",  "kg m/s^2", 0.004,   0.006),
-            ("0.105",  "kg m/s^2", 0.0004,  0.0006),
-            ("0.0010", "kg m/s^2", 0.00004, 0.00006),
-            ("100",    "kg m/s^2", 0.4,     0.6),
-            ("100e10", "kg m/s^2", 4e9,     6e9)
+            ("10.5",       "kg m/s^2", 0.04,    0.06),
+            ("10.55",      "kg m/s^2", 0.004,   0.006),
+            ("0.105",      "kg m/s^2", 0.0004,  0.0006),
+            ("0.0010",     "kg m/s^2", 0.00004, 0.00006),
+            ("100",        "kg m/s^2", 0.4,     0.6),
+            ("100*10**10", "kg m/s^2", 4*10**9, 6*10**9)
         ]
     )
     def test_compute_relative_tolerance_from_significant_digits(self, value, unit, small_diff, large_diff):
         ans = value+" "+unit
-        res_correct_under = str(float(value)-small_diff)+" "+unit
-        res_correct_over = str(float(value)+small_diff)+" "+unit
-        res_incorrect_under = str(float(value)-large_diff)+" "+unit
-        res_incorrect_over = str(float(value)+large_diff)+" "+unit
+        res_correct_under = str(eval(value)-small_diff)+" "+unit
+        res_correct_over = str(eval(value)+small_diff)+" "+unit
+        res_incorrect_under = str(eval(value)-large_diff)+" "+unit
+        res_incorrect_over = str(eval(value)+large_diff)+" "+unit
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         assert evaluation_function(res_correct_under, ans, params)["is_correct"] is True
         assert evaluation_function(res_correct_over, ans, params)["is_correct"] is True
@@ -158,7 +168,8 @@ class TestEvaluationFunction():
             ("-10500 g m/s^2", "-10.5 kg m/s^2"),
             ("-10.5 mm^2", "-0.0000105 m^2"),
             ("5 GN", "5000000000 metre kilogram second^(-2)"),
-            ("10 pint", "5682.6 centimetre^3")
+            ("10 pint", "5682.6 centimetre^3"),
+            ("1 kg", "2.204 lb")
         ]
     )
     def test_convert_units(self, ans, res):
@@ -169,10 +180,10 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "ans,res,tag",
         [
-            ("-10.5 kg m/s^2", "kg m/s^2",       "MISSING_VALUE"),
-            ("-10.5 kg m/s^2", "-10.5",          "MISSING_UNIT"),
-            ("kg m/s^2",       "-10.5 kg m/s^2", "UNEXPECTED_VALUE"),
-            ("-10.5",          "-10.5 kg m/s^2", "UNEXPECTED_UNIT")
+            ("-10.5 kg m/s^2", "kg m/s^2",       "response matches answer_MISSING_VALUE"),
+            ("-10.5 kg m/s^2", "-10.5",          "response matches answer_MISSING_UNIT"),
+            ("kg m/s^2",       "-10.5 kg m/s^2", "response matches answer_UNEXPECTED_VALUE"),
+            ("-10.5",          "-10.5 kg m/s^2", "response matches answer_UNEXPECTED_UNIT")
         ]
     )
     def test_si_units_check_tag(self, ans, res, tag):
@@ -186,29 +197,35 @@ class TestEvaluationFunction():
         res = "-10.5 kg m/s^"
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         result = evaluation_function(res, ans, params, include_test_data=True)
-        assert "PARSE_EXCEPTION" in result["tags"]
+        assert "PARSE_ERROR_response" in result["tags"]
         assert result["is_correct"] is False
 
     @pytest.mark.parametrize(
         "res,is_correct,tag",
         [
-            ("-10.5 kilogram metre/second^2",           True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.5 kilogram m/s^2",                    True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.5 kg m/s^2",                          True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-0.5 kg m/s^2+10 kg m/s^2",               False, "REVERTED_UNIT"),
-            ("-10500 g m/s^2",                          True,  "PREFIX_IS_SMALL"),
-            ("-10.46 kg m/s^2",                         True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.54 kg m/s^2",                         True,  "RESPONSE_MATCHES_ANSWER"),
-            ("-10.44 kg m/s^2",                         False, "RESPONSE_MATCHES_ANSWER"),
-            ("-10.56 kg m/s^2",                         False, "RESPONSE_MATCHES_ANSWER"),
-            ("-10.5",                                   False, "MISSING_UNIT"),
-            ("kg m/s^2",                                False, "MISSING_VALUE"),
-            ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "RESPONSE_MATCHES_ANSWER"),
+            ("-10.5 kilogram metre/second^2",           True,  "response matches answer_TRUE"),
+            ("-10.5 kilogram m/s^2",                    True,  "response matches answer_TRUE"),
+            ("-10.5 kg m/s^2",                          True,  "response matches answer_TRUE"),
+            ("-0.5 kg m/s^2+10 kg m/s^2",               False, "response_REVERTED_UNIT_3"),
+            ("-10500 g m/s^2",                          True,  "response matches answer_UNIT_COMPARISON_PREFIX_IS_SMALL"),
+            ("-10.46 kg m/s^2",                         True,  "response matches answer_TRUE"),
+            ("-10.54 kg m/s^2",                         True,  "response matches answer_TRUE"),
+            ("-10.44 kg m/s^2",                         False, "response matches answer_FALSE"),
+            ("-10.56 kg m/s^2",                         False, "response matches answer_FALSE"),
+            ("-10.5",                                   False, "response matches answer_MISSING_UNIT"),
+            ("kg m/s^2",                                False, "response matches answer_MISSING_VALUE"),
+            ("-sin(pi/2)*sqrt(441)^(0.77233) kg m/s^2", True,  "response matches answer_TRUE"),
         ]
     )
     def test_demo_si_units_demo_a(self, res, is_correct, tag):
         ans = "-10.5 kilogram metre/second^2"
-        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "units_string": "SI",
+            "strictness": "strict",
+            "elementary_functions": True,
+        }
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert tag in result["tags"]
         assert result["is_correct"] is is_correct
@@ -216,10 +233,10 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "res,ans,is_correct,tag,latex",
         [
-            ("-10.5",          "-10.5",    True,  "RESPONSE_MATCHES_ANSWER", r"-10.5"),
-            ("-10.5 kg m/s^2", "-10.5",    False, "UNEXPECTED_UNIT",         r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
-            ("kg m/s^2",       "kg m/s^2", True,  "RESPONSE_MATCHES_ANSWER", r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
-            ("-10.5 kg m/s^2", "kg m/s^2", False, "UNEXPECTED_VALUE",        r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
+            ("-10.5",          "-10.5",    True,  "response matches answer_TRUE", r"-10.5"),
+            ("-10.5 kg m/s^2", "-10.5",    False, "response matches answer_UNEXPECTED_UNIT",         r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
+            ("kg m/s^2",       "kg m/s^2", True,  "response matches answer_TRUE", r"\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
+            ("-10.5 kg m/s^2", "kg m/s^2", False, "response matches answer_UNEXPECTED_VALUE",        r"-10.5~\mathrm{kilogram}~\frac{\mathrm{metre}}{\mathrm{second}^{2}}"),
         ]
     )
     def test_demo_si_units_demo_b(self, res, ans, is_correct, tag, latex):
@@ -236,6 +253,18 @@ class TestEvaluationFunction():
             "strict_syntax": False,
             "physical_quantity": True,
             "elementary functions": True
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_quantity_with_multiple_of_positive_value(self):
+        ans = "5 Hz"
+        res = "10 Hz"
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response > answer"
         }
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
@@ -296,5 +325,66 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    def test_physical_quantity_with_rtol(self):
+        ans = "7500 m/s"
+        res = "7504.1 m/s"
+        params = {
+            'rtol': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_physical_quantity_with_atol(self):
+        ans = "7500 m/s"
+        res = "7504.1 m/s"
+        params = {
+            'atol': 5,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+#    def test_rad_vs_Hz(self):
+#        ans = "28.53 rad/s"
+#        res = "4.5405 H"
+#        params = {
+#            'rtol': 0.03,
+#            'strict_syntax': False,
+#            'physical_quantity': True,
+#            'elementary_functions': True,
+#        }
+#        result = evaluation_function(res, ans, params, include_test_data=True)
+#        assert result["is_correct"] is True
+
+    def test_tolerance_given_as_string(self):
+        ans = "4.52 kg"
+        res = "13.74 kg"
+        params = {
+            'rtol': '0.015',
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_answer_zero_value(self):
+        ans = "0 m"
+        res = "1 m"
+        params = {
+            'rtol': 0,
+            'atol': 0,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
 if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

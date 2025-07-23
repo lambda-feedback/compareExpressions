@@ -1,8 +1,9 @@
 import os
 import pytest
 
-from .preview_utilities import Params, extract_latex
+from .utility.preview_utilities import Params
 from .preview import preview_function
+
 
 class TestPreviewFunction():
     """
@@ -24,10 +25,10 @@ class TestPreviewFunction():
     """
 
     # Import tests that makes sure that mathematical expression comparison works as expected
-    from .symbolic_comparison_preview_tests import TestPreviewFunction as TestSymbolicComparison
+    from .tests.symbolic_preview_tests import TestPreviewFunction as TestSymbolicComparison
 
     # Import tests that makes sure that physical quantities are handled as expected
-    from .quantity_comparison_preview_tests import TestPreviewFunction as TestQuantityComparison
+    from .tests.physical_quantity_preview_tests import TestPreviewFunction as TestQuantityComparison
 
     def test_empty_latex_expression(self):
         response = ""
@@ -75,5 +76,6 @@ class TestPreviewFunction():
         preview = result["preview"]
         assert preview["latex"] == r"\ln{\left(x \right)}"
 
+
 if __name__ == "__main__":
-    pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])
+    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])

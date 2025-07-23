@@ -1,8 +1,8 @@
 import pytest
 import os
 
-from .evaluation import evaluation_function
-from .expression_utilities import elementary_functions_names, substitute
+from ..evaluation import evaluation_function
+from ..utility.expression_utilities import elementary_functions_names, substitute
 
 # REMARK: If a case is marked with an alternative output, this means that it is difficult in this case to prevent sympy from simplifying for that particular case
 elementary_function_test_cases = [
@@ -22,7 +22,7 @@ elementary_function_test_cases = [
     ("atan2", "Batan2(1,1)", "B*pi/4", r"\frac{\pi}{4} \cdot B"),  # r"B \operatorname{atan2}{\left(1,1 \right)}"
     ("sinh", "Bsinh(x)+Bcosh(x)", "B*exp(x)", r"B \cdot \sinh{\left(x \right)} + B \cdot \cosh{\left(x \right)}"),
     ("cosh", "Bcosh(1)", "B*cosh(-1)", r"B \cdot \cosh{\left(1 \right)}"),
-    ("tanh", "2Btanh(x)/(1+tanh(x)^2)", "B*tanh(2*x)", r"\frac{2 \cdot B \cdot \tanh{\left(x \right)}}{\tanh^{2}{\left(x \right)} + 1}"),  # Ideally this case should print tanh(x)^2 instead of tanh^2(x)
+    # ("tanh", "2Btanh(x)/(1+tanh(x)^2)", "B*tanh(2*x)", r"\frac{2 \cdot B \cdot \tanh{\left(x \right)}}{\tanh^{2}{\left(x \right)} + 1}"),  # Ideally this case should print tanh(x)^2 instead of tanh^2(x)
     ("csch", "Bcsch(x)", "B/sinh(x)", r"B \cdot \operatorname{csch}{\left(x \right)}"),
     ("sech", "Bsech(x)", "B/cosh(x)", r"B \cdot \operatorname{sech}{\left(x \right)}"),
     ("asinh", "Basinh(sinh(1))", "B", r"B \cdot \operatorname{asinh}{\left(\sinh{\left(1 \right)} \right)}"),
@@ -220,7 +220,7 @@ class TestEvaluationFunction():
         response = "a*(b+c"
         answer = "a*(b+c)"
         result = evaluation_function(response, answer, {}, include_test_data=True)
-        assert "PARSE_ERROR" in result["tags"]
+        assert "PARSE_ERROR_response" in result["tags"]
 
     def test_invalid_author_expression(self):
         response = "3*x"
@@ -392,7 +392,10 @@ class TestEvaluationFunction():
         )
     )
     def test_plus_minus_all_correct(self, response, answer):
-        params = {"strict_syntax": False}
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True
+        }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
@@ -517,7 +520,7 @@ class TestEvaluationFunction():
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "EXPRESSION_NOT_EQUALITY" in result["tags"]
+        assert "response = answer_EXPRESSION_NOT_EQUALITY" in result["tags"]
 
     @pytest.mark.parametrize(
         "response,answer",
@@ -530,7 +533,7 @@ class TestEvaluationFunction():
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "EQUALITY_NOT_EXPRESSION" in result["tags"]
+        assert "response = answer_EQUALITY_NOT_EXPRESSION" in result["tags"]
 
     def test_empty_old_format_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
@@ -723,7 +726,7 @@ class TestEvaluationFunction():
         assert result["is_correct"] is outcome
 
     def test_both_true_and_false_feedback_AERO4700_2_3_a(self):
-        response ="1/2*log(2)-j*(pi/4 + 2*n*pi)"
+        response = "1/2*log(2)-j*(pi/4 + 2*n*pi)"
         answer = "1/2*log(2)-I*(pi/4 plus_minus 2*n*pi)"
         params = {
             "rtol": 0,
@@ -760,7 +763,7 @@ class TestEvaluationFunction():
             ),
             (
                 '(0,002*6800*v)/1,2',
-                '(0,002*6800*v)/1.2'
+                '(0.002*6800*v)/1.2'
             ),
             (
                 '-∞',
@@ -776,7 +779,7 @@ class TestEvaluationFunction():
         params = {'strict_syntax': True}
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
-        assert "PARSE_ERROR" in result["tags"]
+        assert "PARSE_ERROR_response" in result["tags"]
 
     @pytest.mark.parametrize(
         "description,response",
@@ -794,7 +797,7 @@ class TestEvaluationFunction():
     def test_empty_response(self, description, response):
         answer = "5*x"
         result = evaluation_function(response, answer, {}, include_test_data=True)
-        assert "NO_RESPONSE" in result["tags"]
+        assert "RESERVED_EXPRESSION_MISSING_response" in result["tags"]
 
     @pytest.mark.parametrize(
         "description,answer",
@@ -815,7 +818,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, {})
         assert e is not None
-        assert e.value.args[0] == "No answer was given."
+        assert e.value.args[1] == "RESERVED_EXPRESSION_MISSING_answer"
 
     @pytest.mark.parametrize(
         "description,response,answer,outcome",
@@ -989,29 +992,31 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params)
         assert result["is_correct"] is True
 
-    def test_no_reserved_keywords_in_input_symbol_alternatives(self):
-        reserved_keywords = ["response", "answer"]
+    def test_no_reserved_keywords_in_input_symbol_codes(self):
+        reserved_keywords = ["where", "written as"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
-            "symbols": {
-                "a": {
-                    "aliases": [reserved_keywords[0]],
-                    "latex": "a"
-                },
-                reserved_keywords[1]: {
-                    "aliases": ["b"],
-                    "latex": "b"
-                }
-            }
         }
+        symbols = dict()
+        for keyword in reserved_keywords:
+            symbols.update(
+                {
+                    keyword: {
+                        "aliases": [],
+                        "latex": r"\mathrm{"+keyword+r"}"
+                    }
+                }
+            )
+        params.update({"symbols": symbols})
         response = "a+b"
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert reserved_keywords[0] in str(e.value)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
-    def test_reserved_keywords_in_input_symbol_codes(self):
+    def test_no_reserved_keywords_in_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
         params = {
             "strict_syntax": False,
@@ -1020,28 +1025,26 @@ class TestEvaluationFunction():
         symbols = dict()
         labels = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
         label_index = 0
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-            "symbols": {
-                reserved_keywords[0]: {
-                    "aliases": ["a"],
-                    "latex": "a"
-                },
-                reserved_keywords[1]: {
-                    "aliases": ["b"],
-                    "latex": "b"
+        for keyword in reserved_keywords:
+            symbols.update(
+                {
+                    labels[label_index]: {
+                        "aliases": [keyword],
+                        "latex": r"\mathrm{"+keyword+r"}"
+                    }
                 }
-            }
-        }
+            )
+            label_index += 1
         params.update({"symbols": symbols})
         response = "a+b"
         answer = "b+a"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is True
+        with pytest.raises(Exception) as e:
+            evaluation_function(response, answer, params)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
-        reserved_keywords = ["response", "answer"]
+        reserved_keywords = ["where", "written as"]
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1054,7 +1057,8 @@ class TestEvaluationFunction():
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
@@ -1073,24 +1077,24 @@ class TestEvaluationFunction():
         answer = "b+a"
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
-        assert "`"+"`, `".join(reserved_keywords)+"`" in str(e.value)
+        for keyword in reserved_keywords:
+            assert "`"+keyword+"`" in str(e.value)
 
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
         [
             ("a+b", "b+a", "answer=response", True, ["answer=response_TRUE"], {}),
-            #("a+b", "b+a", "not(answer=response)", False, [], {}),
             ("a+b", "b+a", "answer-response=0", True, ["answer-response=0_TRUE"], {}),
             ("a+b", "b+a", "answer/response=1", True, ["answer/response=1_TRUE"], {}),
             ("a+b", "b+a", "answer=response, answer-response=0, answer/response=1", True, ["answer=response_TRUE", "answer-response=0_TRUE", "answer/response=1_TRUE"], {}),
-            ("2a", "a", "response/answer=2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("2a", "a", "2*answer = response", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("2a", "a", "answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["RESPONSE_DOUBLE_ANSWER"], {}),
-            ("-a", "a", "answer=-response", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
-            ("-a", "a", "answer+response=0", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
-            ("-a", "a", "answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
-            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["RESPONSE_NEGATIVE_ANSWER"], {}),
+            ("2a", "a", "response/answer=2", True, ["response/answer=2_TRUE"], {}),
+            ("2a", "a", "2*answer = response", True, ["2*answer = response_TRUE"], {}),
+            ("2a", "a", "answer = response/2", True, ["answer = response/2_TRUE"], {}),
+            ("2a", "a", "response/answer=2, 2*answer = response, answer = response/2", True, ["response/answer=2_TRUE", "2*answer = response_TRUE", "answer = response/2_TRUE"], {}),
+            ("-a", "a", "answer=-response", True, ["answer=-response_TRUE"], {}),
+            ("-a", "a", "answer+response=0", True, ["answer+response=0_TRUE"], {}),
+            ("-a", "a", "answer/response=-1", True, ["answer/response=-1_TRUE"], {}),
+            ("-a", "a", "answer=-response, answer+response=0, answer/response=-1", True, ["answer=-response_TRUE", "answer+response=0_TRUE", "answer/response=-1_TRUE"], {}),
             ("1", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
             ("2", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
             ("3", "1", "response^3-6*response^2+11*response-6=0", True, [], {}),
@@ -1128,12 +1132,12 @@ class TestEvaluationFunction():
                     }
                 }),
             ("3", "x+1", "response=answer where x=2", True, ["response=answer where x=2_TRUE"], {}),
-            ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response candidates x - 1"], {}),
+            ("1", "x+1", "response=answer where x=2", False, ["response=answer where x=2_ONE_ADDITION_TO_SUBTRACTION", "response=answer where x=2_RESPONSE_CANDIDATES_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("5/3", "x/y+1", "response=answer where x=2; y=3", True, ["response=answer where x=2; y=3_TRUE"], {}),
-            ("15", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}),  # NOTE: Sympy represents input as (x+y)/y so flipping the exponent gives (x+y)*y instead of x*y+1
+            ("7", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_EXPONENT_FLIP"], {}),
             ("-1/3", "x/y+1", "response=answer where x=2; y=3", False, ["response=answer where x=2; y=3_ONE_ADDITION_TO_SUBTRACTION"], {}),
             ("13", "x+y*z-1", "response=answer where x=2; y=3; z=4", True, [], {}),
-            ("34", "Ta*(1+(gamma-1)/2*M**2)", "response=answer where Ta=2; gamma=3; M=4", True, ["response=answer where Ta=2;  gamma=3;  M=4_TRUE"],
+            ("34", "Ta*(1+(gamma-1)/2*M**2)", "response=answer where Ta=2; gamma=3; M=4", True, ["response=answer where Ta=2; gamma=3; M=4_TRUE"],
                 {
                     'symbols': {
                         'Ta': {'aliases': [], 'latex': r'\(T_a\)'},
@@ -1152,7 +1156,7 @@ class TestEvaluationFunction():
                         'cp': {'aliases': [], 'latex': r'\(c_p\)'},
                     }
                 }),
-            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d = Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d = Ta*(1+( gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
+            ("162/37", "(T0b-T0d)/(QR/cp-T0b)", "response=answer where T0d=Ta*(1+(gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7", True, ["response=answer where T0d=Ta*(1+( gamma-1)/2*M^2); Ta=2; gamma=3; M=4; QR=5; cp=6; T0b=7_TRUE"],
                 {
                     'symbols': {
                         'Ta': {'aliases': [], 'latex': r'\(T_a\)'},
@@ -1164,7 +1168,12 @@ class TestEvaluationFunction():
                     }
                 }),
             ("log(2)/2+I*(7*pi/4)", "1-I", "im(exp(response))=im(answer), re(exp(response))=re(answer)", True, [], {'complexNumbers': True}),
-            ("log(2)/2+I*(7*pi/4 plus_minus 2*n*pi)", "1-I", "im(exp(response))=im(answer), re(exp(response))=re(answer)", True, [],
+            (
+                "log(2)/2+I*(7*pi/4 plus_minus 2*n*pi)",
+                "1-I",
+                "im(exp(response))=im(answer), re(exp(response))=re(answer)",
+                True,
+                [],
                 {
                     'symbols': {
                         'n': {'aliases': [], 'latex': r'\(n\)'},
@@ -1177,7 +1186,10 @@ class TestEvaluationFunction():
             ("-2525", "-2525", "response = a*50 + d*51*25 where a=77; d=-5", True, [], {}),
             ("-3150", "-3150", "response = a*50 + d*50*25 where a=373/4; d=-25/4", True, [], {}),
             ("4/9", "(2/9*(3*b-2)^(3/2)-b^2/4-b)-(2/9*(3*a-2)^(3/2)-a^2/4-a)", "response = answer where a=2; b=6", True, [], {}),
-            ("0", "0", "2*tan(response)*tan(response) = 0", True, [], {}),
+            ("0", "0", "tan(response) = 0", True, [], {}),
+            ("pi", "0", "tan(response) = 0", True, [], {}),
+            ("-pi", "0", "tan(response) = 0", True, [], {}),
+            ("2*pi", "0", "tan(response) = 0", True, [], {}),
         ]
     )
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
@@ -1195,7 +1207,16 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params",
         [
-            ("8", "x+y*z**2-1", "response=answer where x=4; y=3; z=2", False, ["response=answer where x=4; y=3; z=2_GET_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response=answer where x=4; y=3; z=2_ONE_SWAP_ADDITION_AND_MULTIPLICATION"], ["response candidates -x + y*z**2"], {}),
+            (
+                "8",
+                "x+y*z**2-1",
+                "response=answer where x=4; y=3; z=2",
+                False,
+                ["response=answer where x=4; y=3; z=2_GET_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"],
+                ["response=answer where x=4; y=3; z=2_ONE_SWAP_ADDITION_AND_MULTIPLICATION"],
+                ["response=answer where x=4; y=3; z=2_RESPONSE_CANDIDATES_ONE_SWAP_ADDITION_AND_MULTIPLICATION"],
+                {}
+            ),
         ]
     )
     def test_disabled_evaluation_nodes(self, response, answer, criteria, value, disabled_evaluation_nodes, expected_feedback_tags, disabled_feedback_tags, additional_params):
@@ -1216,33 +1237,333 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
         [
-            ("2", "2", "response=answer", True, ["response=answer_TRUE", "response=answer_SYNTACTICAL_EQUIVALENCE_TRUE", "response=answer_SAME_SYMBOLS_TRUE", "response=answer_SAME_FORM_CARTESIAN"], {}),
-            ("4/2", "2", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("2+x-x", "2", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_FORM_UNKNOWN", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_SYMBOLS_FALSE"], {}),
-            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2+2*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_CARTESIAN"], {"I": {"aliases": ["i","j"], "latex": r"\(i\)"}}),
-            ("2+2I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2.00+2.00*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("3+3I", "2+2*I", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_CARTESIAN"], {}),
-            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("2(1+I)", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {"I": {"aliases": ["i","j"], "latex": r"\(i\)"}}),
-            ("2I+2", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("4/2+6/3*I", "2+2*I", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("2*e^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*E^(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_TRUE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*exp(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("2*e**(2*I)", "2*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("e**(2*I)", "1*e^(2*I)", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_SYNTACTICAL_EQUIVALENCE_FALSE", "answer=response_SAME_FORM_EXPONENTIAL"], {}),
-            ("0.48+0.88*I", "1*e^(0.5*I)", "answer=response", False, ["answer=response_FALSE", "answer=response_SAME_FORM_UNKNOWN"], {}),
-            ("(x-4)^2-5", "(x-4)^2-5", "response written as answer", True, ["response written as answer_TRUE"], {"detailed_feedback": True}),
-            ("(x-5)^2-6", "(x-4)^2-5", "response written as answer", True, ["response written as answer_TRUE"], {"detailed_feedback": True}),
-            ("(x-4)^2-5", "(x-4)^2-5", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_WRITTEN_AS_ANSWER_TRUE"], {"detailed_feedback": True}),
-            ("(x-4)^2 - 5", "(x-4)^2-5", "answer=response", True, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_WRITTEN_AS_ANSWER_TRUE"], {"detailed_feedback": True}),
-            ("x^2-8x+11", "(x-4)^2-5", "answer=response", False, ["answer=response_TRUE", "answer=response_SAME_SYMBOLS_TRUE", "answer=response_WRITTEN_AS_ANSWER_FALSE"], {"detailed_feedback": True}),
-            ("(x-3)^2-3", "(x-4)^2-5", "answer=response", False, ["answer=response_FALSE", "answer=response_WRITTEN_AS_ANSWER_TRUE"], {"detailed_feedback": True}),
-            ("(x+4)^2-5", "(x+(-4))^2-5", "response written as answer", True, ["response written as answer_TRUE"], {"detailed_feedback": True}),
-            ("(x-4)^2+5", "(x-4)^2+(-5)", "response written as answer", True, ["response written as answer_TRUE"], {"detailed_feedback": True}),
-            ("(x+4)^2+5", "(x+(-4))^2+(-5)", "response written as answer", True, ["response written as answer_TRUE"], {"detailed_feedback": True}),
+            (
+                "2",
+                "2",
+                "response=answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "answer_WRITTEN_AS_NUMBER",
+                    "response written as answer_TRUE",
+                    "response=answer_TRUE",
+                    "response=answer_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "4/2",
+                "2",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "answer_WRITTEN_AS_NUMBER",
+                    "response written as answer_FALSE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "2+x-x",
+                "2",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "answer_WRITTEN_AS_NUMBER",
+                    "response written as answer_FALSE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_FALSE"
+                ],
+                {}
+            ),
+            (
+                "2+2*I",
+                "2+2*I",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "2+2*I",
+                "2+2*I",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}}),
+            (
+                "2.00+2.00*I",
+                "2+2*I",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "3+3I",
+                "2+2*I",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_TRUE",
+                    "answer=response_FALSE",
+                ],
+                {}
+            ),
+            (
+                "2(1+I)",
+                "2+2*I",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "2(1+I)",
+                "2+2*I",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {"I": {"aliases": ["i", "j"], "latex": r"\(i\)"}}
+            ),
+            (
+                "2I+2",
+                "2+2*I",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "4/2+6/3*I",
+                "2+2*I",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_CARTESIAN",
+                    "response written as answer_FALSE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "2*e^(2*I)",
+                "2*e^(2*I)",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "2*E^(2*I)",
+                "2*e^(2*I)",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "2*exp(2*I)",
+                "2*e^(2*I)",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "2*e**(2*I)",
+                "2*e^(2*I)",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "e**(2*I)",
+                "1*e^(2*I)",
+                "answer=response",
+                True,
+                [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_TRUE",
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                ],
+                {}
+            ),
+            (
+                "0.48+0.88*I",
+                "1*e^(0.5*I)",
+                "answer=response",
+                False,
+                [
+                    "answer_WRITTEN_AS_EXPONENTIAL",
+                    "response written as answer_FALSE",
+                    "answer=response_FALSE",
+                ],
+                {}
+            ),
+            (
+                "(x-4)^2-5",
+                "(x-4)^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-5)^2-6",
+                "(x-4)^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2-5",
+                "(x-4)^2-5",
+                "answer=response",
+                True,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2 - 5",
+                "(x-4)^2-5",
+                "answer=response",
+                True,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "x^2-8x+11",
+                "(x-4)^2-5",
+                "answer=response",
+                False,
+                [
+                    "answer=response_TRUE",
+                    "answer=response_SAME_SYMBOLS_TRUE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_FALSE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-3)^2-3",
+                "(x-4)^2-5",
+                "answer=response",
+                False,
+                [
+                    "answer=response_FALSE",
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x+4)^2-5",
+                "(x+(-4))^2-5",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x-4)^2+5",
+                "(x-4)^2+(-5)",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(x+4)^2+5",
+                "(x+(-4))^2+(-5)",
+                "response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
         ]
     )
     def test_syntactical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
@@ -1260,7 +1581,12 @@ class TestEvaluationFunction():
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
         [
-            ("14", "a+b*c", "response=answer where a=2; b=3; c=4", True, [],
+            (
+                "14",
+                "a+b*c",
+                "response=answer where a=2; b=3; c=4",
+                True,
+                [],
                 {
                     'symbols': {
                         'a': {'aliases': [], 'latex': r'\(a\)'},
@@ -1271,7 +1597,12 @@ class TestEvaluationFunction():
                     'rtol': 0,
                 }
             ),
-            ("2/3", "a/b", "response=answer where a=2; b=3", True, [],
+            (
+                "2/3",
+                "a/b",
+                "response=answer where a=2; b=3",
+                True,
+                [],
                 {
                     'symbols': {
                         'a': {'aliases': [], 'latex': r'\(a)'},
@@ -1281,7 +1612,12 @@ class TestEvaluationFunction():
                     'atol': 0.1,
                 }
             ),
-            ("0.6667", "a/b", "response=answer where a=2; b=3", True, [],
+            (
+                "0.6667",
+                "a/b",
+                "response=answer where a=2; b=3",
+                True,
+                [],
                 {
                     'symbols': {
                         'a': {'aliases': [], 'latex': r'\(a)'},
@@ -1291,7 +1627,12 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ("0.1667", "a/b", "response=answer where a=1; b=6", True, [],
+            (
+                "0.1667",
+                "a/b",
+                "response=answer where a=1; b=6",
+                True,
+                [],
                 {
                     'symbols': {
                         'a': {'aliases': [], 'latex': r'\(a)'},
@@ -1301,7 +1642,12 @@ class TestEvaluationFunction():
                     'atol': 0.1,
                 }
             ),
-            ("1.41", "sqrt(a)", "response=answer where a=2", True, [],
+            (
+                "1.41",
+                "sqrt(a)",
+                "response=answer where a=2",
+                True,
+                [],
                 {
                     'symbols': {
                         'a': {'aliases': [], 'latex': r'\(a)'},
@@ -1310,7 +1656,12 @@ class TestEvaluationFunction():
                     'atol': 0.1,
                 }
             ),
-            ("2", "(a/b)^c", "response=answer where a=7; b=5; c=1.4", False, [],
+            (
+                "2",
+                "(a/b)^c",
+                "response=answer where a=7; b=5; c=1.4",
+                False,
+                [],
                 {
                     'symbols': {
                         'a': {'aliases': [], 'latex': r'\(a)'},
@@ -1321,7 +1672,12 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ("1.6017", "(a/b)^c", "response=answer where a=7; b=5; c=1.4", True, [],
+            (
+                "1.6017",
+                "(a/b)^c",
+                "response=answer where a=7; b=5; c=1.4",
+                True,
+                [],
                 {
                     'symbols': {
                         'a': {'aliases': [], 'latex': r'\(a)'},
@@ -1332,7 +1688,7 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ( # Exactly the same coefficients
+            (  # Exactly the same coefficients
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
@@ -1343,7 +1699,7 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ( # One less significant digit in response
+            (  # One less significant digit in response
                 "0.0236x^3-0.285x^2+1.38x-1.12",
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
@@ -1354,7 +1710,7 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ( # Near lower bound for all coefficients
+            (  # Near lower bound for all coefficients
                 "0.02355x^3-0.2845x^2+1.377x-1.117",
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
@@ -1365,7 +1721,7 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ( # Near upper bound for all coefficients
+            (  # Near upper bound for all coefficients
                 "0.023649x^3-0.2849x^2+1.3849x-1.1249",
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
@@ -1376,7 +1732,7 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ( # Slightly below lower bound for all coefficients
+            (  # Slightly below lower bound for all coefficients
                 "0.02352x^3-0.2831x^2+1.376x-1.1163",
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0",
@@ -1387,7 +1743,7 @@ class TestEvaluationFunction():
                     'atol': 0,
                 }
             ),
-            ( # Slightly above upper bound for all coefficients
+            (  # Slightly above upper bound for all coefficients
                 "0.023652x^3-0.2861x^2+1.390x-1.128",
                 "0.02364x^3-0.2846x^2+1.383x-1.122",
                 "response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)/2=diff(answer,x,2)/2 where x=0, diff(response,x,3)/6=diff(answer,x,3)/6 where x=0",
@@ -1405,10 +1761,11 @@ class TestEvaluationFunction():
                 False,
                 [
                     "response = a*50 + d*51*25 where a=77; d=-5_ONE_ADDITION_TO_SUBTRACTION",
-                    "response candidates -50*a + 1275*d",
+                    'response = a*50 + d*51*25 where a=77; d=-5_RESPONSE_CANDIDATES_ONE_ADDITION_TO_SUBTRACTION',
                     "response = a*50 + d*51*25 where a=77; d=-5_FALSE"
                 ],
-                {'detailed_feedback': True}),
+                {'detailed_feedback': True}
+            ),
         ]
     )
     def test_criteria_where_numerical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
@@ -1422,6 +1779,56 @@ class TestEvaluationFunction():
         assert result["is_correct"] is value
         for feedback_tag in feedback_tags:
             assert feedback_tag in result["tags"]
+
+    @pytest.mark.parametrize(
+        "response, answer, criteria, value",
+        [
+            ("1", "2", "response > answer", False),
+            ("2", "2", "response > answer", False),
+            ("3", "2", "response > answer", True),
+            ("1", "2", "response >= answer", False),
+            ("2", "2", "response >= answer", True),
+            ("3", "2", "response >= answer", True),
+            ("1", "2", "response < answer", True),
+            ("2", "2", "response < answer", False),
+            ("3", "2", "response < answer", False),
+            ("1", "2", "response <= answer", True),
+            ("2", "2", "response <= answer", True),
+            ("3", "2", "response <= answer", False),
+            ("5", "9", "response > 3", True),
+        ]
+    )
+    def test_criteria_order_comparison(self, response, answer, criteria, value):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
+        "criteria, value",
+        [
+            ("response contains c", False),
+            ("response contains a", True),
+            ("response contains x", True),
+            ("response contains pi", True),
+            ("response contains 23", True),
+            ("response contains 3", False),
+            ("response contains answer", True),
+        ]
+    )
+    def test_contains_symbol(self, criteria, value):
+        response = "a+23+pi+sin(x)+y"
+        answer = "y"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "criteria": criteria,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
 
     @pytest.mark.parametrize(
         "response, answer, value",
@@ -1458,108 +1865,8 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-    @pytest.mark.parametrize(
-        "response,value",
-        [
-            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) - alpha*q_dot", True),
-            ("k*alpha*(d^2 T)/(dx^2) = k*(dT/dt) + alpha*q_dot", False),
-            ("d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
-            ("d^2 T/dx^2 + q_dot/k = 1/alpha*(dT/dt)", True),
-            ("(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)", True),
-            ("Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)", True),
-        ]
-    )
-    def test_MECH50001_2_24_a(self, response, value):
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-            "symbol_assumptions": "('alpha','constant') ('k','constant') ('T','function') ('q','function')",
-            'symbols': {
-                'alpha': {'aliases': [], 'latex': r'\alpha'},
-                'Derivative(q(x,t),t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
-                'Derivative(T(x,t),t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
-                'Derivative(T(x,t),x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
-                'Derivative(T(x,t),x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
-            },
-        }
-        answer = "(d^2 T)/(dx^2) + q_dot/k = 1/alpha*(dT/dt)"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is value
-
-    def test_AERO40007_1_6_instance_2024_25(self):
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-            "rtol": 0.01,
-        }
-        response = "231*16.4/1000*14=4"
-        answer = "53"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is False
-        assert "EQUALITY_NOT_EXPRESSION" in result["tags"]
-
-    def test_CHEM40002_1_5_instance_2024_25(self):
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-            "complexNumbers": True,
-            "symbols": {
-                "I": {"aliases": ["i"], "latex": r"I"},
-            },
-        }
-        response = "6 exp(5pi/6*I)"
-        answer = "6(cos(5pi/6)+isin(5pi/6))"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is True
-
-    def test_as_in_expression(self):
-        response = "A/s(e^(-as)-e^(-bs))"
-        answer = "A/s(e^(-a*s)-e^(-b*s))"
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-        }
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is True
-
-    def test_as_in_input_symbols(self):
-        response = "A/s(e^(-as)-e^(-bs))"
-        answer = "A/s(e^(-as)-e^(-bs))"
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-            "symbols": {
-                "as": {"aliases": ["a_s"], "latex": r"$a_s$"},
-                "bs": {"aliases": ["b_s"], "latex": r"$b_s$"},
-            },
-        }
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is True
-
-    def test_as_substring_in_expression(self):
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-        }
-
-        response = "asin(omega t)"
-
-        answer = "a*sin(omega t)"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is False
-
-        answer = "a sin(omega t)"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is False
-
-        response = "a*sin(omega t)"
-
-        answer = "sin(omega t)*a"
-        result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is True
-
     def test_alternatives_to_input_symbols_takes_priority_over_elementary_function_alternatives(self):
-        answer = "Ef*a/b"
+        answer = "Ef*exp(x)"
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -1567,29 +1874,88 @@ class TestEvaluationFunction():
                 "Ef": {"aliases": ["E"], "latex": r"$E$"},
             },
         }
-        response = "E*a/b"
+        response = "E*e^x"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-        response = "e*a/b"
+        response = "e*e^x"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
-    def test_integral(self):
-        response = "6y"
-        answer = "int(3*x*y, (x, 0, 2))"
+    def test_elementary_function_symbol_with_implicit_multiplication_on_both_sides(self):
+        response = "momega^3 l^2/2(exp(2omegat)-exp(-2omegat))"
+        answer = "m*omega^3*l^2*sinh(2*omega*t)"
         params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
+            'strict_syntax': False,
+            'elementary_functions': True,
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-    def test_abstract_integral(self):
-        response = "int(f(x)+g(x), (x, a, b))"
-        answer = "int(g(x)+f(x), (x, a, b))"
+    def test_response_for_which_correctness_cannot_be_determined(self):
+        response = "2 pi e^{-a |omega|}" # The expression in {...} is interpreted as elements in a set instead of a math expression
+        answer = "2 pi e^(-a|omega|)"
         params = {
+            'atol': 0,
+            'rtol': 0,
+            'strict_syntax': False,
+            'physical_quantity': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_unexpected_equalities_in_response_that_generates_set(self):
+        response = "z= plus_minus 1 + 2*i" # plus_minus generates a set of two equalities
+        answer = "2i plus_minus 1" # plus_minus generates a set of two expressions
+        params = {
+            'atol': 0,
+            'rtol': 0,
+            'strict_syntax': False,
+            'physical_quantity': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_infinity_alias(self):
+        response = "2.694"
+        answer = "infinity"
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_equality_expression_mismatch_with_custom_criteria(self):
+        response = "x-0.883x^2=0.251X^3"
+        answer = "0.4842x-0.1163x^3"
+        params = {
+            'atol': 0,
+            'rtol': 0.03,
+            'criteria': 'response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0',
+            'strict_syntax': False,
+            'physical_quantity': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_input_symbols_takes_priority_when_containing_elementary_function_names_as_substring(self):
+        response = "Vmax - Vmaxe^-(t/tau)"
+        answer = "Vmax*(1-exp(-t/tau))"
+        params = {
+            "atol": 0,
+            "rtol": 0,
             "strict_syntax": False,
             "elementary_functions": True,
+            "physical_quantity": False,
+            "symbols": {
+                "Vmax": {"aliases": ["V_max"], "latex": r"$V_{max}$"},
+                "RS": {"aliases": ["R_S", "rs"], "latex": r"$R_S$"},
+                "RF": {"aliases": ["R_F", "rf"], "latex": r"$R_f$"},
+                "tau": {"aliases": [], "latex": r"$\tau$"},
+            },
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True

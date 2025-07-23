@@ -1,13 +1,13 @@
-from .preview_utilities import (
+from .utility.preview_utilities import (
     Params,
-    Preview,
     Result,
 )
 
-from .quantity_comparison_preview import preview_function as quantity_preview
-from .symbolic_comparison_preview import preview_function as symbolic_comparison_preview
+from .preview_implementations.physical_quantity_preview import preview_function as physical_quantity_preview
+from .preview_implementations.symbolic_preview import preview_function as symbolic_preview
 
-def preview_function(response: str, params: Params, join_sympy=True) -> Result:
+
+def preview_function(response: str, params: Params) -> Result:
     """
     Function used to preview a student response.
     ---
@@ -29,8 +29,8 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     """
 
     if params.get("physical_quantity", False):
-        result = quantity_preview(response, params, join_sympy)
+        result = physical_quantity_preview(response, params)
     else:
-        result = symbolic_comparison_preview(response, params, join_sympy)
+        result = symbolic_preview(response, params)
 
     return result

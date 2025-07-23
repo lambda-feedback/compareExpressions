@@ -1,28 +1,27 @@
 from sympy.parsing.sympy_parser import T as parser_transformations
-from .expression_utilities import (
-    extract_latex,
+from ..utility.expression_utilities import (
+    default_parameters,
     convert_absolute_notation,
     create_expression_set,
     create_sympy_parsing_params,
-    latex_symbols,
     parse_expression,
     substitute_input_symbols,
     SymbolDict,
     sympy_symbols,
     sympy_to_latex,
+    preprocess_expression,
 )
-
-from .preview_utilities import (
+from ..utility.preview_utilities import (
     Params,
     Preview,
     Result,
-    extract_latex,
     parse_latex
 )
+from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
-from .feedback.symbolic_comparison import internal as symbolic_comparison_internal_messages
 
 def parse_symbolic(response: str, params):
+    symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
     response_list_in = create_expression_set(response, params)
     response_list_out = []
     feedback = []
@@ -48,13 +47,13 @@ def parse_symbolic(response: str, params):
                 parsing_params.update({"rtol": params["rtol"]})
             res = parse_expression(response, parsing_params)
         except Exception as exc:
-            raise SyntaxError(symbolic_comparison_internal_messages["PARSE_ERROR"](response)) from exc
+            raise SyntaxError(symbolic_comparison_internal_messages("PARSE_ERROR")({"response": response})) from exc
         result_sympy_expression.append(res)
 
     return result_sympy_expression, feedback
 
 
-def preview_function(response: str, params: Params, join_sympy=True) -> Result:
+def preview_function(response: str, params: Params) -> Result:
     """
     Function used to preview a student response.
     ---
@@ -74,6 +73,10 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
     The way you wish to structure you code (all in this function, or
     split into many) is entirely up to you.
     """
+    for (key, value) in default_parameters.items():
+        if key not in params.keys():
+            params.update({key: value})
+
     original_response = response
 
     symbols: SymbolDict = params.get("symbols", {})
@@ -87,25 +90,29 @@ def preview_function(response: str, params: Params, join_sympy=True) -> Result:
 
     for response in response_list:
         try:
-            if params.get("is_latex", False):
+            if params.get("is_latex", False) is True:
                 sympy_out = [parse_latex(response, symbols, params.get("simplify", False))]
                 latex_out = [response]
             else:
                 params.update({"rationalise": False})
+                _, response, _ = preprocess_expression("response", response, params)
                 expression_list, _ = parse_symbolic(response, params)
+
+                parsing_params = create_sympy_parsing_params(params)
+                printing_symbols = dict()
+                for key in parsing_params["symbol_dict"].keys():
+                    if key in symbols.keys():
+                        printing_symbols.update({key: symbols[key]["latex"]})
 
                 latex_out = []
                 sympy_out = []
                 for expression in expression_list:
-                    latex_out.append(sympy_to_latex(expression, symbols, settings = {"mul_symbol": r" \cdot "}))
+                    latex_out.append(sympy_to_latex(expression, symbols, settings={"mul_symbol": r" \cdot "}))
                     sympy_out.append(response)
 
             if len(sympy_out) == 1:
                 sympy_out = sympy_out[0]
             sympy_out = str(sympy_out)
-
-            if not params.get("is_latex", False):
-                sympy_out = response
 
             if len(latex_out) > 1:
                 latex_out = "\\left\\{"+",~".join(latex_out)+"\\right\\}"

@@ -1,9 +1,9 @@
 import os
 import pytest
 
-from .preview_utilities import Params, extract_latex
-from .symbolic_comparison_preview import preview_function
-from .symbolic_comparison_evaluation_tests import elementary_function_test_cases
+from ..utility.preview_utilities import Params, extract_latex
+from ..preview_implementations.symbolic_preview import preview_function
+from .symbolic_evaluation_tests import elementary_function_test_cases
 
 
 class TestPreviewFunction():
