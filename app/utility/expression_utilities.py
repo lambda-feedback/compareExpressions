@@ -62,7 +62,7 @@ elementary_functions_names = [
     # Special symbols to make sure plus_minus and minus_plus are not destroyed during preprocessing
     ('plus_minus', []), ('minus_plus', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
-    ('summation', ['sum', 'Sum']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag']), ('conjugate', ['conj'])
+    ('summation', ['sum', 'Sum']), ('Integral', ['int']), ('Derivative', ['diff']), ('re', ['real']), ('im', ['imag']), ('conjugate', ['conj'])
 ]
 for data in elementary_functions_names:
     upper_case_alternatives = [data[0].upper()]
