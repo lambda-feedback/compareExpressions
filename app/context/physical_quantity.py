@@ -208,7 +208,7 @@ def less_than_node(criterion, parameters, label=None):
 
 def less_than_or_equal_node(criterion, parameters, label=None):
     # TODO: Add nodes for the equal case
-    graph = comparison_base_graph(criterion, parameters, comparison_operator="<=", label=label)
+    graph = comparison_base_graph(criterion, parameters, comparison_operator=">=", label=label)
     return graph
 
 
@@ -279,12 +279,12 @@ def criterion_match_node(criterion, parameters, label=None):
             #       numerical tolerances can be applied appropriately
             if parsing_params.get('rtol', 0) > 0 or parsing_params.get('atol', 0) > 0:
                 if (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer'):
-                    ans = parameters["reserved_expressions"]["answer"]["standard"]["value"]
-                    res = parameters["reserved_expressions"]["response"]["standard"]["value"]
+                    ans = parameters["reserved_expressions"]["answer"]["standard"]["value"].simplify()
+                    res = parameters["reserved_expressions"]["response"]["standard"]["value"].simplify()
                 if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
-                    if parsing_params.get('rtol', 0) > 0:
+                    if parsing_params.get('rtol', 0) > 0 and (ans != 0):
                         value_match = bool(abs(float((ans-res)/ans)) < parsing_params['rtol'])
-                    elif parsing_params.get('atol', 0) > 0:
+                    elif parsing_params.get('atol', 0) > 0 or (ans == 0):
                         value_match = bool(abs(float(ans-res)) < parsing_params['atol'])
 
         substitutions = [(key, expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
@@ -541,20 +541,6 @@ def expression_preprocess(name, expr, parameters):
             expr = expr[0:match_content.span()[0]]+match_content.group().replace("*", " ")+expr[match_content.span()[1]:]
             match_content = re.search(search_string, expr)
 
-    prefixes = set(x[0] for x in set_of_SI_prefixes)
-    fundamental_units = set(x[0] for x in set_of_SI_base_unit_dimensions)
-    units_string = parameters["units_string"]
-    valid_units = set()
-    for key in units_sets_dictionary.keys():
-        if key in units_string:
-            for unit in units_sets_dictionary[key]:
-                valid_units = valid_units.union(set((unit[0], unit[1])+unit[3]+unit[4]))
-    dimensions = set(x[2] for x in set_of_SI_base_unit_dimensions)
-    unsplittable_symbols = list(prefixes | fundamental_units | valid_units | dimensions)
-    preprocess_parameters = deepcopy(parameters)
-    # TODO: find better way to prevent preprocessing from mangling reserved keywords for physical quantity criteria
-    preprocess_parameters.update({"reserved_keywords": preprocess_parameters.get("reserved_keywords", [])+unsplittable_symbols+['matches']})
-    expr = substitute_input_symbols(expr.strip(), preprocess_parameters)[0]
     success = True
     return success, expr, None
 
@@ -572,7 +558,9 @@ def feedback_string_generator(tags, graph, parameters_dict):
 def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
     parsing_parameters = create_sympy_parsing_params(params)
     parsing_parameters.update({
-        "strictness": params.get("strictness", "natural")
+        "strictness": params.get("strictness", "natural"),
+        "rtol": float(params.get("rtol", 0)),
+        "atol": float(params.get("atol", 0)),
     })
     return parsing_parameters
 

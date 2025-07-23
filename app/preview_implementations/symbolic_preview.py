@@ -108,7 +108,7 @@ def preview_function(response: str, params: Params) -> Result:
                 sympy_out = []
                 for expression in expression_list:
                     latex_out.append(sympy_to_latex(expression, symbols, settings={"mul_symbol": r" \cdot "}))
-                    sympy_out.append(str(expression))
+                    sympy_out.append(response)
 
             if len(sympy_out) == 1:
                 sympy_out = sympy_out[0]

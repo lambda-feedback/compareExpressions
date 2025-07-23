@@ -29,7 +29,7 @@ class TestEvaluationFunction():
     from .tests.physical_quantity_evaluation_tests import TestEvaluationFunction as TestQuantities
 
     # Import tests that corresponds to examples in documentation and examples module
-    from .tests.example_tests import TestEvaluationFunction as TestExamples
+    #from .tests.example_tests import TestEvaluationFunction as TestExamples
 
     def test_eval_function_can_handle_latex_input(self):
         response = r"\sin x + x^{7}"

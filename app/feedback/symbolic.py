@@ -25,6 +25,7 @@ feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "EQUALITY_NOT_EXPRESSION": "The response was an equality but was expected to be an expression.",
     "EQUALITIES_EQUIVALENT": None,
     "EQUALITIES_NOT_EQUIVALENT": "The response is not the expected equality.",
+    "EQUALITY_EQUIVALENCE_UNKNOWN": "Cannot determine if the given equality is equivalent to the expected equality.",
     "WITHIN_TOLERANCE": None,  # "The difference between the response the answer is within specified error tolerance.",
     "NOT_NUMERICAL": None,  # "The expression cannot be evaluated numerically.",
 }[tag]

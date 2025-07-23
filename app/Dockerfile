@@ -1,6 +1,7 @@
 # Base image that bundles AWS Lambda Python 3.8 image with some middleware functions
 # FROM base-eval-tmp
-FROM rabidsheep55/python-base-eval-layer
+# FROM rabidsheep55/python-base-eval-layer
+FROM ghcr.io/lambda-feedback/baseevalutionfunctionlayer:main-3.8
 
 RUN yum install -y git
 
@@ -50,7 +51,6 @@ COPY utility/unit_system_conversions.py ./app/utility/
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md
 COPY docs/user.md ./app/docs/user.md
-COPY docs/quantity_comparison_graph.svg ./app/docs/quantity_comparison_graph.svg
 
 # Set permissions so files and directories can be accessed on AWS
 RUN chmod 644 $(find . -type f)

@@ -1881,5 +1881,84 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
+    def test_elementary_function_symbol_with_implicit_multiplication_on_both_sides(self):
+        response = "momega^3 l^2/2(exp(2omegat)-exp(-2omegat))"
+        answer = "m*omega^3*l^2*sinh(2*omega*t)"
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_response_for_which_correctness_cannot_be_determined(self):
+        response = "2 pi e^{-a |omega|}" # The expression in {...} is interpreted as elements in a set instead of a math expression
+        answer = "2 pi e^(-a|omega|)"
+        params = {
+            'atol': 0,
+            'rtol': 0,
+            'strict_syntax': False,
+            'physical_quantity': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_unexpected_equalities_in_response_that_generates_set(self):
+        response = "z= plus_minus 1 + 2*i" # plus_minus generates a set of two equalities
+        answer = "2i plus_minus 1" # plus_minus generates a set of two expressions
+        params = {
+            'atol': 0,
+            'rtol': 0,
+            'strict_syntax': False,
+            'physical_quantity': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_infinity_alias(self):
+        response = "2.694"
+        answer = "infinity"
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_equality_expression_mismatch_with_custom_criteria(self):
+        response = "x-0.883x^2=0.251X^3"
+        answer = "0.4842x-0.1163x^3"
+        params = {
+            'atol': 0,
+            'rtol': 0.03,
+            'criteria': 'response=answer where x=0, diff(response,x)=diff(answer,x) where x=0, diff(response,x,2)=diff(answer,x,2) where x=0, diff(response,x,3)=diff(answer,x,3) where x=0',
+            'strict_syntax': False,
+            'physical_quantity': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_input_symbols_takes_priority_when_containing_elementary_function_names_as_substring(self):
+        response = "Vmax - Vmaxe^-(t/tau)"
+        answer = "Vmax*(1-exp(-t/tau))"
+        params = {
+            "atol": 0,
+            "rtol": 0,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "physical_quantity": False,
+            "symbols": {
+                "Vmax": {"aliases": ["V_max"], "latex": r"$V_{max}$"},
+                "RS": {"aliases": ["R_S", "rs"], "latex": r"$R_S$"},
+                "RF": {"aliases": ["R_F", "rf"], "latex": r"$R_f$"},
+                "tau": {"aliases": [], "latex": r"$\tau$"},
+            },
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

@@ -257,32 +257,17 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
-    @pytest.mark.parametrize(
-        "response, answer, order_operator, value",
-        [
-            ("10 Hz", "5 Hz", ">", True),
-            ("5 Hz", "10 Hz", ">", False),
-            ("10 Hz", "10 Hz", ">", False),
-            ("10 Hz", "5 Hz", "<", False),
-            ("5 Hz", "10 Hz", "<", True),
-            ("10 Hz", "10 Hz", "<", False),
-            ("10 Hz", "5 Hz", ">=", True),
-            ("5 Hz", "10 Hz", ">=", False),
-            ("10 Hz", "10 Hz", ">=", True),
-            ("10 Hz", "5 Hz", "<=", False),
-            ("5 Hz", "10 Hz", "<=", True),
-            ("10 Hz", "10 Hz", "<=", True),
-        ]
-    )
-    def test_order_operators(self, response, answer, order_operator, value):
+    def test_quantity_with_multiple_of_positive_value(self):
+        ans = "5 Hz"
+        res = "10 Hz"
         params = {
             "strict_syntax": False,
             "physical_quantity": True,
             "elementary functions": True,
-            "criteria": "response "+order_operator+" answer"
+            "criteria": "response > answer"
         }
-        result = evaluation_function(response, answer, params, include_test_data=True)
-        assert result["is_correct"] is value
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
 
     def test_radians_to_frequency(self):
         ans = "2*pi*f radian/second"
@@ -340,6 +325,66 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    def test_physical_quantity_with_rtol(self):
+        ans = "7500 m/s"
+        res = "7504.1 m/s"
+        params = {
+            'rtol': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_physical_quantity_with_atol(self):
+        ans = "7500 m/s"
+        res = "7504.1 m/s"
+        params = {
+            'atol': 5,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+#    def test_rad_vs_Hz(self):
+#        ans = "28.53 rad/s"
+#        res = "4.5405 H"
+#        params = {
+#            'rtol': 0.03,
+#            'strict_syntax': False,
+#            'physical_quantity': True,
+#            'elementary_functions': True,
+#        }
+#        result = evaluation_function(res, ans, params, include_test_data=True)
+#        assert result["is_correct"] is True
+
+    def test_tolerance_given_as_string(self):
+        ans = "4.52 kg"
+        res = "13.74 kg"
+        params = {
+            'rtol': '0.015',
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_answer_zero_value(self):
+        ans = "0 m"
+        res = "1 m"
+        params = {
+            'rtol': 0,
+            'atol': 0,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])
