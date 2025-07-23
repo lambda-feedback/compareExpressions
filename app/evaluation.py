@@ -4,6 +4,9 @@ from .utility.evaluation_result_utilities import EvaluationResult
 from .utility.preview_utilities import parse_latex
 from .context.symbolic import context as symbolic_context
 from .context.physical_quantity import context as quantity_context
+
+#for list context
+from .context.list_expressions import list_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 from collections.abc import Mapping
@@ -38,8 +41,21 @@ class FrozenValuesDictionary(dict):
 
 
 def determine_context(parameters):
+
+    #dealing with list of expressions context case
+    learner_resp = parameters.get("reserved_expressions_strings", {}) \
+                      .get("learner", {}) \
+                      .get("response", None)
+    if isinstance(learner_resp, list):
+         ctx = deepcopy(list_context)
+         ctx.update({"reserved_keywords": []})
+         return ctx
+    
+    #dealing with physical quantity context
     if parameters.get("physical_quantity", False) is True:
         context = deepcopy(quantity_context)
+
+    #standalone symbolic expression context
     else:
         context = deepcopy(symbolic_context)
 
@@ -233,6 +249,21 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         - if set to True, use basic dimensional analysis functionality.
     """
 
+    #dealing with the case that the response is a list of expressions rather than a single one
+    #recursively calls evaluation_function for each element of the list
+    #this will need to be removed and changed as we cannot do feedback mapping as it evaluates each element seperately
+    # we also cannot test determine context on a list with this and 
+    if isinstance(response, list) and isinstance(answer, list):
+        elements = [
+            evaluation_function(r, a, params, include_test_data)
+            for r, a in zip(response, answer)
+        ]
+        return {
+            "is_correct": all(e["is_correct"] for e in elements),
+            "elements":    elements
+        }
+    
+    #rest of evaluation_function as it was before 
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
