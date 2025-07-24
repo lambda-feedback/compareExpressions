@@ -148,24 +148,24 @@ Note that the function treats radians and steradians as dimensionless values.
 | radian    |   r    | $(2\pi)^{-1}$                                                                    |
 | steradian |  sr    | $(4\pi)^{-1}$                                                                    |
 | hertz     |  Hz    | $\mathrm{second}^{-1}$                                                           |
-| newton    |   N    | $\mathrm{metre}~\mathrm{kilogram}~\mathrm{second}^{-2}$                          |
-| pascal    |  Pa    | $\mathrm{metre}^{-1}~\mathrm{kilogram}~\mathrm{second}^{-2}$                     |
-| joule     |   J    | $\mathrm{metre}^2~\mathrm{kilogram~second}^{-2}$                                 |
-| watt      |   W    | $\mathrm{metre}^2~\mathrm{kilogram~second}^{-3}$                                 |
-| coulomb   |   C    | $\mathrm{second~ampere}$                                                         |
-| volt      |   V    | $\mathrm{metre}^2~\mathrm{kilogram second}^{-3}~\mathrm{ampere}^{-1}$            |
-| farad     |   F    | $\mathrm{metre}^{-2}~\mathrm{kilogram}^{-1}~\mathrm{second}^4~\mathrm{ampere}^2$ |
-| ohm       |   O    | $\mathrm{metre}^2~\mathrm{kilogram second}^{-3}~\mathrm{ampere}^{-2}$            |
-| siemens   |   S    | $\mathrm{metre}^{-2}~\mathrm{kilogram}^{-1}~\mathrm{second}^3~\mathrm{ampere}^2$ |
-| weber     |  Wb    | $\mathrm{metre}^2~\mathrm{kilogram~second}^{-2}~\mathrm{ampere}^{-1}$            |
-| tesla     |   T    | $\mathrm{kilogram~second}^{-2} \mathrm{ampere}^{-1}$                             |
-| henry     |   H    | $\mathrm{metre}^2~\mathrm{kilogram~second}^{-2}~\mathrm{ampere}^{-2}$            |
+| newton    |   N    | $\mathrm{metre} \mathrm{kilogram} \mathrm{second}^{-2}$                          |
+| pascal    |  Pa    | $\mathrm{metre}^{-1} \mathrm{kilogram} \mathrm{second}^{-2}$                     |
+| joule     |   J    | $\mathrm{metre}^2 \mathrm{kilogram second}^{-2}$                                 |
+| watt      |   W    | $\mathrm{metre}^2 \mathrm{kilogram second}^{-3}$                                 |
+| coulomb   |   C    | $\mathrm{second ampere}$                                                         |
+| volt      |   V    | $\mathrm{metre}^2 \mathrm{kilogram second}^{-3} \mathrm{ampere}^{-1}$            |
+| farad     |   F    | $\mathrm{metre}^{-2} \mathrm{kilogram}^{-1} \mathrm{second}^4 \mathrm{ampere}^2$ |
+| ohm       |   O    | $\mathrm{metre}^2 \mathrm{kilogram second}^{-3} \mathrm{ampere}^{-2}$            |
+| siemens   |   S    | $\mathrm{metre}^{-2} \mathrm{kilogram}^{-1} \mathrm{second}^3 \mathrm{ampere}^2$ |
+| weber     |  Wb    | $\mathrm{metre}^2 \mathrm{kilogram second}^{-2} \mathrm{ampere}^{-1}$            |
+| tesla     |   T    | $\mathrm{kilogram second}^{-2} \mathrm{ampere}^{-1}$                             |
+| henry     |   H    | $\mathrm{metre}^2 \mathrm{kilogram second}^{-2} \mathrm{ampere}^{-2}$            |
 | lumen     |  lm    | $\mathrm{candela}$                                                               |
-| lux       |  lx    | $\mathrm{metre}^{-2}~\mathrm{candela}$                                           |
+| lux       |  lx    | $\mathrm{metre}^{-2} \mathrm{candela}$                                           |
 | becquerel |  Bq    | $\mathrm{second}^{-1}$                                                           |
-| gray      |  Gy    | $\mathrm{metre}^2~\mathrm{second}^{-2}$                                          |
-| sievert   |  Sv    | $\mathrm{metre}^2~\mathrm{second}^{-2}$                                          |
-| katal     |  kat   | $\mathrm{mole~second}^{-1}$                                                      |
+| gray      |  Gy    | $\mathrm{metre}^2 \mathrm{second}^{-2}$                                          |
+| sievert   |  Sv    | $\mathrm{metre}^2 \mathrm{second}^{-2}$                                          |
+| katal     |  kat   | $\mathrm{mole second}^{-1}$                                                      |
 
 ###### Table: Common non-SI units
 
@@ -176,33 +176,33 @@ Note that only the first table in this section has short form symbols defined, t
 
 | Unit name         | Symbol | Expressed in SI units                      |
 |-------------------|:-------|:-------------------------------------------|
-| minute            |  min   | $60~\mathrm{second}$                       |
-| hour              |   h    | $3600~\mathrm{second}$                     |
+| minute            |  min   | $60 \mathrm{second}$                       |
+| hour              |   h    | $3600 \mathrm{second}$                     |
 | degree            |  deg   | $\frac{1}{360}$                            |
-| liter             |   l    | $10^{-3}~\mathrm{metre}^3$                 |
-| metric_ton        |   t    | $10^3~\mathrm{kilogram}$                   |
+| liter             |   l    | $10^{-3} \mathrm{metre}^3$                 |
+| metric_ton        |   t    | $10^3 \mathrm{kilogram}$                   |
 | neper             |  Np    | $1$                                        |
-| bel               |   B    | $\frac{1}{2}~\ln(10)$                      |
-| electronvolt      |  eV    | $1.60218 \cdot 10^{-19}~\mathrm{joule}$    |
-| atomic_mass_unit  |   u    | $1.66054 \cdot 10^{-27}~\mathrm{kilogram}$ |
-| angstrom          |   å    | $10^{-10}~\mathrm{metre}$                  |
+| bel               |   B    | $\frac{1}{2} \ln(10)$                      |
+| electronvolt      |  eV    | $1.60218 \cdot 10^{-19} \mathrm{joule}$    |
+| atomic_mass_unit  |   u    | $1.66054 \cdot 10^{-27} \mathrm{kilogram}$ |
+| angstrom          |   å    | $10^{-10} \mathrm{metre}$                  |
 
 | Unit name        | Expressed in SI units                                |
 |------------------|:-----------------------------------------------------|
-| day              | $86400~\mathrm{second}$                              |
+| day              | $86400 \mathrm{second}$                              |
 | angleminute      | $\frac{\pi}{10800}$                                  |
 | anglesecond      | $\frac{\pi}{648000}$                                 |
-| astronomicalunit | $149597870700~\mathrm{metre}$                        |
-| nauticalmile     | $1852~\mathrm{metre}$                                |
-| knot             | $\frac{1852}{3600}~\mathrm{metre~second}^{-1}$       |
-| are              | $10^2~\mathrm{metre}^2$                              |
-| hectare          | $10^4~\mathrm{metre}^2$                              |
-| bar              | $10^5~\mathrm{pascal}$                               |
-| barn             | $10^{-28}~\mathrm{metre}$                            |
-| curie            | $3.7 \cdot 10^{10}~\mathrm{becquerel}                |
-| roentgen         | $2.58 \cdot 10^{-4}~\mathrm{kelvin~(kilogram)}^{-1}$ |
-| rad              | $10^{-2}~\mathrm{gray}$                              |
-| rem              | $10^{-2}~\mathrm{sievert}$                           |
+| astronomicalunit | $149597870700 \mathrm{metre}$                        |
+| nauticalmile     | $1852 \mathrm{metre}$                                |
+| knot             | $\frac{1852}{3600} \mathrm{metre second}^{-1}$       |
+| are              | $10^2 \mathrm{metre}^2$                              |
+| hectare          | $10^4 \mathrm{metre}^2$                              |
+| bar              | $10^5 \mathrm{pascal}$                               |
+| barn             | $10^{-28} \mathrm{metre}$                            |
+| curie            | $3.7 \cdot 10^{10} \mathrm{becquerel}                |
+| roentgen         | $2.58 \cdot 10^{-4} \mathrm{kelvin (kilogram)}^{-1}$ |
+| rad              | $10^{-2} \mathrm{gray}$                              |
+| rem              | $10^{-2} \mathrm{sievert}$                           |
 
 ###### Table: Imperial units
 
@@ -210,18 +210,18 @@ Commonly imperial units taken from [Wikipedia, Imperial Units](https://en.wikipe
 
 | Unit name         | Symbol | Expressed in SI units                         |
 |-------------------|:-------|:----------------------------------------------|
-| inch              |   in   | $0.0254~\mathrm{metre}$                       |
-| foot              |   ft   | $0.3048~\mathrm{metre}$                       |
-| yard              |   yd   | $0.9144~\mathrm{metre}$                       |
-| mile              |   mi   | $1609.344~\mathrm{metre}$                     |
-| fluid ounce       |  fl oz | $28.4130625~\mathrm{millilitre}$              |
-| gill              |   gi   | $142.0653125~\mathrm{millilitre}$             |
-| pint              |   pt   | $568.26125~\mathrm{millilitre}$               |
-| quart             |   qt   | $1.1365225~\mathrm{litre}$                    |
-| gallon            |   gal  | $4546.09~\mathrm{litre}$                      |
-| ounce             |   oz   | $28.349523125~\mathrm{gram}$                  |
-| pound             |   lb   | $0.45359237~\mathrm{kilogram}$                |
-| stone             |   st   | $6.35029318~\mathrm{kilogram}$                |
+| inch              |   in   | $0.0254 \mathrm{metre}$                       |
+| foot              |   ft   | $0.3048 \mathrm{metre}$                       |
+| yard              |   yd   | $0.9144 \mathrm{metre}$                       |
+| mile              |   mi   | $1609.344 \mathrm{metre}$                     |
+| fluid ounce       |  fl oz | $28.4130625 \mathrm{millilitre}$              |
+| gill              |   gi   | $142.0653125 \mathrm{millilitre}$             |
+| pint              |   pt   | $568.26125 \mathrm{millilitre}$               |
+| quart             |   qt   | $1.1365225 \mathrm{litre}$                    |
+| gallon            |   gal  | $4546.09 \mathrm{litre}$                      |
+| ounce             |   oz   | $28.349523125 \mathrm{gram}$                  |
+| pound             |   lb   | $0.45359237 \mathrm{kilogram}$                |
+| stone             |   st   | $6.35029318 \mathrm{kilogram}$                |
 
 #### `plus_minus` and `minus_plus`
 
@@ -295,7 +295,7 @@ There are three examples in the example problem set. Each examples uses an EXPRE
 
 ##### Example (a)
 
-The response area below has answer `2.00 km/h` $2.00~\frac{\mathrm{kilometre}}{\mathrm{hour}}$ .
+The response area below has answer `2.00 km/h` $2.00 \frac{\mathrm{kilometre}}{\mathrm{hour}}$ .
 
 There are many possible correct responses, e.g. `2.00 kilometre/hour`, `2 km/h`, `2000 m/h`, `0.556 meter/second`, `2 metre/millihour`.
 
@@ -608,12 +608,12 @@ Some more feedback customisation is shown in *Examples: Customizing comparison u
 
 #### Using integrals
 
-The evaluation function can handle one-dimensional definite integrals, i.e. expression in the form $\int_a^b f(x)~\mathrm{d}x$, if the `elementary\\\_functions` parameter is set to true. The integrand and the boundary values can be symbolic.
+The evaluation function can handle one-dimensional definite integrals, i.e. expression in the form $\int_a^b f(x) \mathrm{d}x$, if the `elementary_functions` parameter is set to true. The integrand and the boundary values can be symbolic.
 
-**Note:** Indefinite integrals (expression in the form $\int f(x)~\mathrm{d}x$), contour integrals ($\oint f(x)~\mathrm{d}x$) and integrals based on abstract measures ($\int_A f(x)~\mathrm{d}\mu$) are not supported.
+**Note:** Indefinite integrals (expression in the form $\int f(x) \mathrm{d}x$), contour integrals ($\oint f(x) \mathrm{d}x$) and integrals based on abstract measures ($\int_A f(x) \mathrm{d}\mu$) are not supported.
 
-The expression $\int_a^b f(x)~\mathrm{d}x$ can be written `Integral(f(x), (x, a, b))`. The syntax works as follows: the integral sign corresponds to `Integral` (the short form `int` can also be used), which must be followed by two argument, first is the integrand (the function that is integrated), the second is a triple containing; the variable to be integrated over and the two boundary values.
+The expression $\int_a^b f(x) \mathrm{d}x$ can be written `Integral(f(x), (x, a, b))`. The syntax works as follows: the integral sign corresponds to `Integral` (the short form `int` can also be used), which must be followed by two argument, first is the integrand (the function that is integrated), the second is a triple containing; the variable to be integrated over and the two boundary values.
 
-Here is an example of an integral that can be fully evaluated, more specifically $\int_0^2 3xy~\mathrm{d}x = 6y$. If the answer is set to `Integral(3xy, (x, 0, 2))` then response area will accept both integral expressions, e.g. `int(3*y*x, (x, 0, 2))`, and computed expressions, e.g. `6y`.
+Here is an example of an integral that can be fully evaluated, more specifically $\int_0^2 3xy \mathrm{d}x = 6y$. If the answer is set to `Integral(3xy, (x, 0, 2))` then response area will accept both integral expressions, e.g. `int(3*y*x, (x, 0, 2))`, and computed expressions, e.g. `6y`.
 
-The boundary and function does not need to be defined explicitly. As an example of a more abstract integral we can consider $\int_a^b f(x)+g(x)~\mathrm{d}x$. If the answer is set to `Integral(f(x)+g(x), (x, a, b))` then, for example, `int(g(x)+f(x), (x, a, b))` $\int_a^b g(x)+f(x)~\mathrm{d}x$ and `int(f(x), (x, a, b)) + int(g(x), (x, a, b))` $\int_a^b f(x)~\mathrm{d}x+\int_a^b g(x)~\mathrm{d}x$.
+The boundary and function does not need to be defined explicitly. As an example of a more abstract integral we can consider $\int_a^b f(x)+g(x) \mathrm{d}x$. If the answer is set to `Integral(f(x)+g(x), (x, a, b))` then, for example, `int(g(x)+f(x), (x, a, b))` $\int_a^b g(x)+f(x) \mathrm{d}x$ and `int(f(x), (x, a, b)) + int(g(x), (x, a, b))` $\int_a^b f(x) \mathrm{d}x+\int_a^b g(x) \mathrm{d}x$.
