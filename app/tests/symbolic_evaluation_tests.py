@@ -98,9 +98,6 @@ class TestEvaluationFunction():
     work, and you should run these tests before committing
     your code to AWS.
 
-    Read the docs on how to use unittest here:
-    https://docs.python.org/3/library/unittest.html
-
     Use evaluation_function() to check your algorithm works
     as it should.
     """

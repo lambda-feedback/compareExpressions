@@ -28,6 +28,9 @@ class TestEvaluationFunction():
     # Import tests that makes sure that physical quantities are handled as expected
     from .tests.physical_quantity_evaluation_tests import TestEvaluationFunction as TestQuantities
 
+    # Import tests that makes sure that lists of expressions are handled as expected
+    from .tests.test_list_of_expressions_on_table import TestEvaluationFunction as TestLists
+
     # Import tests that corresponds to examples in documentation and examples module
     from .tests.example_tests import TestEvaluationFunction as TestExamples
 
