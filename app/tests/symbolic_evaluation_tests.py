@@ -471,19 +471,29 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
-    def test_simplified_in_correct_response(self):
-        response = "a*x + b"
-        answer = "b + a*x"
+    @pytest.mark.parametrize(
+        "response, answer, simplified",
+        [
+            (
+                "b + a*x",
+                "a*x + b",
+                "a*x + b"
+            ),
+            (
+                "b + a*x + 8",
+                "a*x + b",
+                "a*x + b + 8"
+            ),
+            (
+                "b + a*x + y - y",
+                "a*x + b",
+                "a*x + b"
+            ),
+        ]
+    )
+    def test_simplified(self, response, answer, simplified):
         result = evaluation_function(response, answer, {})
-        assert result["is_correct"] is True
-        assert result["response_simplified"] == "a*x + b"
-
-    def test_simplified_in_wrong_response(self):
-        response = "a*x + b"
-        answer = "b + a*x + 8"
-        result = evaluation_function(response, answer, {})
-        assert result["is_correct"] is False
-        assert result["response_simplified"] == "a*x + b"
+        assert result["response_simplified"] == simplified
 
     @pytest.mark.parametrize(
         "response,answer",
