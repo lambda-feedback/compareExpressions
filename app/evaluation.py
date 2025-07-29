@@ -256,14 +256,6 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             parameters.update({key: value})
     if "criteria" not in parameters.keys():
         parameters.update({"criteria": ",".join(context["default_criteria"])})
-    try:
-        preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
-    except Exception:
-        evaluation_result.latex = response
-        evaluation_result.simplified = response
-    else:
-        evaluation_result.latex = preview["latex"]
-        evaluation_result.simplified = preview["sympy"]
 
     reserved_expressions_keys = list(reserved_expressions_strings["learner"].keys())+list(reserved_expressions_strings["task"].keys())
     parameters.update(
@@ -300,6 +292,22 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if reserved_expressions_success is False:
         return evaluation_result.serialise(include_test_data)
     reserved_expressions_parsed = {**reserved_expressions["learner"], **reserved_expressions["task"]}
+
+    try:
+        preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
+    except Exception:
+        evaluation_result.latex = response
+        evaluation_result.simplified = response
+    else:
+        evaluation_result.latex = preview["latex"]
+        parsed_response = reserved_expressions["learner"]["response"]
+        if isinstance(parsed_response, list) or isinstance(parsed_response, set):
+            evaluation_result.simplified = ", ".join([str(ex.simplify()) for ex in parsed_response])
+        else:
+            try:
+                evaluation_result.simplified = str(parsed_response.simplify())
+            except Exception:
+                evaluation_result.simplified = response
 
     criteria_parser = context["generate_criteria_parser"](reserved_expressions)
     criteria = create_criteria_dict(criteria_parser, parameters)
