@@ -6,12 +6,13 @@ from ..preview import preview_function
 
 def create_diagram_for_documentation(filename, result):
     for (index, graph) in enumerate(result["criteria_graphs_vis"].values()):
-        with open(filename+"_"+str(index)+".html", "w") as f:
+        with open(filename+"_"+str(index)+".md", "w") as f:
             #f.write(r'<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>'+'\n')
             f.write("```mermaid")
             for g in result["criteria_graphs_vis"].values():
                 print(g)
-                f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
+                #f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
+                f.write(g)
             #f.write('<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>')
             f.write("```")
 
