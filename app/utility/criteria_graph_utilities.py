@@ -180,16 +180,22 @@ class CriteriaGraph:
         return str(json.dumps(graph))
 
     def mermaid(self):
-        output = ["graph TD"]
+        output = ["flowchart TD"]
+        linebreak = '<br/>---<br/>'
         edges = set()
         sufficiencies = set()
         node_sets = [self.evaluations, self.criteria, self.outputs]
         node_styles = [evaluation_style, criterion_style, output_style]
+        node_keys = {}
+        for set_index, nodes in enumerate(node_sets):
+            index = 0
+            for (label, node) in nodes.items():
+                node_keys.update({label: "N_"+str(set_index)+"_"+str(index)})
         for set_index, nodes in enumerate(node_sets):
             style = node_styles[set_index]
             for (label, node) in nodes.items():
-                output.append(label+style[0]+'"'+node.summary+'"'+style[1])
-                edges.update([(edge.source.label, edge.target.label) for edge in node.outgoing+node.incoming])
+                output.append(node_keys[label]+style[0]+'"'+label+linebreak+node.summary+'"'+style[1])
+                edges.update([(node_keys[edge.source.label], node_keys[edge.target.label]) for edge in node.outgoing+node.incoming])
                 if self.sufficiencies.get(label, None) is not None:
                     sufficiencies.update([(label, sufficiency) for sufficiency in self.sufficiencies.get(label, None)])
         for edge in edges:

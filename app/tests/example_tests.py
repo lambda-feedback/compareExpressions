@@ -573,6 +573,12 @@ class TestEvaluationFunction():
         }
         answer = "2*x^2"
         result = evaluation_function(response, answer, params, include_test_data=True)
+        with open("diagrams.html", "a") as f:
+            f.write(r'<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>\n')
+            for g in result["criteria_graphs_vis"].values():
+                print(g)
+                f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
+            f.write('<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>')
         assert result["is_correct"] is value
         assert set(tags) == set(result["tags"])
 
