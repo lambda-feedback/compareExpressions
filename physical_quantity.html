@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>
+<pre class="mermaid">
+flowchart TD
+	N_0_0(["response matches answer<br/>---<br/>Converts QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} match to a common set of base units and compares their values."])
+	N_0_1(["response matches answer_DIMENSION_MATCH<br/>---<br/>Do the dimensions of QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} match?"])
+	N_0_2(["response matches answer_UNIT_COMPARISON<br/>---<br/>Compares how similar the units of QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} are."])
+	N_1_0["response matches answer_TRUE<br/>---<br/>The quantities QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} match."]
+	N_1_1["response matches answer_FALSE<br/>---<br/>The quantities QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} does not match."]
+	N_1_2["response matches answer_MISSING_VALUE<br/>---<br/>The response is missing a value."]
+	N_1_3["response matches answer_UNEXPECTED_VALUE<br/>---<br/>The response is expected only have unit(s), no value."]
+	N_1_4["response matches answer_MISSING_UNIT<br/>---<br/>The response is missing unit(s)."]
+	N_1_5["response matches answer_UNEXPECTED_UNIT<br/>---<br/>The response is expected to be a value without unit(s)."]
+	N_1_6["response matches answer_DIMENSION_MATCH_TRUE<br/>---<br/>The quantities QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} have the same dimensions."]
+	N_1_7["response matches answer_DIMENSION_MATCH_FALSE<br/>---<br/>The quantities QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} have different dimensions."]
+	N_1_8["response matches answer_UNIT_COMPARISON_IDENTICAL<br/>---<br/>The units of quantities QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} are identical."]
+	N_1_9["response matches answer_UNIT_COMPARISON_SIMILAR<br/>---<br/>The units of quantities QUANTITY: response tags:  {} and QUANTITY: answer tags:  {} are similar."]
+	N_1_10["response matches answer_UNIT_COMPARISON_PREFIX_IS_LARGE<br/>---<br/>The units of QUANTITY: response tags:  {} are at least 1000 times greater than the units of QUANTITY: answer tags:  {}."]
+	N_1_11["response matches answer_UNIT_COMPARISON_PREFIX_IS_SMALL<br/>---<br/>The units of QUANTITY: response tags:  {} are at least 1000 times smaller than the units of QUANTITY: answer tags:  {}."]
+	N_2_0{{"END<br/>---<br/>Evaluation completed."}}
+	N_0_0 --> N_1_1
+	N_1_2 --> N_2_0
+	N_0_0 --> N_1_3
+	N_0_0 --> N_1_4
+	N_0_0 --> N_1_5
+	N_1_7 --> N_2_0
+	N_1_0 --> N_0_2
+	N_1_1 --> N_0_1
+	N_1_10 --> N_2_0
+	N_0_2 --> N_1_11
+	N_0_1 --> N_1_6
+	N_1_5 --> N_2_0
+	N_1_3 --> N_2_0
+	N_0_2 --> N_1_8
+	N_0_0 --> N_1_2
+	N_0_1 --> N_1_7
+	N_1_4 --> N_2_0
+	N_1_6 --> N_2_0
+	N_0_0 --> N_1_0
+	N_0_2 --> N_1_9
+	N_1_11 --> N_2_0
+	N_0_2 --> N_1_10
+</pre>
+<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>

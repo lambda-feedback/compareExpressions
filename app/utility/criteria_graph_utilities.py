@@ -191,10 +191,11 @@ class CriteriaGraph:
             index = 0
             for (label, node) in nodes.items():
                 node_keys.update({label: "N_"+str(set_index)+"_"+str(index)})
+                index += 1
         for set_index, nodes in enumerate(node_sets):
             style = node_styles[set_index]
             for (label, node) in nodes.items():
-                output.append(node_keys[label]+style[0]+'"'+label+linebreak+node.summary+'"'+style[1])
+                output.append(node_keys[label]+style[0]+'"'+label+linebreak+node.details+'"'+style[1])
                 edges.update([(node_keys[edge.source.label], node_keys[edge.target.label]) for edge in node.outgoing+node.incoming])
                 if self.sufficiencies.get(label, None) is not None:
                     sufficiencies.update([(label, sufficiency) for sufficiency in self.sufficiencies.get(label, None)])

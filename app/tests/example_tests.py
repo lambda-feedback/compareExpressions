@@ -4,6 +4,14 @@ import pytest
 from ..evaluation import evaluation_function
 from ..preview import preview_function
 
+def create_diagram_for_documentation(filename, result):
+    for (index, graph) in result["criteria_graphs_vis"].values():
+        with open(filename+"_"+str(index)+"_"+".mmd", "w") as f:
+            #f.write(r'<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>'+'\n')
+            for g in result["criteria_graphs_vis"].values():
+                print(g)
+                f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
+            #f.write('<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>')
 
 class TestEvaluationFunction():
     """
@@ -142,6 +150,18 @@ class TestEvaluationFunction():
         assert result["response_latex"] == response_latex
         assert tags == set(result["tags"])
         assert result["is_correct"] == value
+
+    def test_checking_the_value_of_a_physical_quantity_and_create_diagram_for_docs(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "physical_quantity": True,
+        }
+        response = "2.00 kilometre/hour"
+        answer = "2.00 km/h"
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        create_diagram_for_documentation("physical_quantity.html", result)
+        assert result["is_correct"] == True
 
     @pytest.mark.parametrize(
         "res,ans,convention,value",
@@ -573,12 +593,13 @@ class TestEvaluationFunction():
         }
         answer = "2*x^2"
         result = evaluation_function(response, answer, params, include_test_data=True)
-        with open("diagrams.html", "a") as f:
-            f.write(r'<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>\n')
-            for g in result["criteria_graphs_vis"].values():
-                print(g)
-                f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
-            f.write('<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>')
+        create_diagram_for_documentation("custom_comparison_with_criteria_order.html", result)
+#        with open("diagrams.html", "w") as f:
+#            f.write(r'<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>'+'\n')
+#            for g in result["criteria_graphs_vis"].values():
+#                print(g)
+#                f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
+#            f.write('<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>')
         assert result["is_correct"] is value
         assert set(tags) == set(result["tags"])
 
