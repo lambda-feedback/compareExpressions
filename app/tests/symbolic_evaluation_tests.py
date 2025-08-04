@@ -1970,6 +1970,25 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    def test_equality_with_both_sides_equal_in_response(self):
+        response = "(1/3)^(1/4)= (1/3)^(1/4)"
+        answer = "Vbar=(1/3)^(1/4)"
+        params = {
+            'atol': 0,
+            'rtol': 0,
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'symbols': {
+                'LtDmax': {'aliases': [''], 'latex': '$(L/D)_{max}$'},
+                'etap': {'aliases': [''], 'latex': '$\\eta_p$'},
+                'sigma': {'aliases': [''], 'latex': '$\\sigma$'},
+                'Vbar': {'aliases': [''], 'latex': '$\\overline{V}$'},
+                'Pbar': {'aliases': [''], 'latex': '$\\overline{P}$'},
+            },
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+        
     def test_integral(self):
         response = "6y"
         answer = "int(3*x*y, (x, 0, 2))"

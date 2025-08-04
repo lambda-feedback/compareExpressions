@@ -349,18 +349,6 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
-#    def test_rad_vs_Hz(self):
-#        ans = "28.53 rad/s"
-#        res = "4.5405 H"
-#        params = {
-#            'rtol': 0.03,
-#            'strict_syntax': False,
-#            'physical_quantity': True,
-#            'elementary_functions': True,
-#        }
-#        result = evaluation_function(res, ans, params, include_test_data=True)
-#        assert result["is_correct"] is True
-
     def test_tolerance_given_as_string(self):
         ans = "4.52 kg"
         res = "13.74 kg"

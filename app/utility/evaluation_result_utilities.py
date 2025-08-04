@@ -5,6 +5,7 @@ class EvaluationResult:
         self._feedback = []  # A list that will hold all feedback items
         self._feedback_tags = {}  # A dictionary that holds a list with indices to all feedback items with the same tag
         self._criteria_graphs = {}
+        self._criteria_graphs_vis = {}
         self.latex = ""
         self.simplified = ""
 
@@ -41,6 +42,7 @@ class EvaluationResult:
 
     def add_criteria_graph(self, name, graph):
         self._criteria_graphs.update({name: graph.json()})
+        self._criteria_graphs_vis.update({name: graph.mermaid()})
 
     def _serialise_feedback(self) -> str:
         feedback = []
@@ -56,6 +58,7 @@ class EvaluationResult:
         out.update(dict(tags=list(self._feedback_tags.keys())))
         if include_test_data is True:
             out.update(dict(criteria_graphs=self._criteria_graphs))
+            out.update(dict(criteria_graphs_vis=self._criteria_graphs_vis))
         if self.latex is not None:
             out.update(dict(response_latex=self.latex))
         if self.simplified is not None:

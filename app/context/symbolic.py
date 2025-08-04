@@ -316,7 +316,12 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
 
         # TODO: Remove when criteria for checking proportionality is implemented
         if isinstance(res, Equality) and isinstance(ans, Equality):
-            symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
+            if (res.args[0]-res.args[1]).simplify() == 0:
+                symbols_in_equality_ratio = (ans.args[0]-ans.args[1]).simplify().free_symbols
+            elif (ans.args[0]-ans.args[1]).simplify() == 0:
+                symbols_in_equality_ratio = (res.args[0]-res.args[1]).simplify().free_symbols
+            else:
+                symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
             result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"]["constants"])
         if result is True:
             return {
