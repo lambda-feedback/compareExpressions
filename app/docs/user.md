@@ -496,7 +496,7 @@ $3$
 
 If the parameter `complexNumbers` is set to `true` then `I` will be interpreted as the imaginary constant $i$.
 
-**Note:** When `i` is used to denote the imaginary constant, then it can end up forming reserved keywords when used with other symbols, e.g. `xi` will be interpreted as $\xi$ instead of $x \cdot i$. To see how to avoid this kind of issue, see *Overriding greek letters or other reserved symbols with input symbols*.
+**Note:** When `i` is used to denote the imaginary constant, then it can end up forming reserved keywords when used with other symbols, e.g. `xi` will be interpreted as $\xi$ instead of $x \cdot i$. To see how to avoid this kind of issue, see [Working with Reserved Characters](#workiing-with-reserved-characters).
 
 In this example, `complexNumbers` is set to `true` and the answer is `2+I`. An input symbols has also been added so that `I` can be replaced with `i` or `j`.
 
@@ -507,26 +507,6 @@ Any response that is mathematically equivalent $2+i$ to will be accepted, e.g. `
 #### Using `constant` and `function` assumptions
 
 Examples of how to use the `constant` and `function` assumptions for symbols.
-
-#### Overriding greek letters or other reserved symbols with input symbols
-
-Sometimes there can be ambiguities in the expected responses. For example `xi` in a response could either be interpreted as the greek letter $\xi$ or as the multiplication $x \cdot i$.
-
-If there is an ambiguity the parser will choose the longest corresponding string, in the example above that means that `xi` will be interpreted as $\xi$ rather than $x \cdot i$.
-
-This behaviour can in many cases be overridden using input symbols, by letting the meaning with the longer corresponding string be an alternative to the interpretation consisting of several shorter strings. In the above example adding an input symbol with code `x\*i` and alternative `xi` will ensure that `xi` will be interpreted as  $x \cdot i$ rather than $\xi$.
-
-In this example the answer is set to $5 x \mathbf{i}-12 y \mathbf{j}$, while `strict_syntax` is set to false and `elementary_functions` is set to true.
-
-In order for the response `5xi-12yj` to be interpreted as $5 x \mathbf{i}-12 y \mathbf{j}$ instead of $5 \xi-12 y \mathbf{j}$ the following input symbols have been added:
-
-| Symbol              | Code | Alternatives |
-|:--------------------|:-----|:-------------|
-| `\$x\$`             | x    |              |
-| `\$\\mathbf{i}\$`   | i    |              |
-| `\$x \\mathbf{i}\$` | x\*i | xi           |
-| `\$y\$`             | y    |              |
-| `\$\\mathbf{j}\$`   | j    |              |
 
 #### Comparing equalities involving partial derivatives - Using the `constant` and `function` assumptions
 
@@ -618,7 +598,47 @@ Here is an example of an integral that can be fully evaluated, more specifically
 
 The boundary and function does not need to be defined explicitly. As an example of a more abstract integral we can consider $\int_a^b f(x)+g(x) \mathrm{d}x$. If the answer is set to `Integral(f(x)+g(x), (x, a, b))` then, for example, `int(g(x)+f(x), (x, a, b))` $\int_a^b g(x)+f(x) \mathrm{d}x$ and `int(f(x), (x, a, b)) + int(g(x), (x, a, b))` $\int_a^b f(x) \mathrm{d}x+\int_a^b g(x) \mathrm{d}x$.
 
-## Euler's number
+## Working with Reserved Characters
 
-SymPy recommends that you not use I, E, S, N, C, O, or Q for variable or symbol names, as those are used for the imaginary unit, the base of the natural logarithm, the sympify function, numeric evaluation, the big O order symbol, and the assumptions object that holds a list of supported ask keys, respectively. You can use the mnemonic OSINEQ to remember what Symbols are defined by default in SymPy. Or better yet, always use lowercase letters for Symbol names. Python will not prevent you from overriding default SymPy names or functions, so be careful."
+SymPy recommends that you not use I, E, S, N, C, O, or Q for variable or symbol names, as those are used for the imaginary unit ($i$), the base of the natural logarithm ($e$), the sympify function (`S()`), numeric evaluation (`N()`), the big O order symbol (as in $O(n)$), and the assumptions object that holds a list of supported ask keys (such as `Q.real`), respectively. You can use the mnemonic OSINEQ to remember what Symbols are defined by default in SymPy. Or better yet, always use lowercase letters for Symbol names. Python will not prevent you from overriding default SymPy names or functions, so be careful."
 For more information checkout the [SymPy Docs](https://docs.sympy.org/latest/explanation/gotchas.html#predefined-symbols)
+
+If you want to use a symbol that is usually reserved for some reserved character, e.g. ‘E’, do as follows:
+1. Create an input symbol where the code is different that the symbol you want to use, e.g. ‘Ef’ or 'Euler' instead of ‘E’
+2. Add the symbol you want to use as an alternative, e.g. the alternatives could be set to ‘E’
+
+#### Example:
+For the answer:
+$A/(b*l)$
+
+And then add an input symbol:
+
+Symbol: ϵ
+Code: b
+Alternatives: ϵ,ε,E,e,Ep
+
+Here the answer A/El is marked as correct.
+
+Note: the 'code' in the input symbol must be a single letter symbol. You can use multi-letter alternatives though.
+
+Now you have a symbol 'b'. In Lambda Feedback, you can hide it from the input symbols. Unfortunately it must be single letter and, unfortunately, it can't be a lower case 'e'.
+
+### Overriding greek letters or other reserved symbols with input symbols
+
+Sometimes there can be ambiguities in the expected responses. For example `xi` in a response could either be interpreted as the greek letter $\xi$ or as the multiplication $x \cdot i$.
+
+If there is an ambiguity the parser will choose the longest corresponding string, in the example above that means that `xi` will be interpreted as $\xi$ rather than $x \cdot i$.
+
+This behaviour can in many cases be overridden using input symbols, by letting the meaning with the longer corresponding string be an alternative to the interpretation consisting of several shorter strings. In the above example adding an input symbol with code `x\*i` and alternative `xi` will ensure that `xi` will be interpreted as  $x \cdot i$ rather than $\xi$.
+
+In this example the answer is set to $5 x \mathbf{i}-12 y \mathbf{j}$, while `strict_syntax` is set to false and `elementary_functions` is set to true.
+
+In order for the response `5xi-12yj` to be interpreted as $5 x \mathbf{i}-12 y \mathbf{j}$ instead of $5 \xi-12 y \mathbf{j}$ the following input symbols have been added:
+
+| Symbol              | Code | Alternatives |
+|:--------------------|:-----|:-------------|
+| `\$x\$`             | x    |              |
+| `\$\\mathbf{i}\$`   | i    |              |
+| `\$x \\mathbf{i}\$` | x\*i | xi           |
+| `\$y\$`             | y    |              |
+| `\$\\mathbf{j}\$`   | j    |              |
