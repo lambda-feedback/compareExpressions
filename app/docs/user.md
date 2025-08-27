@@ -617,3 +617,8 @@ The expression $\int_a^b f(x) \mathrm{d}x$ can be written `Integral(f(x), (x, a,
 Here is an example of an integral that can be fully evaluated, more specifically $\int_0^2 3xy \mathrm{d}x = 6y$. If the answer is set to `Integral(3xy, (x, 0, 2))` then response area will accept both integral expressions, e.g. `int(3*y*x, (x, 0, 2))`, and computed expressions, e.g. `6y`.
 
 The boundary and function does not need to be defined explicitly. As an example of a more abstract integral we can consider $\int_a^b f(x)+g(x) \mathrm{d}x$. If the answer is set to `Integral(f(x)+g(x), (x, a, b))` then, for example, `int(g(x)+f(x), (x, a, b))` $\int_a^b g(x)+f(x) \mathrm{d}x$ and `int(f(x), (x, a, b)) + int(g(x), (x, a, b))` $\int_a^b f(x) \mathrm{d}x+\int_a^b g(x) \mathrm{d}x$.
+
+## Euler's number
+
+SymPy recommends that you not use I, E, S, N, C, O, or Q for variable or symbol names, as those are used for the imaginary unit, the base of the natural logarithm, the sympify function, numeric evaluation, the big O order symbol, and the assumptions object that holds a list of supported ask keys, respectively. You can use the mnemonic OSINEQ to remember what Symbols are defined by default in SymPy. Or better yet, always use lowercase letters for Symbol names. Python will not prevent you from overriding default SymPy names or functions, so be careful."
+For more information checkout the [SymPy Docs](https://docs.sympy.org/latest/explanation/gotchas.html#predefined-symbols)
