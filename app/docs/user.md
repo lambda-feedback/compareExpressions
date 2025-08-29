@@ -609,17 +609,14 @@ If you want to use a symbol that is usually reserved for some reserved character
 
 #### Example:
 For the answer:
-$A/(b*l)$
-
-And then add an input symbol:
-
+$A/(El*l)$ $E$ is reserved, so we replace $E$ with $b$ and provide alternatives as input symbols:
 Symbol: ϵ
 Code: b
 Alternatives: ϵ,ε,E,e,Ep
 
 Here the answer A/El is marked as correct.
 
-Note: the 'code' in the input symbol must be a single letter symbol. You can use multi-letter alternatives though.
+Note: the 'code' in the input symbol must be a single letter symbol.
 
 Now you have a symbol 'b'. In Lambda Feedback, you can hide it from the input symbols. Unfortunately it must be single letter and, unfortunately, it can't be a lower case 'e'.
 
