@@ -609,16 +609,30 @@ If you want to use a symbol that is usually reserved for some reserved character
 
 #### Example:
 For the answer:
-$A/(El*l)$ $E$ is reserved, so we replace $E$ with $b$ and provide alternatives as input symbols:
+$A/(E*l)$, $E$ is reserved, so we replace $E$ with $ef$ and provide alternatives as input symbols:
+
+Symbol: $ϵ$
+
+Code: `ef`
+
+Alternatives: `ϵ,ε,E,e,Ep`
+
+Here the answer $A/(E*l)$ is marked as correct.
+
+
+### Reserved Characters and Implicit Multiplication
+As implicit multiplication cannot decypher what is a multi-character code and what are two variables that should be multiplied, single letter codes should be used.
+
+#### Example
+With `"convention": "implicit_higher_precedence"` set
+
+For the answer:
+$A/(E*l)$ $E$ is reserved, so we replace $E$ with $b$ and provide alternatives as input symbols:
 Symbol: ϵ
 Code: b
 Alternatives: ϵ,ε,E,e,Ep
 
 Here the answer A/El is marked as correct.
-
-Note: the 'code' in the input symbol must be a single letter symbol.
-
-Now you have a symbol 'b'. In Lambda Feedback, you can hide it from the input symbols. Unfortunately it must be single letter and, unfortunately, it can't be a lower case 'e'.
 
 ### Overriding greek letters or other reserved symbols with input symbols
 
