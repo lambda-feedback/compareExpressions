@@ -80,5 +80,56 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
 
+    def test_theata_character_implict_multi_variable(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+            "symbols": {
+                "a": {"aliases": ["a"]},
+                "bc": {"aliases": ["bc"]},
+                "d": {"aliases": ["d"]}
+            },
+        }
+        answer = "a/(theta*d)"
+        response_full = "a/(theta*d)"
+        response_implicit_bracket = "a/(thetad)"
+        response_implicit_no_bracket = "a/thetad"
+
+        result = evaluation_function(response_full, answer, params)
+        assert result["is_correct"] is True, "Response: a/(theta*d)"
+
+        result = evaluation_function(response_implicit_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/(thetad)"
+
+        result = evaluation_function(response_implicit_no_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/thetad"
+
+    def test_multi_character_implicit_multi_variable(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+            "symbols": {
+                "a": {"aliases": ["a"]},
+                "bc": {"aliases": ["bc"]},
+                "d": {"aliases": ["d"]}
+            },
+        }
+        answer = "a/(bc*d)"
+        response_full = "a/(bc*d)"
+        response_implicit_bracket = "a/(bcd)"
+        response_implicit_no_bracket = "a/bcd"
+
+        result = evaluation_function(response_full, answer, params)
+        assert result["is_correct"] is True, "Response: a/(bc*d)"
+
+        result = evaluation_function(response_implicit_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/(bcd)"
+
+        result = evaluation_function(response_implicit_no_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/bcd"
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', '--tb=short', '--durations=10', os.path.abspath(__file__)])
