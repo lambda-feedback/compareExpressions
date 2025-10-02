@@ -110,15 +110,15 @@ SI base units based on Table 2 in [The International System of Units (SI), 9th e
 
 Note that gram is used as a base unit instead of kilogram.
 
-| SI base unit | Symbol | Dimension name       |
-|--------------|:-------|:---------------------|
-| metre        |   m    | `length`             |
-| gram         |   g    | `mass`               |
-| second       |   s    | `time`               |
-| ampere       |   A    | `electric_current`   |
-| kelvin       |   k    | `temperature`        |
-| mole         |  mol   | `amountof_substance` |
-| candela      |  cd    | `luminous_intensity` |
+| SI base unit | Symbol | Dimension name        |
+|--------------|:-------|:----------------------|
+| metre        |   m    | `length`              |
+| gram         |   g    | `mass`                |
+| second       |   s    | `time`                |
+| ampere       |   A    | `electric_current`    |
+| kelvin       |   k    | `temperature`         |
+| mole         |  mol   | `amount_of_substance` |
+| candela      |  cd    | `luminous_intensity`  |
 
 ###### Table: SI prefixes
 
