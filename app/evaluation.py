@@ -233,6 +233,12 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         - if set to True, use basic dimensional analysis functionality.
     """
 
+    if "relative_tolerance" in params:
+        params["rtol"] = params["relative_tolerance"]
+
+    if "absolute_tolerance" in params:
+        params["atol"] = params["absolute_tolerance"]
+
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
@@ -318,7 +324,6 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "reserved_expressions": reserved_expressions_parsed,
             "criteria": criteria,
             "disabled_evaluation_nodes": parameters.get("disabled_evaluation_nodes", set()),
-            "evaluation_result": evaluation_result,
             "parsing_parameters": parsing_parameters,
             "evaluation_result": evaluation_result,
             "syntactical_comparison": parameters.get("syntactical_comparison", False),
