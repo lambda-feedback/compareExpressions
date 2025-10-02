@@ -1,10 +1,11 @@
-class EvaluationResponse:
+class EvaluationResult:
     def __init__(self):
         self.is_correct = False
         self.latex = None
         self._feedback = []  # A list that will hold all feedback items
         self._feedback_tags = {}  # A dictionary that holds a list with indices to all feedback items with the same tag
         self._criteria_graphs = {}
+        self._criteria_graphs_vis = {}
         self.latex = ""
         self.simplified = ""
 
@@ -25,22 +26,30 @@ class EvaluationResponse:
             raise TypeError("Feedback must be on the form (tag, feedback).")
         self._feedback_tags
 
-    def add_feedback_from_tags(self, tags, graph, inputs):
-        for tag in tags:
+    def add_feedback_from_tags(self, tags, graph, custom_feedback=None):
+        if custom_feedback is None:
+            custom_feedback = {}
+        for (tag, inputs) in tags.items():
             if tag not in self._feedback_tags.keys():
-                feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
-                if feedback_string is not None:
-                    self.add_feedback((tag, feedback_string))
+                if tag in custom_feedback.keys():
+                    feedback_string = custom_feedback[tag]
+                else:
+                    if inputs is None:
+                        feedback_string = graph.criteria[tag].feedback_string_generator(dict())
+                    else:
+                        feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
+                self.add_feedback((tag, feedback_string))
 
     def add_criteria_graph(self, name, graph):
         self._criteria_graphs.update({name: graph.json()})
+        self._criteria_graphs_vis.update({name: graph.mermaid()})
 
     def _serialise_feedback(self) -> str:
         feedback = []
         for x in self._feedback:
             if (isinstance(x, tuple) and len(x[1].strip())) > 0:
                 feedback.append(x[1].strip())
-            elif len(x.strip()) > 0:
+            elif x is not None and len(x.strip()) > 0:
                 feedback.append(x.strip())
         return "<br>".join(feedback)
 
@@ -49,9 +58,12 @@ class EvaluationResponse:
         out.update(dict(tags=list(self._feedback_tags.keys())))
         if include_test_data is True:
             out.update(dict(criteria_graphs=self._criteria_graphs))
+            out.update(dict(criteria_graphs_vis=self._criteria_graphs_vis))
         if self.latex is not None:
             out.update(dict(response_latex=self.latex))
         if self.simplified is not None:
+            if isinstance(self.simplified, list):
+                self.simplified = ", ".join(self.simplified)
             out.update(dict(response_simplified=self.simplified))
         return out
 

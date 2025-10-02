@@ -1,9 +1,9 @@
 import os
 import pytest
 
-from .preview_utilities import Params, extract_latex
-from .symbolic_comparison_preview import preview_function
-from .symbolic_comparison_evaluation_tests import elementary_function_test_cases
+from ..utility.preview_utilities import Params, extract_latex
+from ..preview_implementations.symbolic_preview import preview_function
+from .symbolic_evaluation_tests import elementary_function_test_cases
 
 
 class TestPreviewFunction():
@@ -68,7 +68,7 @@ class TestPreviewFunction():
         params = Params(is_latex=True, simplify=False)
         result = preview_function(response, params)
         preview = result["preview"]
-        assert preview.get("sympy") == "Eq((x**2 + x + x)/x, y)"
+        assert preview.get("sympy") == '(x**2 + x + x)/x=y'
 
     def test_sympy_with_equality_symbol(self):
         response = "Eq((x + x**2 + x)/x, 1)"
@@ -76,6 +76,44 @@ class TestPreviewFunction():
         result = preview_function(response, params)
         preview = result["preview"]
         assert preview.get("latex") == "\\frac{x^{2} + x + x}{x} = 1"
+
+    def test_latex_with_plus_minus(self):
+        response = r"\pm \frac{3}{\sqrt{5}} i"
+        params = Params(
+            is_latex=True,
+            simplify=False,
+            complexNumbers=True,
+            symbols={
+                "I": {
+                    "latex": "$i$",
+                    "aliases": ["i"],
+                },
+                "plus_minus": {
+                    "latex": "$\\pm$",
+                    "aliases": ["pm", "+-"],
+                },
+            }
+        )
+        result = preview_function(response, params)
+        preview = result["preview"]
+        assert preview.get("sympy") in {'{3*(sqrt(5)/5)*I, -3*sqrt(5)/5*I}', '{-3*sqrt(5)/5*I, 3*(sqrt(5)/5)*I}'}
+        assert preview.get("latex") == r'\pm \frac{3}{\sqrt{5}} i'
+        response = r"4 \pm \sqrt{6}}"
+        params = Params(
+            is_latex=True,
+            simplify=False,
+            complexNumbers=True,
+            symbols={
+                "plus_minus": {
+                    "latex": "$\\pm$",
+                    "aliases": ["pm", "+-"],
+                },
+            }
+        )
+        result = preview_function(response, params)
+        preview = result["preview"]
+        assert preview.get("sympy") in {'{sqrt(6) + 4, 4 - sqrt(6)}', '{4 - sqrt(6), sqrt(6) + 4}'}
+        assert preview.get("latex") == r'4 \pm \sqrt{6}}'
 
     def test_latex_conversion_preserves_default_symbols(self):
         response = "\\mu + x + 1"
@@ -198,6 +236,22 @@ class TestPreviewFunction():
         response_b = "1/a*b"
         result_b = preview_function(response_b, params)
         assert result_b["preview"]["latex"] == latex
+
+    def test_MECH50001_2_24_a(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            'symbols': {
+                'alpha': {'aliases': [], 'latex': r'\alpha'},
+                'Derivative(q,t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
+                'Derivative(T,t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
+                'Derivative(T,x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
+                'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
+            },
+        }
+        response = "d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)"
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == r'\frac{d^{2}}{d x^{2}} T + \frac{\frac{d}{d t} q}{k}=1 \cdot \frac{1}{\alpha} \cdot \frac{d}{d t} T'
 
 
 if __name__ == "__main__":

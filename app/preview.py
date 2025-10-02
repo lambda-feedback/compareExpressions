@@ -1,11 +1,11 @@
-from .preview_utilities import (
+from .utility.preview_utilities import (
     Params,
-    Preview,
     Result,
 )
 
-from .quantity_comparison_preview import preview_function as quantity_preview
-from .symbolic_comparison_preview import preview_function as symbolic_comparison_preview
+from .preview_implementations.physical_quantity_preview import preview_function as physical_quantity_preview
+from .preview_implementations.symbolic_preview import preview_function as symbolic_preview
+
 
 def preview_function(response: str, params: Params) -> Result:
     """
@@ -29,8 +29,8 @@ def preview_function(response: str, params: Params) -> Result:
     """
 
     if params.get("physical_quantity", False):
-        result = quantity_preview(response, params)
+        result = physical_quantity_preview(response, params)
     else:
-        result = symbolic_comparison_preview(response, params)
+        result = symbolic_preview(response, params)
 
     return result
