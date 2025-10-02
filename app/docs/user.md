@@ -21,13 +21,15 @@ If you want to use `I` for the imaginary constant, set the grading parameter `co
 
 Changes the implicit multiplication convention. If unset it will default to `equal_precedence`.
 
-If set to `implicit_higher_precedence` then implicit multiplication will have higher precedence than explicit multiplication, i.e. `1/ab` will be equal to `1/(ab)` and `1/a*b` will be equal to `(1/a)*b`.
+If set to `implicit_higher_precedence` then implicit multiplication will have higher precedence than explicit multiplication, i.e. `1/ab` will be equal to `1/(ab)` and `1/a*b` will be equal to `(1/a)*b`. 
+
+**_NOTE:_** Currently, if implicit multiplication has higher precedence, then multi-character custom symbols are not supported. For example, if you have defined the symbol `bc` with an answer `a/(bc*d)` then `a/(bcd)` will fail, as it is treated as `a/(b *  c * d)`.
 
 If set to `equal_precedence` then implicit multiplication will have the same precedence than explicit multiplication, i.e. both `1/ab` and `1/a*b` will be equal to `(1/a)*b`.
 
 #### `criteria`
 
-The `criteria` parameter can be used to customize the comparison performed by the evaluation function. If unset the evaluation function will will default to checking if the answer and response are symbolically equal.
+The `criteria` parameter can be used to customize the comparison performed by the evaluation function. If unset the evaluation function will default to checking if the answer and response are symbolically equal.
 
 The `criteria` parameter takes a string that defines a set of (comma separated) mathematical statements. If all statements in the list are true the response is considered correct.
 
