@@ -110,15 +110,15 @@ SI base units based on Table 2 in [The International System of Units (SI), 9th e
 
 Note that gram is used as a base unit instead of kilogram.
 
-| SI base unit | Symbol | Dimension name      |
-|--------------|:-------|:--------------------|
-| metre        |   m    | length              |
-| gram         |   g    | mass                |
-| second       |   s    | time                |
-| ampere       |   A    | electriccurrent     |
-| kelvin       |   k    | temperature         |
-| mole         |  mol   | amountofsubstance   |
-| candela      |  cd    | luminousintensity   |
+| SI base unit | Symbol | Dimension name        |
+|--------------|:-------|:----------------------|
+| metre        |   m    | `length`              |
+| gram         |   g    | `mass`                |
+| second       |   s    | `time`                |
+| ampere       |   A    | `electric_current`    |
+| kelvin       |   k    | `temperature`         |
+| mole         |  mol   | `amount_of_substance` |
+| candela      |  cd    | `luminous_intensity`  |
 
 ###### Table: SI prefixes
 
@@ -126,6 +126,8 @@ SI prefixes based on Table 7 in [The International System of Units (SI), 9th edi
 
 | SI Prefix | Symbol | Factor     | | SI Prefix | Symbol | Factor     |
 |-----------|:-------|:-----------|-|-----------|:-------|:-----------|
+| quetta    |   Q    | $10^{30}$  | | deci      |   d    | $10^{-1}$  |
+| ronna     |   R    | $10^{27}$  | | centi     |   c    | $10^{-2}$  |
 | yotta     |   Y    | $10^{24}$  | | deci      |   d    | $10^{-1}$  |
 | zetta     |   Z    | $10^{21}$  | | centi     |   c    | $10^{-2}$  |
 | exa       |   E    | $10^{18}$  | | milli     |   m    | $10^{-3}$  |
@@ -174,35 +176,35 @@ Note that the function treats angles, neper and bel as dimensionless values.
 
 Note that only the first table in this section has short form symbols defined, the second table does not, this is done to minimize ambiguities when writing units.
 
-| Unit name         | Symbol | Expressed in SI units                      |
+|| Unit name         | Symbol | Expressed in SI units                      |
 |-------------------|:-------|:-------------------------------------------|
-| minute            |  min   | $60 \mathrm{second}$                       |
-| hour              |   h    | $3600 \mathrm{second}$                     |
-| degree            |  deg   | $\frac{1}{360}$                            |
-| liter             |   l    | $10^{-3} \mathrm{metre}^3$                 |
-| metric_ton        |   t    | $10^3 \mathrm{kilogram}$                   |
+| minute            |  min   | $60~\mathrm{second}$                       |
+| hour              |   h    | $3600~\mathrm{second}$                     |
+| degree            |  deg   | $\frac{\pi}{180}$                          |
+| liter             |   l    | $10^{-3}~\mathrm{metre}^3$                 |
+| metric_ton        |   t    | $10^3~\mathrm{kilogram}$                   |
 | neper             |  Np    | $1$                                        |
-| bel               |   B    | $\frac{1}{2} \ln(10)$                      |
-| electronvolt      |  eV    | $1.60218 \cdot 10^{-19} \mathrm{joule}$    |
-| atomic_mass_unit  |   u    | $1.66054 \cdot 10^{-27} \mathrm{kilogram}$ |
-| angstrom          |   å    | $10^{-10} \mathrm{metre}$                  |
+| bel               |   B    | $\frac{1}{2}~\ln(10)$                      |
+| electronvolt      |  eV    | $1.60218 \cdot 10^{-19}~\mathrm{joule}$    |
+| atomic_mass_unit  |   u    | $1.66054 \cdot 10^{-27}~\mathrm{kilogram}$ |
+| angstrom          |   å    | $10^{-10}~\mathrm{metre}$                  |
 
 | Unit name        | Expressed in SI units                                |
 |------------------|:-----------------------------------------------------|
-| day              | $86400 \mathrm{second}$                              |
+| day              | $86400~\mathrm{second}$                              |
 | angleminute      | $\frac{\pi}{10800}$                                  |
 | anglesecond      | $\frac{\pi}{648000}$                                 |
-| astronomicalunit | $149597870700 \mathrm{metre}$                        |
-| nauticalmile     | $1852 \mathrm{metre}$                                |
-| knot             | $\frac{1852}{3600} \mathrm{metre second}^{-1}$       |
-| are              | $10^2 \mathrm{metre}^2$                              |
-| hectare          | $10^4 \mathrm{metre}^2$                              |
-| bar              | $10^5 \mathrm{pascal}$                               |
-| barn             | $10^{-28} \mathrm{metre}$                            |
-| curie            | $3.7 \cdot 10^{10} \mathrm{becquerel}                |
-| roentgen         | $2.58 \cdot 10^{-4} \mathrm{kelvin (kilogram)}^{-1}$ |
-| rad              | $10^{-2} \mathrm{gray}$                              |
-| rem              | $10^{-2} \mathrm{sievert}$                           |
+| astronomicalunit | $149597870700~\mathrm{metre}$                        |
+| nauticalmile     | $1852~\mathrm{metre}$                                |
+| knot             | $\frac{1852}{3600}~\mathrm{metre~second}^{-1}$       |
+| are              | $10^2~\mathrm{metre}^2$                              |
+| hectare          | $10^4~\mathrm{metre}^2$                              |
+| bar              | $10^5~\mathrm{pascal}$                               |
+| barn             | $10^{-28}~\mathrm{metre}$                            |
+| curie            | $3.7 \cdot 10^{10}~\mathrm{becquerel}                |
+| roentgen         | $2.58 \cdot 10^{-4}~\mathrm{kelvin~(kilogram)}^{-1}$ |
+| rad              | $10^{-2}~\mathrm{gray}$                              |
+| rem              | $10^{-2}~\mathrm{sievert}$                           |
 
 ###### Table: Imperial units
 
@@ -210,18 +212,18 @@ Commonly imperial units taken from [Wikipedia, Imperial Units](https://en.wikipe
 
 | Unit name         | Symbol | Expressed in SI units                         |
 |-------------------|:-------|:----------------------------------------------|
-| inch              |   in   | $0.0254 \mathrm{metre}$                       |
-| foot              |   ft   | $0.3048 \mathrm{metre}$                       |
-| yard              |   yd   | $0.9144 \mathrm{metre}$                       |
-| mile              |   mi   | $1609.344 \mathrm{metre}$                     |
-| fluid ounce       |  fl oz | $28.4130625 \mathrm{millilitre}$              |
-| gill              |   gi   | $142.0653125 \mathrm{millilitre}$             |
-| pint              |   pt   | $568.26125 \mathrm{millilitre}$               |
-| quart             |   qt   | $1.1365225 \mathrm{litre}$                    |
-| gallon            |   gal  | $4546.09 \mathrm{litre}$                      |
-| ounce             |   oz   | $28.349523125 \mathrm{gram}$                  |
-| pound             |   lb   | $0.45359237 \mathrm{kilogram}$                |
-| stone             |   st   | $6.35029318 \mathrm{kilogram}$                |
+| inch              |   in   | $0.0254~\mathrm{metre}$                       |
+| foot              |   ft   | $0.3048~\mathrm{metre}$                       |
+| yard              |   yd   | $0.9144~\mathrm{metre}$                       |
+| mile              |   mi   | $1609.344~\mathrm{metre}$                     |
+| fluid ounce       |  fl oz | $28.4130625~\mathrm{millilitre}$              |
+| gill              |   gi   | $142.0653125~\mathrm{millilitre}$             |
+| pint              |   pt   | $568.26125~\mathrm{millilitre}$               |
+| quart             |   qt   | $1.1365225~\mathrm{litre}$                    |
+| gallon            |   gal  | $4546.09~\mathrm{litre}$                      |
+| ounce             |   oz   | $28.349523125~\mathrm{gram}$                  |
+| pound             |   lb   | $0.45359237~\mathrm{kilogram}$                |
+| stone             |   st   | $6.35029318~\mathrm{kilogram}$                |
 
 #### `plus_minus` and `minus_plus`
 
