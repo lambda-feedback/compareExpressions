@@ -1869,6 +1869,7 @@ class TestEvaluationFunction():
             ("n!", "factorial(n)", True),
             ("a!=b", "factorial(3)", False),
             ("2*n!", "2*factorial(n)", True),
+            ("3!", "3!", True)
         ]
     )
     def test_exclamation_mark_for_factorial(self, response, answer, value):
@@ -1887,6 +1888,7 @@ class TestEvaluationFunction():
             ("n!!", "factorial2(n)", True),
             ("a!=b", "factorial2(3)", False),
             ("2*n!!", "2*factorial2(n)", True),
+            ("3!!", "3!!", True),
         ]
     )
     def test_double_exclamation_mark_for_factorial(self, response, answer, value):
