@@ -24,6 +24,10 @@ from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
 from sympy import Basic, Symbol, Equality, Function
 
+from sympy import factorial as _sympy_factorial
+from sympy.functions.combinatorial.factorials import factorial2 as _sympy_factorial2
+
+
 import re
 from typing import Dict, List, TypedDict
 
@@ -661,6 +665,149 @@ def preprocess_expression(name, expr, parameters):
         success = False
     return success, expr, abs_feedback
 
+def convert_double_bang_factorial(s: str) -> str:
+    """
+    Convert double postfix factorial (e.g., n!!, (x+1)!!, 3!!) to function form: factorial2(n), etc.
+    Safeguards:
+      - Does NOT treat '!=' specially (since we target '!!').
+      - Requires two consecutive '!' characters (no whitespace in between).
+      - Handles balanced parenthesis operands (e.g., '(... )!!').
+      - Handles identifiers and numeric literals.
+    """
+    n = len(s)
+    i = 0
+    last = 0
+    out = []
+
+    while i < n:
+        ch = s[i]
+        if ch == '!' and (i + 1) < n and s[i + 1] == '!':
+            # Look left to find the operand (skip whitespace)
+            j = i - 1
+            while j >= 0 and s[j].isspace():
+                j -= 1
+            if j < 0:
+                # Nothing to the left; keep as-is
+                i += 1
+                continue
+
+            # Case 1: operand ends with ')': parenthesized group
+            if s[j] == ')':
+                depth = 1
+                k = j - 1
+                while k >= 0 and depth > 0:
+                    if s[k] == ')':
+                        depth += 1
+                    elif s[k] == '(':
+                        depth -= 1
+                    k -= 1
+                if depth == 0:
+                    L = k + 1    # index of '('
+                    R = j        # index of ')'
+                    out.append(s[last:L])
+                    out.append('factorial2(')
+                    out.append(s[L:R+1])
+                    out.append(')')
+                    last = i + 2   # consume both '!'
+                    i += 2
+                    continue
+                else:
+                    # Unbalanced parentheses; leave as-is
+                    i += 1
+                    continue
+
+            # Case 2: operand is an identifier/number ending at j
+            k = j
+            while k >= 0 and (s[k].isalnum() or s[k] in ('_', '.')):
+                k -= 1
+            L = k + 1
+            if L <= j:
+                out.append(s[last:L])
+                out.append('factorial2(')
+                out.append(s[L:j+1])
+                out.append(')')
+                last = i + 2
+                i += 2
+                continue
+            # If we get here, no valid operand token; fall through and keep scanning.
+
+        i += 1
+
+    out.append(s[last:])
+    return ''.join(out)
+
+def convert_bang_factorial(s: str) -> str:
+    """
+    Convert single postfix factorial (e.g., n!, (x+1)!, 3!) to function form: factorial(n), etc.
+    Safeguards:
+      - Does NOT convert '!='.
+      - Does NOT convert '!!' (handled by convert_double_bang_factorial).
+    """
+    n = len(s)
+    i = 0
+    last = 0
+    out = []
+
+    while i < n:
+        ch = s[i]
+        if ch == '!':
+            # Skip '!=' and '!!' (the latter handled in a separate pass)
+            nxt = s[i+1] if i + 1 < n else ''
+            if nxt in ('=', '!'):
+                i += 1
+                continue
+
+            # Move left to find the operand (skip whitespace)
+            j = i - 1
+            while j >= 0 and s[j].isspace():
+                j -= 1
+            if j < 0:
+                i += 1
+                continue
+
+            # Parenthesized operand
+            if s[j] == ')':
+                depth = 1
+                k = j - 1
+                while k >= 0 and depth > 0:
+                    if s[k] == ')':
+                        depth += 1
+                    elif s[k] == '(':
+                        depth -= 1
+                    k -= 1
+                if depth == 0:
+                    L = k + 1
+                    R = j
+                    out.append(s[last:L])
+                    out.append('factorial(')
+                    out.append(s[L:R+1])
+                    out.append(')')
+                    last = i + 1
+                    i += 1
+                    continue
+                else:
+                    i += 1
+                    continue
+
+            # Identifier/number operand
+            k = j
+            while k >= 0 and (s[k].isalnum() or s[k] in ('_', '.')):
+                k -= 1
+            L = k + 1
+            if L <= j:
+                out.append(s[last:L])
+                out.append('factorial(')
+                out.append(s[L:j+1])
+                out.append(')')
+                last = i + 1
+                i += 1
+                continue
+
+        i += 1
+
+    out.append(s[last:])
+    return ''.join(out)
+
 
 def parse_expression(expr_string, parsing_params):
     '''
@@ -678,27 +825,52 @@ def parse_expression(expr_string, parsing_params):
     extra_transformations = parsing_params.get("extra_transformations", ())
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
+
+    # --- Ensure factorial and factorial2 are known and not split ---
+    symbol_dict = dict(symbol_dict)
+    symbol_dict.setdefault("factorial", _sympy_factorial)
+    symbol_dict.setdefault("factorial2", _sympy_factorial2)
+
+    if 'factorial' not in unsplittable_symbols or 'factorial2' not in unsplittable_symbols:
+        unsplittable_symbols = tuple(
+            list(unsplittable_symbols)
+            + [s for s in ('factorial', 'factorial2') if s not in unsplittable_symbols]
+        )
+
     separate_unsplittable_symbols = [(x, " "+x) for x in unsplittable_symbols]
     substitutions = separate_unsplittable_symbols
 
     parsed_expr_set = set()
     for expr in expr_set:
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
+
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)
-        if parsing_params["elementary_functions"] is True:
+        if parsing_params.get("elementary_functions") is True:
             substitutions += protect_elementary_functions_substitutions(expr)
+
+            expr = convert_double_bang_factorial(expr)  # n!! -> factorial2(n)
+            expr = convert_bang_factorial(expr)  # n!  -> factorial(n)
+
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)
         expr = substitute(expr, substitutions)
         expr = " ".join(expr.split())
+
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
         if strict_syntax is True:
             transformations = parser_transformations[0:4]+extra_transformations
         else:
-            transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8, 9]
+            transformations = (
+                parser_transformations[0:5, 6]  # keep your existing set-up
+                + extra_transformations
+                + (split_symbols_custom(can_split),)
+                + parser_transformations[8, 9]
+            )
+
         if parsing_params.get("rationalise", False):
             transformations += parser_transformations[11]
+
         if "=" in expr:
             expr_parts = expr.split("=")
             lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
@@ -710,11 +882,12 @@ def parse_expression(expr_string, parsing_params):
                 parsed_expr = parsed_expr.simplify()
         else:
             parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+
         if not isinstance(parsed_expr, Basic):
             raise ValueError(f"Failed to parse Sympy expression `{expr}`")
         parsed_expr_set.add(parsed_expr)
 
-    if len(expr_set) == 1:
-        return parsed_expr_set.pop()
-    else:
-        return parsed_expr_set
+        if len(expr_set) == 1:
+            return parsed_expr_set.pop()
+        else:
+            return parsed_expr_set
