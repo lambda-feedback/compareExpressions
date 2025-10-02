@@ -85,6 +85,7 @@ class TestEvaluationFunction():
             "strict_syntax": False,
             "elementary_functions": True,
             "convention": "implicit_higher_precedence",
+            "normalise": True,
             "symbols": {
                 "a": {"aliases": ["a"]},
                 "bc": {"aliases": ["bc"]},
@@ -110,6 +111,7 @@ class TestEvaluationFunction():
             "strict_syntax": False,
             "elementary_functions": True,
             "convention": "implicit_higher_precedence",
+            "normalise": True,
             "symbols": {
                 "a": {"aliases": ["a"]},
                 "bc": {"aliases": ["bc"]},
