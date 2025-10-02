@@ -825,8 +825,9 @@ def parse_expression(expr_string, parsing_params):
     extra_transformations = parsing_params.get("extra_transformations", ())
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
+    separate_unsplittable_symbols = [(x, " "+x) for x in unsplittable_symbols]
+    substitutions = separate_unsplittable_symbols
 
-    # --- Ensure factorial and factorial2 are known and not split ---
     symbol_dict = dict(symbol_dict)
     symbol_dict.setdefault("factorial", _sympy_factorial)
     symbol_dict.setdefault("factorial2", _sympy_factorial2)
@@ -837,40 +838,26 @@ def parse_expression(expr_string, parsing_params):
             + [s for s in ('factorial', 'factorial2') if s not in unsplittable_symbols]
         )
 
-    separate_unsplittable_symbols = [(x, " "+x) for x in unsplittable_symbols]
-    substitutions = separate_unsplittable_symbols
-
     parsed_expr_set = set()
     for expr in expr_set:
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
-
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)
-        if parsing_params.get("elementary_functions") is True:
+        if parsing_params["elementary_functions"] is True:
             substitutions += protect_elementary_functions_substitutions(expr)
-
-            expr = convert_double_bang_factorial(expr)  # n!! -> factorial2(n)
-            expr = convert_bang_factorial(expr)  # n!  -> factorial(n)
-
+            expr = convert_double_bang_factorial(expr)
+            expr = convert_bang_factorial(expr)
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)
         expr = substitute(expr, substitutions)
         expr = " ".join(expr.split())
-
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
         if strict_syntax is True:
             transformations = parser_transformations[0:4]+extra_transformations
         else:
-            transformations = (
-                parser_transformations[0:5, 6]  # keep your existing set-up
-                + extra_transformations
-                + (split_symbols_custom(can_split),)
-                + parser_transformations[8, 9]
-            )
-
+            transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8, 9]
         if parsing_params.get("rationalise", False):
             transformations += parser_transformations[11]
-
         if "=" in expr:
             expr_parts = expr.split("=")
             lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
@@ -882,12 +869,11 @@ def parse_expression(expr_string, parsing_params):
                 parsed_expr = parsed_expr.simplify()
         else:
             parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-
         if not isinstance(parsed_expr, Basic):
             raise ValueError(f"Failed to parse Sympy expression `{expr}`")
         parsed_expr_set.add(parsed_expr)
 
-        if len(expr_set) == 1:
-            return parsed_expr_set.pop()
-        else:
-            return parsed_expr_set
+    if len(expr_set) == 1:
+        return parsed_expr_set.pop()
+    else:
+        return parsed_expr_set
