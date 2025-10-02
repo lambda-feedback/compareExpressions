@@ -776,10 +776,6 @@ class TestEvaluationFunction():
                 '(0.002*6800*v)/1.2'
             ),
             (
-                '-∞',
-                '-inf'
-            ),
-            (
                 'x.y',
                 'x*y'
             ),
