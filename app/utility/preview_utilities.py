@@ -110,7 +110,7 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
     if len(parsed_responses) < 2:
         return parsed_responses.pop()
     else:
-        return '{'+', '.join(parsed_responses)+'}'
+        return '{'+', '.join(sorted(parsed_responses))+'}'
 
 
 def sanitise_latex(response):
