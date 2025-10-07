@@ -1,6 +1,9 @@
 # Default parameters for expression handling
 # Any contexts that use this collection of utility functions
 # must define values for theses parameters
+
+DEFAULT_SIGNIFICANT_FIGURES = 2
+
 default_parameters = {
     "complexNumbers": False,
     "convention": "equal_precedence",
@@ -471,7 +474,7 @@ def compute_relative_tolerance_from_significant_decimals(string):
         index = min(separator_indices)
         significant_characters = string[0:index].replace(".", "")
         significant_characters = significant_characters.lstrip("-0")
-        rtol = 5*10**(-len(significant_characters))
+        rtol = 5*10**(-max(len(significant_characters), DEFAULT_SIGNIFICANT_FIGURES))
     return rtol
 
 
