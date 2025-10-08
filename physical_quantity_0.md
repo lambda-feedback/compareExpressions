@@ -16,26 +16,26 @@ flowchart TD
 	N_1_10["response matches answer_UNIT_COMPARISON_PREFIX_IS_LARGE<br/>---<br/>The units of QUANTITY: response tags:  {} are at least 1000 times greater than the units of QUANTITY: answer tags:  {}."]
 	N_1_11["response matches answer_UNIT_COMPARISON_PREFIX_IS_SMALL<br/>---<br/>The units of QUANTITY: response tags:  {} are at least 1000 times smaller than the units of QUANTITY: answer tags:  {}."]
 	N_2_0{{"END<br/>---<br/>Evaluation completed."}}
-	N_0_1 --> N_1_7
 	N_0_2 --> N_1_9
+	N_1_4 --> N_2_0
+	N_0_0 --> N_1_2
+	N_0_0 --> N_1_1
+	N_0_1 --> N_1_7
+	N_1_5 --> N_2_0
+	N_0_1 --> N_1_6
+	N_0_0 --> N_1_3
 	N_0_2 --> N_1_11
-	N_1_10 --> N_2_0
-	N_1_1 --> N_0_1
 	N_1_6 --> N_2_0
 	N_0_0 --> N_1_5
-	N_1_11 --> N_2_0
-	N_1_0 --> N_0_2
-	N_0_1 --> N_1_6
 	N_0_2 --> N_1_8
-	N_1_7 --> N_2_0
 	N_0_2 --> N_1_10
-	N_0_0 --> N_1_3
-	N_0_0 --> N_1_1
-	N_1_4 --> N_2_0
-	N_0_0 --> N_1_4
+	N_1_11 --> N_2_0
+	N_1_1 --> N_0_1
+	N_1_3 --> N_2_0
 	N_0_0 --> N_1_0
 	N_1_2 --> N_2_0
-	N_1_5 --> N_2_0
-	N_1_3 --> N_2_0
-	N_0_0 --> N_1_2
+	N_1_7 --> N_2_0
+	N_0_0 --> N_1_4
+	N_1_10 --> N_2_0
+	N_1_0 --> N_0_2
 ```
