@@ -1,6 +1,8 @@
 # Default parameters for expression handling
 # Any contexts that use this collection of utility functions
 # must define values for theses parameters
+from .unsplittable_multicharacter_transformer import create_multichar_symbol_transformer
+
 default_parameters = {
     "complexNumbers": False,
     "convention": "equal_precedence",
@@ -617,7 +619,6 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "convention": params["convention"],
         "simplify": params.get("simplify", False),
         "rationalise": params.get("rationalise", True),
-        "normalise": params.get("normalise", False),
         "constants": set(),
         "complexNumbers": params["complexNumbers"],
         "reserved_keywords": params.get("reserved_keywords",[]),
@@ -646,6 +647,10 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         except Exception as e:
             raise Exception(f"Assumption {assumption} for symbol {symbol} caused a problem.") from e
 
+    if any(len(s) > 1 for s in unsplittable_symbols) and params.get('context') == "implicit_higher_precedence":
+        mc_transform = create_multichar_symbol_transformer(unsplittable_symbols)
+        parsing_params["extra_transformations"] += (mc_transform, )
+
     return parsing_params
 
 
@@ -661,67 +666,6 @@ def preprocess_expression(name, expr, parameters):
     if abs_feedback is not None:
         success = False
     return success, expr, abs_feedback
-
-def normalise(expr: str, symbol_names, enable_numbers=True) -> str:
-    """
-    Greedily segment identifiers into known symbol names and insert '*' between
-    adjacent matches. Punctuation and spacing are preserved; numbers are kept
-    intact.
-
-    Example (symbol_names=['a','bc','d']):
-        'a/(bcd)' -> 'a/(bc*d)'
-        '2a + bcd' -> '2*a + bc*d'
-
-    Args:
-        expr (str):       input expression string
-        symbol_names:     iterable of allowed symbol names (strings)
-        enable_numbers:   if True, recognize numbers as single tokens
-
-    Returns:
-        str: the segmented expression where within-word adjacencies are made explicit.
-    """
-    name_set = set(symbol_names)
-    if not name_set:
-        return expr
-    maxlen = max(map(len, name_set))
-
-    # Tokenize into: numbers | identifiers | single non-word characters
-    if enable_numbers:
-        token_re = re.compile(r"\d+\.\d*|\d*\.\d+|\d+|[A-Za-z_]\w*|[^\w\s]")
-    else:
-        token_re = re.compile(r"[A-Za-z_]\w*|[^\w\s]")
-
-    tokens = token_re.findall(expr)
-
-    def segment_identifier(w: str) -> str:
-        i = 0
-        out = []
-        while i < len(w):
-            match = None
-            # Greedy longest match
-            for L in range(min(maxlen, len(w) - i), 0, -1):
-                cand = w[i:i+L]
-                if cand in name_set:
-                    match = cand
-                    break
-            if match is not None:
-                if out:
-                    out.append("*")
-                out.append(match)
-                i += len(match)
-            else:
-                # No match: treat single char as its own identifier
-                if out:
-                    out.append("*")
-                out.append(w[i])
-                i += 1
-        return "".join(out)
-
-    normalised_parts = [
-        segment_identifier(tok) if tok and (tok[0].isalpha() or tok[0] == "_") else tok
-        for tok in tokens
-    ]
-    return "".join(normalised_parts)
 
 
 def parse_expression(expr_string, parsing_params):
@@ -745,8 +689,6 @@ def parse_expression(expr_string, parsing_params):
 
     parsed_expr_set = set()
 
-    segment_names = tuple(dict.fromkeys(list(symbol_dict.keys()) + list(unsplittable_symbols)))
-
     for expr in expr_set:
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
         substitutions = list(set(substitutions))
@@ -767,10 +709,6 @@ def parse_expression(expr_string, parsing_params):
 
         if parsing_params.get("rationalise", False):
             transformations += parser_transformations[11]
-
-        if parsing_params.get("normalise") and parsing_params.get("convention", "") == "implicit_higher_precedence":
-
-            expr = normalise(expr, symbol_names=segment_names)
 
 
         if "=" in expr:

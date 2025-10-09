@@ -8,7 +8,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are 16 optional parameters that can be set: `atol`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `normalise`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
+There are 16 optional parameters that can be set: `atol`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
 
 #### `atol`
 Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $|x-\tilde{x}| \leq e_aBy default `atol` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
@@ -63,17 +63,6 @@ All feedback for all incorrect responses will be replaced with the string that t
 The $\pm$ and $\mp$ symbols can be represented in  the answer or response by `plus_minus` and `minus_plus` respectively.
 
 Answers or responses that contain $\pm$ or $\mp$ has two possible interpretations which requires further criteria for equality. The grading parameter `multiple_answers_criteria` controls this. The default setting, `all`, is that each answer must have a corresponding answer and vice versa. The setting `all_responses` check that all responses are valid answers and the setting `all_answers` checks that all answers are found among the responses.
-
-#### `normalise`
-If unset, `normalise` will default to `false`.
-
-If `normalise` is set to true the answer and response will be parsed by a custom tokenizer before the standard sympy parsing.
-It should only be used with `convention: "implicit_higher_precedence"`
-This enables the support of implicit multiplication of custom symbols that contain multiple characters.
-
-For example, with `normalise` enabled `a/(bcd)` with the symbol `bc` would normalise to `a/(bc*d)`.
-If `normalise` is disabled `a/(bcd)` would be interpreted as `a/(b*c*d)`.
-
 #### `physical_quantity`
 
 If unset, `physical_quantity` will default to `false`. 
