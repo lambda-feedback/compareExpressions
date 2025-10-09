@@ -1869,7 +1869,8 @@ class TestEvaluationFunction():
             ("n!", "factorial(n)", True),
             ("a!=b", "factorial(3)", False),
             ("2*n!", "2*factorial(n)", True),
-            ("3!", "3!", True)
+            ("3!", "3!", True),
+            ("3*sin(n)!", "3*factorial(sin(n))", True)
         ]
     )
     def test_exclamation_mark_for_factorial(self, response, answer, value):
