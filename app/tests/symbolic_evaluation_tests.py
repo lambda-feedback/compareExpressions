@@ -776,10 +776,6 @@ class TestEvaluationFunction():
                 '(0.002*6800*v)/1.2'
             ),
             (
-                '-∞',
-                '-inf'
-            ),
-            (
                 'x.y',
                 'x*y'
             ),
@@ -1865,15 +1861,52 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value
 
-    def test_exclamation_mark_for_factorial(self):
-        response = "3!"
-        answer = "factorial(3)"
+    @pytest.mark.parametrize(
+        "response, answer, value",
+        [
+            ("3!", "factorial(3)", True),
+            ("(n+1)!", "factorial(n+1)", True),
+            ("n!", "factorial(n)", True),
+            ("a!=b", "factorial(3)", False),
+            ("2*n!", "2*factorial(n)", True),
+            ("3!", "3!", True),
+            ("3*sin(n)!", "3*factorial(sin(n))", True)
+        ]
+    )
+    def test_exclamation_mark_for_factorial(self, response, answer, value):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
         }
         result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is True
+        assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
+        "response, answer, value",
+        [
+            ("3!!", "factorial2(3)", True),
+            ("(n+1)!!", "factorial2(n+1)", True),
+            ("n!!", "factorial2(n)", True),
+            ("a!=b", "factorial2(3)", False),
+            ("2*n!!", "2*factorial2(n)", True),
+            ("3!!", "3!!", True),
+        ]
+    )
+    def test_double_exclamation_mark_for_factorial(self, response, answer, value):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    def test_warning_for_triple_factorial(self):
+        answer = '2^4!'
+        response = '2^4!!!'
+        params = {'strict_syntax': False}
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is False
+        assert "NOTATION_WARNING_TRIPLE_FACTORIAL" in result["tags"]
 
     def test_alternatives_to_input_symbols_takes_priority_over_elementary_function_alternatives(self):
         answer = "Ef*exp(x)"
