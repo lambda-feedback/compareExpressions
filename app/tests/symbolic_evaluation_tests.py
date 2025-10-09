@@ -1899,6 +1899,14 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value
 
+    def test_warning_for_triple_factorial(self):
+        answer = '2^4!'
+        response = '2^4!!!'
+        params = {'strict_syntax': False}
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is False
+        assert "NOTATION_WARNING_TRIPLE_FACTORIAL" in result["tags"]
+
     def test_alternatives_to_input_symbols_takes_priority_over_elementary_function_alternatives(self):
         answer = "Ef*exp(x)"
         params = {

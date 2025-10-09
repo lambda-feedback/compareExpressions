@@ -288,6 +288,10 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         if "!" in response:
             evaluation_result.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict())))
 
+    if "!!!" in response:
+        evaluation_result.add_feedback(
+            ("NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict())))
+
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:
         return evaluation_result.serialise(include_test_data)
