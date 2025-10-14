@@ -21,7 +21,6 @@ feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "PARSE_ERROR": f"`{inputs.get('x','')}` could not be parsed as a valid mathematical expression. Ensure that correct codes for input symbols are used, correct notation is used, that the expression is unambiguous and that all parentheses are closed.",
     "NOTATION_WARNING_EXPONENT": "Note that `^` cannot be used to denote exponentiation, use `**` instead.",
     "NOTATION_WARNING_FACTORIAL": "Note that `!` cannot be used to denote factorial, use `factorial(...)` instead.",
-    "NOTATION_WARNING_TRIPLE_FACTORIAL": "Note that `!!!` is not supported.",
     "EXPRESSION_NOT_EQUALITY": "The response was an expression but was expected to be an equality.",
     "EQUALITY_NOT_EXPRESSION": "The response was an equality but was expected to be an expression.",
     "EQUALITIES_EQUIVALENT": None,

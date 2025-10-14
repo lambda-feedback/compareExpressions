@@ -53,7 +53,7 @@ Once the code passes all these tests, it will then be uploaded to AWS and will b
 ## Pre-requisites
 Although all programming can be done through the GitHub interface, it is recommended you do this locally on your machine. To do this, you must have installed:
 
-- Python 3.12 or higher.
+- Python 3.8 or higher.
 
 - GitHub Desktop or the `git` CLI.
 

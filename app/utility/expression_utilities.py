@@ -691,12 +691,10 @@ def parse_expression(expr_string, parsing_params):
         substitutions.sort(key=substitutions_sort_key)
         if parsing_params["elementary_functions"] is True:
             substitutions += protect_elementary_functions_substitutions(expr)
-
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)
         expr = substitute(expr, substitutions)
         expr = " ".join(expr.split())
-
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
         if strict_syntax is True:
             transformations = parser_transformations[0:4]+extra_transformations
@@ -704,7 +702,6 @@ def parse_expression(expr_string, parsing_params):
             transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8, 9]
         if parsing_params.get("rationalise", False):
             transformations += parser_transformations[11]
-
         if "=" in expr:
             expr_parts = expr.split("=")
             lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
@@ -716,7 +713,6 @@ def parse_expression(expr_string, parsing_params):
                 parsed_expr = parsed_expr.simplify()
         else:
             parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-
         if not isinstance(parsed_expr, Basic):
             raise ValueError(f"Failed to parse Sympy expression `{expr}`")
         parsed_expr_set.add(parsed_expr)
