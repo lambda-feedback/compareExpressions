@@ -3,7 +3,7 @@
 # FROM rabidsheep55/python-base-eval-layer
 FROM ghcr.io/lambda-feedback/baseevalutionfunctionlayer:main-3.12
 
-RUN dnf install -y git
+RUN yum install -y git
 
 WORKDIR /app
 
