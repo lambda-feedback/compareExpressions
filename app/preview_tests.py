@@ -77,6 +77,23 @@ class TestPreviewFunction():
         assert preview["latex"] == r"\ln{\left(x \right)}"
 
     @pytest.mark.parametrize(
+        "response, response_latex, response_sympy", [
+            ("e", "e", "E",),
+            ("oo", "\\infty", "oo"),
+            ("ex", "e \\cdot x", "Ex"),
+            ("e * x", "e \\cdot x", "E * x")
+        ]
+    )
+    def test_eulers_number_notation(self, response, response_latex, response_sympy):
+        params = Params(is_latex=False, elementary_functions=True, strict_syntax=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == response_latex
+        assert preview["sympy"] == response_sympy
+
+    @pytest.mark.parametrize(
         "response, is_latex, response_latex, response_sympy",
         [
             ("plus_minus x", False, '\\left\\{- x,~x\\right\\}', "plus_minus x"),
