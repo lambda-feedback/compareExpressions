@@ -33,7 +33,7 @@ class Result(TypedDict):
 
 
 def find_placeholder(exp):
-    for char in 'abcdefghjkoqrtvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ':
+    for char in 'abcdfghjkoqrtvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ':
         if char not in exp:
             return char
 
