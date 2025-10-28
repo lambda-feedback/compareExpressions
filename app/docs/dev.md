@@ -209,5 +209,7 @@ When the evaluation function preview is called the code in `preview.py` will be 
 
 **Remark**: Since it is likely that there will be significant overlap between the response preview and the response evaluation (e.g. code for parsing and interpreting the response), it is good practice if they can share as much code as possible to ensure consistency. For this reason it might be better to move the preview functions fully inside the context (either by making a `preview` subfolder in the `context` folder, or by moving the implementation of the preview function inside the context files themselves). In this case the `preview.py` and `evaluation.py` could also share the same code for determining the right context to use.
 
+`E` is treated as `E` in when `is_latex` is enabled. As latex2sympy2 does not parse E correctly.
+
 # Tests
 There are two main groups of tests, evaluation tests and preview tests. The evaluation test can be run by calling `evaluation_tests.py`

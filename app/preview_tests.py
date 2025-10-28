@@ -93,6 +93,19 @@ class TestPreviewFunction():
             ("e * x", True, False, "e * x", "E*x"),
             ("E", True, False, "E", "E",),
             ("ER_2", True, False, "ER_2", "E*R_2",),
+            # TODO: add exp (0), (1), (2) and (x)
+            ("exp(1)", False, True, "e^{1}", "exp(1)"),
+            ("e**1", False, True, "e^{1}", "E**1"),
+            ("e^{1}", True, True, "e^{1}", "E"),
+            ("exp(0)", False, True, "e^{0}", "exp(0)"),
+            ("e**0", False, True, "e^{0}", "E**0"),
+            ("e^{0}", True, True, "e^{0}", "1"),
+            ("exp(2)", False, True, "e^{2}", "exp(2)"),
+            ("e**2", False, True, "e^{2}", "E**2"),
+            ("e^{2}", True, True, "e^{2}", "exp(2)"),
+            ("exp(x)", False, True, "e^{x}", "exp(x)"),
+            ("e**x", False, True, "e^{x}", "E**x"),
+            ("e^{x}", True, True, "e^{x}", "exp(x)")
         ]
     )
     def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
