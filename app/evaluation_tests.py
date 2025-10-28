@@ -1,6 +1,8 @@
 import pytest
 import os
 
+from app.preview import preview_function
+from app.utility.preview_utilities import Params
 from .evaluation import evaluation_function
 
 
@@ -91,6 +93,30 @@ class TestEvaluationFunction():
         answer = "0.5 Nm"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
+
+    def test_euler_preview_evaluate(self):
+        response = "ER_2"
+        params = Params(is_latex=True, elementary_functions=False, strict_syntax=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == "ER_2"
+        assert preview["sympy"] == "E*R_2"
+
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": False,
+            "elementary_functions": False,
+        }
+
+        response = preview["sympy"]
+        answer = "E*R_2"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', '--tb=short', '--durations=10', os.path.abspath(__file__)])
