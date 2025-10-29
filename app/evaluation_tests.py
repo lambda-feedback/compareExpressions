@@ -1,8 +1,8 @@
 import pytest
 import os
 
-from app.preview import preview_function
-from app.utility.preview_utilities import Params
+from .preview import preview_function
+from .utility.preview_utilities import Params
 from .evaluation import evaluation_function
 
 
