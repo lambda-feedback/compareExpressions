@@ -2009,5 +2009,88 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    @pytest.mark.parametrize("unicode_char,letter_name", [
+        ("Α", "Alpha"), ("α", "alpha"), ("Β", "Beta"), ("β", "beta"),
+        ("Γ", "Gamma"), ("γ", "gamma"), ("Δ", "Delta"), ("δ", "delta"),
+        ("Ε", "Epsilon"), ("ε", "epsilon"), ("Ζ", "Zeta"), ("ζ", "zeta"),
+        ("Η", "Eta"), ("η", "eta"), ("Θ", "Theta"), ("θ", "theta"),
+        ("Ι", "Iota"), ("ι", "iota"), ("Κ", "Kappa"), ("κ", "kappa"),
+        ("Λ", "Lambda"),
+        ("Μ", "Mu"), ("μ", "mu"), ("Ν", "Nu"), ("ν", "nu"),
+        ("Ξ", "Xi"), ("ξ", "xi"), ("Ο", "Omicron"), ("ο", "omicron"),
+        ("Π", "Pi"), ("π", "pi"), ("Ρ", "Rho"), ("ρ", "rho"),
+        ("Σ", "Sigma"), ("σ", "sigma"), ("Τ", "Tau"), ("τ", "tau"),
+        ("Υ", "Upsilon"), ("υ", "upsilon"), ("Φ", "Phi"), ("φ", "phi"),
+        ("Χ", "Chi"), ("χ", "chi"), ("Ψ", "Psi"), ("ψ", "psi"),
+        ("Ω", "Omega"), ("ω", "omega")
+    ])
+    def test_greek_unicode_letters(self, unicode_char, letter_name):
+        response = unicode_char
+        answer = letter_name
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("unicode_expr,letter_expr", [
+        # Basic expressions with common variables
+        ("α + β", "alpha + beta"),
+        ("2μ + 3", "2*mu + 3"),
+        ("π*r^2", "pi*r^2"),
+        ("θ/2", "theta/2"),
+        ("σ^2", "sigma^2"),
+
+        # Chi vs X confusion tests (CRITICAL)
+        ("χ + x", "chi + x"),
+        ("Χ + X", "Chi + X"),
+        ("χ*x", "chi*x"),
+        ("x^2 + χ", "x^2 + chi"),
+        ("χ^2 + x^2", "chi^2 + x^2"),
+
+        # Xi vs X confusion tests
+        ("ξ + x", "xi + x"),
+        ("Ξ*X", "Xi*X"),
+
+        # Rho vs P confusion tests
+        ("ρ + p", "rho + p"),
+        ("Ρ*P", "Rho*P"),
+
+        # Nu vs V confusion tests
+        ("ν + v", "nu + v"),
+        ("Ν*V", "Nu*V"),
+
+        # Omicron vs O confusion tests
+        ("ο + o", "omicron + o"),
+        ("Ο*O", "Omicron*O"),
+
+        # Multiple Greek letters with Latin variables
+        ("α*x + β*y", "alpha*x + beta*y"),
+        ("μ*σ^2 + ν", "mu*sigma^2 + nu"),
+        ("γ*t + δ*s", "gamma*t + delta*s"),
+        ("Λ*x + μ*y + ν*z", "Lambda*x + mu*y + nu*z"),
+
+        # Complex expressions
+        ("sin(θ) + cos(φ)", "sin(theta) + cos(phi)"),
+        ("e^(iπ)", "e^(i*pi)"),
+
+        # Edge cases with similar-looking letters
+        ("ω*t + φ", "omega*t + phi"),
+        ("Ψ(x) + ψ(y)", "Psi(x) + psi(y)"),
+        ("Δx/Δt", "Delta*x/Delta*t"),
+        ("ε_0*μ_0", "epsilon_0*mu_0"),
+    ])
+    def test_greek_letters_in_expressions(self, unicode_expr, letter_expr):
+        response = unicode_expr
+        answer = letter_expr
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

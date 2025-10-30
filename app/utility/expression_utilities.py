@@ -74,14 +74,16 @@ for data in elementary_functions_names:
             upper_case_alternatives.append(alternative.upper())
     data[1].extend(upper_case_alternatives)
 
-greek_letters = [
-    "Alpha", "alpha", "Beta", "beta", "Gamma", "gamma", "Delta", "delta", "Epsilon", "epsilon", "Zeta", "zeta",
-    "Eta", "eta", "Theta", "theta", "Iota", "iota", "Kappa", "kappa", "Lambda",  # "lambda" removed to avoid collision with reserved keyword in python
-    "Mu", "mu", "Nu", "nu",
-    "Xi", "xi", "Omicron", "omicron", "Pi", "pi", "Rho", "rho", "Sigma", "sigma", "Tau", "tau", "Upsilon", "upsilon",
-    "Phi", "phi", "Chi", "chi", "Psi", "psi", "Omega", "omega"
+special_symbols_names = [
+    ("Alpha", ["Α"]), ("alpha", ["α"]), ("Beta", ["Β"]), ("beta", ["β"]), ("Gamma", ["Γ"]), ("gamma", ["γ"]), ("Delta", ["Δ"]), ("delta", ["δ"]),
+    ("Epsilon", ["Ε"]), ("epsilon", ["ε"]), ("Zeta", ["Ζ"]), ("zeta", ["ζ"]), ("Eta", ["Η"]), ("eta", ["η"]), ("Theta", ["Θ"]), ("theta", ["θ"]),
+    ("Iota", ["Ι"]), ("iota", ["ι"]), ("Kappa", ["Κ"]), ("kappa", ["κ"]), ("Lambda", ["Λ"]),  # "lambda" removed to avoid collision with reserved keyword in python
+    ("Mu", ["Μ"]), ("mu", ["μ"]), ("Nu", ["Ν"]), ("nu", ["ν"]), ("Xi", ["Ξ"]), ("xi", ["ξ"]), ("Omicron", ["Ο"]), ("omicron", ["ο"]), ("Pi", ["Π"]),
+    ("pi", ["π"]), ("Rho", ["Ρ"]), ("rho", ["ρ"]), ("Sigma", ["Σ"]), ("sigma", ["σ"]), ("Tau", ["Τ"]), ("tau", ["τ"]), ("Upsilon", ["Υ"]),
+    ("upsilon", ["υ"]), ("Phi", ["Φ"]), ("phi", ["φ"]), ("Chi", ["Χ"]), ("chi", ["χ"]), ("Psi", ["Ψ"]), ("psi", ["ψ"]), ("Omega", ["Ω"]),
+    ("omega", ["ω"])
 ]
-special_symbols_names = [(x, []) for x in greek_letters]
+
 
 
 # -------- String Manipulation Utilities
@@ -578,11 +580,13 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
                 unsplittable_symbols.append(symbol)
 
     if params.get("specialFunctions", False) is True:
-        from sympy import beta, gamma, zeta
+        from sympy import beta, gamma, zeta, Lambda, Chi
     else:
         beta = Symbol("beta")
         gamma = Symbol("gamma")
         zeta = Symbol("zeta")
+        Lambda = Symbol("Lambda")
+        Chi = Symbol("Chi")
     if params["complexNumbers"] is True:
         from sympy import I
     else:
@@ -599,12 +603,14 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "beta": beta,
         "gamma": gamma,
         "zeta": zeta,
+        "Lambda": Lambda,
+        "Chi": Chi,
         "I": I,
         "N": N,
         "O": O,
         "Q": Q,
         "S": S,
-        "E": E
+        "E": E,
     }
 
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
