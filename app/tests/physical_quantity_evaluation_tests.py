@@ -380,7 +380,7 @@ class TestEvaluationFunction():
             ("10 ohm", "10 Ω"),
             ("10 micro A", "10 μA"),
             ("10 micro A", "10 μ A"),
-            ("30 degree", "30 θ"),
+            ("30 degree", "30 °"),
         ]
     )
     def test_greek_letter_units(self, ans, res):

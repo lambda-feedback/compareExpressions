@@ -83,7 +83,7 @@ set_of_very_common_units_in_SI = {
     ('steradian', 'sr',  '(1/(4*pi))',                            tuple(),                  ('steradians',)),
     ('minute',            'min', '(60*second)',                   tuple(),                  ('minutes',)),
     ('hour',              'h',   '(3600*second)',                 tuple(),                  ('hours',)),
-    ('degree',            'deg', '(1/360)',                       ('θ', ),             ('degrees',)),
+    ('degree',            'deg', '(1/360)',                       ('°', ),             ('degrees',)),
     ('litre',             'L',   '(10**(-3)*metre**3)',           ('liter',),               ('litres,liters',)),
     ('metricton',         't',   '(10**3*kilogram)',              ('tonne',),               ('tonnes',)),
     ('neper',             'Np',  '(1)',                           ('Neper',),               ('nepers', 'Nepers')),
