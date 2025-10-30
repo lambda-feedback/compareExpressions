@@ -2029,7 +2029,7 @@ class TestEvaluationFunction():
         answer = letter_name
         params = {
             "strict_syntax": False,
-            "elementary_functions": True,
+            "elementary_functions": False,
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
@@ -2087,7 +2087,7 @@ class TestEvaluationFunction():
         answer = letter_expr
         params = {
             "strict_syntax": False,
-            "elementary_functions": True,
+            "elementary_functions": False,
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True

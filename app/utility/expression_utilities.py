@@ -77,7 +77,7 @@ for data in elementary_functions_names:
 special_symbols_names = [
     ("Alpha", ["Α"]), ("alpha", ["α"]), ("Beta", ["Β"]), ("beta", ["β"]), ("Gamma", ["Γ"]), ("gamma", ["γ"]), ("Delta", ["Δ"]), ("delta", ["δ"]),
     ("Epsilon", ["Ε"]), ("epsilon", ["ε"]), ("Zeta", ["Ζ"]), ("zeta", ["ζ"]), ("Eta", ["Η"]), ("eta", ["η"]), ("Theta", ["Θ"]), ("theta", ["θ"]),
-    ("Iota", ["Ι"]), ("iota", ["ι"]), ("Kappa", ["Κ"]), ("kappa", ["κ"]), ("Lambda", ["Λ"]),  ("lambda", ["λ"]),
+    ("Iota", ["Ι"]), ("iota", ["ι"]), ("Kappa", ["Κ"]), ("kappa", ["κ"]), ("Lambda", ["Λ"]),  ("lamda", ["λ"]), # lambda mispelt here to minimise conflict with Python in-built
     ("Mu", ["Μ"]), ("mu", ["μ"]), ("Nu", ["Ν"]), ("nu", ["ν"]), ("Xi", ["Ξ"]), ("xi", ["ξ"]), ("Omicron", ["Ο"]), ("omicron", ["ο"]), ("Pi", ["Π"]),
     ("pi", ["π"]), ("Rho", ["Ρ"]), ("rho", ["ρ"]), ("Sigma", ["Σ"]), ("sigma", ["σ"]), ("Tau", ["Τ"]), ("tau", ["τ"]), ("Upsilon", ["Υ"]),
     ("upsilon", ["υ"]), ("Phi", ["Φ"]), ("phi", ["φ"]), ("Chi", ["Χ"]), ("chi", ["χ"]), ("Psi", ["Ψ"]), ("psi", ["ψ"]), ("Omega", ["Ω"]),
@@ -238,10 +238,19 @@ def preprocess_according_to_chosen_convention(expression, parameters):
         expression = parser.parse(parser.scan(expression))[0].content_string()
     return expression
 
+def transform_unicode_greek_symbols(expr):
+    alias_substitutions = []
+    for (name, alias_list) in special_symbols_names:
+        if name in expr:
+            alias_substitutions += [(name, " "+name+" ")]
+        for alias in alias_list:
+            if alias in expr:
+                alias_substitutions += [(alias, " "+name+" ")]
+    return alias_substitutions
 
 def protect_elementary_functions_substitutions(expr):
     alias_substitutions = []
-    for (name, alias_list) in elementary_functions_names+special_symbols_names:
+    for (name, alias_list) in elementary_functions_names:
         if name in expr:
             alias_substitutions += [(name, " "+name+" ")]
         for alias in alias_list:
@@ -690,18 +699,25 @@ def parse_expression(expr_string, parsing_params):
     separate_unsplittable_symbols = [(x, " "+x) for x in unsplittable_symbols]
     substitutions = separate_unsplittable_symbols
 
+
+
     parsed_expr_set = set()
     for expr in expr_set:
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
+
         substitutions = list(set(substitutions))
+        substitutions += transform_unicode_greek_symbols(expr)
         substitutions.sort(key=substitutions_sort_key)
+
         if parsing_params["elementary_functions"] is True:
             substitutions += protect_elementary_functions_substitutions(expr)
+
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)
         expr = substitute(expr, substitutions)
         expr = " ".join(expr.split())
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
+
         if strict_syntax is True:
             transformations = parser_transformations[0:4]+extra_transformations
         else:
