@@ -2015,7 +2015,7 @@ class TestEvaluationFunction():
         ("Ε", "Epsilon"), ("ε", "epsilon"), ("Ζ", "Zeta"), ("ζ", "zeta"),
         ("Η", "Eta"), ("η", "eta"), ("Θ", "Theta"), ("θ", "theta"),
         ("Ι", "Iota"), ("ι", "iota"), ("Κ", "Kappa"), ("κ", "kappa"),
-        ("Λ", "Lambda"),
+        ("Λ", "Lambda"), ("λ", "lambda"),
         ("Μ", "Mu"), ("μ", "mu"), ("Ν", "Nu"), ("ν", "nu"),
         ("Ξ", "Xi"), ("ξ", "xi"), ("Ο", "Omicron"), ("ο", "omicron"),
         ("Π", "Pi"), ("π", "pi"), ("Ρ", "Rho"), ("ρ", "rho"),
@@ -2070,6 +2070,7 @@ class TestEvaluationFunction():
         ("μ*σ^2 + ν", "mu*sigma^2 + nu"),
         ("γ*t + δ*s", "gamma*t + delta*s"),
         ("Λ*x + μ*y + ν*z", "Lambda*x + mu*y + nu*z"),
+        ("λ*x + μ*y + ν*z", "lambda*x + mu*y + nu*z"),
 
         # Complex expressions
         ("sin(θ) + cos(φ)", "sin(theta) + cos(phi)"),
