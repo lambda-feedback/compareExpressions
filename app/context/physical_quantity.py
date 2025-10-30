@@ -10,7 +10,8 @@ from ..utility.physical_quantity_utilities import (
 )
 from ..preview_implementations.physical_quantity_preview import preview_function
 from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
-from ..utility.expression_utilities import default_parameters as symbolic_default_parameters
+from ..utility.expression_utilities import default_parameters as symbolic_default_parameters, \
+    transform_unicode_greek_symbols, substitute
 from ..utility.expression_utilities import (
     substitute_input_symbols,
     create_sympy_parsing_params,
@@ -35,6 +36,7 @@ from ..utility.criteria_graph_utilities import CriteriaGraph
 def parse_quantity(name, expr, parameters, evaluation_result):
     parser = SLR_quantity_parser(parameters)
     quantity = SLR_quantity_parsing(expr, parameters, parser, name)
+
     for message in quantity.messages:
         evaluation_result.add_feedback(message)
     if quantity.standard_value is not None:
@@ -476,6 +478,10 @@ def feedback_procedure_generator(parameters_dict):
         graphs.update({label: graph})
     return graphs
 
+def preprocess_unicode(expr):
+    unicode_transforms = transform_unicode_greek_symbols(expr)
+    expr = substitute(expr, unicode_transforms)
+    return expr
 
 def expression_preprocess(name, expr, parameters):
     if parameters.get("strictness", "natural") == "legacy":
@@ -541,6 +547,8 @@ def expression_preprocess(name, expr, parameters):
             expr = expr[0:match_content.span()[0]]+match_content.group().replace("*", " ")+expr[match_content.span()[1]:]
             match_content = re.search(search_string, expr)
 
+
+    expr = preprocess_unicode(expr)
     success = True
     return success, expr, None
 
