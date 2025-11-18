@@ -273,6 +273,13 @@ def SLR_generate_unit_dictionaries(units_string, strictness):
                         prefixes_long_to_short[prefix]+units_long_to_short[unit]: prefix+units[unit]
                     }
                 )
+            if prefix + units_long_to_short[unit] not in units_short_to_long.keys():
+                prefixed_units.update(
+                    {
+                        prefix + units_long_to_short[unit]: prefix + units[unit]
+                    }
+                )
+
 
     prefixed_units_end = {**units_end}
     for unit in units_end.keys():
