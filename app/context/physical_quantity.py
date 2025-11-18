@@ -561,7 +561,7 @@ def transform_prefixes_to_standard(expr):
             # Match the alternative prefix either attached to or followed by spaces before a unit
             # Examples matched: "km", "k m", "microsecond", "micro second"
             pattern = rf'(?<!\w){re.escape(alt)}\s*(?=[A-Za-zµΩ])'
-            expr = re.sub(pattern, symbol, expr)
+            expr = re.sub(pattern, prefix_name + ' ', expr)
 
     # Normalize spacing (no multiple spaces)
     expr = re.sub(r'\s{2,}', ' ', expr).strip()

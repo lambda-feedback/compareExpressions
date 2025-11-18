@@ -378,8 +378,8 @@ class TestEvaluationFunction():
         "ans,res",
         [
             ("10 ohm", "10 Ω"),
-            ("10 muA", "10 μA"),
-            ("10 muA", "10 μ A"),
+            ("10 micro A", "10 μA"),
+            ("10 micro A", "10 μ A"),
             ("30 degree", "30 °"),
         ]
     )
