@@ -120,12 +120,12 @@ class TestEvaluationFunction():
 
     def test_mu_preview_evaluate(self):
         response = "10 μA"
-        params = Params(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantities=True)
+        params = Params(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantity=True)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
         preview = result["preview"]
-        assert preview["latex"] == "10 \cdot A \cdot \mu"
+        assert preview["latex"] == "10~\\mathrm{microampere}"
         assert preview["sympy"] == "10 μA"
 
         params = {

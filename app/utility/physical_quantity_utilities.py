@@ -493,3 +493,104 @@ def SLR_quantity_parsing(expr, parameters, parser, name):
 
     tag_handler = set_tags(parameters.get("strictness", "strict"))
     return PhysicalQuantity(name, parameters, quantity[0], parser, messages=[], tag_handler=tag_handler)
+
+def expression_preprocess(name, expr, parameters):
+    if parameters.get("strictness", "natural") == "legacy":
+        expr = preprocess_legacy(expr, parameters)
+        return True, expr, None
+
+    expr = transform_prefixes_to_standard(expr)
+
+    return True, expr, None
+
+def preprocess_legacy(expr, parameters):
+    prefix_data = {(p[0], p[1], tuple(), p[3]) for p in set_of_SI_prefixes}
+    prefixes = []
+    for prefix in prefix_data:
+        prefixes = prefixes + [prefix[0]] + list(prefix[-1])
+    prefix_short_forms = [prefix[1] for prefix in prefix_data]
+    unit_data = set_of_SI_base_unit_dimensions \
+                | set_of_derived_SI_units_in_SI_base_units \
+                | set_of_common_units_in_SI \
+                | set_of_very_common_units_in_SI \
+                | set_of_imperial_units
+    unit_long_forms = prefixes
+    for unit in unit_data:
+        unit_long_forms = unit_long_forms + [unit[0]] + list(unit[-2]) + list(unit[-1])
+    unit_long_forms = "(" + "|".join(unit_long_forms) + ")"
+    # Rewrite any expression on the form "*UNIT" (but not "**UNIT") as " UNIT"
+    # Example: "newton*metre" ---> "newton metre"
+    search_string = r"(?<!\*)\* *" + unit_long_forms
+    match_content = re.search(search_string, expr[1:])
+    while match_content is not None:
+        expr = expr[0:match_content.span()[0] + 1] + match_content.group().replace("*", " ") + expr[
+                                                                                               match_content.span()[
+                                                                                                   1] + 1:]
+        match_content = re.search(search_string, expr[1:])
+    prefixes = "(" + "|".join(prefixes) + ")"
+    # Rewrite any expression on the form "PREFIX UNIT" as "PREFIXUNIT"
+    # Example: "kilo metre" ---> "kilometre"
+    search_string = prefixes + " " + unit_long_forms
+    match_content = re.search(search_string, expr)
+    while match_content is not None:
+        expr = expr[0:match_content.span()[0]] + " " + "".join(match_content.group().split()) + expr[
+                                                                                                match_content.span()[
+                                                                                                    1]:]
+        match_content = re.search(search_string, expr)
+    unit_short_forms = [u[1] for u in unit_data]
+    short_forms = "(" + "|".join(list(set(prefix_short_forms + unit_short_forms))) + ")"
+    # Add space before short forms of prefixes or unit names if they are preceded by numbers or multiplication
+    # Example: "100Pa" ---> "100 Pa"
+    search_string = r"[0-9\*\(\)]" + short_forms
+    match_content = re.search(search_string, expr)
+    while match_content is not None:
+        expr = expr[0:match_content.span()[0] + 1] + " " + expr[match_content.span()[0] + 1:]
+        match_content = re.search(search_string, expr)
+    # Remove space after prefix short forms if they are preceded by numbers, multiplication or space
+    # Example: "100 m Pa" ---> "100 mPa"
+    prefix_short_forms = "(" + "|".join(prefix_short_forms) + ")"
+    search_string = r"[0-9\*\(\) ]" + prefix_short_forms + " "
+    match_content = re.search(search_string, expr)
+    while match_content is not None:
+        expr = expr[0:match_content.span()[0] + 1] + match_content.group()[0:-1] + expr[match_content.span()[1]:]
+        match_content = re.search(search_string, expr)
+    # Remove multiplication and space after prefix short forms if they are preceded by numbers, multiplication or space
+    # Example:  "100 m* Pa" ---> "100 mPa"
+    search_string = r"[0-9\*\(\) ]" + prefix_short_forms + "\* "
+    match_content = re.search(search_string, expr)
+    while match_content is not None:
+        expr = expr[0:match_content.span()[0] + 1] + match_content.group()[0:-2] + expr[match_content.span()[1]:]
+        match_content = re.search(search_string, expr)
+    # Replace multiplication followed by space before unit short forms with only spaces if they are preceded by numbers or space
+    # Example:  "100* Pa" ---> "100 Pa"
+    unit_short_forms = "(" + "|".join(unit_short_forms) + ")"
+    search_string = r"[0-9\(\) ]\* " + unit_short_forms
+    match_content = re.search(search_string, expr)
+    while match_content is not None:
+        expr = expr[0:match_content.span()[0]] + match_content.group().replace("*", " ") + expr[
+                                                                                           match_content.span()[1]:]
+        match_content = re.search(search_string, expr)
+
+    return expr
+
+def transform_prefixes_to_standard(expr):
+    """
+    Transform ONLY alternative prefix spellings to standard prefix names.
+    Ensure there's exactly one space after the prefix before the unit.
+    Works for both attached (e.g. 'km') and spaced (e.g. 'k m') forms.
+    """
+
+    for prefix_name, symbol, power, alternatives in set_of_SI_prefixes:
+        for alt in alternatives:
+            if not alt:
+                continue
+
+            # Match the alternative prefix either attached to or followed by spaces before a unit
+            # Examples matched: "km", "k m", "microsecond", "micro second"
+            pattern = rf'(?<!\w){re.escape(alt)}\s*(?=[A-Za-zµΩ])'
+            expr = re.sub(pattern, prefix_name, expr)
+
+    # Normalize spacing (no multiple spaces)
+    expr = re.sub(r'\s{2,}', ' ', expr).strip()
+
+    return expr
