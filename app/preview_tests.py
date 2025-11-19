@@ -93,7 +93,6 @@ class TestPreviewFunction():
             ("e * x", True, False, "e * x", "E*x"),
             ("E", True, False, "E", "E",),
             ("ER_2", True, False, "ER_2", "E*R_2",),
-            # TODO: add exp (0), (1), (2) and (x)
             ("exp(1)", False, True, "e^{1}", "exp(1)"),
             ("e**1", False, True, "e^{1}", "E**1"),
             ("e^{1}", True, True, "e^{1}", "E"),

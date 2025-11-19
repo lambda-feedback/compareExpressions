@@ -16,7 +16,7 @@ from ..utility.preview_utilities import (
 )
 
 from ..utility.expression_utilities import default_parameters as symbolic_default_parameters
-from ..utility.physical_quantity_utilities import SLR_quantity_parser as quantity_parser
+from ..utility.physical_quantity_utilities import SLR_quantity_parser as quantity_parser, expression_preprocess
 from ..utility.physical_quantity_utilities import SLR_quantity_parsing as quantity_parsing
 
 # CONSIDER: Move these to separate file so that they can be shared with
@@ -114,7 +114,8 @@ def preview_function(response: str, params: Params) -> Result:
             unit_sympy = res_parsed.unit.content_string() if unit is not None else ""
             sympy_out = value_sympy+separator_sympy+unit_sympy
         else:
-            res_parsed = quantity_parsing(response, params, parser, "response")
+            _, res_pre_processed, _ = expression_preprocess("response", response, params)
+            res_parsed = quantity_parsing(res_pre_processed, params, parser, "response")
             latex_out = res_parsed.latex_string
             sympy_out = response
 
