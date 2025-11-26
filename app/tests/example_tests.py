@@ -652,7 +652,7 @@ class TestEvaluationFunction():
                 ],
                 {
                     "answer <= response_TRUE": "Custom response true",
-                    "2+answer > response_UNKNOWN": "Custom response unknown",
+                    "2+answer > response_UNKNOWN": "μ Custom response unknown",
                 },
                 {
                     "symbol_assumptions": "('x', 'real')",
