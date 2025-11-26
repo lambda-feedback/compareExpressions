@@ -94,6 +94,20 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
+    def test_physical_qualities_correct_feedback(self):
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary_functions": True,
+        }
+        response = "0.6 Nm"
+        answer = "0.6 Nm"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+        assert result["feedback"] == "Response matches answer."
+
     def test_euler_preview_evaluate(self):
         response = "ER_2"
         params = Params(is_latex=True, elementary_functions=False, strict_syntax=False)
