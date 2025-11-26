@@ -38,6 +38,10 @@ class EvaluationResult:
                         feedback_string = graph.criteria[tag].feedback_string_generator(dict())
                     else:
                         feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
+
+                if feedback_string is not None:
+                    feedback_string = feedback_string.capitalize()
+
                 self.add_feedback((tag, feedback_string))
 
     def add_criteria_graph(self, name, graph):

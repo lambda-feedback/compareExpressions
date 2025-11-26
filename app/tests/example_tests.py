@@ -651,8 +651,8 @@ class TestEvaluationFunction():
                     "2+answer > response_UNKNOWN",
                 ],
                 {
-                    "answer <= response_TRUE": "AAA",
-                    "2+answer > response_UNKNOWN": "BBB",
+                    "answer <= response_TRUE": "Custom response true",
+                    "2+answer > response_UNKNOWN": "Custom response unknown",
                 },
                 {
                     "symbol_assumptions": "('x', 'real')",
