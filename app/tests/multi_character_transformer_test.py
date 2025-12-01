@@ -17,12 +17,11 @@ class TestMultiCharacterTransformerIntegration:
 
         # define parameters
         params = {
+            "complexNumbers": False,
             "strict_syntax": False,
             "elementary_functions": True,
             "convention": "implicit_higher_precedence",
             "symbols": symbols_dict,
-            # Pass custom functions/assumptions if needed
-            "symbol_assumptions": [] 
         }
 
         parsing_params = create_sympy_parsing_params(params)

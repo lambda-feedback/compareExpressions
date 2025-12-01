@@ -1,13 +1,8 @@
 from sympy.parsing.sympy_parser import (
-    _token_splittable,
-    _add_factorial_tokens,
-    TOKEN,
     NAME,
     OP,
     NUMBER
 )
-from sympy import Mul, Pow
-import re
 
 
 def create_multichar_symbol_transformer(unsplittable_symbols):
