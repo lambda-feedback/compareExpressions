@@ -1,113 +1,121 @@
-def create_multichar_symbol_transformer(symbol_names_or_dict, enable_numbers=True):
+from sympy.parsing.sympy_parser import (
+    _token_splittable,
+    _add_factorial_tokens,
+    TOKEN,
+    NAME,
+    OP,
+    NUMBER
+)
+from sympy import Mul, Pow
+import re
+
+
+def create_multichar_symbol_transformer(unsplittable_symbols):
     """
-    Create a SymPy transformation function that greedily segments identifiers
-    into known symbol names and inserts '*' between adjacent matches.
+    Creates a transformer that handles implicit multiplication with higher precedence
+    for multi-character symbols.
 
-    This returns a transformation function compatible with sympy.parsing.sympy_parser.parse_expr.
-
-    Args:
-        symbol_names_or_dict: iterable of allowed symbol names (strings) or dict mapping names to symbols
-        enable_numbers: if True, recognize numbers as single tokens
-
-    Returns:
-        A transformation function that takes (tokens, local_dict, global_dict)
-        and returns modified tokens.
-
-    Example usage:
-        from sympy import parse_expr, Symbol
-        from sympy.parsing.sympy_parser import standard_transformations
-
-        local_dict = {'a': Symbol('a'), 'bc': Symbol('bc'), 'd': Symbol('d')}
-        transform = create_multichar_symbol_transformer(local_dict)
-        transformations = standard_transformations + (transform,)
-
-        expr = parse_expr('a/(bcd)', transformations=transformations, local_dict=local_dict)
+    When implicit_higher_precedence is set, expressions like a/bcd where 'bc' is a
+    multi-character symbol should be parsed as a/(bc*d) rather than (a/bc)*d.
     """
-    # Handle both dict and iterable
-    if isinstance(symbol_names_or_dict, dict):
-        name_set = set(symbol_names_or_dict.keys())
-        symbol_dict = symbol_names_or_dict
-    else:
-        name_set = set(symbol_names_or_dict)
-        symbol_dict = None
 
-    if not name_set:
-        # Return identity transformation
-        return lambda tokens, local_dict, global_dict: tokens
+    # Sort symbols by length (longest first) to match greedily
+    sorted_symbols = sorted(unsplittable_symbols, key=len, reverse=True)
 
-    maxlen = max(map(len, name_set))
-
-    def segment_identifier(w: str) -> list:
-        """Segment an identifier and return list of token tuples."""
-        i = 0
-        out = []
-        while i < len(w):
-            match = None
-            # Greedy longest match
-            for L in range(min(maxlen, len(w) - i), 0, -1):
-                cand = w[i:i + L]
-                if cand in name_set:
-                    match = cand
-                    break
-            if match is not None:
-                if out:
-                    out.append((53, '*'))  # OP token for '*'
-                out.append((1, match))  # NAME token
-                i += len(match)
-            else:
-                # No match: treat single char as its own identifier
-                if out:
-                    out.append((53, '*'))  # OP token for '*'
-                out.append((1, w[i]))  # NAME token
-                i += 1
-        return out
-
-    def multichar_symbol_transformation(tokens, local_dict):
+    def multichar_implicit_multiplication(tokens, local_dict, global_dict):
         """
-        Transform tokens by segmenting multi-character identifiers.
+        Transform tokens to handle implicit multiplication with higher precedence.
 
-        Args:
-            tokens: list of (token_type, token_string) tuples
-            local_dict: local namespace dict
-
-        Returns:
-            Modified list of tokens
+        This transformer:
+        1. Identifies sequences of adjacent NAME/NUMBER tokens (implicit multiplication)
+        2. Groups them together with parentheses after division operators
+        3. Handles NAME(expr) as implicit multiplication
+        4. Preserves multi-character symbols during this process
         """
-        from sympy import Symbol
-
         result = []
+        i = 0
 
-        # Merge the symbol_dict into local_dict if provided
-        working_dict = dict(local_dict) if local_dict else {}
+        while i < len(tokens):
+            token = tokens[i]
 
-        if symbol_dict:
-            working_dict.update(symbol_dict)
+            # Check if this is a division operator
+            if token[0] == OP and token[1] == '/':
+                result.append(token)
+                i += 1
 
-        for i, (tok_type, tok_str) in enumerate(tokens):
-            # Token type 1 is NAME in Python's token module
-            # Token type 2 is NUMBER
-            if tok_type == 1:  # NAME token
-                # Check if this is an identifier (not a keyword)
-                if tok_str and (tok_str[0].isalpha() or tok_str[0] == '_'):
-                    # Segment the identifier
-                    segmented = segment_identifier(tok_str)
+                # Look ahead to find implicitly multiplied terms after division
+                implicit_group = []
+                j = i
 
-                    # Ensure all segmented symbols are in local_dict
-                    for seg_type, seg_str in segmented:
-                        if seg_type == 1 and seg_str not in working_dict:
-                            # Auto-create symbol if not present
-                            working_dict[seg_str] = Symbol(seg_str)
+                while j < len(tokens):
+                    next_token = tokens[j]
 
-                    # Update the original local_dict
-                    if local_dict is not None:
-                        local_dict.update(working_dict)
+                    # Stop at explicit operators (except power which binds tighter)
+                    if next_token[0] == OP:
+                        if next_token[1] in ['*', '/', '+', '-']:
+                            break
+                        elif next_token[1] == '**':
+                            # Include power and its operand
+                            if implicit_group:
+                                implicit_group.append(next_token)
+                                j += 1
+                                if j < len(tokens) and tokens[j][0] in [NAME, NUMBER]:
+                                    implicit_group.append(tokens[j])
+                                    j += 1
+                            break
 
-                    result.extend(segmented)
+                    # Collect NAME and NUMBER tokens
+                    if next_token[0] in [NAME, NUMBER]:
+                        implicit_group.append(next_token)
+                        j += 1
+                    # Handle parentheses as a single unit
+                    elif next_token[0] == OP and next_token[1] == '(':
+                        paren_count = 1
+                        implicit_group.append(next_token)
+                        j += 1
+                        while j < len(tokens) and paren_count > 0:
+                            implicit_group.append(tokens[j])
+                            if tokens[j][0] == OP:
+                                if tokens[j][1] == '(':
+                                    paren_count += 1
+                                elif tokens[j][1] == ')':
+                                    paren_count -= 1
+                            j += 1
+                        break
+                    else:
+                        break
+
+                # If we found multiple implicitly multiplied terms, wrap in parens
+                if len(implicit_group) > 1:
+                    result.append((OP, '('))
+                    result.extend(implicit_group)
+                    result.append((OP, ')'))
+                    i = j
                 else:
-                    result.append((tok_type, tok_str))
+                    # Just a single term or no terms, add as-is
+                    result.extend(implicit_group)
+                    i = j
+
+            # Handle NAME followed by '(' as implicit multiplication: NAME(expr) -> NAME*(expr)
+            elif token[0] == NAME and i + 1 < len(tokens) and tokens[i + 1][0] == OP and tokens[i + 1][1] == '(':
+                # Check if this NAME is NOT a known function
+                name = token[1]
+                is_function = (name in local_dict and callable(local_dict[name])) or \
+                              (name in global_dict and callable(global_dict[name]))
+
+                # For implicit_higher_precedence, treat NAME(expr) as NAME*(expr)
+                # unless it's a known function
+                if not is_function:
+                    result.append(token)
+                    result.append((OP, '*'))
+                    i += 1
+                else:
+                    result.append(token)
+                    i += 1
             else:
-                result.append((tok_type, tok_str))
+                result.append(token)
+                i += 1
 
         return result
 
-    return multichar_symbol_transformation
+    return multichar_implicit_multiplication
