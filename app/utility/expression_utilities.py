@@ -706,7 +706,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         except Exception as e:
             raise Exception(f"Assumption {assumption} for symbol {symbol} caused a problem.") from e
 
-    if any(len(s) > 1 for s in unsplittable_symbols) and params.get('context') == "implicit_higher_precedence":
+    if any(len(s) > 1 for s in unsplittable_symbols) and params.get('convention') == "implicit_higher_precedence":
         mc_transform = create_multichar_symbol_transformer(unsplittable_symbols)
         parsing_params["extra_transformations"] += (mc_transform, )
 
