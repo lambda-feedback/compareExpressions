@@ -374,5 +374,24 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is False
 
+    @pytest.mark.parametrize(
+        "ans,res",
+        [
+            ("10 ohm", "10 Ω"),
+            ("10 micro A", "10 μA"),
+            ("10 micro A", "10 μ A"),
+            ("30 degree", "30 °"),
+        ]
+    )
+    def test_greek_letter_units(self, ans, res):
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params)
+        assert result["is_correct"] is True
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

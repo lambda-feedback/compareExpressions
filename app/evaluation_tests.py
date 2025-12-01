@@ -1,6 +1,8 @@
 import pytest
 import os
 
+from .preview import preview_function
+from .utility.preview_utilities import Params
 from .evaluation import evaluation_function
 
 
@@ -76,6 +78,42 @@ class TestEvaluationFunction():
         }
         response = "6 exp(5pi/6*I)"
         answer = "6(cos(5pi/6)+isin(5pi/6))"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_physical_qualities_no_tolerance(self):
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary_functions": True,
+        }
+        response = "0.6 Nm"
+        answer = "0.5 Nm"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_euler_preview_evaluate(self):
+        response = "ER_2"
+        params = Params(is_latex=True, elementary_functions=False, strict_syntax=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == "ER_2"
+        assert preview["sympy"] == "E*R_2"
+
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": False,
+            "elementary_functions": False,
+        }
+
+        response = preview["sympy"]
+        answer = "E*R_2"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
