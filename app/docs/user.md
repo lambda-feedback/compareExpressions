@@ -8,7 +8,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are 16 optional parameters that can be set: `atol`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
+There are 15 optional parameters that can be set: `atol`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
 
 #### `atol`
 Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $|x-\tilde{x}| \leq e_aBy default `atol` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
