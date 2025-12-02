@@ -723,11 +723,6 @@ def preprocess_expression(name, expr, parameters):
         success = False
     return success, expr, abs_feedback
 
-
-def protect_symbols(unsplittable_symbols):
-    return [(symbol, " " + symbol + " ") for symbol in unsplittable_symbols]
-
-
 def parse_expression(expr_string, parsing_params):
     '''
     Input:
@@ -744,7 +739,7 @@ def parse_expression(expr_string, parsing_params):
     extra_transformations = parsing_params.get("extra_transformations", ())
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
-    separate_unsplittable_symbols = [(x, " "+x) for x in unsplittable_symbols]
+    separate_unsplittable_symbols = [(x, " " + x + " ") for x in unsplittable_symbols]
     substitutions = separate_unsplittable_symbols
 
     parsed_expr_set = set()
@@ -758,9 +753,6 @@ def parse_expression(expr_string, parsing_params):
 
         if parsing_params["elementary_functions"] is True:
             substitutions += protect_elementary_functions_substitutions(expr)
-
-        if parsing_params.get('convention') == "implicit_higher_precedence":
-            substitutions += protect_symbols(unsplittable_symbols)
 
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)
