@@ -631,7 +631,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
                 unsplittable_symbols.append(symbol)
 
     if params.get("specialFunctions", False) is True:
-        from sympy import beta, gamma, zeta
+        from sympy import beta, gamma, zeta, Lambda, Chi
     else:
         beta = Symbol("beta")
         gamma = Symbol("gamma")
@@ -650,6 +650,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
     O = Symbol("O")
     Q = Symbol("Q")
     S = Symbol("S")
+
     symbol_dict = {
         "beta": beta,
         "gamma": gamma,
