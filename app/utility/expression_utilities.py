@@ -1,7 +1,6 @@
 # Default parameters for expression handling
 # Any contexts that use this collection of utility functions
 # must define values for theses parameters
-from .unsplittable_multicharacter_transformer import create_multichar_symbol_transformer
 
 
 DEFAULT_SIGNIFICANT_FIGURES = 2
@@ -706,9 +705,6 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         except Exception as e:
             raise Exception(f"Assumption {assumption} for symbol {symbol} caused a problem.") from e
 
-    if any(len(s) > 1 for s in unsplittable_symbols) and params.get('convention') == "implicit_higher_precedence":
-        mc_transform = create_multichar_symbol_transformer(unsplittable_symbols)
-        parsing_params["extra_transformations"] += (mc_transform, )
 
     return parsing_params
 
@@ -725,6 +721,10 @@ def preprocess_expression(name, expr, parameters):
     if abs_feedback is not None:
         success = False
     return success, expr, abs_feedback
+
+
+def protect_symbols(unsplittable_symbols):
+    return [(symbol, " " + symbol + " ") for symbol in unsplittable_symbols]
 
 
 def parse_expression(expr_string, parsing_params):
@@ -757,6 +757,9 @@ def parse_expression(expr_string, parsing_params):
 
         if parsing_params["elementary_functions"] is True:
             substitutions += protect_elementary_functions_substitutions(expr)
+
+        if parsing_params.get('convention') == "implicit_higher_precedence":
+            substitutions += protect_symbols(unsplittable_symbols)
 
         substitutions = list(set(substitutions))
         substitutions.sort(key=substitutions_sort_key)

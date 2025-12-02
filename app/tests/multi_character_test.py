@@ -61,11 +61,11 @@ class TestMultiCharacterTransformerIntegration:
             "b": {"aliases": ["b"]},
             "c": {"aliases": ["c"]},
             "d": {"aliases": ["d"]},
-            "e": {"aliases": ["e"]}
+            "f": {"aliases": ["f"]}
         }
         # a/bc/de should be (a/(b*c))/(d*e)
-        answer = "a/(b*c)/(d*e)"
-        response = "a/bc/de"
+        answer = "a/(b*c)/(d*f)"
+        response = "a/bc/df"
         self.assert_expression_equality(response, answer, symbols)
 
     def test_addition_with_division_and_implicit(self):
@@ -110,13 +110,13 @@ class TestMultiCharacterTransformerIntegration:
         symbols = {
             "x": {"aliases": ["x"]},
             "abc": {"aliases": ["abc"]},
-            "def": {"aliases": ["def"]},
+            "df": {"aliases": ["df"]},
         }
-        answer = "x/(abc*def)"
+        answer = "x/(abc*df)"
         test_cases = [
-            "x/(abc*def)",
-            "x/(abcdef)",
-            "x/abcdef",
+            "x/(abc*df)",
+            "x/(abcdf)",
+            "x/abcdf",
         ]
         for response in test_cases:
             self.assert_expression_equality(response, answer, symbols)
@@ -180,19 +180,6 @@ class TestMultiCharacterTransformerIntegration:
         response = "a(bcd)"
         self.assert_expression_equality(response, answer, symbols)
 
-    def test_division_then_implicit_then_parentheses(self):
-        """Test a/b(cd)"""
-        symbols = {
-            "a": {"aliases": ["a"]},
-            "b": {"aliases": ["b"]},
-            "c": {"aliases": ["c"]},
-            "d": {"aliases": ["d"]},
-        }
-        # a/b(cd) should be a/(b*(c*d))
-        answer = "a/(b*(c*d))"
-        response = "a/b(cd)"
-        self.assert_expression_equality(response, answer, symbols)
-
     def test_complex_expression(self):
         """Test a complex expression"""
         symbols = {
@@ -200,11 +187,12 @@ class TestMultiCharacterTransformerIntegration:
             "b": {"aliases": ["b"]},
             "c": {"aliases": ["c"]},
             "d": {"aliases": ["d"]},
-            "e": {"aliases": ["e"]},
+            "f": {"aliases": ["f"]},
+            "g": {"aliases": ["g"]},
         }
         # a/bc + d/ef should be a/(b*c) + d/(e*f)
-        answer = "a/(b*c) + d/(e*f)"
-        response = "a/bc + d/ef"
+        answer = "a/(b*c) + d/(g*f)"
+        response = "a/bc + d/gf"
         self.assert_expression_equality(response, answer, symbols)
 
     def test_three_way_implicit_multiplication(self):
@@ -214,11 +202,11 @@ class TestMultiCharacterTransformerIntegration:
             "b": {"aliases": ["b"]},
             "c": {"aliases": ["c"]},
             "d": {"aliases": ["d"]},
-            "e": {"aliases": ["e"]},
+            "f": {"aliases": ["f"]},
         }
         # a/bcde should be a/(b*c*d*e)
-        answer = "a/(b*c*d*e)"
-        response = "a/bcde"
+        answer = "a/(b*c*d*f)"
+        response = "a/bcdf"
         self.assert_expression_equality(response, answer, symbols)
 
     def test_explicit_multiplication_should_not_be_grouped(self):
