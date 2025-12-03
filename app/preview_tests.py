@@ -172,5 +172,33 @@ class TestPreviewFunction():
         assert result["preview"]["latex"] == "x + y=x + y"
         assert result["preview"]["sympy"] == "x + y=y + x"
 
+    def test_multi_character_implicit_multi_variable(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+            "symbols": {
+                "a": {"aliases": ["a"], "latex": "a"},
+                "bc": {"aliases": ["bc"], "latex": "bc"},
+                "d": {"aliases": ["d"], "latex": "d"}
+            },
+        }
+
+        response_full = "a/(bc*d)"
+        response_implicit_bracket = "a/(bcd)"
+        response_implicit_no_bracket = "a/bcd"
+
+        result = preview_function(response_full, params)
+        assert result["preview"]["latex"] == '\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["sympy"] == "a/(bc*d)"
+
+        result = preview_function(response_implicit_bracket, params)
+        assert result["preview"]["latex"] == '\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["sympy"] == "a/(bcd)"
+
+        result = preview_function(response_implicit_no_bracket, params)
+        assert result["preview"]["latex"] =='\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["sympy"] == "a/bcd"
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
