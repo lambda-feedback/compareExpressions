@@ -21,13 +21,15 @@ If you want to use `I` for the imaginary constant, set the grading parameter `co
 
 Changes the implicit multiplication convention. If unset it will default to `equal_precedence`.
 
-If set to `implicit_higher_precedence` then implicit multiplication will have higher precedence than explicit multiplication, i.e. `1/ab` will be equal to `1/(ab)` and `1/a*b` will be equal to `(1/a)*b`.
+If set to `implicit_higher_precedence` then implicit multiplication will have higher precedence than explicit multiplication, i.e. `1/ab` will be equal to `1/(ab)` and `1/a*b` will be equal to `(1/a)*b`. 
+
+**_NOTE:_** Currently, if implicit multiplication has higher precedence, then multi-character custom symbols are not supported. For example, if you have defined the symbol `bc` with an answer `a/(bc*d)` then `a/(bcd)` will fail, as it is treated as `a/(b *  c * d)`.
 
 If set to `equal_precedence` then implicit multiplication will have the same precedence than explicit multiplication, i.e. both `1/ab` and `1/a*b` will be equal to `(1/a)*b`.
 
 #### `criteria`
 
-The `criteria` parameter can be used to customize the comparison performed by the evaluation function. If unset the evaluation function will will default to checking if the answer and response are symbolically equal.
+The `criteria` parameter can be used to customize the comparison performed by the evaluation function. If unset the evaluation function will default to checking if the answer and response are symbolically equal.
 
 The `criteria` parameter takes a string that defines a set of (comma separated) mathematical statements. If all statements in the list are true the response is considered correct.
 
@@ -109,15 +111,15 @@ SI base units based on Table 2 in [The International System of Units (SI), 9th e
 
 Note that gram is used as a base unit instead of kilogram.
 
-| SI base unit | Symbol | Dimension name      |
-|--------------|:-------|:--------------------|
-| metre        |   m    | length              |
-| gram         |   g    | mass                |
-| second       |   s    | time                |
-| ampere       |   A    | electriccurrent     |
-| kelvin       |   k    | temperature         |
-| mole         |  mol   | amountofsubstance   |
-| candela      |  cd    | luminousintensity   |
+| SI base unit | Symbol | Dimension name        |
+|--------------|:-------|:----------------------|
+| metre        |   m    | `length`              |
+| gram         |   g    | `mass`                |
+| second       |   s    | `time`                |
+| ampere       |   A    | `electric_current`    |
+| kelvin       |   k    | `temperature`         |
+| mole         |  mol   | `amount_of_substance` |
+| candela      |  cd    | `luminous_intensity`  |
 
 ###### Table: SI prefixes
 
@@ -125,6 +127,8 @@ SI prefixes based on Table 7 in [The International System of Units (SI), 9th edi
 
 | SI Prefix | Symbol | Factor     | | SI Prefix | Symbol | Factor     |
 |-----------|:-------|:-----------|-|-----------|:-------|:-----------|
+| quetta    |   Q    | $10^{30}$  | | deci      |   d    | $10^{-1}$  |
+| ronna     |   R    | $10^{27}$  | | centi     |   c    | $10^{-2}$  |
 | yotta     |   Y    | $10^{24}$  | | deci      |   d    | $10^{-1}$  |
 | zetta     |   Z    | $10^{21}$  | | centi     |   c    | $10^{-2}$  |
 | exa       |   E    | $10^{18}$  | | milli     |   m    | $10^{-3}$  |
@@ -173,35 +177,35 @@ Note that the function treats angles, neper and bel as dimensionless values.
 
 Note that only the first table in this section has short form symbols defined, the second table does not, this is done to minimize ambiguities when writing units.
 
-| Unit name         | Symbol | Expressed in SI units                      |
+|| Unit name         | Symbol | Expressed in SI units                      |
 |-------------------|:-------|:-------------------------------------------|
-| minute            |  min   | $60 \mathrm{second}$                       |
-| hour              |   h    | $3600 \mathrm{second}$                     |
-| degree            |  deg   | $\frac{1}{360}$                            |
-| liter             |   l    | $10^{-3} \mathrm{metre}^3$                 |
-| metric_ton        |   t    | $10^3 \mathrm{kilogram}$                   |
+| minute            |  min   | $60~\mathrm{second}$                       |
+| hour              |   h    | $3600~\mathrm{second}$                     |
+| degree            |  deg   | $\frac{\pi}{180}$                          |
+| liter             |   l    | $10^{-3}~\mathrm{metre}^3$                 |
+| metric_ton        |   t    | $10^3~\mathrm{kilogram}$                   |
 | neper             |  Np    | $1$                                        |
-| bel               |   B    | $\frac{1}{2} \ln(10)$                      |
-| electronvolt      |  eV    | $1.60218 \cdot 10^{-19} \mathrm{joule}$    |
-| atomic_mass_unit  |   u    | $1.66054 \cdot 10^{-27} \mathrm{kilogram}$ |
-| angstrom          |   å    | $10^{-10} \mathrm{metre}$                  |
+| bel               |   B    | $\frac{1}{2}~\ln(10)$                      |
+| electronvolt      |  eV    | $1.60218 \cdot 10^{-19}~\mathrm{joule}$    |
+| atomic_mass_unit  |   u    | $1.66054 \cdot 10^{-27}~\mathrm{kilogram}$ |
+| angstrom          |   å    | $10^{-10}~\mathrm{metre}$                  |
 
 | Unit name        | Expressed in SI units                                |
 |------------------|:-----------------------------------------------------|
-| day              | $86400 \mathrm{second}$                              |
+| day              | $86400~\mathrm{second}$                              |
 | angleminute      | $\frac{\pi}{10800}$                                  |
 | anglesecond      | $\frac{\pi}{648000}$                                 |
-| astronomicalunit | $149597870700 \mathrm{metre}$                        |
-| nauticalmile     | $1852 \mathrm{metre}$                                |
-| knot             | $\frac{1852}{3600} \mathrm{metre second}^{-1}$       |
-| are              | $10^2 \mathrm{metre}^2$                              |
-| hectare          | $10^4 \mathrm{metre}^2$                              |
-| bar              | $10^5 \mathrm{pascal}$                               |
-| barn             | $10^{-28} \mathrm{metre}$                            |
-| curie            | $3.7 \cdot 10^{10} \mathrm{becquerel}                |
-| roentgen         | $2.58 \cdot 10^{-4} \mathrm{kelvin (kilogram)}^{-1}$ |
-| rad              | $10^{-2} \mathrm{gray}$                              |
-| rem              | $10^{-2} \mathrm{sievert}$                           |
+| astronomicalunit | $149597870700~\mathrm{metre}$                        |
+| nauticalmile     | $1852~\mathrm{metre}$                                |
+| knot             | $\frac{1852}{3600}~\mathrm{metre~second}^{-1}$       |
+| are              | $10^2~\mathrm{metre}^2$                              |
+| hectare          | $10^4~\mathrm{metre}^2$                              |
+| bar              | $10^5~\mathrm{pascal}$                               |
+| barn             | $10^{-28}~\mathrm{metre}$                            |
+| curie            | $3.7 \cdot 10^{10}~\mathrm{becquerel}                |
+| roentgen         | $2.58 \cdot 10^{-4}~\mathrm{kelvin~(kilogram)}^{-1}$ |
+| rad              | $10^{-2}~\mathrm{gray}$                              |
+| rem              | $10^{-2}~\mathrm{sievert}$                           |
 
 ###### Table: Imperial units
 
@@ -209,18 +213,18 @@ Commonly imperial units taken from [Wikipedia, Imperial Units](https://en.wikipe
 
 | Unit name         | Symbol | Expressed in SI units                         |
 |-------------------|:-------|:----------------------------------------------|
-| inch              |   in   | $0.0254 \mathrm{metre}$                       |
-| foot              |   ft   | $0.3048 \mathrm{metre}$                       |
-| yard              |   yd   | $0.9144 \mathrm{metre}$                       |
-| mile              |   mi   | $1609.344 \mathrm{metre}$                     |
-| fluid ounce       |  fl oz | $28.4130625 \mathrm{millilitre}$              |
-| gill              |   gi   | $142.0653125 \mathrm{millilitre}$             |
-| pint              |   pt   | $568.26125 \mathrm{millilitre}$               |
-| quart             |   qt   | $1.1365225 \mathrm{litre}$                    |
-| gallon            |   gal  | $4546.09 \mathrm{litre}$                      |
-| ounce             |   oz   | $28.349523125 \mathrm{gram}$                  |
-| pound             |   lb   | $0.45359237 \mathrm{kilogram}$                |
-| stone             |   st   | $6.35029318 \mathrm{kilogram}$                |
+| inch              |   in   | $0.0254~\mathrm{metre}$                       |
+| foot              |   ft   | $0.3048~\mathrm{metre}$                       |
+| yard              |   yd   | $0.9144~\mathrm{metre}$                       |
+| mile              |   mi   | $1609.344~\mathrm{metre}$                     |
+| fluid ounce       |  fl oz | $28.4130625~\mathrm{millilitre}$              |
+| gill              |   gi   | $142.0653125~\mathrm{millilitre}$             |
+| pint              |   pt   | $568.26125~\mathrm{millilitre}$               |
+| quart             |   qt   | $1.1365225~\mathrm{litre}$                    |
+| gallon            |   gal  | $4546.09~\mathrm{litre}$                      |
+| ounce             |   oz   | $28.349523125~\mathrm{gram}$                  |
+| pound             |   lb   | $0.45359237~\mathrm{kilogram}$                |
+| stone             |   st   | $6.35029318~\mathrm{kilogram}$                |
 
 #### `plus_minus` and `minus_plus`
 
@@ -495,7 +499,7 @@ $3$
 
 If the parameter `complexNumbers` is set to `true` then `I` will be interpreted as the imaginary constant $i$.
 
-**Note:** When `i` is used to denote the imaginary constant, then it can end up forming reserved keywords when used with other symbols, e.g. `xi` will be interpreted as $\xi$ instead of $x \cdot i$. To see how to avoid this kind of issue, see *Overriding greek letters or other reserved symbols with input symbols*.
+**Note:** When `i` is used to denote the imaginary constant, then it can end up forming reserved keywords when used with other symbols, e.g. `xi` will be interpreted as $\xi$ instead of $x \cdot i$. To see how to avoid this kind of issue, see [Working with Reserved Characters](#workiing-with-reserved-characters).
 
 In this example, `complexNumbers` is set to `true` and the answer is `2+I`. An input symbols has also been added so that `I` can be replaced with `i` or `j`.
 
@@ -506,26 +510,6 @@ Any response that is mathematically equivalent $2+i$ to will be accepted, e.g. `
 #### Using `constant` and `function` assumptions
 
 Examples of how to use the `constant` and `function` assumptions for symbols.
-
-#### Overriding greek letters or other reserved symbols with input symbols
-
-Sometimes there can be ambiguities in the expected responses. For example `xi` in a response could either be interpreted as the greek letter $\xi$ or as the multiplication $x \cdot i$.
-
-If there is an ambiguity the parser will choose the longest corresponding string, in the example above that means that `xi` will be interpreted as $\xi$ rather than $x \cdot i$.
-
-This behaviour can in many cases be overridden using input symbols, by letting the meaning with the longer corresponding string be an alternative to the interpretation consisting of several shorter strings. In the above example adding an input symbol with code `x\*i` and alternative `xi` will ensure that `xi` will be interpreted as  $x \cdot i$ rather than $\xi$.
-
-In this example the answer is set to $5 x \mathbf{i}-12 y \mathbf{j}$, while `strict_syntax` is set to false and `elementary_functions` is set to true.
-
-In order for the response `5xi-12yj` to be interpreted as $5 x \mathbf{i}-12 y \mathbf{j}$ instead of $5 \xi-12 y \mathbf{j}$ the following input symbols have been added:
-
-| Symbol              | Code | Alternatives |
-|:--------------------|:-----|:-------------|
-| `\$x\$`             | x    |              |
-| `\$\\mathbf{i}\$`   | i    |              |
-| `\$x \\mathbf{i}\$` | x\*i | xi           |
-| `\$y\$`             | y    |              |
-| `\$\\mathbf{j}\$`   | j    |              |
 
 #### Comparing equalities involving partial derivatives - Using the `constant` and `function` assumptions
 
@@ -617,7 +601,58 @@ Here is an example of an integral that can be fully evaluated, more specifically
 
 The boundary and function does not need to be defined explicitly. As an example of a more abstract integral we can consider $\int_a^b f(x)+g(x) \mathrm{d}x$. If the answer is set to `Integral(f(x)+g(x), (x, a, b))` then, for example, `int(g(x)+f(x), (x, a, b))` $\int_a^b g(x)+f(x) \mathrm{d}x$ and `int(f(x), (x, a, b)) + int(g(x), (x, a, b))` $\int_a^b f(x) \mathrm{d}x+\int_a^b g(x) \mathrm{d}x$.
 
-## Euler's number
+## Working with Reserved Characters
 
-SymPy recommends that you not use I, E, S, N, C, O, or Q for variable or symbol names, as those are used for the imaginary unit, the base of the natural logarithm, the sympify function, numeric evaluation, the big O order symbol, and the assumptions object that holds a list of supported ask keys, respectively. You can use the mnemonic OSINEQ to remember what Symbols are defined by default in SymPy. Or better yet, always use lowercase letters for Symbol names. Python will not prevent you from overriding default SymPy names or functions, so be careful."
+SymPy recommends that you not use I, E, S, N, C, O, or Q for variable or symbol names, as those are used for the imaginary unit ($i$), the base of the natural logarithm ($e$), the sympify function (`S()`), numeric evaluation (`N()`), the big O order symbol (as in $O(n)$), and the assumptions object that holds a list of supported ask keys (such as `Q.real`), respectively. You can use the mnemonic OSINEQ to remember what Symbols are defined by default in SymPy. Or better yet, always use lowercase letters for Symbol names. Python will not prevent you from overriding default SymPy names or functions, so be careful."
 For more information checkout the [SymPy Docs](https://docs.sympy.org/latest/explanation/gotchas.html#predefined-symbols)
+
+If you want to use a symbol that is usually reserved for some reserved character, e.g. ‘E’, do as follows:
+1. Create an input symbol where the code is different that the symbol you want to use, e.g. ‘Ef’ or 'Euler' instead of ‘E’
+2. Add the symbol you want to use as an alternative, e.g. the alternatives could be set to ‘E’
+
+#### Example:
+For the answer:
+$A/(E*l)$, $E$ is reserved, so we replace $E$ with $ef$ and provide alternatives as input symbols:
+
+Symbol: $ϵ$
+
+Code: `ef`
+
+Alternatives: `ϵ,ε,E,e,Ep`
+
+Here the answer $A/(E*l)$ is marked as correct.
+
+
+### Reserved Characters and Implicit Multiplication
+As implicit multiplication cannot decypher what is a multi-character code and what are two variables that should be multiplied, single letter codes should be used.
+
+#### Example
+With `"convention": "implicit_higher_precedence"` set
+
+For the answer:
+$A/(E*l)$ $E$ is reserved, so we replace $E$ with $b$ and provide alternatives as input symbols:
+Symbol: ϵ
+Code: b
+Alternatives: ϵ,ε,E,e,Ep
+
+Here the answer A/El is marked as correct.
+
+### Overriding greek letters or other reserved symbols with input symbols
+
+Sometimes there can be ambiguities in the expected responses. For example `xi` in a response could either be interpreted as the greek letter $\xi$ or as the multiplication $x \cdot i$.
+
+If there is an ambiguity the parser will choose the longest corresponding string, in the example above that means that `xi` will be interpreted as $\xi$ rather than $x \cdot i$.
+
+This behaviour can in many cases be overridden using input symbols, by letting the meaning with the longer corresponding string be an alternative to the interpretation consisting of several shorter strings. In the above example adding an input symbol with code `x\*i` and alternative `xi` will ensure that `xi` will be interpreted as  $x \cdot i$ rather than $\xi$.
+
+In this example the answer is set to $5 x \mathbf{i}-12 y \mathbf{j}$, while `strict_syntax` is set to false and `elementary_functions` is set to true.
+
+In order for the response `5xi-12yj` to be interpreted as $5 x \mathbf{i}-12 y \mathbf{j}$ instead of $5 \xi-12 y \mathbf{j}$ the following input symbols have been added:
+
+| Symbol              | Code | Alternatives |
+|:--------------------|:-----|:-------------|
+| `\$x\$`             | x    |              |
+| `\$\\mathbf{i}\$`   | i    |              |
+| `\$x \\mathbf{i}\$` | x\*i | xi           |
+| `\$y\$`             | y    |              |
+| `\$\\mathbf{j}\$`   | j    |              |
