@@ -1,3 +1,4 @@
+import re
 from typing import TypedDict
 from typing_extensions import NotRequired
 
@@ -29,6 +30,40 @@ class Preview(TypedDict):
 
 class Result(TypedDict):
     preview: Preview
+
+
+def find_placeholder(exp):
+    for char in 'abcdfghjkoqrtvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ':
+        if char not in exp:
+            return char
+
+def preprocess_E(latex_str: str, placeholder: str) -> str:
+    """
+    Replace all symbols starting with 'E' (including plain 'E') with a
+    placeholder, so latex2sympy does not interpret 'E' as Euler's number.
+    """
+    # Replace E, E_x, ER_2, Efield, etc.
+    def repl(match):
+        token = match.group(0)
+        return placeholder + token[1:]
+
+    # Match E followed by optional subscript or alphanumeric/underscore
+    pattern = re.compile(r'(?<![\\a-zA-Z])E([A-Za-z0-9_]*(?:_\{[^}]*\})?)')
+    return pattern.sub(repl, latex_str)
+
+
+def postprocess_E(expr, placeholder):
+    """
+    Replace all placeholder symbols back to symbols starting with E.
+    """
+    subs = {}
+    for s in expr.free_symbols:
+        name = str(s)
+        if name.startswith(placeholder):
+            new_name = "E" + name[len(placeholder):]
+            subs[s] = Symbol(new_name)
+    return expr.xreplace(subs)
+
 
 
 def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=None) -> str:
@@ -97,20 +132,25 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
     parsed_responses = set()
     for expression in response_set:
         try:
-            expression = latex2sympy(expression, substitutions)
-            if isinstance(expression, list):
-                expression = expression.pop()
+            e_placeholder = find_placeholder(expression)
+
+            expression_preprocessed = preprocess_E(expression, e_placeholder)
+            expression_parsed = latex2sympy(expression_preprocessed, substitutions)
+            if isinstance(expression_parsed, list):
+                expression_parsed = expression_parsed.pop()
+
+            expression_postprocess = postprocess_E(expression_parsed, e_placeholder)
             if simplify is True:
-                expression = expression.simplify()
+                expression_postprocess = expression_postprocess.simplify()
         except Exception as e:
             raise ValueError(str(e))
 
-        parsed_responses.add(str(expression.xreplace(substitutions)))
+        parsed_responses.add(str(expression_postprocess.xreplace(substitutions)))
 
     if len(parsed_responses) < 2:
         return parsed_responses.pop()
     else:
-        return '{'+', '.join(parsed_responses)+'}'
+        return '{'+', '.join(sorted(parsed_responses))+'}'
 
 
 def sanitise_latex(response):

@@ -76,6 +76,101 @@ class TestPreviewFunction():
         preview = result["preview"]
         assert preview["latex"] == r"\ln{\left(x \right)}"
 
+    @pytest.mark.parametrize(
+        "response, is_latex, elementary_functions,  response_latex, response_sympy", [
+            ("e", False, True, "e", "E",),
+            ("oo", False, True, "\\infty", "oo"),
+            ("ex", False, True, "e \\cdot x", "Ex"),
+            ("e * x", False, True,  "e \\cdot x", "E * x"),
+            ("E", False, True, "e", "E", ),
+            ("e", False, False, "e", "e",),
+            ("ex", False, False, "e \\cdot x", "ex"),
+            ("e * x", False, False, "e \\cdot x", "e * x"),
+            ("E", False, False, "E", "E",),
+            ("E", True, True, "E", "E",),
+            ("e", True, False, "e", "E",),
+            ("ex", True, False, "ex", "E*x"),
+            ("e * x", True, False, "e * x", "E*x"),
+            ("E", True, False, "E", "E",),
+            ("ER_2", True, False, "ER_2", "E*R_2",),
+            # TODO: add exp (0), (1), (2) and (x)
+            ("exp(1)", False, True, "e^{1}", "exp(1)"),
+            ("e**1", False, True, "e^{1}", "E**1"),
+            ("e^{1}", True, True, "e^{1}", "E"),
+            ("exp(0)", False, True, "e^{0}", "exp(0)"),
+            ("e**0", False, True, "e^{0}", "E**0"),
+            ("e^{0}", True, True, "e^{0}", "1"),
+            ("exp(2)", False, True, "e^{2}", "exp(2)"),
+            ("e**2", False, True, "e^{2}", "E**2"),
+            ("e^{2}", True, True, "e^{2}", "exp(2)"),
+            ("exp(x)", False, True, "e^{x}", "exp(x)"),
+            ("e**x", False, True, "e^{x}", "E**x"),
+            ("e^{x}", True, True, "e^{x}", "exp(x)")
+        ]
+    )
+    def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
+        params = Params(is_latex=is_latex, elementary_functions=elementary_functions, strict_syntax=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == response_latex
+        assert preview["sympy"] == response_sympy
+
+    @pytest.mark.parametrize(
+        "response, is_latex, response_latex, response_sympy",
+        [
+            ("plus_minus x", False, '\\left\\{- x,~x\\right\\}', "plus_minus x"),
+            ("\\pm x", True, '\\pm x', '{-x, x}'),
+            (r"\pm x^{2}+\mp y^{2}", True, "\pm x^{2}+\mp y^{2}", "{-x**2 + y**2, x**2 - y**2}"),
+            ("plus_minus x**2 + minus_plus y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
+            ("- minus_plus x^2 minus_plus y^2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 minus_plus y^2"),
+            ("- minus_plus x^2 - plus_minus y^2", False, r"\left\{- x^{2} - - y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 - plus_minus y^2"),
+            ("pm x**2 + mp y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
+            ("+- x**2 + -+ y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
+        ]
+    )
+    def test_using_plus_minus_symbols(self, response, is_latex, response_latex, response_sympy):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "is_latex": is_latex,
+            "symbols": {
+                "plus_minus": {
+                    "latex": r"\(\pm\)",
+                    "aliases": ["pm", "+-"],
+                },
+                "minus_plus": {
+                    "latex": r"\(\mp\)",
+                    "aliases": ["mp", "-+"],
+                },
+            },
+        }
+        params = Params(**params)
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == response_latex
+        assert result["preview"]["sympy"] == response_sympy
+
+    def test_lh_rh_response(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "is_latex": False,
+            "symbols": {
+                "plus_minus": {
+                    "latex": r"\(\pm\)",
+                    "aliases": ["pm", "+-"],
+                },
+                "minus_plus": {
+                    "latex": r"\(\mp\)",
+                    "aliases": ["mp", "-+"],
+                },
+            },
+        }
+        params = Params(**params)
+        result = preview_function("x + y = y + x", params)
+        assert result["preview"]["latex"] == "x + y=x + y"
+        assert result["preview"]["sympy"] == "x + y=y + x"
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
