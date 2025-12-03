@@ -611,32 +611,45 @@ If you want to use a symbol that is usually reserved for some reserved character
 1. Create an input symbol where the code is different that the symbol you want to use, e.g. ‘Ef’ or 'Euler' instead of ‘E’
 2. Add the symbol you want to use as an alternative, e.g. the alternatives could be set to ‘E’
 
+See note in [`convention`](#convention) for the limitations of using multi character symbols and implicit multiplication higher precedence.
+
 #### Example:
 For the answer:
-$A/(E*l)$, $E$ is reserved, so we replace $E$ with $ef$ and provide alternatives as input symbols:
+$A/(\epsilon*l)$, `e` is reserved as Euler's number, so we replace `e` with `ef` or any other character(s) that are not reserved or used in the expression and provide alternatives as input symbols:
 
-Symbol: $ϵ$
+Symbol: $\epsilon$
 
 Code: `ef`
 
 Alternatives: `ϵ,ε,E,e,Ep`
 
-Here the answer $A/(E*l)$ is marked as correct.
+Here the answer $A/(ef*l)$ is marked as correct, and so are the alternatives:
+- $A/(ϵ*l)$
+- $A/(ε*l)$
+- $A/(E*l)$
+- $A/(e*l)$
+- $A/(Ep*l)$
 
 
-### Reserved Characters and Implicit Multiplication
-As implicit multiplication cannot decypher what is a multi-character code and what are two variables that should be multiplied, single letter codes should be used.
+
 
 #### Example
+As implicit multiplication with higher precedence cannot decypher what is a multi-character code and what are two variables that should be multiplied (see [`convention`](#convention) for more detail), single letter codes should be used.
 With `"convention": "implicit_higher_precedence"` set
 
 For the answer:
-$A/(E*l)$ $E$ is reserved, so we replace $E$ with $b$ and provide alternatives as input symbols:
-Symbol: ϵ
+$A/(\epsilon*l)$, `e` is reserved as Euler's number, so we replace `e` with `b` or any other character(s) that are not reserved or used in the expression and provide alternatives as input symbols:
+Symbol: $\epsilon$
 Code: b
 Alternatives: ϵ,ε,E,e,Ep
 
-Here the answer A/El is marked as correct.
+Here the following are marked as correct:
+- $A/(b*l)$ or $A/(bl)$ or $A/bl$
+- $A/(ϵ*l)$ or $A/(ϵl)$ or $A/ϵl$
+- $A/(ε*l)$ or $A/(εl)$ or $A/εl$
+- $A/(E*l)$ or $A/(El)$ or $A/El$
+- $A/(e*l)$ or $A/(el)$ or $A/e*l$
+- $A/(Ep*l)$ or $A/(Epl)$ or $A/Epl$
 
 ### Overriding greek letters or other reserved symbols with input symbols
 
