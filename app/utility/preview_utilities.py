@@ -48,7 +48,7 @@ def preprocess_E(latex_str: str, placeholder: str) -> str:
         return placeholder + token[1:]
 
     # Match E followed by optional subscript or alphanumeric/underscore
-    pattern = re.compile(r'(?<![\\a-zA-Z])E([A-Za-z0-9_]*(?:_\{[^}]*\})?)')
+    pattern = re.compile(r'(?<![\\a-zA-Z])[E|e]([A-Za-z0-9_]*(?:_\{[^}]*\})?)')
     return pattern.sub(repl, latex_str)
 
 
@@ -121,13 +121,18 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
 
         if "\pm" not in symbol_str and "\mp" not in symbol_str:
             try:
-                latex_symbol = latex2sympy(latex_symbol_str)
+                e_placeholder = find_placeholder(latex_symbol_str)
+                latex_symbol_str_preprocessed = preprocess_E(latex_symbol_str, e_placeholder)
+                latex_symbol_parsed = latex2sympy(latex_symbol_str_preprocessed)
+                latex_symbol_str_postprocess = postprocess_E(latex_symbol_parsed, e_placeholder)
+
             except Exception:
                 raise ValueError(
                     f"Couldn't parse latex symbol {latex_symbol_str} "
                     f"to sympy symbol."
                 )
-            substitutions[latex_symbol] = Symbol(sympy_symbol_str)
+            substitutions[latex_symbol_str_postprocess] = Symbol(sympy_symbol_str)
+
 
     parsed_responses = set()
     for expression in response_set:

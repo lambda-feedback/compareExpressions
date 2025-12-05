@@ -93,7 +93,6 @@ class TestPreviewFunction():
             ("e * x", True, False, "e * x", "E*x"),
             ("E", True, False, "E", "E",),
             ("ER_2", True, False, "ER_2", "E*R_2",),
-            # TODO: add exp (0), (1), (2) and (x)
             ("exp(1)", False, True, "e^{1}", "exp(1)"),
             ("e**1", False, True, "e^{1}", "E**1"),
             ("e^{1}", True, True, "e^{1}", "E"),
@@ -102,10 +101,10 @@ class TestPreviewFunction():
             ("e^{0}", True, True, "e^{0}", "1"),
             ("exp(2)", False, True, "e^{2}", "exp(2)"),
             ("e**2", False, True, "e^{2}", "E**2"),
-            ("e^{2}", True, True, "e^{2}", "exp(2)"),
+            ("e^{2}", True, True, "e^{2}", "E**2"),
             ("exp(x)", False, True, "e^{x}", "exp(x)"),
             ("e**x", False, True, "e^{x}", "E**x"),
-            ("e^{x}", True, True, "e^{x}", "exp(x)")
+            ("e^{x}", True, True, "e^{x}", "E**x")
         ]
     )
     def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
@@ -116,6 +115,32 @@ class TestPreviewFunction():
         preview = result["preview"]
         assert preview["latex"] == response_latex
         assert preview["sympy"] == response_sympy
+
+    @pytest.mark.parametrize(
+        "response, is_latex, response_latex, response_sympy", [
+            ("e**ea", False, "e^{ea}", "E**ea"),
+            ("e**Ea", False, "e^{ea}", "E**ea"),
+            ("e^{ea}", True, "e^{ea}", "E**ea"),
+            ("e^{Ea}", True, "e^{Ea}", "E**ea"),
+        ]
+    )
+    def test_e_latex(self, response, is_latex, response_latex, response_sympy):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "ea": {"aliases": ["ea", "Ea"], "latex": "ea"},
+            },
+        }
+
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+        preview = result["preview"]
+
+        assert preview["latex"] == response_latex
+        assert preview["sympy"] == response_sympy
+
 
     @pytest.mark.parametrize(
         "response, is_latex, response_latex, response_sympy",
@@ -199,6 +224,7 @@ class TestPreviewFunction():
         result = preview_function(response_implicit_no_bracket, params)
         assert result["preview"]["latex"] =='\\frac{a}{bc \\cdot d}'
         assert result["preview"]["sympy"] == "a/bcd"
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
