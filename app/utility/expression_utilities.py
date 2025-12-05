@@ -2,6 +2,7 @@
 # Any contexts that use this collection of utility functions
 # must define values for theses parameters
 
+
 DEFAULT_SIGNIFICANT_FIGURES = 2
 
 default_parameters = {
@@ -649,6 +650,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
     O = Symbol("O")
     Q = Symbol("Q")
     S = Symbol("S")
+
     symbol_dict = {
         "beta": beta,
         "gamma": gamma,
@@ -660,7 +662,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         "O": O,
         "Q": Q,
         "S": S,
-        "E": E,
+        "E": E
     }
 
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
@@ -704,6 +706,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
         except Exception as e:
             raise Exception(f"Assumption {assumption} for symbol {symbol} caused a problem.") from e
 
+
     return parsing_params
 
 
@@ -720,11 +723,10 @@ def preprocess_expression(name, expr, parameters):
         success = False
     return success, expr, abs_feedback
 
-
 def parse_expression(expr_string, parsing_params):
     '''
     Input:
-        expr           : string to be parsed into a sympy expression
+        expr_string    : string to be parsed into a sympy expression
         parsing_params : dictionary that contains parsing parameters
     Output:
         sympy expression created by parsing expr configured according
@@ -737,12 +739,11 @@ def parse_expression(expr_string, parsing_params):
     extra_transformations = parsing_params.get("extra_transformations", ())
     unsplittable_symbols = parsing_params.get("unsplittable_symbols", ())
     symbol_dict = parsing_params.get("symbol_dict", {})
-    separate_unsplittable_symbols = [(x, " "+x) for x in unsplittable_symbols]
+    separate_unsplittable_symbols = [(x, " " + x + " ") for x in unsplittable_symbols]
     substitutions = separate_unsplittable_symbols
 
-
-
     parsed_expr_set = set()
+
     for expr in expr_set:
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
 
@@ -760,11 +761,15 @@ def parse_expression(expr_string, parsing_params):
         can_split = lambda x: False if x in unsplittable_symbols else _token_splittable(x)
 
         if strict_syntax is True:
-            transformations = parser_transformations[0:4]+extra_transformations
+            transformations = parser_transformations[0:4] + extra_transformations
         else:
-            transformations = parser_transformations[0:5, 6]+extra_transformations+(split_symbols_custom(can_split),)+parser_transformations[8, 9]
+            transformations = (parser_transformations[0:5, 6] + extra_transformations +
+                               (split_symbols_custom(can_split),) + parser_transformations[8, 9])
+
         if parsing_params.get("rationalise", False):
             transformations += parser_transformations[11]
+
+
         if "=" in expr:
             expr_parts = expr.split("=")
             lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
@@ -776,8 +781,10 @@ def parse_expression(expr_string, parsing_params):
                 parsed_expr = parsed_expr.simplify()
         else:
             parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+
         if not isinstance(parsed_expr, Basic):
             raise ValueError(f"Failed to parse Sympy expression `{expr}`")
+
         parsed_expr_set.add(parsed_expr)
 
     if len(expr_set) == 1:

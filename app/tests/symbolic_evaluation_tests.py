@@ -377,6 +377,15 @@ class TestEvaluationFunction():
     response = "zeta(2)"
     answer = "pi**2/6"
     input_variations += generate_input_variations(response, answer)
+    response = "Lambda(x, x**2)"
+    answer = "Lambda(x, x**2)"
+    input_variations += generate_input_variations(response, answer)
+    response = "Lambda((x, y), x + y)"
+    answer = "Lambda((x, y), x + y)"
+    input_variations += generate_input_variations(response, answer)
+    response = "chi(x)"
+    answer = "chi(x)"
+    input_variations += generate_input_variations(response, answer)
 
     @pytest.mark.parametrize("response,answer", generate_input_variations(response, answer))
     def test_special_functions(self, response, answer):

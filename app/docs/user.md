@@ -23,8 +23,6 @@ Changes the implicit multiplication convention. If unset it will default to `equ
 
 If set to `implicit_higher_precedence` then implicit multiplication will have higher precedence than explicit multiplication, i.e. `1/ab` will be equal to `1/(ab)` and `1/a*b` will be equal to `(1/a)*b`. 
 
-**_NOTE:_** Currently, if implicit multiplication has higher precedence, then multi-character custom symbols are not supported. For example, if you have defined the symbol `bc` with an answer `a/(bc*d)` then `a/(bcd)` will fail, as it is treated as `a/(b *  c * d)`.
-
 If set to `equal_precedence` then implicit multiplication will have the same precedence than explicit multiplication, i.e. both `1/ab` and `1/a*b` will be equal to `(1/a)*b`.
 
 #### `criteria`
@@ -65,7 +63,6 @@ All feedback for all incorrect responses will be replaced with the string that t
 The $\pm$ and $\mp$ symbols can be represented in  the answer or response by `plus_minus` and `minus_plus` respectively.
 
 Answers or responses that contain $\pm$ or $\mp$ has two possible interpretations which requires further criteria for equality. The grading parameter `multiple_answers_criteria` controls this. The default setting, `all`, is that each answer must have a corresponding answer and vice versa. The setting `all_responses` check that all responses are valid answers and the setting `all_answers` checks that all answers are found among the responses.
-
 #### `physical_quantity`
 
 If unset, `physical_quantity` will default to `false`. 
@@ -611,8 +608,6 @@ If you want to use a symbol that is usually reserved for some reserved character
 1. Create an input symbol where the code is different that the symbol you want to use, e.g. ‘Ef’ or 'Euler' instead of ‘E’
 2. Add the symbol you want to use as an alternative, e.g. the alternatives could be set to ‘E’
 
-See note in [`convention`](#convention) for the limitations of using multi character symbols and implicit multiplication higher precedence.
-
 #### Example:
 For the answer:
 $A/(\epsilon*l)$, `e` is reserved as Euler's number, so we replace `e` with `ef` or any other character(s) that are not reserved or used in the expression and provide alternatives as input symbols:
@@ -629,27 +624,6 @@ Here the answer $A/(ef*l)$ is marked as correct, and so are the alternatives:
 - $A/(E*l)$
 - $A/(e*l)$
 - $A/(Ep*l)$
-
-
-
-
-#### Example
-As implicit multiplication with higher precedence cannot decypher what is a multi-character code and what are two variables that should be multiplied (see [`convention`](#convention) for more detail), single letter codes should be used.
-With `"convention": "implicit_higher_precedence"` set
-
-For the answer:
-$A/(\epsilon*l)$, `e` is reserved as Euler's number, so we replace `e` with `b` or any other character(s) that are not reserved or used in the expression and provide alternatives as input symbols:
-Symbol: $\epsilon$
-Code: b
-Alternatives: ϵ,ε,E,e,Ep
-
-Here the following are marked as correct:
-- $A/(b*l)$ or $A/(bl)$ or $A/bl$
-- $A/(ϵ*l)$ or $A/(ϵl)$ or $A/ϵl$
-- $A/(ε*l)$ or $A/(εl)$ or $A/εl$
-- $A/(E*l)$ or $A/(El)$ or $A/El$
-- $A/(e*l)$ or $A/(el)$ or $A/e*l$
-- $A/(Ep*l)$ or $A/(Epl)$ or $A/Epl$
 
 ### Overriding greek letters or other reserved symbols with input symbols
 
