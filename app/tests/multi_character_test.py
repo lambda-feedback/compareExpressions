@@ -1,10 +1,9 @@
 import pytest
 from ..utility.expression_utilities import parse_expression, create_sympy_parsing_params
 
-class TestMultiCharacterTransformerIntegration:
+class TestMultiCharImplicitMultiHigherPrecedenceIntegration:
     """
-    Integration tests for Multi-Character Implicit Multiplication Transformer.
-    Uses expression_utilities.py directly to parse expressions.
+    Integration tests for multi-characters symbols and the convention of implicit_higher_precedence enabled.
     """
 
     def assert_expression_equality(self, response, answer, symbols_dict, local_dict=None):
