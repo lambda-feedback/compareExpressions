@@ -1,3 +1,4 @@
+=======
 # CompareExpressions
 This function utilises the [`SymPy`](https://docs.sympy.org/latest/index.html) to provide a maths-aware evaluation of a learner's response.
 
