@@ -169,5 +169,29 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True, "Response: a/bcd"
 
 
+    def test_mu_preview_evaluate(self):
+        response = "10 μA"
+        params = Params(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantity=True)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == "10~\\mathrm{microampere}"
+        assert preview["sympy"] == "10 μA"
+
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary_functions": False,
+        }
+
+        response = preview["sympy"]
+        answer = "10 muA"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', '--tb=short', '--durations=10', os.path.abspath(__file__)])
