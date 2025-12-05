@@ -118,7 +118,7 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
 
-    def test_theata_character_implict_multi_variable(self):
+    def test_theta_character_impilict_multi_variable(self):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
