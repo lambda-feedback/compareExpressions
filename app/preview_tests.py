@@ -120,8 +120,8 @@ class TestPreviewFunction():
         "response, is_latex, response_latex, response_sympy", [
             ("e**ea", False, "e^{ea}", "E**ea"),
             ("e**Ea", False, "e^{ea}", "E**ea"),
-            ("e^{ea}", True, "e^{ea}", "E**ea"),
-            ("e^{Ea}", True, "e^{Ea}", "E**ea"),
+            ("e^{ea}", True, "e^{ea}", "e**ea"),
+            ("e^{Ea}", True, "e^{Ea}", "e**ea"),
         ]
     )
     def test_e_latex(self, response, is_latex, response_latex, response_sympy):

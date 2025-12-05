@@ -37,22 +37,31 @@ def find_placeholder(exp):
         if char not in exp:
             return char
 
-def preprocess_E(latex_str: str, placeholder: str) -> str:
+def preprocess_E(latex_str: str, placeholder: str) -> tuple[str, str | None]:
     """
     Replace all symbols starting with 'E' (including plain 'E') with a
     placeholder, so latex2sympy does not interpret 'E' as Euler's number.
     """
-    # Replace E, E_x, ER_2, Efield, etc.
+    replaced_char = None
+
+    # Replace E/e, E_x, ER_2, Efield, etc.
     def repl(match):
+        nonlocal replaced_char
         token = match.group(0)
+        # Capture which character (E or e) was replaced
+        if replaced_char is None:
+            replaced_char = token[0]
         return placeholder + token[1:]
 
-    # Match E followed by optional subscript or alphanumeric/underscore
-    pattern = re.compile(r'(?<![\\a-zA-Z])[E|e]([A-Za-z0-9_]*(?:_\{[^}]*\})?)')
-    return pattern.sub(repl, latex_str)
+    # Match E or e followed by optional subscript or alphanumeric/underscore
+    pattern = re.compile(r'(?<![\\a-zA-Z])[Ee]([A-Za-z0-9_]*(?:_\{[^}]*\})?)')
+    modified_str = pattern.sub(repl, latex_str)
+
+    # Return the modified string, which character was replaced, and the pattern as string
+    return modified_str, replaced_char
 
 
-def postprocess_E(expr, placeholder):
+def postprocess_E(expr, placeholder, replaced_char):
     """
     Replace all placeholder symbols back to symbols starting with E.
     """
@@ -60,7 +69,7 @@ def postprocess_E(expr, placeholder):
     for s in expr.free_symbols:
         name = str(s)
         if name.startswith(placeholder):
-            new_name = "E" + name[len(placeholder):]
+            new_name = replaced_char + name[len(placeholder):]
             subs[s] = Symbol(new_name)
     return expr.xreplace(subs)
 
@@ -122,9 +131,9 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
         if "\pm" not in symbol_str and "\mp" not in symbol_str:
             try:
                 e_placeholder = find_placeholder(latex_symbol_str)
-                latex_symbol_str_preprocessed = preprocess_E(latex_symbol_str, e_placeholder)
+                latex_symbol_str_preprocessed, replaced_char = preprocess_E(latex_symbol_str, e_placeholder)
                 latex_symbol_parsed = latex2sympy(latex_symbol_str_preprocessed)
-                latex_symbol_str_postprocess = postprocess_E(latex_symbol_parsed, e_placeholder)
+                latex_symbol_str_postprocess = postprocess_E(latex_symbol_parsed, e_placeholder, replaced_char)
 
             except Exception:
                 raise ValueError(
@@ -139,12 +148,12 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
         try:
             e_placeholder = find_placeholder(expression)
 
-            expression_preprocessed = preprocess_E(expression, e_placeholder)
+            expression_preprocessed, replaced_char = preprocess_E(expression, e_placeholder)
             expression_parsed = latex2sympy(expression_preprocessed, substitutions)
             if isinstance(expression_parsed, list):
                 expression_parsed = expression_parsed.pop()
 
-            expression_postprocess = postprocess_E(expression_parsed, e_placeholder)
+            expression_postprocess = postprocess_E(expression_parsed, e_placeholder, replaced_char)
             if simplify is True:
                 expression_postprocess = expression_postprocess.simplify()
         except Exception as e:
