@@ -168,6 +168,29 @@ class TestEvaluationFunction():
         result = evaluation_function(response_implicit_no_bracket, answer, params)
         assert result["is_correct"] is True, "Response: a/bcd"
 
+    @pytest.mark.parametrize(
+        "response, is_latex, is_correct", [
+            ("e**ea", False, True),
+            ("e**Ea", False, True),
+            ("e^{ea}", True, True),
+            ("e^{Ea}", True, True),
+        ]
+    )
+    def test_e_latex(self, response, is_latex, is_correct):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "ea": {"aliases": ["ea", "Ea"], "latex": "ea"},
+            },
+        }
+        answer = "e**ea"
+
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] == is_correct
+
+
 
     def test_mu_preview_evaluate(self):
         response = "10 μA"

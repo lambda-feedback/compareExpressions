@@ -101,10 +101,10 @@ class TestPreviewFunction():
             ("e^{0}", True, True, "e^{0}", "1"),
             ("exp(2)", False, True, "e^{2}", "exp(2)"),
             ("e**2", False, True, "e^{2}", "E**2"),
-            ("e^{2}", True, True, "e^{2}", "exp(2)"),
+            ("e^{2}", True, True, "e^{2}", "E**2"),
             ("exp(x)", False, True, "e^{x}", "exp(x)"),
             ("e**x", False, True, "e^{x}", "E**x"),
-            ("e^{x}", True, True, "e^{x}", "exp(x)")
+            ("e^{x}", True, True, "e^{x}", "E**x")
         ]
     )
     def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
@@ -115,6 +115,34 @@ class TestPreviewFunction():
         preview = result["preview"]
         assert preview["latex"] == response_latex
         assert preview["sympy"] == response_sympy
+
+    @pytest.mark.parametrize(
+        "response, is_latex, response_latex, response_sympy, symbols", [
+            ("e**ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e**Ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e^{ea}", True, "e^{ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            # ("e^{Ea}", True, "e^{Ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}), # TODO: Clarify if we want to be able to use aliases for LaTeX?
+            ("e**aea", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e**aEa", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e^{aea}", True, "e^{aea}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            # ("e^{aEa}", True, "e^{aEa}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}), # TODO: Clarify if we want to be able to use aliases for LaTeX?
+        ]
+    )
+    def test_e_latex(self, response, is_latex, response_latex, response_sympy, symbols):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": symbols,
+        }
+
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+        preview = result["preview"]
+
+        assert preview["latex"] == response_latex
+        assert preview["sympy"] == response_sympy
+
 
     @pytest.mark.parametrize(
         "response, is_latex, response_latex, response_sympy",
@@ -198,6 +226,7 @@ class TestPreviewFunction():
         result = preview_function(response_implicit_no_bracket, params)
         assert result["preview"]["latex"] =='\\frac{a}{bc \\cdot d}'
         assert result["preview"]["sympy"] == "a/bcd"
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
