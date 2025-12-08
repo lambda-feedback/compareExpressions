@@ -182,7 +182,6 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
         try:
             expression_postprocess = latex2sympy(expression, substitutions)
         except Exception:
-
             try:
                 expression_preprocessed, replacements = preprocess_E(expression)
                 expression_parsed = latex2sympy(expression_preprocessed, substitutions)
@@ -190,10 +189,11 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
                     expression_parsed = expression_parsed.pop()
 
                 expression_postprocess = postprocess_E(expression_parsed, replacements)
-                if simplify is True:
-                    expression_postprocess = expression_postprocess.simplify()
             except Exception as e:
                 raise ValueError("Failed to pass expression during preview: ", str(e))
+
+        if simplify is True:
+            expression_postprocess = expression_postprocess.simplify()
 
         parsed_responses.add(str(expression_postprocess.xreplace(substitutions)))
 
