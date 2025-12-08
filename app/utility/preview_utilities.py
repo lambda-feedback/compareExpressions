@@ -38,7 +38,7 @@ def find_placeholder(exp):
             return char
 
 
-def preprocess_E(latex_str: str) -> tuple[str, dict[str, str]]:
+def preprocess_E(latex_str: str) -> tuple:
     """
     Replace all symbols starting with 'E' or 'e' with placeholders,
     so latex2sympy does not interpret 'E' as Euler's number.
