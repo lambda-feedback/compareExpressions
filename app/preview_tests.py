@@ -101,10 +101,10 @@ class TestPreviewFunction():
             ("e^{0}", True, True, "e^{0}", "1"),
             ("exp(2)", False, True, "e^{2}", "exp(2)"),
             ("e**2", False, True, "e^{2}", "E**2"),
-            ("e^{2}", True, True, "e^{2}", "E**2"),
+            ("e^{2}", True, True, "e^{2}", "exp(2)"),
             ("exp(x)", False, True, "e^{x}", "exp(x)"),
             ("e**x", False, True, "e^{x}", "E**x"),
-            ("e^{x}", True, True, "e^{x}", "E**x")
+            ("e^{x}", True, True, "e^{x}", "exp(x)")
         ]
     )
     def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
@@ -120,11 +120,11 @@ class TestPreviewFunction():
         "response, is_latex, response_latex, response_sympy, symbols", [
             ("e**ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e**Ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
-            ("e^{ea}", True, "e^{ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e^{ea}", True, "e^{ea}", "exp(ea)", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             # ("e^{Ea}", True, "e^{Ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}), # TODO: Clarify if we want to be able to use aliases for LaTeX?
             ("e**aea", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             ("e**aEa", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
-            ("e^{aea}", True, "e^{aea}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e^{aea}", True, "e^{aea}", "exp(aea)", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             # ("e^{aEa}", True, "e^{aEa}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}), # TODO: Clarify if we want to be able to use aliases for LaTeX?
         ]
     )
