@@ -1,8 +1,10 @@
 import re
 from typing import TypedDict
+
+from sympy.parsing.sympy_parser import standard_transformations, implicit_multiplication_application
 from typing_extensions import NotRequired
 
-from sympy import Symbol
+from sympy import Symbol, parse_expr, srepr
 from latex2sympy2 import latex2sympy
 
 from copy import deepcopy
@@ -177,6 +179,12 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
             substitutions[latex_symbol_str_postprocess] = Symbol(sympy_symbol_str)
 
 
+            aliases = symbols[sympy_symbol_str]['aliases']
+            transformations = (standard_transformations + (implicit_multiplication_application,))
+            for alias in aliases:
+                substitutions[parse_expr(alias, transformations=transformations)] = Symbol(sympy_symbol_str)
+
+
     parsed_responses = set()
     for expression in response_set:
         try:
@@ -195,7 +203,7 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
         if simplify is True:
             expression_postprocess = expression_postprocess.simplify()
 
-        parsed_responses.add(str(expression_postprocess.xreplace(substitutions)))
+        parsed_responses.add(str(expression_postprocess.subs(substitutions)))
 
     if len(parsed_responses) < 2:
         return parsed_responses.pop()
