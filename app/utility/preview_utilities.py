@@ -182,7 +182,19 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
             aliases = symbols[sympy_symbol_str]['aliases']
             transformations = (standard_transformations + (implicit_multiplication_application,))
             for alias in aliases:
-                substitutions[parse_expr(alias, transformations=transformations, local_dict={'E': Symbol("E")})] = Symbol(sympy_symbol_str)
+                if not alias.strip():
+                    continue
+                try:
+                    parsed_alias = parse_expr(
+                        alias,
+                        transformations=transformations,
+                        global_dict={},
+                        local_dict={'Symbol': Symbol,'E': Symbol("E")}
+                    )
+                    substitutions[parsed_alias] = Symbol(sympy_symbol_str)
+                except Exception as e:
+                    print(e)
+                    substitutions[Symbol(alias)] = Symbol(sympy_symbol_str)
 
 
     parsed_responses = set()
