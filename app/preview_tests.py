@@ -231,8 +231,8 @@ class TestPreviewFunction():
         "response, is_latex, latex, sympy", [
             ("A/s(e**(-a*s)-e**(-b*s))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
             ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-bs))"),
-            ("A/s( e^(-a*s)-e^(-b*s))", True, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
-            ("A/s( e^(-as)-e^(-bs))", True, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
+            ("A/s( e^{-a*s}-e^{-b*s})", True, r"A/s( e^{-a*s}-e^{-b*s})", "A/((s*(-exp(-b*s) + exp(-a*s))))"),
+            ("A/s( e^{-as}-e^{-bs})", True, r"A/s( e^{-as}-e^{-bs})", "A/((s*(-exp(-b*s) + exp(-a*s))))"),
         ]
     )
     def test_mech5003(self, response, is_latex, latex, sympy):
@@ -240,11 +240,6 @@ class TestPreviewFunction():
             "is_latex": is_latex,
             "strict_syntax": False,
             "elementary_functions": True,
-            # "symbols": {
-            #     "a": {"aliases": ["a"], "latex": "a"},
-            #     "b": {"aliases": ["b"], "latex": "b"},
-            #     "s": {"aliases": ["s"], "latex": "s"}
-            # },
             "convention": "implicit_higher_precedence",
         }
 
