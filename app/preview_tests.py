@@ -227,6 +227,32 @@ class TestPreviewFunction():
         assert result["preview"]["latex"] =='\\frac{a}{bc \\cdot d}'
         assert result["preview"]["sympy"] == "a/bcd"
 
+    @pytest.mark.parametrize(
+        "response, is_latex, latex, sympy", [
+            ("A/s(e**(-a*s)-e**(-b*s))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
+            ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-bs))"),
+            ("A/s( e^(-a*s)-e^(-b*s))", True, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
+            ("A/s( e^(-as)-e^(-bs))", True, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
+        ]
+    )
+    def test_mech5003(self, response, is_latex, latex, sympy):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            # "symbols": {
+            #     "a": {"aliases": ["a"], "latex": "a"},
+            #     "b": {"aliases": ["b"], "latex": "b"},
+            #     "s": {"aliases": ["s"], "latex": "s"}
+            # },
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
