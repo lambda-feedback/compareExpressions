@@ -413,7 +413,7 @@ def substitute_input_symbols(exprs, params):
     substitutions = [(original, subs.replace("lambda", "lamda")) for (original, subs) in substitutions]
 
     # Since 'as' is a reserved keyword in python, we add a subsitution of 'as' to 'a*s' if 'as' is not a defined symbol
-    if 'as' not in input_symbols.keys():
+    if 'as' not in input_symbols:
         substitutions += [('as', 'a*s')]
 
     substitutions = list(set(substitutions))
