@@ -219,8 +219,10 @@ class TestEvaluationFunction():
         "response, is_latex, is_correct", [
             ("A/s(e**(-a*s)-e**(-b*s))", False, True),
             ("A/s(e**(-as)-e**(-bs))", False, True),
-            ("A/s( e^(-a*s)-e^(-b*s))", True, True),
-            ("A/s( e^(-as)-e^(-bs))", True, True),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, True),
+            ("(A/s)( e^{-as}-e^{-bs})", True, True),
+            (r"\frac{A}{s} (e^{-a*s}-e^{-b*s})", True, True),
+            (r"\frac{A}{s} (e^{-a s}-e^{-b s})", True, True)
         ]
     )
     def test_mech5003(self, response, is_latex, is_correct):
