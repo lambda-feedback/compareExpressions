@@ -225,7 +225,7 @@ class TestEvaluationFunction():
             (r"\frac{A}{s} (e^{-a s}-e^{-b s})", True, True)
         ]
     )
-    def test_mech5003(self, response, is_latex, is_correct):
+    def test_laplace_transforms(self, response, is_latex, is_correct):
 
         params = {
             "is_latex": is_latex,

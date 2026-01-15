@@ -235,7 +235,7 @@ class TestPreviewFunction():
             ("(A/s)( e^{-as}-e^{-bs})", True, r"(A/s)( e^{-as}-e^{-bs})", "A*(-exp(-b*s) + exp(-a*s))/s"),
         ]
     )
-    def test_mech5003(self, response, is_latex, latex, sympy):
+    def test_laplace_transforms(self, response, is_latex, latex, sympy):
         params = {
             "is_latex": is_latex,
             "strict_syntax": False,
