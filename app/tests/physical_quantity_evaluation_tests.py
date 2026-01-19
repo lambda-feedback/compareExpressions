@@ -337,11 +337,35 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    def test_physical_quantity_with_rel_tol(self):
+        ans = "7500 m/s"
+        res = "7504.1 m/s"
+        params = {
+            'relative_tolerance': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
     def test_physical_quantity_with_atol(self):
         ans = "7500 m/s"
         res = "7504.1 m/s"
         params = {
             'atol': 5,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_physical_quantity_with_abs_tol(self):
+        ans = "7500 m/s"
+        res = "7504.1 m/s"
+        params = {
+            'absolute_tolerance': 5,
             'strict_syntax': False,
             'physical_quantity': True,
             'elementary_functions': True,
