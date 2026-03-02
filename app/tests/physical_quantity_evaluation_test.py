@@ -2,7 +2,7 @@ import pytest
 import os
 
 # Import necessary data and reference cases for tests
-from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
+from .slr_quantity_test import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from ..evaluation import evaluation_function
 from ..utility.unit_system_conversions import (
     set_of_SI_prefixes,
@@ -32,7 +32,7 @@ class TestEvaluationFunction():
     """
 
     # Import tests that makes sure that physical quantity parsing works as expected
-    from .slr_quantity_tests import TestEvaluationFunction as TestStrictSLRSyntax
+    from .slr_quantity_test import TestEvaluationFunction as TestStrictSLRSyntax
 
     log_details = True
 
