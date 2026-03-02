@@ -215,6 +215,30 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    @pytest.mark.parametrize(
+        "response, is_latex, is_correct", [
+            ("A/s(e**(-a*s)-e**(-b*s))", False, True),
+            ("A/s(e**(-as)-e**(-bs))", False, True),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, True),
+            ("(A/s)( e^{-as}-e^{-bs})", True, True),
+            (r"\frac{A}{s} (e^{-a*s}-e^{-b*s})", True, True),
+            (r"\frac{A}{s} (e^{-a s}-e^{-b s})", True, True)
+        ]
+    )
+    def test_laplace_transforms(self, response, is_latex, is_correct):
+
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+        answer = "A/s(e**(-a*s)-e**(-b*s))"
+
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] == is_correct
+
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', '--tb=short', '--durations=10', os.path.abspath(__file__)])
