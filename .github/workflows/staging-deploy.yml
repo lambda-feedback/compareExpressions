@@ -19,47 +19,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.8", "3.12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          lfs: true
-      - name: pull lfs files
-        run: git lfs pull
-      - name: Verify LFS files
-        run: git lfs ls-files
       - name: Set up Python ${{ matrix.python-version }}
         id: python-setup
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Load cached Poetry installation
-        id: poetry-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local
-          key: poetry-0
-
-      - name: Install and configure Poetry
-        if: steps.poetry-cache.outputs.cache-hit != 'true'
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-in-project: true
-
-      - name: Load cached venv
-        id: dependencies-cache
-        uses: actions/cache@v3
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.python-setup.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
       - name: Install dependencies
-        if: steps.dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          poetry install  --with dev --no-interaction --no-root
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
 
       # TODO: add linting / black / flake8
       # - name: Lint with flake8
