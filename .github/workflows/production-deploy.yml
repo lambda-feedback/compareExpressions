@@ -23,6 +23,7 @@ jobs:
     with:
       template-repository-name: 'lambda-feedback/evaluation-function-boilerplate-python'
       build-file: "app/Dockerfile"
+      build-context: "./app"
       environment: "production"
       version-bump: ${{ inputs.version-bump }}
       branch: ${{ inputs.branch }}
