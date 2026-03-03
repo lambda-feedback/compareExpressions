@@ -65,6 +65,7 @@ jobs:
     with:
       template-repository-name: "lambda-feedback/evaluation-function-boilerplate-python"
       build-file: "app/Dockerfile"
+      build-context: "./app"
       build-platforms: "aws"
       environment: "staging"
       lfs: false
