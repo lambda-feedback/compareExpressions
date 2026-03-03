@@ -22,6 +22,7 @@ jobs:
     uses: lambda-feedback/evaluation-function-workflows/.github/workflows/deploy.yml@deploy-request
     with:
       template-repository-name: 'lambda-feedback/evaluation-function-boilerplate-python'
+      build-file: "app/Dockerfile"
       environment: "production"
       version-bump: ${{ inputs.version-bump }}
       branch: ${{ inputs.branch }}
