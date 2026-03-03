@@ -64,6 +64,7 @@ jobs:
     uses: lambda-feedback/evaluation-function-workflows/.github/workflows/deploy.yml@deploy-request
     with:
       template-repository-name: "lambda-feedback/evaluation-function-boilerplate-python"
+      build-file: "app/Dockerfile"
       build-platforms: "aws"
       environment: "staging"
       lfs: false
