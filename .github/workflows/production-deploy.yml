@@ -27,7 +27,7 @@ jobs:
       environment: "production"
       version-bump: ${{ inputs.version-bump }}
       branch: ${{ inputs.branch }}
-      run-tests: true
+      run-database-tests: true
 
     secrets:
       aws-key-id: ${{ secrets.LAMBDA_CONTAINER_PIPELINE_AWS_ID }}
