@@ -785,10 +785,6 @@ class TestEvaluationFunction():
                 '(0.002*6800*v)/1.2'
             ),
             (
-                '-∞',
-                '-inf'
-            ),
-            (
                 'x.y',
                 'x*y'
             ),
@@ -1935,6 +1931,11 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
+
+    def test_infinity_unicode_symbol(self):
+        params = {'strict_syntax': True, 'elementary_functions': True}
+        result = evaluation_function('-∞', '-inf', params)
+        assert result["is_correct"] is True
 
     def test_infinity_alias(self):
         response = "2.694"
