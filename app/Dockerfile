@@ -13,9 +13,9 @@ RUN pip3 install -r requirements.txt
 
 # Copy main scripts
 COPY evaluation.py ./app/
-COPY evaluation_tests.py ./app/
+COPY evaluation_test.py ./app/
 COPY preview.py ./app/
-COPY preview_tests.py ./app/
+COPY preview_test.py ./app/
 
 # Copy contexts
 COPY context/physical_quantity.py ./app/context/
@@ -30,12 +30,12 @@ COPY preview_implementations/physical_quantity_preview.py ./app/preview_implemen
 COPY preview_implementations/symbolic_preview.py ./app/preview_implementations/
 
 # Copy tests
-COPY tests/example_tests.py ./app/tests/
-COPY tests/physical_quantity_evaluation_tests.py ./app/tests/
-COPY tests/physical_quantity_preview_tests.py ./app/tests/
-COPY tests/slr_quantity_tests.py ./app/tests/
-COPY tests/symbolic_evaluation_tests.py ./app/tests/
-COPY tests/symbolic_preview_tests.py ./app/tests/
+COPY tests/example_test.py ./app/tests/
+COPY tests/physical_quantity_evaluation_test.py ./app/tests/
+COPY tests/physical_quantity_preview_test.py ./app/tests/
+COPY tests/slr_quantity_test.py ./app/tests/
+COPY tests/symbolic_evaluation_test.py ./app/tests/
+COPY tests/symbolic_preview_test.py ./app/tests/
 
 # Copy utility code
 COPY utility/criteria_graph_utilities.py ./app/utility/

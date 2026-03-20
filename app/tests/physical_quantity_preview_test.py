@@ -2,7 +2,7 @@ import os
 import pytest
 
 from ..preview_implementations.physical_quantity_preview import preview_function
-from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
+from .slr_quantity_test import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 
 
 class TestPreviewFunction():
