@@ -2,7 +2,7 @@ import pytest
 import os
 
 # Import necessary data and reference cases for tests
-from .slr_quantity_tests import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
+from .slr_quantity_test import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from ..evaluation import evaluation_function
 from ..utility.unit_system_conversions import (
     set_of_SI_prefixes,
@@ -32,7 +32,7 @@ class TestEvaluationFunction():
     """
 
     # Import tests that makes sure that physical quantity parsing works as expected
-    from .slr_quantity_tests import TestEvaluationFunction as TestStrictSLRSyntax
+    from .slr_quantity_test import TestEvaluationFunction as TestStrictSLRSyntax
 
     log_details = True
 
@@ -397,6 +397,25 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is False
+
+    @pytest.mark.parametrize(
+        "ans,res",
+        [
+            ("10 ohm", "10 Ω"),
+            ("10 microA", "10 μA"),
+            ("10 microA", "10 μ A"),
+            ("30 degree", "30 °"),
+        ]
+    )
+    def test_greek_letter_units(self, ans, res):
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params)
+        assert result["is_correct"] is True
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

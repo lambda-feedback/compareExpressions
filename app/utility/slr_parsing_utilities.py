@@ -815,7 +815,7 @@ class SLR_Parser:
                 parse_action = self.parsing_action(stack[-1], a)
             if parse_action < len(self.states):
                 stack.append(parse_action)
-                output.append(a)
+                output.append(ExprNode(a, []))
                 if verbose:
                     print("shift and transition to: "+self.state_string(self._states_index[parse_action])+"  \t"+str(output))
                 a = tokens.pop(0)
@@ -823,7 +823,7 @@ class SLR_Parser:
                 if verbose:
                     print("ACCEPT")
                 if len(tokens) > 0 and tokens != [self.end_token]:
-                    output += self.parse(tokens)
+                    output += ExprNode(self.parse(tokens), [])
                 break
             elif parse_action <= len(self.states)+len(self.productions_token):
                 production = productions_token[parse_action-len(self.states)]
