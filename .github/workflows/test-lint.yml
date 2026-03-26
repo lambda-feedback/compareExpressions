@@ -1,10 +1,7 @@
-name: Deploy to Staging
+name: Test and Lint
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  pull_request:
 
 jobs:
   test:
@@ -18,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.8"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +30,6 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install pytest
           .venv/bin/pip install -r app/requirements.txt
-
 
       - name: Lint with flake8
         run: |
@@ -57,18 +53,3 @@ jobs:
           name: test-results-${{ matrix.python-version }}
           path: ./reports/pytest.xml
           if-no-files-found: warn
-  deploy:
-    needs: test
-    uses: lambda-feedback/evaluation-function-workflows/.github/workflows/deploy.yml@deploy-request
-    with:
-      template-repository-name: "lambda-feedback/evaluation-function-boilerplate-python"
-      build-file: "app/Dockerfile"
-      build-context: "./app"
-      build-platforms: "aws"
-      environment: "staging"
-      lfs: false
-    secrets:
-      aws-key-id: ${{ secrets.LAMBDA_CONTAINER_PIPELINE_AWS_ID }}
-      aws-secret-key: ${{ secrets.LAMBDA_CONTAINER_PIPELINE_AWS_SECRET}}
-      function-admin-api-key: ${{ secrets.FUNCTION_ADMIN_API_KEY}}
-      gcp_credentials: ${{ secrets.GCP_DEPLOY }}

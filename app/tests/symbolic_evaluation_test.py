@@ -924,6 +924,19 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
+    def test_pi_with_rel_tol(self):
+        answer = "pi"
+        response = "3.14"
+        params = {
+            "strict_syntax": False,
+            "relative_tolerance": 0.05,
+            "symbols": {
+                "pi": {"aliases": ["Pi", "PI", "π"], "latex": "\\(\\pi\\)"},
+            }
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
     @pytest.mark.parametrize(
         "response,outcome",
         [
