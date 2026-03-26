@@ -1,6 +1,6 @@
 pydot
 typing_extensions
-mpmath==1.4.1
+mpmath==1.3.0
 sympy==1.14
 antlr4-python3-runtime==4.7.2
 git+https://github.com/lambda-feedback/latex2sympy.git@master#egg=latex2sympy2
