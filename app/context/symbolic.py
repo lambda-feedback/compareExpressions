@@ -122,9 +122,11 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):
         result = False
     else:
-        # Subtraction of infinite values (e.g. oo - oo) yields nan rather than 0,
-        # so we use direct comparison when either side is infinite.
-        if lhs_expr.is_infinite or rhs_expr.is_infinite:
+        try:
+            either_is_infinite = lhs_expr.is_infinite or rhs_expr.is_infinite
+        except (KeyError, TypeError):
+            either_is_infinite = False
+        if either_is_infinite:
             result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
         else:
             result = do_comparison(criterion.content, lhs_expr-rhs_expr)
