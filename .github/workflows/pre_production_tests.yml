@@ -17,6 +17,16 @@ on:
         description: "Random seed for reproducible sampling (float in [-1.0, 1.0]). Leave blank to auto-generate."
         required: false
         default: ''
+      request_delay:
+        type: string
+        description: "Delay (seconds) between dispatching requests"
+        required: false
+        default: '0'
+      max_concurrency:
+        type: string
+        description: "Max concurrent requests (lower for GPT-backed functions)"
+        required: false
+        default: '5'
 
 jobs:
   run-pre-production-tests:
@@ -26,6 +36,8 @@ jobs:
       eval_function: ${{ inputs.eval_function }}
       sql_limit: ${{ inputs.sql_limit }}
       seed: ${{ inputs.seed }}
+      request_delay: ${{ inputs.request_delay }}
+      max_concurrency: ${{ inputs.max_concurrency }}
     secrets:
       TEST_API_ENDPOINT: ${{ secrets.TEST_API_ENDPOINT }}
       DB_USER: ${{ secrets.DB_USER }}

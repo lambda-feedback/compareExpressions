@@ -22,6 +22,16 @@ on:
         required: false
         type: string
         default: ''
+      request_delay:
+        description: 'Delay (seconds) between dispatching requests'
+        required: false
+        type: string
+        default: '0'
+      max_concurrency:
+        description: 'Max concurrent requests (lower for GPT-backed functions)'
+        required: false
+        type: string
+        default: '5'
 jobs:
   deploy:
     uses: lambda-feedback/evaluation-function-workflows/.github/workflows/deploy.yml@deploy-request
@@ -34,6 +44,8 @@ jobs:
       branch: ${{ inputs.branch }}
       run-database-tests: true
       seed: ${{ inputs.seed }}
+      request_delay: ${{ inputs.request_delay }}
+      max_concurrency: ${{ inputs.max_concurrency }}
 
     secrets:
       aws-key-id: ${{ secrets.LAMBDA_CONTAINER_PIPELINE_AWS_ID }}
