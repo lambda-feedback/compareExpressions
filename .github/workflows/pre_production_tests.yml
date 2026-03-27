@@ -12,6 +12,11 @@ on:
         description: "The maximum number of SQL test cases to run"
         required: false
         default: 500
+      seed:
+        type: string
+        description: "Random seed for reproducible sampling (float in [-1.0, 1.0]). Leave blank to auto-generate."
+        required: false
+        default: ''
 
 jobs:
   run-pre-production-tests:
@@ -20,6 +25,7 @@ jobs:
     with:
       eval_function: ${{ inputs.eval_function }}
       sql_limit: ${{ inputs.sql_limit }}
+      seed: ${{ inputs.seed }}
     secrets:
       TEST_API_ENDPOINT: ${{ secrets.TEST_API_ENDPOINT }}
       DB_USER: ${{ secrets.DB_USER }}
