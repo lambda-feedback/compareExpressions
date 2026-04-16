@@ -240,7 +240,7 @@ If `strict_syntax` is set to true then the answer and response must have `*` or 
 
 If `strict_syntax` is set to false, then `*` can be omitted and `^` used instead of `**`. In this case it is also recommended to list any multicharacter symbols expected to appear in the response as input symbols.
 
-By default `strict_syntax` is set to true.
+By default `strict_syntax` is set to false.
 
 #### `symbol_assumptions`
 
