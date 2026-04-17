@@ -11,6 +11,12 @@
       "value": "http://localhost:9001/2015-03-31/functions/function/invocations",
       "type": "string",
       "description": "Change to your API Gateway URL for staging/prod testing"
+    },
+    {
+      "key": "mode",
+      "value": "local",
+      "type": "string",
+      "description": "Set to 'local' for Lambda RIE or 'cloud' for API Gateway"
     }
   ],
   "event": [
@@ -28,9 +34,18 @@
           "h += 'function buildLegacyPreviewEvent(r,p){var e=buildEvent({response:r,params:p||{}},\"/\");e.headers[\"command\"]=\"preview\";return e;}';",
           "h += 'function buildMuEdEvent(r,a,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(a!=null){var rf={};rf[k]=a;b.task={title:o.title||\"Evaluation Task\",referenceSolution:rf};}if(p&&Object.keys(p).length)b.configuration={params:p};if(o.user)b.user=o.user;if(o.criteria)b.criteria=o.criteria;return buildEvent(b,\"/evaluate\");}';",
           "h += 'function buildMuEdPreviewEvent(r,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(p&&Object.keys(p).length)b.configuration={params:p};return buildEvent(b,\"/preview\");}';",
+          "h += 'var __mode=pm.collectionVariables.get(\"mode\")||\"local\";';",
+          "h += 'var __base=pm.collectionVariables.get(\"baseUrl\");';",
+          "h += 'function setLegacyEvalReq(r,a,p){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildLegacyEvalEvent(r,a,p)));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({response:r,answer:a,params:p||{}}));pm.variables.set(\"requestUrl\",__base);}}';",
+          "h += 'function setLegacyPreviewReq(r,p){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildLegacyPreviewEvent(r,p)));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({response:r,params:p||{}}));pm.variables.set(\"requestUrl\",__base);pm.request.headers.add({key:\"command\",value:\"preview\"});}}';",
+          "h += 'function setLegacyHealthReq(){if(__mode===\"local\"){var e=buildEvent({},\"/\");e.headers[\"command\"]=\"healthcheck\";pm.variables.set(\"lambdaEvent\",JSON.stringify(e));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({}));pm.variables.set(\"requestUrl\",__base);pm.request.headers.add({key:\"command\",value:\"healthcheck\"},true);}}';",
+          "h += 'function setMuEdEvalReq(r,a,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(a!=null){var rf={};rf[k]=a;b.task={title:o.title||\"Evaluation Task\",referenceSolution:rf};}if(p&&Object.keys(p).length)b.configuration={params:p};if(o.user)b.user=o.user;if(o.criteria)b.criteria=o.criteria;if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent(b,\"/evaluate\")));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify(b));pm.variables.set(\"requestUrl\",__base+\"/evaluate\");}}';",
+          "h += 'function setMuEdPreviewReq(r,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(p&&Object.keys(p).length)b.configuration={params:p};if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent(b,\"/preview\")));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify(b));pm.variables.set(\"requestUrl\",__base+\"/preview\");}}';",
+          "h += 'function setMuEdHealthReq(){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent({},\"/evaluate/health\")));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({}));pm.variables.set(\"requestUrl\",__base+\"/evaluate/health\");}}';",
+          "h += 'function setMuEdRawReq(body,path){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent(body,path)));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify(body));pm.variables.set(\"requestUrl\",__base+path);}}';",
           "pm.globals.set('__helpers', h);",
           "",
-          "// Shared test cases — referenced by Folder 0 (muEd) and Folder 1 (legacy)",
+          "// Shared test cases \u2014 referenced by Folder 0 (muEd) and Folder 1 (legacy)",
           "pm.collectionVariables.set('tc_simple_correct',   JSON.stringify({response:'x+1',    answer:'x+1',         params:{strict_syntax:false}}));",
           "pm.collectionVariables.set('tc_simple_incorrect', JSON.stringify({response:'x+1',    answer:'x+2',         params:{strict_syntax:false}}));",
           "pm.collectionVariables.set('tc_algebraic_equiv',  JSON.stringify({response:'x**2-1', answer:'(x-1)*(x+1)', params:{strict_syntax:false,elementary_functions:true}}));"
@@ -51,7 +66,7 @@
   ],
   "item": [
     {
-      "name": "Chunk 1 — Health & Error Cases",
+      "name": "Chunk 1 \u2014 Health & Error Cases",
       "item": [
         {
           "name": "Legacy",
@@ -65,9 +80,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "var evt = buildEvent({}, '/');",
-                      "evt.headers['command'] = 'healthcheck';",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(evt));"
+                      "setLegacyHealthReq();"
                     ]
                   }
                 },
@@ -91,9 +104,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -110,7 +141,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildEvent({}, '/health')));"
+                      "setMuEdHealthReq();"
                     ]
                   }
                 },
@@ -134,9 +165,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -149,7 +198,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_correct'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent(tc.response, tc.answer, tc.params, {title:'Algebra Task'})));"
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params, {title:'Algebra Task'});"
                     ]
                   }
                 },
@@ -173,13 +222,31 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
-              "name": "Missing submission → error",
+              "name": "Missing submission \u2192 error",
               "event": [
                 {
                   "listen": "prerequest",
@@ -187,7 +254,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildEvent({task:{title:'Some Task'}}, '/evaluate')));"
+                      "setMuEdRawReq({task:{title:'Some Task'}}, '/evaluate');"
                     ]
                   }
                 },
@@ -208,13 +275,31 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
-              "name": "Invalid submission type → error",
+              "name": "Invalid submission type \u2192 error",
               "event": [
                 {
                   "listen": "prerequest",
@@ -222,7 +307,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildEvent({submission:{type:'INVALID',content:{}}}, '/evaluate')));"
+                      "setMuEdRawReq({submission:{type:'INVALID',content:{}}}, '/evaluate');"
                     ]
                   }
                 },
@@ -243,9 +328,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -253,7 +356,7 @@
       ]
     },
     {
-      "name": "Chunk 2 — Basic Symbolic",
+      "name": "Chunk 2 \u2014 Basic Symbolic",
       "item": [
         {
           "name": "Legacy",
@@ -268,7 +371,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_correct'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent(tc.response, tc.answer, tc.params)));"
+                      "setLegacyEvalReq(tc.response, tc.answer, tc.params);"
                     ]
                   }
                 },
@@ -287,9 +390,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -302,7 +423,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_incorrect'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent(tc.response, tc.answer, tc.params)));"
+                      "setLegacyEvalReq(tc.response, tc.answer, tc.params);"
                     ]
                   }
                 },
@@ -321,9 +442,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -336,7 +475,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var tc = JSON.parse(pm.collectionVariables.get('tc_algebraic_equiv'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent(tc.response, tc.answer, tc.params)));"
+                      "setLegacyEvalReq(tc.response, tc.answer, tc.params);"
                     ]
                   }
                 },
@@ -355,9 +494,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -369,7 +526,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('\\\\sin x + x^{7}', 'sin(x)+x**7', {strict_syntax:false,elementary_functions:true,is_latex:true})));"
+                      "setLegacyEvalReq('\\\\sin x + x^{7}', 'sin(x)+x**7', {strict_syntax:false,elementary_functions:true,is_latex:true});"
                     ]
                   }
                 },
@@ -388,9 +545,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -402,7 +577,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('6*exp(5*pi/6*I)', '6*(cos(5*pi/6)+I*sin(5*pi/6))', {strict_syntax:false,complexNumbers:true})));"
+                      "setLegacyEvalReq('6*exp(5*pi/6*I)', '6*(cos(5*pi/6)+I*sin(5*pi/6))', {strict_syntax:false,complexNumbers:true});"
                     ]
                   }
                 },
@@ -421,9 +596,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -441,7 +634,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_correct'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent(tc.response, tc.answer, tc.params)));"
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params);"
                     ]
                   }
                 },
@@ -460,9 +653,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -475,7 +686,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_incorrect'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent(tc.response, tc.answer, tc.params)));"
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params);"
                     ]
                   }
                 },
@@ -494,9 +705,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -509,7 +738,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var tc = JSON.parse(pm.collectionVariables.get('tc_algebraic_equiv'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent(tc.response, tc.answer, tc.params)));"
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params);"
                     ]
                   }
                 },
@@ -528,9 +757,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -542,7 +789,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('\\\\sin x + x^{7}', 'sin(x)+x**7', {strict_syntax:false,elementary_functions:true,is_latex:true})));"
+                      "setMuEdEvalReq('\\\\sin x + x^{7}', 'sin(x)+x**7', {strict_syntax:false,elementary_functions:true,is_latex:true});"
                     ]
                   }
                 },
@@ -561,9 +808,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -575,7 +840,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('6*exp(5*pi/6*I)', '6*(cos(5*pi/6)+I*sin(5*pi/6))', {strict_syntax:false,complexNumbers:true})));"
+                      "setMuEdEvalReq('6*exp(5*pi/6*I)', '6*(cos(5*pi/6)+I*sin(5*pi/6))', {strict_syntax:false,complexNumbers:true});"
                     ]
                   }
                 },
@@ -594,18 +859,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 3 — Tolerances",
+      "name": "Chunk 3 \u2014 Tolerances",
       "item": [
         {
           "name": "Legacy",
@@ -619,7 +901,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('10', 'sqrt(47)+pi', {strict_syntax:false,atol:5})));"
+                      "setLegacyEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
                     ]
                   }
                 },
@@ -638,9 +920,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -652,7 +952,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('4', 'sqrt(47)+pi', {strict_syntax:false,atol:5})));"
+                      "setLegacyEvalReq('4', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
                     ]
                   }
                 },
@@ -671,9 +971,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -685,7 +1003,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('10', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5})));"
+                      "setLegacyEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
                     ]
                   }
                 },
@@ -704,9 +1022,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -718,7 +1054,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('49', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5})));"
+                      "setLegacyEvalReq('49', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
                     ]
                   }
                 },
@@ -737,9 +1073,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -756,7 +1110,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('10', 'sqrt(47)+pi', {strict_syntax:false,atol:5})));"
+                      "setMuEdEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
                     ]
                   }
                 },
@@ -775,9 +1129,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -789,7 +1161,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('4', 'sqrt(47)+pi', {strict_syntax:false,atol:5})));"
+                      "setMuEdEvalReq('4', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
                     ]
                   }
                 },
@@ -808,9 +1180,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -822,7 +1212,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('10', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5})));"
+                      "setMuEdEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
                     ]
                   }
                 },
@@ -841,9 +1231,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -855,7 +1263,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('49', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5})));"
+                      "setMuEdEvalReq('49', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
                     ]
                   }
                 },
@@ -874,18 +1282,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 4 — Custom Criteria",
+      "name": "Chunk 4 \u2014 Custom Criteria",
       "item": [
         {
           "name": "Legacy",
@@ -899,7 +1324,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('5*x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'})));"
+                      "setLegacyEvalReq('5*x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
                     ]
                   }
                 },
@@ -919,9 +1344,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -933,7 +1376,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'})));"
+                      "setLegacyEvalReq('x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
                     ]
                   }
                 },
@@ -952,9 +1395,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -966,7 +1427,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('sin(x)+2', 'sin(x)', {strict_syntax:false,elementary_functions:true,criteria:'diff(response,x)=cos(x)'})));"
+                      "setLegacyEvalReq('sin(x)+2', 'sin(x)', {strict_syntax:false,elementary_functions:true,criteria:'diff(response,x)=cos(x)'});"
                     ]
                   }
                 },
@@ -985,9 +1446,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -999,7 +1478,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('2*a+2*b+2*c', 'a+b+c', {strict_syntax:false,criteria:'response proportional to answer'})));"
+                      "setLegacyEvalReq('2*a+2*b+2*c', 'a+b+c', {strict_syntax:false,criteria:'response proportional to answer'});"
                     ]
                   }
                 },
@@ -1019,9 +1498,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1034,7 +1531,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, criteria:'sin(response)=0, response contains n', symbol_assumptions:\"('n', 'integer')\", symbols:{n:{latex:'\\\\(n\\\\)', aliases:['i','k','N','I','K']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('pi*n', '0', params)));"
+                      "setLegacyEvalReq('pi*n', '0', params);"
                     ]
                   }
                 },
@@ -1053,9 +1550,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -1072,7 +1587,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('5*x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'})));"
+                      "setMuEdEvalReq('5*x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
                     ]
                   }
                 },
@@ -1092,9 +1607,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1106,7 +1639,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'})));"
+                      "setMuEdEvalReq('x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
                     ]
                   }
                 },
@@ -1125,9 +1658,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1139,7 +1690,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('sin(x)+2', 'sin(x)', {strict_syntax:false,elementary_functions:true,criteria:'diff(response,x)=cos(x)'})));"
+                      "setMuEdEvalReq('sin(x)+2', 'sin(x)', {strict_syntax:false,elementary_functions:true,criteria:'diff(response,x)=cos(x)'});"
                     ]
                   }
                 },
@@ -1158,9 +1709,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1172,7 +1741,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('2*a+2*b+2*c', 'a+b+c', {strict_syntax:false,criteria:'response proportional to answer'})));"
+                      "setMuEdEvalReq('2*a+2*b+2*c', 'a+b+c', {strict_syntax:false,criteria:'response proportional to answer'});"
                     ]
                   }
                 },
@@ -1192,9 +1761,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1207,7 +1794,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, criteria:'sin(response)=0, response contains n', symbol_assumptions:\"('n', 'integer')\", symbols:{n:{latex:'\\\\(n\\\\)', aliases:['i','k','N','I','K']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('pi*n', '0', params)));"
+                      "setMuEdEvalReq('pi*n', '0', params);"
                     ]
                   }
                 },
@@ -1226,18 +1813,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 5 — Syntactical Comparison",
+      "name": "Chunk 5 \u2014 Syntactical Comparison",
       "item": [
         {
           "name": "Legacy",
@@ -1251,7 +1855,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('(x-5)^2-6', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true})));"
+                      "setLegacyEvalReq('(x-5)^2-6', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
                     ]
                   }
                 },
@@ -1271,9 +1875,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1285,7 +1907,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('x^2-8x+11', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true})));"
+                      "setLegacyEvalReq('x^2-8x+11', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
                     ]
                   }
                 },
@@ -1305,9 +1927,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -1324,7 +1964,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('(x-5)^2-6', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true})));"
+                      "setMuEdEvalReq('(x-5)^2-6', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
                     ]
                   }
                 },
@@ -1344,9 +1984,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1358,7 +2016,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('x^2-8x+11', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true})));"
+                      "setMuEdEvalReq('x^2-8x+11', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
                     ]
                   }
                 },
@@ -1378,18 +2036,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 6 — Plus/Minus Symbols",
+      "name": "Chunk 6 \u2014 Plus/Minus Symbols",
       "item": [
         {
           "name": "Legacy",
@@ -1404,7 +2079,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('{-x, x}', 'plus_minus x', params)));"
+                      "setLegacyEvalReq('{-x, x}', 'plus_minus x', params);"
                     ]
                   }
                 },
@@ -1423,9 +2098,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1438,7 +2131,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}, minus_plus:{latex:'\\\\(\\\\mp\\\\)', aliases:['mp','-+']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('pm x**2 + mp y**2', 'plus_minus x**2 + minus_plus y**2', params)));"
+                      "setLegacyEvalReq('pm x**2 + mp y**2', 'plus_minus x**2 + minus_plus y**2', params);"
                     ]
                   }
                 },
@@ -1457,9 +2150,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -1477,7 +2188,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('{-x, x}', 'plus_minus x', params)));"
+                      "setMuEdEvalReq('{-x, x}', 'plus_minus x', params);"
                     ]
                   }
                 },
@@ -1496,9 +2207,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1511,7 +2240,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}, minus_plus:{latex:'\\\\(\\\\mp\\\\)', aliases:['mp','-+']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('pm x**2 + mp y**2', 'plus_minus x**2 + minus_plus y**2', params)));"
+                      "setMuEdEvalReq('pm x**2 + mp y**2', 'plus_minus x**2 + minus_plus y**2', params);"
                     ]
                   }
                 },
@@ -1530,18 +2259,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 7 — Physical Quantities",
+      "name": "Chunk 7 \u2014 Physical Quantities",
       "item": [
         {
           "name": "Legacy",
@@ -1555,7 +2301,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('2.00 kilometre/hour', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setLegacyEvalReq('2.00 kilometre/hour', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1575,9 +2321,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1589,7 +2353,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('0.556 m/s', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setLegacyEvalReq('0.556 m/s', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1609,9 +2373,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1623,7 +2405,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('0.6 Nm', '0.5 Nm', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setLegacyEvalReq('0.6 Nm', '0.5 Nm', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1642,9 +2424,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1656,7 +2456,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('2.00', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setLegacyEvalReq('2.00', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1676,9 +2476,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1690,7 +2508,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('2 km', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setLegacyEvalReq('2 km', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1710,9 +2528,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -1729,7 +2565,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('2.00 kilometre/hour', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setMuEdEvalReq('2.00 kilometre/hour', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1749,9 +2585,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1763,7 +2617,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('0.556 m/s', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setMuEdEvalReq('0.556 m/s', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1783,9 +2637,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1797,7 +2669,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('0.6 Nm', '0.5 Nm', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setMuEdEvalReq('0.6 Nm', '0.5 Nm', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1816,9 +2688,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1830,7 +2720,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('2.00', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setMuEdEvalReq('2.00', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1850,9 +2740,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1864,7 +2772,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('2 km', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true})));"
+                      "setMuEdEvalReq('2 km', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
                     ]
                   }
                 },
@@ -1884,18 +2792,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 8 — Symbol Aliases",
+      "name": "Chunk 8 \u2014 Symbol Aliases",
       "item": [
         {
           "name": "Legacy",
@@ -1910,7 +2835,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbols:{epsilon_r:{latex:'\\\\(\\\\epsilon_r\\\\)', aliases:['eps','eps_r','e_r']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('eps', 'epsilon_r', params)));"
+                      "setLegacyEvalReq('eps', 'epsilon_r', params);"
                     ]
                   }
                 },
@@ -1929,9 +2854,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -1944,7 +2887,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbol_assumptions:\"('a','positive') ('b','positive')\"};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('sqrt(a)/sqrt(b)', 'sqrt(a/b)', params)));"
+                      "setLegacyEvalReq('sqrt(a)/sqrt(b)', 'sqrt(a/b)', params);"
                     ]
                   }
                 },
@@ -1963,9 +2906,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -1983,7 +2944,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbols:{epsilon_r:{latex:'\\\\(\\\\epsilon_r\\\\)', aliases:['eps','eps_r','e_r']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('eps', 'epsilon_r', params)));"
+                      "setMuEdEvalReq('eps', 'epsilon_r', params);"
                     ]
                   }
                 },
@@ -2002,9 +2963,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -2017,7 +2996,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbol_assumptions:\"('a','positive') ('b','positive')\"};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('sqrt(a)/sqrt(b)', 'sqrt(a/b)', params)));"
+                      "setMuEdEvalReq('sqrt(a)/sqrt(b)', 'sqrt(a/b)', params);"
                     ]
                   }
                 },
@@ -2036,18 +3015,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 9 — Custom Feedback",
+      "name": "Chunk 9 \u2014 Custom Feedback",
       "item": [
         {
           "name": "Legacy",
@@ -2061,7 +3057,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyEvalEvent('x+1', 'x+2', {strict_syntax:false, feedback_for_incorrect_response:'Try again!'})));"
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, feedback_for_incorrect_response:'Try again!'});"
                     ]
                   }
                 },
@@ -2081,9 +3077,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -2100,7 +3114,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdEvent('x+1', 'x+2', {strict_syntax:false, feedback_for_incorrect_response:'Try again!'})));"
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, feedback_for_incorrect_response:'Try again!'});"
                     ]
                   }
                 },
@@ -2120,18 +3134,35 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
         }
       ]
-    }
-  ,
+    },
     {
-      "name": "Chunk 10 — Preview Function",
+      "name": "Chunk 10 \u2014 Preview Function",
       "item": [
         {
           "name": "Legacy",
@@ -2145,7 +3176,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyPreviewEvent('x+1', {strict_syntax:false})));"
+                      "setLegacyPreviewReq('x+1', {strict_syntax:false});"
                     ]
                   }
                 },
@@ -2165,9 +3196,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -2179,7 +3228,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyPreviewEvent('\\\\sin x + x^{7}', {strict_syntax:false,elementary_functions:true,is_latex:true})));"
+                      "setLegacyPreviewReq('\\\\sin x + x^{7}', {strict_syntax:false,elementary_functions:true,is_latex:true});"
                     ]
                   }
                 },
@@ -2198,9 +3247,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -2212,7 +3279,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyPreviewEvent('ln(x)', {strict_syntax:false,elementary_functions:true})));"
+                      "setLegacyPreviewReq('ln(x)', {strict_syntax:false,elementary_functions:true});"
                     ]
                   }
                 },
@@ -2231,9 +3298,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -2245,7 +3330,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyPreviewEvent('', {strict_syntax:false})));"
+                      "setLegacyPreviewReq('', {strict_syntax:false});"
                     ]
                   }
                 },
@@ -2264,9 +3349,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -2278,7 +3381,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyPreviewEvent('10 \u03bcA', {strict_syntax:false,physical_quantity:true})));"
+                      "setLegacyPreviewReq('10 \u03bcA', {strict_syntax:false,physical_quantity:true});"
                     ]
                   }
                 },
@@ -2297,9 +3400,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -2312,7 +3433,7 @@
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
                       "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}}};",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildLegacyPreviewEvent('plus_minus x', params)));"
+                      "setLegacyPreviewReq('plus_minus x', params);"
                     ]
                   }
                 },
@@ -2331,9 +3452,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -2350,7 +3489,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdPreviewEvent('x+1', {strict_syntax:false})));"
+                      "setMuEdPreviewReq('x+1', {strict_syntax:false});"
                     ]
                   }
                 },
@@ -2370,9 +3509,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -2384,7 +3541,7 @@
                     "type": "text/javascript",
                     "exec": [
                       "eval(pm.globals.get('__helpers'));",
-                      "pm.variables.set('lambdaEvent', JSON.stringify(buildMuEdPreviewEvent('\\\\sin x + x^{7}', {strict_syntax:false,elementary_functions:true,is_latex:true})));"
+                      "setMuEdPreviewReq('\\\\sin x + x^{7}', {strict_syntax:false,elementary_functions:true,is_latex:true});"
                     ]
                   }
                 },
@@ -2403,9 +3560,27 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
