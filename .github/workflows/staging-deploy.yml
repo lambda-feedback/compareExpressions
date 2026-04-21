@@ -59,7 +59,7 @@ jobs:
           if-no-files-found: warn
   deploy:
     needs: test
-    uses: lambda-feedback/evaluation-function-workflows/.github/workflows/deploy.yml@deploy-request
+    uses: lambda-feedback/evaluation-function-workflows/.github/workflows/deploy.yml@deploy-request-on-dev
     with:
       template-repository-name: "lambda-feedback/evaluation-function-boilerplate-python"
       build-file: "app/Dockerfile"
