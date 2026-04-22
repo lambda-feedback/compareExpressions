@@ -3586,6 +3586,324 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Chunk 11 — Matched Case",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "No match: matched_case absent",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Try x+3.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('matched_case is absent', function () { pm.expect(r.result).to.not.have.property('matched_case'); });",
+                      "pm.test('feedback is absent', function () { pm.expect(r.result).to.not.have.property('feedback'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            },
+            {
+              "name": "First case match: matched_case is 0",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+1', feedback:'You entered x+1.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('matched_case is 0', function () { pm.expect(r.result.matched_case).to.equal(0); });",
+                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            },
+            {
+              "name": "Second case match: matched_case is 1",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Not case 0.'},{answer:'x+1', feedback:'You entered x+1.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matched_case is 1', function () { pm.expect(r.result.matched_case).to.equal(1); });",
+                      "pm.test('feedback is case 1 message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            },
+            {
+              "name": "Case mark override: is_correct overridden to true",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+1', feedback:'Close!', mark:1}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matched_case is 0', function () { pm.expect(r.result.matched_case).to.equal(0); });",
+                      "pm.test('is_correct overridden to true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('Close!'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "No match: matchedCase is null",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Try x+3.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            },
+            {
+              "name": "First case match: matchedCase is 0",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('100+100.1(j)', '100+100.1j', {atol:0,rtol:0,strict_syntax:false,physical_quantity:false,elementary_functions:true,cases:[{answer:'100+100.1(j)',params:{atol:0,rtol:0,strict_syntax:false,physical_quantity:false,elementary_functions:true},feedback:'Hello'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('matchedCase is 0', function () { pm.expect(r[0].matchedCase).to.equal(0); });",
+                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Hello'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            },
+            {
+              "name": "Second case match: matchedCase is 1",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Not case 0.'},{answer:'x+1', feedback:'This is case 1.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matchedCase is 1', function () { pm.expect(r[0].matchedCase).to.equal(1); });",
+                      "pm.test('message is case 1 feedback', function () { pm.expect(r[0].message).to.equal('This is case 1.'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            },
+            {
+              "name": "Correct: matchedCase is null",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+1', {strict_syntax:false, cases:[{answer:'x+1', feedback:'Matched but not checked.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            },
+            {
+              "name": "Case mark override: awardedPoints is 1",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+1', feedback:'Close enough!', mark:1}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matchedCase is 0', function () { pm.expect(r[0].matchedCase).to.equal(0); });",
+                      "pm.test('awardedPoints overridden to 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Close enough!'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
