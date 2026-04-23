@@ -215,7 +215,9 @@
                       "});",
                       "pm.test('response first item exists', function () {",
                       "    pm.expect(r[0]).to.be.an('object');",
-                      "});"
+                      "});",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -383,7 +385,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -435,7 +439,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });"
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -487,7 +493,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -538,7 +546,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -589,7 +599,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -646,7 +658,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -698,7 +712,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });"
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -750,7 +766,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -801,7 +819,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -852,7 +872,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -913,7 +935,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -964,7 +988,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });"
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1015,7 +1041,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1066,7 +1094,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });"
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1122,7 +1152,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1173,7 +1205,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });"
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1224,7 +1258,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1275,7 +1311,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });"
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1337,7 +1375,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
-                      "pm.test('tag answer-response = 0_TRUE present', function () { pm.expect(r.result.tags).to.include('answer-response = 0_TRUE'); });"
+                      "pm.test('tag answer-response = 0_TRUE present', function () { pm.expect(r.result.tags).to.include('answer-response = 0_TRUE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1388,7 +1428,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });"
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1439,7 +1481,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1491,7 +1535,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
-                      "pm.test('tag response proportional to answer_TRUE present', function () { pm.expect(r.result.tags).to.include('response proportional to answer_TRUE'); });"
+                      "pm.test('tag response proportional to answer_TRUE present', function () { pm.expect(r.result.tags).to.include('response proportional to answer_TRUE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1543,7 +1589,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1600,7 +1648,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
-                      "pm.test('tag answer-response = 0_TRUE present', function () { pm.expect(r[0].tags).to.include('answer-response = 0_TRUE'); });"
+                      "pm.test('tag answer-response = 0_TRUE present', function () { pm.expect(r[0].tags).to.include('answer-response = 0_TRUE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1651,7 +1701,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });"
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1702,7 +1754,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1754,7 +1808,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
-                      "pm.test('tag response proportional to answer_TRUE present', function () { pm.expect(r[0].tags).to.include('response proportional to answer_TRUE'); });"
+                      "pm.test('tag response proportional to answer_TRUE present', function () { pm.expect(r[0].tags).to.include('response proportional to answer_TRUE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1806,7 +1862,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1868,7 +1926,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
-                      "pm.test('tag response written as answer_TRUE present', function () { pm.expect(r.result.tags).to.include('response written as answer_TRUE'); });"
+                      "pm.test('tag response written as answer_TRUE present', function () { pm.expect(r.result.tags).to.include('response written as answer_TRUE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1920,7 +1980,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
-                      "pm.test('tag response written as answer_FALSE present', function () { pm.expect(r.result.tags).to.include('response written as answer_FALSE'); });"
+                      "pm.test('tag response written as answer_FALSE present', function () { pm.expect(r.result.tags).to.include('response written as answer_FALSE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -1977,7 +2039,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
-                      "pm.test('tag response written as answer_TRUE present', function () { pm.expect(r[0].tags).to.include('response written as answer_TRUE'); });"
+                      "pm.test('tag response written as answer_TRUE present', function () { pm.expect(r[0].tags).to.include('response written as answer_TRUE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2029,7 +2093,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
-                      "pm.test('tag response written as answer_FALSE present', function () { pm.expect(r[0].tags).to.include('response written as answer_FALSE'); });"
+                      "pm.test('tag response written as answer_FALSE present', function () { pm.expect(r[0].tags).to.include('response written as answer_FALSE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2091,7 +2157,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2143,7 +2211,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2200,7 +2270,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2252,7 +2324,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2314,7 +2388,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
-                      "pm.test('tag UNIT_COMPARISON_IDENTICAL present', function () { pm.expect(r.result.tags).to.include('response matches answer_UNIT_COMPARISON_IDENTICAL'); });"
+                      "pm.test('tag UNIT_COMPARISON_IDENTICAL present', function () { pm.expect(r.result.tags).to.include('response matches answer_UNIT_COMPARISON_IDENTICAL'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2366,7 +2442,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
-                      "pm.test('tag UNIT_COMPARISON_SIMILAR present', function () { pm.expect(r.result.tags).to.include('response matches answer_UNIT_COMPARISON_SIMILAR'); });"
+                      "pm.test('tag UNIT_COMPARISON_SIMILAR present', function () { pm.expect(r.result.tags).to.include('response matches answer_UNIT_COMPARISON_SIMILAR'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2417,7 +2495,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });"
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2469,7 +2549,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
-                      "pm.test('tag MISSING_UNIT present', function () { pm.expect(r.result.tags).to.include('response matches answer_MISSING_UNIT'); });"
+                      "pm.test('tag MISSING_UNIT present', function () { pm.expect(r.result.tags).to.include('response matches answer_MISSING_UNIT'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2521,7 +2603,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
-                      "pm.test('tag DIMENSION_MATCH_FALSE present', function () { pm.expect(r.result.tags).to.include('response matches answer_DIMENSION_MATCH_FALSE'); });"
+                      "pm.test('tag DIMENSION_MATCH_FALSE present', function () { pm.expect(r.result.tags).to.include('response matches answer_DIMENSION_MATCH_FALSE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2578,7 +2662,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
-                      "pm.test('tag UNIT_COMPARISON_IDENTICAL present', function () { pm.expect(r[0].tags).to.include('response matches answer_UNIT_COMPARISON_IDENTICAL'); });"
+                      "pm.test('tag UNIT_COMPARISON_IDENTICAL present', function () { pm.expect(r[0].tags).to.include('response matches answer_UNIT_COMPARISON_IDENTICAL'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2630,7 +2716,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
-                      "pm.test('tag UNIT_COMPARISON_SIMILAR present', function () { pm.expect(r[0].tags).to.include('response matches answer_UNIT_COMPARISON_SIMILAR'); });"
+                      "pm.test('tag UNIT_COMPARISON_SIMILAR present', function () { pm.expect(r[0].tags).to.include('response matches answer_UNIT_COMPARISON_SIMILAR'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2681,7 +2769,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });"
+                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2733,7 +2823,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
-                      "pm.test('tag MISSING_UNIT present', function () { pm.expect(r[0].tags).to.include('response matches answer_MISSING_UNIT'); });"
+                      "pm.test('tag MISSING_UNIT present', function () { pm.expect(r[0].tags).to.include('response matches answer_MISSING_UNIT'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2785,7 +2877,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
-                      "pm.test('tag DIMENSION_MATCH_FALSE present', function () { pm.expect(r[0].tags).to.include('response matches answer_DIMENSION_MATCH_FALSE'); });"
+                      "pm.test('tag DIMENSION_MATCH_FALSE present', function () { pm.expect(r[0].tags).to.include('response matches answer_DIMENSION_MATCH_FALSE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2847,7 +2941,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2899,7 +2995,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
-                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });"
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -2956,7 +3054,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -3008,7 +3108,9 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
-                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });"
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -3070,7 +3172,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
                       "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
-                      "pm.test('feedback is custom message', function () { pm.expect(r.result.feedback).to.equal('Try again!'); });"
+                      "pm.test('feedback is custom message', function () { pm.expect(r.result.feedback).to.equal('Try again!'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -3127,7 +3231,9 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
-                      "pm.test('message is custom feedback', function () { pm.expect(r[0].message).to.equal('Try again!'); });"
+                      "pm.test('message is custom feedback', function () { pm.expect(r[0].message).to.equal('Try again!'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
@@ -3588,7 +3694,7 @@
       ]
     },
     {
-      "name": "Chunk 11 — Matched Case",
+      "name": "Chunk 11 \u2014 Matched Case",
       "item": [
         {
           "name": "Legacy",
@@ -3615,16 +3721,36 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
                       "pm.test('matched_case is absent', function () { pm.expect(r.result).to.not.have.property('matched_case'); });",
-                      "pm.test('feedback is absent', function () { pm.expect(r.result).to.not.have.property('feedback'); });"
+                      "pm.test('feedback is absent', function () { pm.expect(r.result).to.not.have.property('feedback'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -3649,16 +3775,36 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
                       "pm.test('matched_case is 0', function () { pm.expect(r.result.matched_case).to.equal(0); });",
-                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });"
+                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -3682,16 +3828,36 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('matched_case is 1', function () { pm.expect(r.result.matched_case).to.equal(1); });",
-                      "pm.test('feedback is case 1 message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });"
+                      "pm.test('feedback is case 1 message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -3716,16 +3882,36 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('matched_case is 0', function () { pm.expect(r.result.matched_case).to.equal(0); });",
                       "pm.test('is_correct overridden to true', function () { pm.expect(r.result.is_correct).to.be.true; });",
-                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('Close!'); });"
+                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('Close!'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
@@ -3755,16 +3941,36 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
-                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });"
+                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -3789,16 +3995,36 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
                       "pm.test('matchedCase is 0', function () { pm.expect(r[0].matchedCase).to.equal(0); });",
-                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Hello'); });"
+                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Hello'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -3822,16 +4048,36 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('matchedCase is 1', function () { pm.expect(r[0].matchedCase).to.equal(1); });",
-                      "pm.test('message is case 1 feedback', function () { pm.expect(r[0].message).to.equal('This is case 1.'); });"
+                      "pm.test('message is case 1 feedback', function () { pm.expect(r[0].message).to.equal('This is case 1.'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -3855,16 +4101,36 @@
                       "var raw = pm.response.json();",
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
-                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });"
+                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             },
             {
@@ -3889,16 +4155,36 @@
                       "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
                       "pm.test('matchedCase is 0', function () { pm.expect(r[0].matchedCase).to.equal(0); });",
                       "pm.test('awardedPoints overridden to 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
-                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Close enough!'); });"
+                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Close enough!'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
                     ]
                   }
                 }
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{{lambdaEvent}}", "options": { "raw": { "language": "json" } } },
-                "url": { "raw": "{{requestUrl}}", "host": ["{{requestUrl}}"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
               }
             }
           ]
