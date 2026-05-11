@@ -3,7 +3,7 @@
 # FROM rabidsheep55/python-base-eval-layer
 FROM ghcr.io/lambda-feedback/baseevalutionfunctionlayer:main-3.12
 
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN dnf install -y git && dnf clean all
 
 WORKDIR /app
 
