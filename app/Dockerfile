@@ -7,6 +7,8 @@ RUN dnf install -y git findutils && dnf clean all
 
 WORKDIR /app
 
+ENV PYTHONPATH=/app
+
 # Copy and install any packages/modules needed for your evaluation script.
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
@@ -57,4 +59,4 @@ RUN chmod 644 $(find . -type f)
 RUN chmod 755 $(find . -type d)
 
 # The entrypoint for AWS is to invoke the handler function within the app package
-CMD [ "/app/app.handler" ]
+CMD [ "app.handler" ]
