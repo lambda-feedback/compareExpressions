@@ -290,6 +290,20 @@ def transform_unicode_greek_symbols(expr):
                 alias_substitutions += [(alias, " "+name+" ")]
     return alias_substitutions
 
+def convert_unicode_dashes(expr):
+    unicode_dashes = [
+        "‐",  # HYPHEN
+        "‑",  # NON-BREAKING HYPHEN
+        "‒",  # FIGURE DASH
+        "–",  # EN DASH
+        "—",  # EM DASH
+        "−",  # MINUS SIGN
+        "﹣",  # SMALL HYPHEN-MINUS
+        "－",  # FULLWIDTH HYPHEN-MINUS
+    ]
+    return [(dash, "-") for dash in unicode_dashes if dash in expr]
+
+
 def protect_elementary_functions_substitutions(expr):
     alias_substitutions = []
     for (name, alias_list) in elementary_functions_names:
