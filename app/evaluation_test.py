@@ -25,13 +25,13 @@ class TestEvaluationFunction():
     """
 
     # Import tests that makes sure that mathematical expression comparison works as expected
-    from .tests.symbolic_evaluation_tests import TestEvaluationFunction as TestSymbolicComparison
+    from .tests.symbolic_evaluation_test import TestEvaluationFunction as TestSymbolicComparison
 
     # Import tests that makes sure that physical quantities are handled as expected
-    from .tests.physical_quantity_evaluation_tests import TestEvaluationFunction as TestQuantities
+    from .tests.physical_quantity_evaluation_test import TestEvaluationFunction as TestQuantities
 
     # Import tests that corresponds to examples in documentation and examples module
-    from .tests.example_tests import TestEvaluationFunction as TestExamples
+    from .tests.example_test import TestEvaluationFunction as TestExamples
 
     def test_eval_function_can_handle_latex_input(self):
         response = r"\sin x + x^{7}"
@@ -214,6 +214,30 @@ class TestEvaluationFunction():
         answer = "10 muA"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
+
+    @pytest.mark.parametrize(
+        "response, is_latex, is_correct", [
+            ("A/s(e**(-a*s)-e**(-b*s))", False, True),
+            ("A/s(e**(-as)-e**(-bs))", False, True),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, True),
+            ("(A/s)( e^{-as}-e^{-bs})", True, True),
+            (r"\frac{A}{s} (e^{-a*s}-e^{-b*s})", True, True),
+            (r"\frac{A}{s} (e^{-a s}-e^{-b s})", True, True)
+        ]
+    )
+    def test_laplace_transforms(self, response, is_latex, is_correct):
+
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+        answer = "A/s(e**(-a*s)-e**(-b*s))"
+
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] == is_correct
+
 
 
 if __name__ == "__main__":

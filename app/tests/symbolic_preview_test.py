@@ -3,7 +3,7 @@ import pytest
 
 from ..utility.preview_utilities import Params, extract_latex
 from ..preview_implementations.symbolic_preview import preview_function
-from .symbolic_evaluation_tests import elementary_function_test_cases
+from .symbolic_evaluation_test import elementary_function_test_cases
 
 
 class TestPreviewFunction():

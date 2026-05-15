@@ -25,10 +25,10 @@ class TestPreviewFunction():
     """
 
     # Import tests that makes sure that mathematical expression comparison works as expected
-    from .tests.symbolic_preview_tests import TestPreviewFunction as TestSymbolicComparison
+    from .tests.symbolic_preview_test import TestPreviewFunction as TestSymbolicComparison
 
     # Import tests that makes sure that physical quantities are handled as expected
-    from .tests.physical_quantity_preview_tests import TestPreviewFunction as TestQuantityComparison
+    from .tests.physical_quantity_preview_test import TestPreviewFunction as TestQuantityComparison
 
     def test_empty_latex_expression(self):
         response = ""
@@ -252,6 +252,27 @@ class TestPreviewFunction():
         result = preview_function(response_implicit_no_bracket, params)
         assert result["preview"]["latex"] =='\\frac{a}{bc \\cdot d}'
         assert result["preview"]["sympy"] == "a/bcd"
+
+    @pytest.mark.parametrize(
+        "response, is_latex, latex, sympy", [
+            ("A/s(e**(-a*s)-e**(-b*s))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
+            ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-bs))"),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, r"(A/s)( e^{-a*s}-e^{-b*s})", "A*(-exp(-b*s) + exp(-a*s))/s"),
+            ("(A/s)( e^{-as}-e^{-bs})", True, r"(A/s)( e^{-as}-e^{-bs})", "A*(-exp(-b*s) + exp(-a*s))/s"),
+        ]
+    )
+    def test_laplace_transforms(self, response, is_latex, latex, sympy):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
 
 
 if __name__ == "__main__":

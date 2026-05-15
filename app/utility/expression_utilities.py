@@ -290,6 +290,20 @@ def transform_unicode_greek_symbols(expr):
                 alias_substitutions += [(alias, " "+name+" ")]
     return alias_substitutions
 
+def convert_unicode_dashes(expr):
+    unicode_dashes = [
+        "‐",  # HYPHEN
+        "‑",  # NON-BREAKING HYPHEN
+        "‒",  # FIGURE DASH
+        "–",  # EN DASH
+        "—",  # EM DASH
+        "−",  # MINUS SIGN
+        "﹣",  # SMALL HYPHEN-MINUS
+        "－",  # FULLWIDTH HYPHEN-MINUS
+    ]
+    return [(dash, "-") for dash in unicode_dashes if dash in expr]
+
+
 def protect_elementary_functions_substitutions(expr):
     alias_substitutions = []
     for (name, alias_list) in elementary_functions_names:
@@ -411,6 +425,10 @@ def substitute_input_symbols(exprs, params):
     # Since 'lambda' is a reserved keyword in python
     # we need to make sure it is not substituted back in
     substitutions = [(original, subs.replace("lambda", "lamda")) for (original, subs) in substitutions]
+
+    # Since 'as' is a reserved keyword in python, we add a subsitution of 'as' to 'a*s' if 'as' is not a defined symbol
+    if 'as' not in input_symbols:
+        substitutions += [('as', 'a*s')]
 
     substitutions = list(set(substitutions))
     if len(substitutions) > 0:
