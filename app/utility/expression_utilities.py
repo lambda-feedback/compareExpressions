@@ -9,7 +9,7 @@ default_parameters = {
     "complexNumbers": False,
     "convention": "equal_precedence",
     "elementary_functions": False,
-    "strict_syntax": True,
+    "strict_syntax": False,
     "multiple_answers_criteria": "all",
 }
 
