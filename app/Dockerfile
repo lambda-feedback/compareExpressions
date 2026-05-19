@@ -1,11 +1,13 @@
 # Base image that bundles AWS Lambda Python 3.8 image with some middleware functions
 # FROM base-eval-tmp
 # FROM rabidsheep55/python-base-eval-layer
-FROM ghcr.io/lambda-feedback/baseevalutionfunctionlayer:main-3.8
+FROM ghcr.io/lambda-feedback/baseevalutionfunctionlayer:main-3.12
 
-RUN yum install -y git
+RUN dnf install -y git findutils && dnf clean all
 
 WORKDIR /app
+
+ENV PYTHONPATH=/app
 
 # Copy and install any packages/modules needed for your evaluation script.
 COPY requirements.txt .
@@ -57,4 +59,4 @@ RUN chmod 644 $(find . -type f)
 RUN chmod 755 $(find . -type d)
 
 # The entrypoint for AWS is to invoke the handler function within the app package
-CMD [ "/app/app.handler" ]
+CMD [ "app.handler" ]
