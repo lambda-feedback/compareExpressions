@@ -288,7 +288,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         )
 
     # FIXME: Move this into expression_utilities
-    if params.get("strict_syntax", True):
+    if params.get("strict_syntax", False):
         if "^" in response:
             evaluation_result.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict())))
         if "!" in response:

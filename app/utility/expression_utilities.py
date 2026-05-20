@@ -9,7 +9,7 @@ default_parameters = {
     "complexNumbers": False,
     "convention": "equal_precedence",
     "elementary_functions": False,
-    "strict_syntax": True,
+    "strict_syntax": False,
     "multiple_answers_criteria": "all",
 }
 
@@ -685,7 +685,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
 
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
 
-    strict_syntax = params.get("strict_syntax", True)
+    strict_syntax = params.get("strict_syntax", False)
 
     parsing_params = {
         "unsplittable_symbols": unsplittable_symbols,

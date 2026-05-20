@@ -227,7 +227,7 @@ class TestEvaluationFunction():
         answer = "3x"
         e = None
         with pytest.raises(Exception) as e:
-            evaluation_function(response, answer, {})
+            evaluation_function(response, answer, {"strict_syntax": True})
         assert e is not None
 
     @pytest.mark.parametrize(
