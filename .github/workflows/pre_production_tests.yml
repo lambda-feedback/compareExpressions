@@ -27,6 +27,11 @@ on:
         description: "Max concurrent requests (lower for GPT-backed functions)"
         required: false
         default: '5'
+      ids_to_exclude:
+        type: string
+        description: "Comma-separated submission UUIDs to add to the exclusion list before testing."
+        required: false
+        default: ''
 
 jobs:
   run-pre-production-tests:
@@ -38,6 +43,7 @@ jobs:
       seed: ${{ inputs.seed }}
       request_delay: ${{ inputs.request_delay }}
       max_concurrency: ${{ inputs.max_concurrency }}
+      ids_to_exclude: ${{ inputs.ids_to_exclude }}
     secrets:
       TEST_API_ENDPOINT: ${{ secrets.TEST_API_ENDPOINT }}
       DB_USER: ${{ secrets.DB_USER }}
