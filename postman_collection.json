@@ -1,0 +1,4195 @@
+{
+  "info": {
+    "_postman_id": "compareExpressions-api-test-suite",
+    "name": "compareExpressions API Tests",
+    "description": "Test suite for the compareExpressions Lambda function covering legacy eval/preview and muEd API paths.\n\n## Setup\nSet `baseUrl` to:\n- **Local (Lambda RIE):** `http://localhost:9000/2015-03-31/functions/function/invocations`\n- **Staging/Prod (API Gateway):** your deployed API Gateway URL\n\n## Helper architecture\nThe collection pre-request stores shared builder functions in `pm.globals.__helpers`. Each request pre-request calls `eval(pm.globals.get('__helpers'))` and then uses `buildLegacyEvalEvent`, `buildLegacyPreviewEvent`, or `buildMuEdEvent`. Three shared test cases (`tc_simple_correct`, `tc_simple_incorrect`, `tc_algebraic_equiv`) are stored as collection variables and referenced by both Folder 0 (muEd) and Folder 1 (legacy).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9001/2015-03-31/functions/function/invocations",
+      "type": "string",
+      "description": "Change to your API Gateway URL for staging/prod testing"
+    },
+    {
+      "key": "mode",
+      "value": "local",
+      "type": "string",
+      "description": "Set to 'local' for Lambda RIE or 'cloud' for API Gateway"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Shared builder functions stored in pm.globals for all request pre-request scripts.",
+          "// Each request calls: eval(pm.globals.get('__helpers'))",
+          "// then uses buildLegacyEvalEvent, buildLegacyPreviewEvent, or buildMuEdEvent.",
+          "var h = '';",
+          "h += 'function buildEvent(b,p){p=p||\"/\";return{version:\"2.0\",routeKey:\"POST \"+p,rawPath:p,rawQueryString:\"\",path:p,headers:{\"content-type\":\"application/json\"},requestContext:{http:{method:\"POST\",path:p}},body:JSON.stringify(b),isBase64Encoded:false};}';",
+          "h += 'function buildLegacyEvalEvent(r,a,p){return buildEvent({response:r,answer:a,params:p||{}},\"/\");}';",
+          "h += 'function buildLegacyPreviewEvent(r,p){var e=buildEvent({response:r,params:p||{}},\"/\");e.headers[\"command\"]=\"preview\";return e;}';",
+          "h += 'function buildMuEdEvent(r,a,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(a!=null){var rf={};rf[k]=a;b.task={title:o.title||\"Evaluation Task\",referenceSolution:rf};}if(p&&Object.keys(p).length)b.configuration={params:p};if(o.user)b.user=o.user;if(o.criteria)b.criteria=o.criteria;return buildEvent(b,\"/evaluate\");}';",
+          "h += 'function buildMuEdPreviewEvent(r,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(p&&Object.keys(p).length)b.configuration={params:p};b.preSubmissionFeedback={enabled:true};return buildEvent(b,\"/evaluate\");}';",
+          "h += 'var __mode=pm.collectionVariables.get(\"mode\")||\"local\";';",
+          "h += 'var __base=pm.collectionVariables.get(\"baseUrl\");';",
+          "h += 'function setLegacyEvalReq(r,a,p){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildLegacyEvalEvent(r,a,p)));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({response:r,answer:a,params:p||{}}));pm.variables.set(\"requestUrl\",__base);}}';",
+          "h += 'function setLegacyPreviewReq(r,p){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildLegacyPreviewEvent(r,p)));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({response:r,params:p||{}}));pm.variables.set(\"requestUrl\",__base);pm.request.headers.add({key:\"command\",value:\"preview\"});}}';",
+          "h += 'function setLegacyHealthReq(){if(__mode===\"local\"){var e=buildEvent({},\"/\");e.headers[\"command\"]=\"healthcheck\";pm.variables.set(\"lambdaEvent\",JSON.stringify(e));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({}));pm.variables.set(\"requestUrl\",__base);pm.request.headers.add({key:\"command\",value:\"healthcheck\"},true);}}';",
+          "h += 'function setMuEdEvalReq(r,a,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(a!=null){var rf={};rf[k]=a;b.task={title:o.title||\"Evaluation Task\",referenceSolution:rf};}if(p&&Object.keys(p).length)b.configuration={params:p};if(o.user)b.user=o.user;if(o.criteria)b.criteria=o.criteria;if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent(b,\"/evaluate\")));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify(b));pm.variables.set(\"requestUrl\",__base+\"/evaluate\");}}';",
+          "h += 'function setMuEdPreviewReq(r,p,o){o=o||{};var t=o.type||\"MATH\",m={MATH:\"expression\",TEXT:\"text\",CODE:\"code\",MODEL:\"model\"},k=m[t]||\"value\",s={type:t,content:{}};s.content[k]=r;var b={submission:s};if(p&&Object.keys(p).length)b.configuration={params:p};b.preSubmissionFeedback={enabled:true};if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent(b,\"/evaluate\")));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify(b));pm.variables.set(\"requestUrl\",__base+\"/evaluate\");}}';",
+          "h += 'function setMuEdHealthReq(){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent({},\"/evaluate/health\")));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify({}));pm.variables.set(\"requestUrl\",__base+\"/evaluate/health\");}}';",
+          "h += 'function setMuEdRawReq(body,path){if(__mode===\"local\"){pm.variables.set(\"lambdaEvent\",JSON.stringify(buildEvent(body,path)));pm.variables.set(\"requestUrl\",__base);}else{pm.variables.set(\"lambdaEvent\",JSON.stringify(body));pm.variables.set(\"requestUrl\",__base+path);}}';",
+          "pm.globals.set('__helpers', h);",
+          "",
+          "// Shared test cases \u2014 referenced by Folder 0 (muEd) and Folder 1 (legacy)",
+          "pm.collectionVariables.set('tc_simple_correct',   JSON.stringify({response:'x+1',    answer:'x+1',         params:{strict_syntax:false}}));",
+          "pm.collectionVariables.set('tc_simple_incorrect', JSON.stringify({response:'x+1',    answer:'x+2',         params:{strict_syntax:false}}));",
+          "pm.collectionVariables.set('tc_algebraic_equiv',  JSON.stringify({response:'x**2-1', answer:'(x-1)*(x+1)', params:{strict_syntax:false,elementary_functions:true}}));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Response status is 200', function () {",
+          "    pm.response.to.have.status(200);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Chunk 1 \u2014 Health & Error Cases",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Health check",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyHealthReq();"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "",
+                      "pm.test('command is healthcheck', function () {",
+                      "    pm.expect(r.command).to.equal('healthcheck');",
+                      "});",
+                      "pm.test('result is present', function () {",
+                      "    pm.expect(r).to.have.property('result');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Health check",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdHealthReq();"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "",
+                      "pm.test('command is healthcheck', function () {",
+                      "    pm.expect(r.command).to.equal('healthcheck');",
+                      "});",
+                      "pm.test('result is present', function () {",
+                      "    pm.expect(r).to.have.property('result');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "With task title",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_correct'));",
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params, {title:'Algebra Task'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "",
+                      "pm.test('response is an array', function () {",
+                      "    pm.expect(r).to.be.an('array');",
+                      "});",
+                      "pm.test('response first item exists', function () {",
+                      "    pm.expect(r[0]).to.be.an('object');",
+                      "});",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Missing submission \u2192 error",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdRawReq({task:{title:'Some Task'}}, '/evaluate');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "",
+                      "pm.test('response has error key', function () {",
+                      "    pm.expect(r).to.have.property('error');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Invalid submission type \u2192 error",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdRawReq({submission:{type:'INVALID',content:{}}}, '/evaluate');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "",
+                      "pm.test('response has error key', function () {",
+                      "    pm.expect(r).to.have.property('error');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 2 \u2014 Basic Symbolic",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Correct: simple equality",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_correct'));",
+                      "setLegacyEvalReq(tc.response, tc.answer, tc.params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: simple inequality",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_incorrect'));",
+                      "setLegacyEvalReq(tc.response, tc.answer, tc.params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: algebraically equivalent",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var tc = JSON.parse(pm.collectionVariables.get('tc_algebraic_equiv'));",
+                      "setLegacyEvalReq(tc.response, tc.answer, tc.params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: LaTeX input",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('\\\\sin x + x^{7}', 'sin(x)+x**7', {strict_syntax:false,elementary_functions:true,is_latex:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: complex numbers",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('6*exp(5*pi/6*I)', '6*(cos(5*pi/6)+I*sin(5*pi/6))', {strict_syntax:false,complexNumbers:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Correct: simple equality",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_correct'));",
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: simple inequality",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var tc = JSON.parse(pm.collectionVariables.get('tc_simple_incorrect'));",
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: algebraically equivalent",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var tc = JSON.parse(pm.collectionVariables.get('tc_algebraic_equiv'));",
+                      "setMuEdEvalReq(tc.response, tc.answer, tc.params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: LaTeX input",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('\\\\sin x + x^{7}', 'sin(x)+x**7', {strict_syntax:false,elementary_functions:true,is_latex:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: complex numbers",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('6*exp(5*pi/6*I)', '6*(cos(5*pi/6)+I*sin(5*pi/6))', {strict_syntax:false,complexNumbers:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 3 \u2014 Tolerances",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Correct: within absolute tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: outside absolute tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('4', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: within relative tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: outside relative tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('49', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Correct: within absolute tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: outside absolute tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('4', 'sqrt(47)+pi', {strict_syntax:false,atol:5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: within relative tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('10', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: outside relative tolerance",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('49', 'sqrt(47)+pi', {strict_syntax:false,rtol:0.5});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 4 \u2014 Custom Criteria",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Correct: custom equality criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('5*x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('tag answer-response = 0_TRUE present', function () { pm.expect(r.result.tags).to.include('answer-response = 0_TRUE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: custom equality criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: derivative criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('sin(x)+2', 'sin(x)', {strict_syntax:false,elementary_functions:true,criteria:'diff(response,x)=cos(x)'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: proportional to criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('2*a+2*b+2*c', 'a+b+c', {strict_syntax:false,criteria:'response proportional to answer'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('tag response proportional to answer_TRUE present', function () { pm.expect(r.result.tags).to.include('response proportional to answer_TRUE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: contains criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, criteria:'sin(response)=0, response contains n', symbol_assumptions:\"('n', 'integer')\", symbols:{n:{latex:'\\\\(n\\\\)', aliases:['i','k','N','I','K']}}};",
+                      "setLegacyEvalReq('pi*n', '0', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Correct: custom equality criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('5*x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('tag answer-response = 0_TRUE present', function () { pm.expect(r[0].tags).to.include('answer-response = 0_TRUE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: custom equality criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x', '5*x', {strict_syntax:false,criteria:'answer-response = 0, response/answer = 1'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: derivative criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('sin(x)+2', 'sin(x)', {strict_syntax:false,elementary_functions:true,criteria:'diff(response,x)=cos(x)'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: proportional to criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('2*a+2*b+2*c', 'a+b+c', {strict_syntax:false,criteria:'response proportional to answer'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('tag response proportional to answer_TRUE present', function () { pm.expect(r[0].tags).to.include('response proportional to answer_TRUE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: contains criteria",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, criteria:'sin(response)=0, response contains n', symbol_assumptions:\"('n', 'integer')\", symbols:{n:{latex:'\\\\(n\\\\)', aliases:['i','k','N','I','K']}}};",
+                      "setMuEdEvalReq('pi*n', '0', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 5 \u2014 Syntactical Comparison",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Correct: written as answer",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('(x-5)^2-6', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('tag response written as answer_TRUE present', function () { pm.expect(r.result.tags).to.include('response written as answer_TRUE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: algebraically equal but different form",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x^2-8x+11', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('tag response written as answer_FALSE present', function () { pm.expect(r.result.tags).to.include('response written as answer_FALSE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Correct: written as answer",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('(x-5)^2-6', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is true', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('tag response written as answer_TRUE present', function () { pm.expect(r[0].tags).to.include('response written as answer_TRUE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: algebraically equal but different form",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x^2-8x+11', '(x-4)^2-5', {strict_syntax:false,criteria:'response written as answer',detailed_feedback:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is false', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('tag response written as answer_FALSE present', function () { pm.expect(r[0].tags).to.include('response written as answer_FALSE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 6 \u2014 Plus/Minus Symbols",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Correct: set notation equivalent to plus_minus",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}}};",
+                      "setLegacyEvalReq('{-x, x}', 'plus_minus x', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: pm/mp aliases",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}, minus_plus:{latex:'\\\\(\\\\mp\\\\)', aliases:['mp','-+']}}};",
+                      "setLegacyEvalReq('pm x**2 + mp y**2', 'plus_minus x**2 + minus_plus y**2', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Correct: set notation equivalent to plus_minus",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}}};",
+                      "setMuEdEvalReq('{-x, x}', 'plus_minus x', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: pm/mp aliases",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}, minus_plus:{latex:'\\\\(\\\\mp\\\\)', aliases:['mp','-+']}}};",
+                      "setMuEdEvalReq('pm x**2 + mp y**2', 'plus_minus x**2 + minus_plus y**2', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 7 \u2014 Physical Quantities",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Correct: identical units",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('2.00 kilometre/hour', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('tag UNIT_COMPARISON_IDENTICAL present', function () { pm.expect(r.result.tags).to.include('response matches answer_UNIT_COMPARISON_IDENTICAL'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: equivalent units",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('0.556 m/s', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('tag UNIT_COMPARISON_SIMILAR present', function () { pm.expect(r.result.tags).to.include('response matches answer_UNIT_COMPARISON_SIMILAR'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: wrong value",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('0.6 Nm', '0.5 Nm', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: missing unit",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('2.00', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('tag MISSING_UNIT present', function () { pm.expect(r.result.tags).to.include('response matches answer_MISSING_UNIT'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: wrong dimension",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('2 km', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('tag DIMENSION_MATCH_FALSE present', function () { pm.expect(r.result.tags).to.include('response matches answer_DIMENSION_MATCH_FALSE'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Correct: identical units",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('2.00 kilometre/hour', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('tag UNIT_COMPARISON_IDENTICAL present', function () { pm.expect(r[0].tags).to.include('response matches answer_UNIT_COMPARISON_IDENTICAL'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: equivalent units",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('0.556 m/s', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('tag UNIT_COMPARISON_SIMILAR present', function () { pm.expect(r[0].tags).to.include('response matches answer_UNIT_COMPARISON_SIMILAR'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: wrong value",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('0.6 Nm', '0.5 Nm', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: missing unit",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('2.00', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('tag MISSING_UNIT present', function () { pm.expect(r[0].tags).to.include('response matches answer_MISSING_UNIT'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Incorrect: wrong dimension",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('2 km', '2.00 km/h', {strict_syntax:false,elementary_functions:true,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('tag DIMENSION_MATCH_FALSE present', function () { pm.expect(r[0].tags).to.include('response matches answer_DIMENSION_MATCH_FALSE'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 8 \u2014 Symbol Aliases",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Correct: custom symbol alias",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbols:{epsilon_r:{latex:'\\\\(\\\\epsilon_r\\\\)', aliases:['eps','eps_r','e_r']}}};",
+                      "setLegacyEvalReq('eps', 'epsilon_r', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: symbol assumptions",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbol_assumptions:\"('a','positive') ('b','positive')\"};",
+                      "setLegacyEvalReq('sqrt(a)/sqrt(b)', 'sqrt(a/b)', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Correct: custom symbol alias",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbols:{epsilon_r:{latex:'\\\\(\\\\epsilon_r\\\\)', aliases:['eps','eps_r','e_r']}}};",
+                      "setMuEdEvalReq('eps', 'epsilon_r', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: symbol assumptions",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbol_assumptions:\"('a','positive') ('b','positive')\"};",
+                      "setMuEdEvalReq('sqrt(a)/sqrt(b)', 'sqrt(a/b)', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 9 \u2014 Custom Feedback",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Incorrect: custom feedback message",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, feedback_for_incorrect_response:'Try again!'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is eval', function () { pm.expect(r.command).to.equal('eval'); });",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('feedback is custom message', function () { pm.expect(r.result.feedback).to.equal('Try again!'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Incorrect: custom feedback message",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, feedback_for_incorrect_response:'Try again!'});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('message is custom feedback', function () { pm.expect(r[0].message).to.equal('Try again!'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 10 \u2014 Preview Function",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "Simple expression",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyPreviewReq('x+1', {strict_syntax:false});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is preview', function () { pm.expect(r.command).to.equal('preview'); });",
+                      "pm.test('preview.latex is present', function () { pm.expect(r.result.preview).to.have.property('latex'); });",
+                      "pm.test('preview.sympy is present', function () { pm.expect(r.result.preview).to.have.property('sympy'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "LaTeX expression",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyPreviewReq('\\\\sin x + x^{7}', {strict_syntax:false,elementary_functions:true,is_latex:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is preview', function () { pm.expect(r.command).to.equal('preview'); });",
+                      "pm.test('preview.sympy contains sin(x)', function () { pm.expect(r.result.preview.sympy).to.include('sin(x)'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Natural log",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyPreviewReq('ln(x)', {strict_syntax:false,elementary_functions:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is preview', function () { pm.expect(r.command).to.equal('preview'); });",
+                      "pm.test('preview.latex is ln', function () { pm.expect(r.result.preview.latex).to.equal('\\\\ln{\\\\left(x \\\\right)}'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Empty expression",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyPreviewReq('', {strict_syntax:false});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is preview', function () { pm.expect(r.command).to.equal('preview'); });",
+                      "pm.test('preview.sympy is empty', function () { pm.expect(r.result.preview.sympy).to.equal(''); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Physical quantity preview",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyPreviewReq('10 \u03bcA', {strict_syntax:false,physical_quantity:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is preview', function () { pm.expect(r.command).to.equal('preview'); });",
+                      "pm.test('preview.latex contains microampere', function () { pm.expect(r.result.preview.latex).to.include('microampere'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Plus/minus preview",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "var params = {strict_syntax:false, elementary_functions:true, symbols:{plus_minus:{latex:'\\\\(\\\\pm\\\\)', aliases:['pm','+-']}}};",
+                      "setLegacyPreviewReq('plus_minus x', params);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('command is preview', function () { pm.expect(r.command).to.equal('preview'); });",
+                      "pm.test('preview.latex is set notation', function () { pm.expect(r.result.preview.latex).to.include('\\\\left\\\\{'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "Simple expression",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdPreviewReq('x+1', {strict_syntax:false});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('preSubmissionFeedback.latex is present', function () { pm.expect(r[0].preSubmissionFeedback).to.have.property('latex'); });",
+                      "pm.test('preSubmissionFeedback.sympy is present', function () { pm.expect(r[0].preSubmissionFeedback).to.have.property('sympy'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "LaTeX expression",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdPreviewReq('\\\\sin x + x^{7}', {strict_syntax:false,elementary_functions:true,is_latex:true});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('preSubmissionFeedback.sympy contains sin(x)', function () { pm.expect(r[0].preSubmissionFeedback.sympy).to.include('sin(x)'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chunk 11 \u2014 Matched Case",
+      "item": [
+        {
+          "name": "Legacy",
+          "item": [
+            {
+              "name": "No match: matched_case absent",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Try x+3.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('matched_case is absent', function () { pm.expect(r.result).to.not.have.property('matched_case'); });",
+                      "pm.test('feedback is absent', function () { pm.expect(r.result).to.not.have.property('feedback'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "First case match: matched_case is 0",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+1', feedback:'You entered x+1.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('is_correct is false', function () { pm.expect(r.result.is_correct).to.be.false; });",
+                      "pm.test('matched_case is 0', function () { pm.expect(r.result.matched_case).to.equal(0); });",
+                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Second case match: matched_case is 1",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Not case 0.'},{answer:'x+1', feedback:'You entered x+1.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matched_case is 1', function () { pm.expect(r.result.matched_case).to.equal(1); });",
+                      "pm.test('feedback is case 1 message', function () { pm.expect(r.result.feedback).to.equal('You entered x+1.'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Case mark override: is_correct overridden to true",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setLegacyEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+1', feedback:'Close!', mark:1}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matched_case is 0', function () { pm.expect(r.result.matched_case).to.equal(0); });",
+                      "pm.test('is_correct overridden to true', function () { pm.expect(r.result.is_correct).to.be.true; });",
+                      "pm.test('feedback is case message', function () { pm.expect(r.result.feedback).to.equal('Close!'); });",
+                      "pm.test('result.response_latex is a string', function () { pm.expect(r.result.response_latex).to.be.a('string'); });",
+                      "pm.test('result.response_simplified is a string', function () { pm.expect(r.result.response_simplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "muEd",
+          "item": [
+            {
+              "name": "No match: matchedCase is null",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Try x+3.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('awardedPoints is 0', function () { pm.expect(r[0].awardedPoints).to.equal(0); });",
+                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "First case match: matchedCase is 0",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('100+100.1(j)', '100+100.1j', {atol:0,rtol:0,strict_syntax:false,physical_quantity:false,elementary_functions:true,cases:[{answer:'100+100.1(j)',params:{atol:0,rtol:0,strict_syntax:false,physical_quantity:false,elementary_functions:true},feedback:'Hello'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('response is an array', function () { pm.expect(r).to.be.an('array'); });",
+                      "pm.test('matchedCase is 0', function () { pm.expect(r[0].matchedCase).to.equal(0); });",
+                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Hello'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Second case match: matchedCase is 1",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+3', feedback:'Not case 0.'},{answer:'x+1', feedback:'This is case 1.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matchedCase is 1', function () { pm.expect(r[0].matchedCase).to.equal(1); });",
+                      "pm.test('message is case 1 feedback', function () { pm.expect(r[0].message).to.equal('This is case 1.'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Correct: matchedCase is null",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+1', {strict_syntax:false, cases:[{answer:'x+1', feedback:'Matched but not checked.'}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('awardedPoints is 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('matchedCase is null', function () { pm.expect(r[0].matchedCase).to.be.null; });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Case mark override: awardedPoints is 1",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "eval(pm.globals.get('__helpers'));",
+                      "setMuEdEvalReq('x+1', 'x+2', {strict_syntax:false, cases:[{answer:'x+1', feedback:'Close enough!', mark:1}]});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var raw = pm.response.json();",
+                      "var r = (raw.body !== undefined) ? JSON.parse(raw.body) : raw;",
+                      "pm.test('matchedCase is 0', function () { pm.expect(r[0].matchedCase).to.equal(0); });",
+                      "pm.test('awardedPoints overridden to 1', function () { pm.expect(r[0].awardedPoints).to.equal(1); });",
+                      "pm.test('message is case feedback', function () { pm.expect(r[0].message).to.equal('Close enough!'); });",
+                      "pm.test('responseLatex is a string', function () { pm.expect(r[0].responseLatex).to.be.a('string'); });",
+                      "pm.test('responseSimplified is a string', function () { pm.expect(r[0].responseSimplified).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{lambdaEvent}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{requestUrl}}",
+                  "host": [
+                    "{{requestUrl}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
