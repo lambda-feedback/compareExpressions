@@ -288,11 +288,15 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         )
 
     # FIXME: Move this into expression_utilities
-    if params.get("strict_syntax", True):
+    if params.get("strict_syntax", False):
         if "^" in response:
             evaluation_result.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict())))
         if "!" in response:
             evaluation_result.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict())))
+
+    if "!!!" in response:
+        evaluation_result.add_feedback(
+            ("NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict())))
 
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:

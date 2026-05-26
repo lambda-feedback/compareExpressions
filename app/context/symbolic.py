@@ -1,5 +1,5 @@
 from copy import deepcopy
-from sympy import Add, Pow, Mul, Equality, pi, im, I, N
+from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo
 from sympy import re as real_part
 
 from ..utility.expression_utilities import (
@@ -83,6 +83,22 @@ def create_expressions_for_comparison(criterion, parameters_dict, local_substitu
     return lhs_expr, rhs_expr
 
 
+def do_comparison_infinite(comparison_symbol, lhs_expr, rhs_expr):
+    # When either side is infinite, subtracting (e.g. oo - oo) yields nan, making
+    # the subtraction-based do_comparison unreliable. Compare the sides directly instead.
+    direct_comparisons = {
+        "=": lhs_expr == rhs_expr,
+        ">": lhs_expr > rhs_expr,
+        ">=": lhs_expr >= rhs_expr,
+        "<": lhs_expr < rhs_expr,
+        "<=": lhs_expr <= rhs_expr,
+    }
+    try:
+        return bool(direct_comparisons[comparison_symbol.strip()])
+    except Exception:
+        return None
+
+
 def do_comparison(comparison_symbol, expression):
     comparisons = {
         "=": lambda expr: bool(expression.cancel().simplify().simplify() == 0),
@@ -106,7 +122,14 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):
         result = False
     else:
-        result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+        try:
+            either_is_infinite = lhs_expr.is_infinite or rhs_expr.is_infinite
+        except (KeyError, TypeError):
+            either_is_infinite = False
+        if either_is_infinite:
+            result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
+        else:
+            result = do_comparison(criterion.content, lhs_expr-rhs_expr)
         # There are some types of expression, e.g. those containing hyperbolic trigonometric functions, that can behave
         # unpredictably when simplification is applied. For that reason we check several different combinations of
         # simplifications here in order to reduce the likelihood of false negatives.

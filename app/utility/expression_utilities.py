@@ -9,7 +9,7 @@ default_parameters = {
     "complexNumbers": False,
     "convention": "equal_precedence",
     "elementary_functions": False,
-    "strict_syntax": True,
+    "strict_syntax": False,
     "multiple_answers_criteria": "all",
 }
 
@@ -62,7 +62,7 @@ elementary_functions_names = [
     ('acsch', ['arccsch', 'arccosech']), ('asech', ['arcsech']),
     ('exp', ['Exp']), ('E', ['e']), ('log', ['ln']),
     ('sqrt', []), ('sign', []), ('Abs', ['abs']), ('Max', ['max']), ('Min', ['min']), ('arg', []), ('ceiling', ['ceil']), ('floor', []),
-    ('oo',['Infinity', 'inf', 'infinity']),
+    ('oo',['Infinity', 'inf', 'infinity', '∞']),
     # Special symbols to make sure plus_minus and minus_plus are not destroyed during preprocessing
     ('plus_minus', []), ('minus_plus', []),
     # Below this line should probably not be collected with elementary functions. Some like 'common operations' would be a better name
@@ -289,6 +289,20 @@ def transform_unicode_greek_symbols(expr):
             if alias in expr:
                 alias_substitutions += [(alias, " "+name+" ")]
     return alias_substitutions
+
+def convert_unicode_dashes(expr):
+    unicode_dashes = [
+        "‐",  # HYPHEN
+        "‑",  # NON-BREAKING HYPHEN
+        "‒",  # FIGURE DASH
+        "–",  # EN DASH
+        "—",  # EM DASH
+        "−",  # MINUS SIGN
+        "﹣",  # SMALL HYPHEN-MINUS
+        "－",  # FULLWIDTH HYPHEN-MINUS
+    ]
+    return [(dash, "-") for dash in unicode_dashes if dash in expr]
+
 
 def protect_elementary_functions_substitutions(expr):
     alias_substitutions = []
@@ -671,7 +685,7 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
 
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
 
-    strict_syntax = params.get("strict_syntax", True)
+    strict_syntax = params.get("strict_syntax", False)
 
     parsing_params = {
         "unsplittable_symbols": unsplittable_symbols,

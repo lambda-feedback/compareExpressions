@@ -173,7 +173,7 @@ class TestEvaluationFunction():
             ("e**ea", False, True),
             ("e**Ea", False, True),
             ("e^{ea}", True, True),
-            # ("e^{Ea}", True, True), # TODO: Support aliases for latex input
+            ("e^{Ea}", True, True),
         ]
     )
     def test_e_latex(self, response, is_latex, is_correct):
@@ -191,6 +191,26 @@ class TestEvaluationFunction():
         assert result["is_correct"] == is_correct
 
 
+
+    @pytest.mark.parametrize("params, is_correct", [
+        ({}, True),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": False, "physical_quantity": False, "elementary_functions": False}, True),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": False, "physical_quantity": False, "elementary_functions": True}, True),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": True,  "physical_quantity": False, "elementary_functions": False}, False),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": True,  "physical_quantity": False, "elementary_functions": True}, False),
+    ])
+    def test_strict_syntax_rejects_implicit_multiplication(self, params, is_correct):
+        response = "-2M0/3"
+        answer = "-2M0/3"
+        if is_correct:
+            result = evaluation_function(response, answer, params)
+            assert result["is_correct"] is True
+        else:
+            # strict_syntax=True prevents implicit multiplication, so -2M0/3 cannot be
+            # parsed. Answer parse failures are raised as exceptions (not returned as
+            # is_correct=False) because they indicate a task misconfiguration.
+            with pytest.raises(Exception):
+                evaluation_function(response, answer, params)
 
     def test_mu_preview_evaluate(self):
         response = "10 μA"

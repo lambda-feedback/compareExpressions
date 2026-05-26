@@ -121,11 +121,11 @@ class TestPreviewFunction():
             ("e**ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e**Ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e^{ea}", True, "e^{ea}", "exp(ea)", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
-            # ("e^{Ea}", True, "e^{Ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}), # TODO: Clarify if we want to be able to use aliases for LaTeX?
+            ("e^{Ea}", True, "e^{Ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e**aea", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             ("e**aEa", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             ("e^{aea}", True, "e^{aea}", "exp(aea)", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
-            # ("e^{aEa}", True, "e^{aEa}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}), # TODO: Clarify if we want to be able to use aliases for LaTeX?
+            ("e^{aEa}", True, "e^{aEa}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
         ]
     )
     def test_e_latex(self, response, is_latex, response_latex, response_sympy, symbols):
@@ -140,9 +140,35 @@ class TestPreviewFunction():
         assert "preview" in result.keys()
         preview = result["preview"]
 
-        assert preview["latex"] == response_latex
-        assert preview["sympy"] == response_sympy
+        assert preview["latex"] == response_latex, "latex_error"
+        assert preview["sympy"] == response_sympy, "sympy_error"
 
+    @pytest.mark.parametrize(
+        "response, is_latex, response_latex, response_sympy, symbols", [
+            ("ab", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("Ab", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("aB", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("AB", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("ab", True, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("Ab", True, "Ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("aB", True, "aB", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("AB", True, "AB", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+        ]
+    )
+    def test_alias(self, response, is_latex, response_latex, response_sympy, symbols):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": symbols,
+        }
+
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+        preview = result["preview"]
+
+        assert preview["latex"] == response_latex, "latex error"
+        assert preview["sympy"] == response_sympy, "sympy error"
 
     @pytest.mark.parametrize(
         "response, is_latex, response_latex, response_sympy",
