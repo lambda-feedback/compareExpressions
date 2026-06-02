@@ -282,10 +282,9 @@ def criterion_match_node(criterion, parameters, label=None):
                     ans = parameters["reserved_expressions"]["answer"]["standard"]["value"].simplify()
                     res = parameters["reserved_expressions"]["response"]["standard"]["value"].simplify()
                 if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
-                    if parsing_params.get('rtol', 0) > 0 and (ans != 0):
-                        value_match = bool(abs(float((ans-res)/ans)) < parsing_params['rtol'])
-                    elif parsing_params.get('atol', 0) > 0 or (ans == 0):
-                        value_match = bool(abs(float(ans-res)) < parsing_params['atol'])
+                    atol = float(parsing_params.get('atol', 0))
+                    rtol = float(parsing_params.get('rtol', 0))
+                    value_match = bool(abs(float(ans - res)) <= atol + rtol * abs(float(ans)))
 
         substitutions = [(key, expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
         unit_match = is_equal(lhs, rhs, substitutions)
