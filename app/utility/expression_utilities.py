@@ -561,22 +561,33 @@ symbol_latex_re = re.compile(
     r"(?P<start>\\\(|\$\$|\$)(?P<latex>.*?)(?P<end>\\\)|\$\$|\$)"
 )
 
+BIG_OPERATOR_PREFIXES = (r"\sum", r"\int", r"\prod", r"\lim", r"\bigcup", r"\bigcap")
+
 
 def sympy_symbols(symbols):
     """Create a mapping of local variables for parsing sympy expressions.
 
     Args:
         symbols (SymbolDict): A dictionary of sympy symbol strings to LaTeX
-        symbol strings.
-
-    Note:
-        Only the sympy string is used in this function.
+        symbol strings, or an iterable of symbol name strings.
 
     Returns:
-        Dict[str, Symbol]: A dictionary of sympy symbol strings to sympy
-        Symbol objects.
+        Dict[str, Symbol | type]: A dictionary mapping symbol names to SymPy
+        Symbol objects, or to Function subclasses for prefix operator symbols
+        (those whose latex begins with a big operator command like \\sum).
     """
-    return {k: Symbol(k) for k in symbols}
+    result = {}
+    for k in symbols:
+        symbol_def = symbols[k] if isinstance(symbols, dict) else None
+        if isinstance(symbol_def, dict):
+            latex = extract_latex(symbol_def.get("latex", "")).strip()
+            if any(latex.startswith(op) for op in BIG_OPERATOR_PREFIXES):
+                def _latex(self, printer, _l=latex):
+                    return _l + " " + printer.doprint(self.args[0])
+                result[k] = type(k, (Function,), {"_latex": _latex})
+                continue
+        result[k] = Symbol(k)
+    return result
 
 
 def extract_latex(symbol):
@@ -684,6 +695,8 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
     }
 
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
+    if "symbols" in params:
+        symbol_dict.update(sympy_symbols(params["symbols"]))
 
     strict_syntax = params.get("strict_syntax", False)
 
