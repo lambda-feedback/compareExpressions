@@ -695,8 +695,6 @@ def create_sympy_parsing_params(params, unsplittable_symbols=tuple(), symbol_ass
     }
 
     symbol_dict.update(sympy_symbols(unsplittable_symbols))
-    if "symbols" in params:
-        symbol_dict.update(sympy_symbols(params["symbols"]))
 
     strict_syntax = params.get("strict_syntax", False)
 
