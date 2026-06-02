@@ -273,6 +273,47 @@ class TestPreviewFunction():
         assert result["preview"]["latex"] == latex
         assert result["preview"]["sympy"] == sympy
 
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            # summation() with explicit bounds — rendered correctly by SymPy
+            (
+                'summation((4/n**2)(-1)**n cos(nx), (n, 1, oo))',
+                r'\sum_{n=1}^{\infty} \frac{4 \cdot \left(-1\right)^{n} \cdot \cos{\left(n \cdot x \right)}}{n^{2}}',
+                'summation((4/n**2)(-1)**n cos(nx), (n, 1, oo))',
+            ),
+            # infsum as a custom prefix symbol — content must appear inside the sum, not outside
+            (
+                'infsum((-1)^n / n^2)',
+                r'\sum_{n=1}^{\infty} \frac{\left(-1\right)^{n}}{n^{2}}',
+                'infsum((-1)^n / n^2)',
+            ),
+            (
+                'infsum((4/n^2)*(-1)^n*cos(nx))',
+                r'\sum_{n=1}^{\infty} \frac{4 \cdot \left(-1\right)^{n} \cdot \cos{\left(n \cdot x \right)}}{n^{2}}',
+                'infsum((4/n^2)*(-1)^n* cos(nx))',
+            ),
+            (
+                '((pi^2)/(3))+infsum((4/n^2)*(-1)^n*cos(nx))',
+                r'\frac{\pi^{2}}{3} + \sum_{n=1}^{\infty} \frac{4 \cdot \left(-1\right)^{n} \cdot \cos{\left(n \cdot x \right)}}{n^{2}}',
+                '(( pi^2)/(3))+infsum((4/n^2)*(-1)^n* cos(nx))',
+            ),
+        ]
+    )
+    def test_sum_preview(self, response, latex, sympy):
+        params = {
+            "is_latex": False,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "infsum": {"aliases": [], "latex": "\\sum_{n=1}^{\\infty}"},
+                "pi": {"aliases": [], "latex": "\\pi"},
+            },
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
 
 
 if __name__ == "__main__":
