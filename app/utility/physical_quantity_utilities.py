@@ -22,6 +22,7 @@ from .unit_system_conversions import\
 from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
 from ..preview_implementations.symbolic_preview import preview_function as symbolic_preview
+from .preview_utilities import parse_latex
 
 QuantityTags = Enum("QuantityTags", {v: i for i, v in enumerate("UVNR", 1)})
 
@@ -209,6 +210,10 @@ class PhysicalQuantity:
     def _all_forms(self):
         parsing_params = self.parsing_params
         converted_value = self.value.content_string() if self.value is not None else None
+
+        if converted_value is not None and self.parameters.get("is_latex", False):
+            symbols = self.parameters.get("symbols", {})
+            converted_value = parse_latex(converted_value, symbols, self.parameters.get("simplify", False))
         converted_unit = None
         expanded_unit = None
         converted_dimension = parse_expression("1", parsing_params)

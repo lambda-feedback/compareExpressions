@@ -274,6 +274,5 @@ class TestPreviewFunction():
         assert result["preview"]["sympy"] == sympy
 
 
-
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
