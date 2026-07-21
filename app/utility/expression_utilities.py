@@ -156,6 +156,14 @@ def create_expression_set(exprs, params):
     return list(expr_set)
 
 
+def convert_bracket_notation(expr):
+    """
+    Accept [] as another way of writing (), SymPy only accepts () for grouping
+    since [] and {} are reserved for lists and sets.
+    """
+    return expr.replace("[", "(").replace("]", ")")
+
+
 def convert_absolute_notation(expr, name):
     """
     Accept || as another form of writing modulus of an expression.
@@ -735,6 +743,7 @@ def substitutions_sort_key(x):
 def preprocess_expression(name, expr, parameters):
     expr = substitute_input_symbols(expr.strip(), parameters)
     expr = expr[0]
+    expr = convert_bracket_notation(expr)
     expr, abs_feedback = convert_absolute_notation(expr, name)
     success = True
     if abs_feedback is not None:
@@ -763,6 +772,7 @@ def parse_expression(expr_string, parsing_params):
     parsed_expr_set = set()
 
     for expr in expr_set:
+        expr = convert_bracket_notation(expr)
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
 
         substitutions = list(set(substitutions))

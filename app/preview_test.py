@@ -273,6 +273,28 @@ class TestPreviewFunction():
         assert result["preview"]["latex"] == latex
         assert result["preview"]["sympy"] == sympy
 
+    @pytest.mark.parametrize(
+        "response, is_latex, latex, sympy", [
+            ("(x+y)*(x+z)", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)","(x+y)*(x+z)"),
+            ("(x+y)*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*(x+z)", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+            ("[x+y]*[x+z]", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("[x+y]*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*[x+z]", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+        ]
+    )
+    def test_brackets(self, response, is_latex, latex, sympy):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
 
 
 if __name__ == "__main__":
