@@ -158,10 +158,11 @@ def create_expression_set(exprs, params):
 
 def convert_bracket_notation(expr):
     """
-    Accept [] as another way of writing (), SymPy only accepts () for grouping
-    since [] and {} are reserved for lists and sets.
+    Accept [] and {} as other ways of writing (), SymPy only accepts ()
+    for grouping since [], {}, and () are otherwise reserved for lists,
+    sets, and tuples respectively.
     """
-    return expr.replace("[", "(").replace("]", ")")
+    return expr.replace("[", "(").replace("]", ")").replace("{", "(").replace("}", ")")
 
 
 def convert_absolute_notation(expr, name):

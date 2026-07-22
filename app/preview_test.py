@@ -281,6 +281,9 @@ class TestPreviewFunction():
             ("[x+y]*[x+z]", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
             ("[x+y]*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
             ("x+y*[x+z]", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+            ("{x+y}*{x+z}", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("{x+y}*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*{x+z}", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
         ]
     )
     def test_brackets(self, response, is_latex, latex, sympy):
@@ -319,6 +322,12 @@ class TestPreviewFunction():
             "[x+y]*[x+z]",
             "[x+y]*x+z",
             "x+y*[x+z]",
+            # {x+y}*{x+z} also starts and ends with a curly brace, so with
+            # conversion skipped it is (mis)detected as a multi-answer wrapper
+            # by create_expression_set's naive check, garbling the expression.
+            # This ambiguity with multi-answer {} syntax is a known, deferred
+            # issue — see is_multiple_answers_wrapper follow-up.
+            "{x+y}*{x+z}",
         ]
     )
     def test_brackets_rejected_with_strict_syntax(self, response):
@@ -331,6 +340,24 @@ class TestPreviewFunction():
 
         with pytest.raises(ValueError):
             preview_function(response, params)
+
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            ("{x+y}*x+z", "\\left\\{x + y\\right\\} \\cdot x + z", "{x+y}*x+z"),
+            ("x+y*{x+z}", "x + y \\cdot \\left\\{x + z\\right\\}", "x+y*{x+z}"),
+        ]
+    )
+    def test_curly_braces_not_converted_with_strict_syntax(self, response, latex, sympy):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
 
 
 if __name__ == "__main__":
