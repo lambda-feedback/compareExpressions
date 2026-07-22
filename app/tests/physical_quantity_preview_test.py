@@ -89,6 +89,23 @@ class TestPreviewFunction():
         assert result["latex"] == r'162~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}'  # TODO: Fix so that unnecessary parenthesis are simplified away
         assert result["sympy"] == "162 newton/metre**(2)"
 
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            (r"\frac{F}{p \cdot \mu}", r"\frac{F}{\mu p}", "F/((mu*p))"),
+            (r"F \cdot p", "F p", "F*p"),
+            (r"\frac{10}{2} \mathrm{~kg}", r"\frac{10}{2}~\mathrm{kilogram}", "10/2 kilogram"),
+        ]
+    )
+    def test_latex_physical_quantity_preview(self, response, latex, sympy):
+        params = {
+            "is_latex": True,
+            "physical_quantity": True,
+            "elementary_functions": True,
+        }
+        result = preview_function(response, params)["preview"]
+        assert result["latex"] == latex
+        assert result["sympy"] == sympy
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
