@@ -1956,8 +1956,8 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-    def test_response_for_which_correctness_cannot_be_determined(self):
-        response = "2 pi e^{-a |omega|}" # The expression in {...} is interpreted as elements in a set instead of a math expression
+    def test_curly_braces_used_for_grouping_in_response(self):
+        response = "2 pi e^{-a |omega|}" # {} is accepted as another way of writing () for grouping
         answer = "2 pi e^(-a|omega|)"
         params = {
             'atol': 0,
@@ -1967,7 +1967,7 @@ class TestEvaluationFunction():
             'elementary_functions': True,
         }
         result = evaluation_function(response, answer, params)
-        assert result["is_correct"] is False
+        assert result["is_correct"] is True
 
     def test_unexpected_equalities_in_response_that_generates_set(self):
         response = "z= plus_minus 1 + 2*i" # plus_minus generates a set of two equalities
