@@ -1,3 +1,4 @@
+import tokenize
 from copy import deepcopy
 
 from ..utility.expression_utilities import (
@@ -119,7 +120,7 @@ def preview_function(response: str, params: Params) -> Result:
             latex_out = res_parsed.latex_string
             sympy_out = response
 
-    except SyntaxError as e:
+    except (SyntaxError, tokenize.TokenError) as e:
         raise Exception("Failed to parse Sympy expression") from e
     except ValueError as e:
         raise Exception("Failed to parse LaTeX expression") from e
