@@ -743,7 +743,8 @@ def substitutions_sort_key(x):
 def preprocess_expression(name, expr, parameters):
     expr = substitute_input_symbols(expr.strip(), parameters)
     expr = expr[0]
-    expr = convert_bracket_notation(expr)
+    if not parameters.get("strict_syntax", False):
+        expr = convert_bracket_notation(expr)
     expr, abs_feedback = convert_absolute_notation(expr, name)
     success = True
     if abs_feedback is not None:
@@ -772,7 +773,8 @@ def parse_expression(expr_string, parsing_params):
     parsed_expr_set = set()
 
     for expr in expr_set:
-        expr = convert_bracket_notation(expr)
+        if not strict_syntax:
+            expr = convert_bracket_notation(expr)
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
 
         substitutions = list(set(substitutions))

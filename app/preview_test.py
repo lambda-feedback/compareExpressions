@@ -295,6 +295,43 @@ class TestPreviewFunction():
         assert result["preview"]["latex"] == latex
         assert result["preview"]["sympy"] == sympy
 
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            ("(x+y)*(x+z)", "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("(x+y)*x+z", "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*(x+z)", "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+        ]
+    )
+    def test_brackets_strict_syntax_parentheses_still_work(self, response, latex, sympy):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+    @pytest.mark.parametrize(
+        "response", [
+            "[x+y]*[x+z]",
+            "[x+y]*x+z",
+            "x+y*[x+z]",
+        ]
+    )
+    def test_brackets_rejected_with_strict_syntax(self, response):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        with pytest.raises(ValueError):
+            preview_function(response, params)
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
