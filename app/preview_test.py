@@ -273,6 +273,100 @@ class TestPreviewFunction():
         assert result["preview"]["latex"] == latex
         assert result["preview"]["sympy"] == sympy
 
+    @pytest.mark.parametrize(
+        "response, is_latex, latex, sympy", [
+            ("(x+y)*(x+z)", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)","(x+y)*(x+z)"),
+            ("(x+y)*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*(x+z)", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+            ("[x+y]*[x+z]", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("[x+y]*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*[x+z]", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+            ("{x+y}*{x+z}", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("{x+y}*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*{x+z}", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+        ]
+    )
+    def test_brackets(self, response, is_latex, latex, sympy):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            ("(x+y)*(x+z)", "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("(x+y)*x+z", "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*(x+z)", "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+        ]
+    )
+    def test_brackets_strict_syntax_parentheses_still_work(self, response, latex, sympy):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+    @pytest.mark.parametrize(
+        "response", [
+            "[x+y]*[x+z]",
+            "[x+y]*x+z",
+            "x+y*[x+z]",
+        ]
+    )
+    def test_brackets_rejected_with_strict_syntax(self, response):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        with pytest.raises(ValueError):
+            preview_function(response, params)
+
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            ("{x+y}*{x+z}", "\\left\\{x + y\\right\\} \\cdot \\left\\{x + z\\right\\}", "{x+y}*{x+z}"),
+            ("{x+y}*x+z", "\\left\\{x + y\\right\\} \\cdot x + z", "{x+y}*x+z"),
+            ("x+y*{x+z}", "x + y \\cdot \\left\\{x + z\\right\\}", "x+y*{x+z}"),
+        ]
+    )
+    def test_curly_braces_not_converted_with_strict_syntax(self, response, latex, sympy):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+    @pytest.mark.parametrize("strict_syntax", [False, True])
+    def test_curly_brace_multiple_answers_still_works(self, strict_syntax):
+        params = {
+            "is_latex": False,
+            "strict_syntax": strict_syntax,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function("{1, 2}", params)
+        assert result["preview"]["latex"] == "\\left\\{1,~2\\right\\}"
+        assert result["preview"]["sympy"] == "{1, 2}"
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])

@@ -8,6 +8,7 @@ from ..utility.expression_utilities import (
     create_expression_set,
     extract_latex,
     find_matching_parenthesis,
+    is_multiple_answers_wrapper,
     latex_symbols,
     preprocess_expression,
     protect_elementary_functions_substitutions,
@@ -355,6 +356,26 @@ class TestCreateExpressionSet:
         result = create_expression_set("±x", params)
         assert sorted(result) == sorted(["+x", "-x"]) or sorted(result) == sorted(["x", "-x"])
         assert len(result) == 2
+
+    def test_curly_braces_used_for_grouping_are_not_split(self):
+        result = create_expression_set("{x+1}*{x-2}", {})
+        assert result == ["{x+1}*{x-2}"]
+
+
+class TestIsMultipleAnswersWrapper:
+
+    @pytest.mark.parametrize(
+        "expr, expected", [
+            ("{x, y}", True),
+            ("{x+1}", True),
+            ("{(x+1), (x-1)}", True),
+            ("x+y", False),
+            ("{x+1}*{x-2}", False),
+            ("{x+1}*x", False),
+        ]
+    )
+    def test_is_multiple_answers_wrapper(self, expr, expected):
+        assert is_multiple_answers_wrapper(expr) is expected
 
 
 class TestPreprocessExpression:

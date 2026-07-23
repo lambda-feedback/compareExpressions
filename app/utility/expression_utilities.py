@@ -129,9 +129,22 @@ special_symbols_names = [
 
 
 # -------- String Manipulation Utilities
+def is_multiple_answers_wrapper(expr):
+    """
+    True if expr, as a whole, is wrapped in a top-level {...} pair that
+    create_expression_set will treat as a set of multiple acceptable
+    answers, as opposed to {} that merely sit at the string's edges
+    incidentally (e.g. "{x+1}*{x-2}").
+    """
+    stripped = expr.strip()
+    if not (stripped.startswith('{') and stripped.endswith('}')):
+        return False
+    return find_matching_parenthesis(stripped, 0, delimiters=('{', '}')) == len(stripped) - 1
+
+
 def create_expression_set(exprs, params):
     if isinstance(exprs, str):
-        if exprs.startswith('{') and exprs.endswith('}'):
+        if is_multiple_answers_wrapper(exprs):
             exprs = [expr.strip() for expr in exprs[1:-1].split(',')]
         else:
             exprs = [exprs]
@@ -154,6 +167,20 @@ def create_expression_set(exprs, params):
             expr_set.add(expr)
 
     return list(expr_set)
+
+
+def convert_bracket_notation(expr):
+    """
+    Accept [] and {} as other ways of writing (), SymPy only accepts ()
+    for grouping since [], {}, and () are otherwise reserved for lists,
+    sets, and tuples respectively. {} is left untouched when it spans the
+    entire expression, since that denotes a set of multiple acceptable
+    answers (see create_expression_set).
+    """
+    expr = expr.replace("[", "(").replace("]", ")")
+    if is_multiple_answers_wrapper(expr):
+        return expr
+    return expr.replace("{", "(").replace("}", ")")
 
 
 def convert_absolute_notation(expr, name):
@@ -735,6 +762,8 @@ def substitutions_sort_key(x):
 def preprocess_expression(name, expr, parameters):
     expr = substitute_input_symbols(expr.strip(), parameters)
     expr = expr[0]
+    if not parameters.get("strict_syntax", False):
+        expr = convert_bracket_notation(expr)
     expr, abs_feedback = convert_absolute_notation(expr, name)
     success = True
     if abs_feedback is not None:
@@ -763,6 +792,8 @@ def parse_expression(expr_string, parsing_params):
     parsed_expr_set = set()
 
     for expr in expr_set:
+        if not strict_syntax:
+            expr = convert_bracket_notation(expr)
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
 
         substitutions = list(set(substitutions))
