@@ -176,11 +176,20 @@ def convert_bracket_notation(expr):
     sets, and tuples respectively. {} is left untouched when it spans the
     entire expression, since that denotes a set of multiple acceptable
     answers (see create_expression_set).
+
+    Brackets must be closed with the matching type, e.g. "[x+y)" is
+    rejected rather than silently reinterpreted as "(x+y)", since this
+    project does not support interval/limit notation. If the brackets in
+    expr are mismatched, expr is returned unconverted together with
+    feedback describing the problem.
     """
+    if not has_matching_brackets(expr):
+        tag = "BRACKET_NOTATION_MISMATCH"
+        return expr, (tag, feedback_string_generators["INTERNAL"](tag)({'x': expr}))
     expr = expr.replace("[", "(").replace("]", ")")
     if is_multiple_answers_wrapper(expr):
-        return expr
-    return expr.replace("{", "(").replace("}", ")")
+        return expr, None
+    return expr.replace("{", "(").replace("}", ")"), None
 
 
 def convert_absolute_notation(expr, name):
@@ -465,6 +474,23 @@ def substitute_input_symbols(exprs, params):
             exprs[k] = " ".join(exprs[k].split())
 
     return exprs
+
+
+def has_matching_brackets(expr):
+    """
+    True if every occurrence of (, [, { in expr is closed by the closing
+    bracket of the same type, correctly nested. Mismatched types (e.g. the
+    "[x+y)" in interval/limit notation) or unbalanced brackets are rejected.
+    """
+    closing_to_opening = {')': '(', ']': '[', '}': '{'}
+    stack = []
+    for char in expr:
+        if char in '([{':
+            stack.append(char)
+        elif char in ')]}':
+            if not stack or stack.pop() != closing_to_opening[char]:
+                return False
+    return not stack
 
 
 def find_matching_parenthesis(string, index, delimiters=None):
@@ -762,13 +788,13 @@ def substitutions_sort_key(x):
 def preprocess_expression(name, expr, parameters):
     expr = substitute_input_symbols(expr.strip(), parameters)
     expr = expr[0]
+    bracket_feedback = None
     if not parameters.get("strict_syntax", False):
-        expr = convert_bracket_notation(expr)
+        expr, bracket_feedback = convert_bracket_notation(expr)
     expr, abs_feedback = convert_absolute_notation(expr, name)
-    success = True
-    if abs_feedback is not None:
-        success = False
-    return success, expr, abs_feedback
+    feedback = bracket_feedback or abs_feedback
+    success = feedback is None
+    return success, expr, feedback
 
 def parse_expression(expr_string, parsing_params):
     '''
@@ -793,7 +819,7 @@ def parse_expression(expr_string, parsing_params):
 
     for expr in expr_set:
         if not strict_syntax:
-            expr = convert_bracket_notation(expr)
+            expr, _ = convert_bracket_notation(expr)
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
 
         substitutions = list(set(substitutions))

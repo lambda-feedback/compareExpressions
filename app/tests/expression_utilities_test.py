@@ -4,10 +4,12 @@ from sympy import Symbol, sqrt, sin as sympy_sin
 from ..utility.expression_utilities import (
     compute_relative_tolerance_from_significant_decimals,
     convert_absolute_notation,
+    convert_bracket_notation,
     convert_unicode_dashes,
     create_expression_set,
     extract_latex,
     find_matching_parenthesis,
+    has_matching_brackets,
     is_multiple_answers_wrapper,
     latex_symbols,
     preprocess_expression,
@@ -181,6 +183,66 @@ class TestFindMatchingParenthesis:
         else:
             result = find_matching_parenthesis(string, index, delimiters)
         assert result == expected
+
+
+class TestHasMatchingBrackets:
+
+    @pytest.mark.parametrize(
+        "expr, expected", [
+            ("x+y", True),
+            ("(x+y)", True),
+            ("[x+y]", True),
+            ("{x+y}", True),
+            ("[x+(y-1)]", True),
+            ("{(x+1), (x-1)}", True),
+            # Mismatched bracket types
+            ("[x+y)", False),
+            ("(x+y]", False),
+            ("{x+y)", False),
+            ("[(x+y]", False),
+            # Unbalanced brackets
+            ("[x+y", False),
+            ("x+y]", False),
+            ("((x+y)", False),
+        ]
+    )
+    def test_has_matching_brackets(self, expr, expected):
+        assert has_matching_brackets(expr) is expected
+
+
+class TestConvertBracketNotation:
+
+    @pytest.mark.parametrize(
+        "expr, expected", [
+            ("[x+y]", "(x+y)"),
+            ("[x+(y-1)]", "(x+(y-1))"),
+            ("{x+1}*{x-2}", "(x+1)*(x-2)"),
+        ]
+    )
+    def test_matched_brackets_are_converted(self, expr, expected):
+        result, feedback = convert_bracket_notation(expr)
+        assert result == expected
+        assert feedback is None
+
+    def test_multiple_answers_wrapper_left_untouched(self):
+        result, feedback = convert_bracket_notation("{x+1, x-1}")
+        assert result == "{x+1, x-1}"
+        assert feedback is None
+
+    @pytest.mark.parametrize(
+        "expr", [
+            "[x+y)",
+            "(x+y]",
+            "{x+y)",
+            "[x+y",
+            "x+y]",
+        ]
+    )
+    def test_mismatched_brackets_are_rejected(self, expr):
+        result, feedback = convert_bracket_notation(expr)
+        assert result == expr
+        assert feedback is not None
+        assert feedback[0] == "BRACKET_NOTATION_MISMATCH"
 
 
 class TestSubstitute:
@@ -397,3 +459,25 @@ class TestPreprocessExpression:
         assert success is False
         assert feedback is not None
         assert feedback[0] == "ABSOLUTE_VALUE_NOTATION_AMBIGUITY"
+
+    def test_square_brackets_converted(self):
+        success, expr, feedback = preprocess_expression("response", "[x+y]", {})
+        assert success is True
+        assert expr == "(x+y)"
+        assert feedback is None
+
+    @pytest.mark.parametrize(
+        "expr", [
+            "[x+y)",
+            "(x+y]",
+            "{x+y)",
+            "[x+y",
+            "x+y]",
+        ]
+    )
+    def test_mismatched_brackets_returns_failure(self, expr):
+        success, result, feedback = preprocess_expression("response", expr, {})
+        assert success is False
+        assert result == expr
+        assert feedback is not None
+        assert feedback[0] == "BRACKET_NOTATION_MISMATCH"
