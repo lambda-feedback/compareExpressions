@@ -243,6 +243,58 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     @pytest.mark.parametrize(
+        "response, answer",
+        [
+            ("sec(x)^4", "sec(x)**4"),
+            ("sec**12(x)", "sec(x)**12"),
+            ("sec^3(x)", "sec(x)**3"),
+            ("sec**2(x)", "sec(x)^2"),
+            ("sec^2(x)", "sec(x)^2"),
+            # testing all 24 supported trig functions
+            ("sin**235(x)", "sin(x)**235"),
+            ("cos**123(x)", "cos(x)**123"),
+            ("tan**54(x)", "tan(x)**54"),
+            ("sinc**2(x)", "sinc(x)**2"),
+            ("csc**3(x)", "csc(x)**3"),
+            ("sec**6(x)", "sec(x)**6"),
+            ("cot**5(x)", "cot(x)**5"),
+            ("asin**75(x)", "asin(x)**75"),
+            ("acos**3(x)", "acos(x)**3"),
+            ("atan**2(x)", "atan(x)**2"),
+            ("acsc**9(x)", "acsc(x)**9"),
+            ("asec**7(x)", "asec(x)**7"),
+            ("acot**9(x)", "acot(x)**9"),
+            ("atan2**2(x,y)", "atan2(x,y)**2"),
+            ("sinh**4(x)", "sinh(x)**4"),
+            ("cosh**11(x)", "cosh(x)**11"),
+            ("tanh**8(x)", "tanh(x)**8"),
+            ("csch**5(x)", "csch(x)**5"),
+            ("sech**6(x)", "sech(x)**6"),
+            ("asinh**13(x)", "asinh(x)**13"),
+            ("acosh**4(x)", "acosh(x)**4"),
+            ("atanh**9(x)", "atanh(x)**9"),
+            ("acsch**7(x)", "acsch(x)**7"),
+            ("asech**5(x)", "asech(x)**5"),
+        ]
+    )
+    def test_trig_expt_correct(self, response, answer):
+        params = {"strict_syntax": False}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize(
+        "response, answer",
+        [
+            ("2sec**2(x)", "2*sec(x)**2"),
+            ("Bsec**2(x)", "B*sec(x)**2"),
+        ]
+    )
+    def test_trig_expt_with_adjacent_implicit_multiplication_correct(self, response, answer):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize(
         "response,answer",
         generate_input_variations(
             response="x/2",
