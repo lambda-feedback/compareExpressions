@@ -1,0 +1,33 @@
+name: "Feature Request"
+description: "Propose new functionality or an improvement to how expressions are compared."
+title: "Feature: "
+labels:
+  - enhancement
+assignees: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: "What can't you currently do, and why does it matter?"
+      placeholder: |
+        e.g. Custom multi-character variable names aren't supported, so questions using
+        variables like `V_max` can't be graded correctly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: "What would you like to see happen?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Optional: any workarounds or other approaches you've considered."
+    validations:
+      required: false
