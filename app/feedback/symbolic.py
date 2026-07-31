@@ -14,6 +14,7 @@ feedback_generators = dict()
 feedback_generators["EQUIVALENCES"] = criteria_equivalences
 feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "ABSOLUTE_VALUE_NOTATION_AMBIGUITY": f"Notation in {inputs.get('name','')} might be ambiguous, use `Abs(.)` instead of `|.|`",
+    "BRACKET_NOTATION_MISMATCH": f"Brackets in `{inputs.get('x','')}` do not match. Every `(`, `[` or `{{` must be closed with the corresponding `)`, `]` or `}}` — different bracket types cannot be mixed to close the same group.",
     "NO_RESPONSE": "No response submitted.",
     "MULTIPLE_ANSWER_FAIL_ALL": "At least one answer or response was incorrect.",
     "MULTIPLE_ANSWER_FAIL_RESPONSE": "At least one response was incorrect.",
