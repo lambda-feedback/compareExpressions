@@ -142,8 +142,6 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
 
         # TODO: Make numerical comparison its own context
         if result is False:
-            error_below_rtol = None
-            error_below_atol = None
             if parameters_dict.get("numerical", False) or float(parameters_dict.get("rtol", 0)) > 0 or float(parameters_dict.get("atol", 0)) > 0:
                 # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
                 # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
@@ -158,26 +156,22 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
                 # Separates LHS and RHS, parses and evaluates them
                 res = N(replace_pi(lhs_expr))
                 ans = N(replace_pi(rhs_expr))
-                if float(parameters_dict.get("atol", 0)) > 0:
+
+                atol = float(parameters_dict.get("atol", 0))
+                rtol = float(parameters_dict.get("rtol", 0))
+
+                try:
+                    # Dividing by ans cancels symbols (e.g. rho*L^3 / rho*L^3 = 1)
+                    # Equivalent to numpy.isclose: |ans-res| <= atol + rtol*|ans|
+                    ratio = float((ans - res) / ans)
                     try:
-                        absolute_error = abs(float(ans-res))
-                        error_below_atol = bool(absolute_error < float(parameters_dict["atol"]))
+                        tolerance = rtol + atol / abs(float(ans))
                     except TypeError:
-                        error_below_atol = None
-                else:
-                    error_below_atol = True
-                if float(parameters_dict.get("rtol", 0)) > 0:
-                    try:
-                        relative_error = abs(float((ans-res)/ans))
-                        error_below_rtol = bool(relative_error < float(parameters_dict["rtol"]))
-                    except TypeError:
-                        error_below_rtol = None
-                else:
-                    error_below_rtol = True
-                if error_below_atol is None or error_below_rtol is None:
+                        # Defaulting to relative tolerance if symbol cancellation fails to preserve the previous implementation
+                        tolerance = rtol
+                    result = bool(abs(ratio) <= tolerance)
+                except (TypeError, ZeroDivisionError):
                     result = False
-                elif error_below_atol is True and error_below_rtol is True:
-                    result = True
 
     return result
 
