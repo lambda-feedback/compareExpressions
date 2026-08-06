@@ -102,7 +102,7 @@ class PhysicalQuantity:
         value_latex = self.value_latex_string if self.value_latex_string is not None else ""
         unit_latex = self.unit_latex_string if self.unit_latex_string is not None else ""
         self.latex_string = value_latex+separator+unit_latex
-        self.standard_value, self.standard_unit, self.expanded_unit, self.dimension = self._all_forms()
+        self.standard_value, self.standard_unit, self.expanded_unit, self.dimension, self.converted_unit_factor = self._all_forms()
         return
 
     def _rotate(self, direction):
@@ -217,6 +217,7 @@ class PhysicalQuantity:
         converted_unit = None
         expanded_unit = None
         converted_dimension = parse_expression("1", parsing_params)
+        converted_unit_factor = parse_expression("1", parsing_params)
         if self.unit is not None:
             converted_unit = self.unit.copy()
             expanded_unit = self._expand_units(converted_unit)
@@ -236,7 +237,7 @@ class PhysicalQuantity:
             converted_dimension = parse_expression(converted_dimension, parsing_params)
         if converted_value is not None:
             converted_value = parse_expression(converted_value, parsing_params)
-        return converted_value, converted_unit, expanded_unit, converted_dimension
+        return converted_value, converted_unit, expanded_unit, converted_dimension, converted_unit_factor
 
 
 def SLR_generate_unit_dictionaries(units_string, strictness):
