@@ -285,7 +285,8 @@ def criterion_match_node(criterion, parameters, label=None):
                     if parsing_params.get('rtol', 0) > 0 and (ans != 0):
                         value_match = bool(abs(float((ans-res)/ans)) < parsing_params['rtol'])
                     elif parsing_params.get('atol', 0) > 0 or (ans == 0):
-                        value_match = bool(abs(float(ans-res)) < parsing_params['atol'])
+                        answer_unit_factor = float(parameters["reserved_expressions"]["answer"]["quantity"].converted_unit_factor)
+                        value_match = bool(abs(float(ans-res)) < parsing_params['atol']*answer_unit_factor)
 
         substitutions = [(key, expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
         unit_match = is_equal(lhs, rhs, substitutions)

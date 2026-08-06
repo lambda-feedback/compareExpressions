@@ -398,6 +398,148 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is False
 
+
+    def test_physical_quantity_with_atol_and_kg_unit(self):
+        ans = "20 kg"
+        params = {
+            'atol': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        res = "19.97 kg"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "19.5 kg"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_physical_quantity_with_atol_and_km_unit(self):
+        ans = "5 km"
+        params = {
+            'atol': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        res = "5.03 km"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "5.2 km"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_physical_quantity_with_abs_tol_and_non_base_unit(self):
+        ans = "20 kg"
+        res = "19.97 kg"
+        params = {
+            'absolute_tolerance': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_physical_quantity_with_atol_and_imperial_mass_unit(self):
+        ans = "10 lb"
+        params = {
+            'atol': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        res = "10.03 lb"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "10.2 lb"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_physical_quantity_with_atol_and_imperial_length_unit(self):
+        ans = "3 mile"
+        params = {
+            'atol': 0.05,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        res = "3.02 mile"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "3.1 mile"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_physical_quantity_with_atol_and_compound_unit_force(self):
+        ans = "10 kg m/s^2"
+        params = {
+            'atol': 0.02,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        res = "10.01 kg m/s^2"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "10.05 kg m/s^2"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_physical_quantity_with_atol_and_compound_unit_density(self):
+        ans = "2.5 kg/m^3"
+        params = {
+            'atol': 0.01,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        res = "2.505 kg/m^3"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "2.52 kg/m^3"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_physical_quantity_with_atol_and_mixed_units_kg_g(self):
+        ans = "1 kg"
+        params = {
+            'atol': 0.01,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        res = "998 g"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+        res = "950 g"
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is False
+
+    def test_physical_quantity_with_rtol_and_kg_unit(self):
+        ans = "20 kg"
+        res = "21 kg"
+        params = {
+            'rtol': 0.1,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
+    def test_physical_quantity_with_rtol_and_imperial_mass_unit(self):
+        ans = "10 lb"
+        res = "10.9 lb"
+        params = {
+            'rtol': 0.1,
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(res, ans, params, include_test_data=True)
+        assert result["is_correct"] is True
+
     @pytest.mark.parametrize(
         "ans,res",
         [
