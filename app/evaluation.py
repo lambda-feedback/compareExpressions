@@ -239,6 +239,17 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if "absolute_tolerance" in params:
         params["atol"] = params["absolute_tolerance"]
 
+    if "significant_figures" in params:
+        params["sig_figs"] = params["significant_figures"]
+
+    if "sig_figs" in params:
+        uses_tolerance = any(k in params for k in ("relative_tolerance", "rtol", "absolute_tolerance", "atol"))
+        if uses_tolerance:
+            raise Exception("`sig_figs`/`significant_figures` cannot be used together with `atol`/`rtol`.")
+        sig_figs = params["sig_figs"]
+        if not isinstance(sig_figs, int) or isinstance(sig_figs, bool) or sig_figs < 1:
+            raise Exception("`sig_figs`/`significant_figures` must be a positive integer.")
+
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
@@ -335,6 +346,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "numerical": parameters.get("numerical", False),
             "atol": parameters.get("atol", 0),
             "rtol": parameters.get("rtol", 0),
+            "sig_figs": parameters.get("sig_figs"),
             "custom_feedback": parameters.get("custom_feedback",{}),
         }
     )

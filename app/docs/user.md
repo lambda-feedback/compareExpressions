@@ -8,7 +8,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are 15 optional parameters that can be set: `absolute_tolerance`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
+There are 16 optional parameters that can be set: `absolute_tolerance`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `significant_figures`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
 
 #### `absolute_tolerance` (`atol`)
 Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $|x-\tilde{x}| \leq e_aBy default `absolute_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
@@ -78,6 +78,16 @@ When `physical_quantity` the evaluation function will generate feedback based on
 
 #### `relative_tolerance` (`rtol`)
 Sets the relative tolerance, $e_r$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $\left|\frac{x-\tilde{x}}{x}\right| \leq e_r$. By default `relative_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
+
+#### `significant_figures` (`sig_figs`)
+
+Checks the response against the answer to a fixed number of significant figures, both for numerical correctness and for the precision the response was actually *written* to. It only applies to a plain numeric response (or, when `physical_quantity` is `true`, a numeric value with units) being compared directly against the answer — it is ignored for any other kind of criterion.
+
+For example, with an answer of `3.14159` and `significant_figures` set to `3`: the response `3.14` is accepted (correct value, written to 3 significant figures). `3.1` is rejected for having too few significant figures, and `3.14159` is rejected for having too many — even though both are numerically close to the answer.
+
+Significant figures are counted as written: leading zeros are never significant (`0.0032` has 2), trailing zeros after a decimal point are always significant (`92.00` has 4), and trailing zeros in a whole number are only significant if a decimal point is explicitly written (`540` has 2, but `540.` has 3).
+
+`significant_figures` cannot be combined with `atol`/`absolute_tolerance` or `rtol`/`relative_tolerance` — setting both will raise an error. Unlike those tolerance parameters, a `significant_figures` failure produces the same generic feedback as any other incorrect response; it does not distinguish "wrong value" from "wrong precision" from "not a number".
 
 #### `strictness`
 

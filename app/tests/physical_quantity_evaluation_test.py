@@ -417,5 +417,47 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
 
+class TestSigFigs:
+
+    base_params = {
+        "strict_syntax": False,
+        "physical_quantity": True,
+        "units_string": "SI",
+        "strictness": "natural",
+    }
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs,outcome",
+        [
+            ("Correct value and precision, with units", "92.00 m", "92 m", 4, True),
+            ("Numerically equal but wrong precision", "92.00 m", "92 m", 2, False),
+            ("Wrong value", "91.00 m", "92 m", 4, False),
+            ("Unit mismatch fails regardless of sig figs", "92 s", "92 m", 2, False),
+            ("No units, plain numeric", "3.14", "3.14159", 3, True),
+            ("Non-numeric response", "two m", "92 m", 2, False),
+        ]
+    )
+    def test_sig_figs(self, description, response, answer, sig_figs, outcome):
+        params = dict(self.base_params, sig_figs=sig_figs)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_significant_figures_alias(self):
+        params = dict(self.base_params, significant_figures=4)
+        result = evaluation_function("92.00 m", "92 m", params)
+        assert result["is_correct"] is True
+
+    def test_sig_figs_mutually_exclusive_with_atol(self):
+        params = dict(self.base_params, sig_figs=4, atol=0.1)
+        with pytest.raises(Exception):
+            evaluation_function("92.00 m", "92 m", params)
+
+    @pytest.mark.parametrize("sig_figs", [0, -1, 3.5, True])
+    def test_sig_figs_invalid_value_raises(self, sig_figs):
+        params = dict(self.base_params, sig_figs=sig_figs)
+        with pytest.raises(Exception):
+            evaluation_function("92.00 m", "92 m", params)
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

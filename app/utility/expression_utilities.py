@@ -28,6 +28,7 @@ from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
 from sympy import Basic, Symbol, Equality, Function
 
+import math
 import re
 from typing import Dict, List, TypedDict
 
@@ -574,6 +575,81 @@ def compute_relative_tolerance_from_significant_decimals(string):
         significant_characters = significant_characters.lstrip("-0")
         rtol = 5*10**(-max(len(significant_characters), DEFAULT_SIGNIFICANT_FIGURES))
     return rtol
+
+
+def round_to_sig_figs(value, sig_figs):
+    if value == 0:
+        return 0.0
+    return float(f"{value:.{sig_figs}g}")
+
+
+def split_numeric_string(value):
+    '''
+    Input:
+        value : a string that may represent a plain number (optionally signed,
+                with an optional decimal point and/or exponent)
+    Output:
+        (int_part, frac_part, has_decimal) if value parses as a plain number,
+        None otherwise.
+    '''
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    body = stripped[1:] if stripped[:1] in ("+", "-") else stripped
+
+    mantissa, sep, exponent = body.partition("e") if "e" in body else body.partition("E")
+    if sep and not exponent.lstrip("+-").isdigit():
+        return None
+
+    has_decimal = "." in mantissa
+    int_part, _, frac_part = mantissa.partition(".")
+    if not (int_part.isdigit() or frac_part.isdigit()):
+        return None
+    if int_part and not int_part.isdigit():
+        return None
+    if frac_part and not frac_part.isdigit():
+        return None
+
+    return int_part, frac_part, has_decimal
+
+
+def count_sig_figs(int_part, frac_part, has_decimal):
+    digits = int_part + frac_part
+    first_nonzero = next((i for i, d in enumerate(digits) if d != "0"), None)
+    if first_nonzero is None:
+        return 1
+
+    trimmed = digits[first_nonzero:]
+    if has_decimal:
+        return len(trimmed)
+    return len(trimmed.rstrip("0")) or 1
+
+
+def sig_figs_match(response_string, response_value, answer_value, sig_figs):
+    '''
+    Input:
+        response_string : raw string as written by the learner, used to count
+                           significant figures as written (a parsed float loses
+                           trailing zeros and decimal-point placement)
+        response_value  : response_string parsed to a float
+        answer_value    : answer parsed to a float
+        sig_figs        : required number of significant figures (positive int)
+    Output:
+        True if response_string parses as a plain number, its value rounds to
+        the same value as the answer to sig_figs, and it was written to exactly
+        sig_figs significant figures. False otherwise.
+    '''
+    parts = split_numeric_string(response_string)
+    if parts is None:
+        return False
+
+    rounded_answer = round_to_sig_figs(answer_value, sig_figs)
+    rounded_response = round_to_sig_figs(response_value, sig_figs)
+    numeric_correct = abs(rounded_response - rounded_answer) <= math.ulp(abs(rounded_answer))
+
+    precision_correct = response_value == 0 or count_sig_figs(*parts) == sig_figs
+
+    return numeric_correct and precision_correct
 
 
 # -------- (Sympy) Expression Parsing Utilities

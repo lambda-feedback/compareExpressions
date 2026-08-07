@@ -2205,5 +2205,52 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
 
+class TestSigFigs:
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs,outcome",
+        [
+            ("Correct value and precision", "3.14", "3.14159", 3, True),
+            ("Wrong value", "3.15", "3.14159", 3, False),
+            ("Numerically equal but too many digits written", "3.14159", "3.14159", 3, False),
+            ("Numerically equal but too few digits written", "3.1", "3.10", 3, False),
+            ("Negative numbers", "-3.14", "-3.14159", 3, True),
+            ("Zero answer bypasses precision check", "0", "0", 3, True),
+            ("Trailing decimal zeros are significant", "92.00", "92", 4, True),
+            ("Leading zeros are not significant", "0.0032", "0.0032", 2, True),
+            ("Whole number trailing zeros are not significant", "540", "540", 2, True),
+            ("Whole number, wrong sig fig count", "540", "540", 3, False),
+            ("Scientific notation", "5.02e4", "50200", 3, True),
+            ("Non-numeric response", "two", "3.14159", 3, False),
+            ("Response with a symbol is rejected", "3.14*x", "3.14159", 3, False),
+        ]
+    )
+    def test_sig_figs(self, description, response, answer, sig_figs, outcome):
+        params = {"strict_syntax": False, "sig_figs": sig_figs}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_significant_figures_alias(self):
+        params = {"strict_syntax": False, "significant_figures": 3}
+        result = evaluation_function("3.14", "3.14159", params)
+        assert result["is_correct"] is True
+
+    def test_sig_figs_mutually_exclusive_with_atol(self):
+        params = {"strict_syntax": False, "sig_figs": 3, "atol": 0.1}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+    def test_sig_figs_mutually_exclusive_with_rtol(self):
+        params = {"strict_syntax": False, "significant_figures": 3, "relative_tolerance": 0.1}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+    @pytest.mark.parametrize("sig_figs", [0, -1, 3.5, True])
+    def test_sig_figs_invalid_value_raises(self, sig_figs):
+        params = {"strict_syntax": False, "sig_figs": sig_figs}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])
