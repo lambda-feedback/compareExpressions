@@ -189,6 +189,18 @@ along the the following base tokens:
 
 **TODO** Describe shared default parameters
 
+##### Significant figures (`sig_figs`)
+
+`app/utility/expression_utilities.py` provides `round_to_sig_figs`, `split_numeric_string`, `count_sig_figs` and `sig_figs_match`, which implement the `significant_figures`/`sig_figs` parameter (see the user docs). `sig_figs_match(response_string, response_value, answer_value, sig_figs)` is pure (no SymPy dependency) and returns a single bool: `response_string` must parse as a plain number (via `split_numeric_string`), its value must round to the same value as the answer to `sig_figs` (via `round_to_sig_figs`, compared within `math.ulp` of the rounded answer), and it must have been written to exactly `sig_figs` significant figures (via `count_sig_figs`, applied to the parsed integer/fractional digit parts).
+
+`response_string` must be the response's *raw* as-written string, not a parsed/simplified expression, since a parsed float loses trailing zeros and decimal-point placement (`92.0 == 92.00 == 92` once parsed, but they have different significant-figure counts as written).
+
+`sig_figs` is threaded from `params` into `evaluation_parameters` alongside `atol`/`rtol` in `evaluation.py`, and is mutually exclusive with them (enforced with a raised `Exception` in `evaluation_function`, before context determination). It integrates into each context exactly the way `atol`/`rtol` already do — by changing the boolean result inside the *existing* evaluate closure — rather than by adding new criterion-graph tags or branches:
+- `symbolic`: at the top of `check_equality` (`context/symbolic.py`), before the ordinary equality logic, since a value that's numerically equal but written to the wrong precision must still fail — it can't be gated behind "ordinary equality already returned `False`" the way the `atol`/`rtol` fallback is.
+- `physical_quantity`: inside the `quantity_match` closure in `criterion_match_node` (`context/physical_quantity.py`), replacing the ordinary `is_equal`-based value match for the same reason. Unit matching is unaffected — `sig_figs` only changes how the *value* half of `matches` is decided. Note that `quantity_match` reads `atol`/`rtol` off a local `parsing_params` closure variable that can also be silently populated by the existing implicit-tolerance-from-significant-decimals feature (see `compute_relative_tolerance_from_significant_decimals`) when neither is set explicitly; that implicit derivation is skipped whenever `sig_figs` is set, so the two features stay independent.
+
+Both integration points restrict `sig_figs` to a direct `response = answer` (or `answer = response`) comparison — it has no effect on other custom criteria.
+
 ## Feedback and tag generation
 
 - Generate feedback procedures from criteria, each procedure return a boolean that indicates whether the corresponding criterion is satisfied or not, a string intended to be shown to the student, and a list of tags indicating what was found when checking the criteria

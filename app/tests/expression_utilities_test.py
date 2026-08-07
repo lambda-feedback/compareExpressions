@@ -5,6 +5,7 @@ from ..utility.expression_utilities import (
     compute_relative_tolerance_from_significant_decimals,
     convert_absolute_notation,
     convert_unicode_dashes,
+    count_sig_figs,
     create_expression_set,
     extract_latex,
     find_matching_parenthesis,
@@ -12,6 +13,9 @@ from ..utility.expression_utilities import (
     latex_symbols,
     preprocess_expression,
     protect_elementary_functions_substitutions,
+    round_to_sig_figs,
+    sig_figs_match,
+    split_numeric_string,
     substitute,
     substitute_input_symbols,
     substitutions_sort_key,
@@ -245,6 +249,105 @@ class TestComputeRelativeTolerance:
     def test_relative_tolerance(self, string, expected):
         result = compute_relative_tolerance_from_significant_decimals(string)
         assert result == pytest.approx(expected)
+
+
+class TestRoundToSigFigs:
+
+    @pytest.mark.parametrize(
+        "value, sig_figs, expected",
+        [
+            (0, 3, 0.0),
+            (0.0, 3, 0.0),
+            (3.14159, 3, 3.14),
+            (3.14159, 6, 3.14159),
+            (540, 2, 540.0),
+            (0.0032, 2, 0.0032),
+            (50200, 3, 50200.0),
+            (-3.14159, 3, -3.14),
+        ]
+    )
+    def test_round_to_sig_figs(self, value, sig_figs, expected):
+        assert round_to_sig_figs(value, sig_figs) == pytest.approx(expected)
+
+
+class TestSplitNumericString:
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ("92.00", ("92", "00", True)),
+            ("92", ("92", "", False)),
+            ("0.0032", ("0", "0032", True)),
+            ("540", ("540", "", False)),
+            ("540.", ("540", "", True)),
+            ("-3.14", ("3", "14", True)),
+            ("+3.14", ("3", "14", True)),
+            ("5.02e4", ("5", "02", True)),
+            ("0", ("0", "", False)),
+            (3.14, None),
+            ("two", None),
+            ("3.14e", None),
+            ("", None),
+            ("--3.14", None),
+        ]
+    )
+    def test_split_numeric_string(self, value, expected):
+        assert split_numeric_string(value) == expected
+
+
+class TestCountSigFigs:
+
+    @pytest.mark.parametrize(
+        "int_part, frac_part, has_decimal, expected",
+        [
+            ("92", "00", True, 4),
+            ("92", "", False, 2),
+            ("0", "0032", True, 2),
+            ("540", "", False, 2),
+            ("540", "", True, 3),
+            ("0", "", False, 1),
+        ]
+    )
+    def test_count_sig_figs(self, int_part, frac_part, has_decimal, expected):
+        assert count_sig_figs(int_part, frac_part, has_decimal) == expected
+
+
+class TestSigFigsMatch:
+
+    @pytest.mark.parametrize(
+        "response_string, response_value, answer_value, sig_figs, expected",
+        [
+            # Correct value and precision
+            ("3.14", 3.14, 3.14159, 3, True),
+            # Numerically wrong
+            ("3.15", 3.15, 3.14159, 3, False),
+            # Numerically correct but too many digits written
+            ("3.14159", 3.14159, 3.14159, 3, False),
+            # Numerically correct but too few digits written
+            ("3.1", 3.1, 3.10, 3, False),
+            # Negative numbers
+            ("-3.14", -3.14, -3.14159, 3, True),
+            # Zero answer: precision check is bypassed
+            ("0", 0.0, 0.0, 3, True),
+            # Trailing decimal zeros are significant
+            ("92.00", 92.00, 92, 4, True),
+            # Leading zeros are not significant
+            ("0.0032", 0.0032, 0.0032, 2, True),
+            # Whole number trailing zeros are not significant
+            ("540", 540, 540, 2, True),
+            ("540", 540, 540, 3, False),
+            # Explicit trailing decimal point makes trailing zeros significant
+            ("540.", 540, 540, 3, True),
+            # Scientific notation
+            ("5.02e4", 50200, 50200, 3, True),
+            # Non-numeric response
+            (3.14, 3.14, 3.14159, 3, False),
+            ("two", 0, 3.14159, 3, False),
+            ("3.14e", 3.14, 3.14159, 3, False),
+        ]
+    )
+    def test_sig_figs_match(self, response_string, response_value, answer_value, sig_figs, expected):
+        assert sig_figs_match(response_string, response_value, answer_value, sig_figs) is expected
 
 
 class TestSympySymbols:
