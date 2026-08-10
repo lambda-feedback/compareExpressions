@@ -458,6 +458,22 @@ class TestSigFigs:
         with pytest.raises(Exception):
             evaluation_function("92.00 m", "92 m", params)
 
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs,outcome",
+        [
+            ("Different unit, correct value and precision", "1.000 mile", "1609.344 m", 4, True),
+            ("Different unit the other way round", "1609 m", "1 mile", 4, True),
+            ("Correct value, but too few sig figs as written in its own unit", "1 mile", "1609.344 m", 4, False),
+            ("Precision must match exactly, not just be at least sig_figs", "1.0000 mile", "1609.344 m", 4, False),
+            ("Third unit entirely, correct value and precision", "1.6093 km", "1 mile", 5, True),
+            ("Dimension mismatch across unit systems", "1 mile", "1 kg", 4, False),
+        ]
+    )
+    def test_sig_figs_across_units(self, description, response, answer, sig_figs, outcome):
+        params = dict(self.base_params, units_string="SI common imperial", sig_figs=sig_figs)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])
