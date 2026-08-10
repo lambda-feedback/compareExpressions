@@ -64,7 +64,11 @@ def generate_arbitrary_number_pattern_matcher(string):
         offset = end
         number = re.search(number_pattern, string[offset:])
         nonneg_number = re.search(nonneg_number_pattern, string[offset:])
-    non_numbers.append(string[offset:])
+    tail = escape_regex_reserved_characters(string[offset:])
+    if len(tail) > 0:
+        tail = '('+tail+')'
+    tail = ''.join(tail.split())
+    non_numbers.append(tail)
     pattern = full_pattern.join(non_numbers)
 
     def matcher(comp_string):

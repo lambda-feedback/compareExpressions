@@ -1644,6 +1644,50 @@ class TestEvaluationFunction():
                 ],
                 {"detailed_feedback": True}
             ),
+            # Regression test: "response written as answer" used to raise
+            # `re.error: unbalanced parenthesis` whenever the last number in
+            # `answer` was not immediately followed by more digits, e.g. a
+            # trailing closing bracket, since the tail of the string after the
+            # final matched number was not escaped/wrapped before being
+            # inserted into the generated regex pattern.
+            (
+                "(2x-5)(3x+2)",
+                "(2x-5)(3x+2)",
+                "response = answer, response written as answer",
+                True,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response = answer_TRUE",
+                    "response = answer_SAME_SYMBOLS_TRUE",
+                    "response written as answer_TRUE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "(3x+2)(2x-5)",
+                "(2x-5)(3x+2)",
+                "response = answer, response written as answer",
+                False,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response = answer_TRUE",
+                    "response = answer_SAME_SYMBOLS_TRUE",
+                    "response written as answer_FALSE"
+                ],
+                {"detailed_feedback": True}
+            ),
+            (
+                "3x^2-11x-10",
+                "(2x-5)(3x+2)",
+                "response = answer, response written as answer",
+                False,
+                [
+                    "answer_WRITTEN_AS_UNKNOWN",
+                    "response = answer_FALSE",
+                    "response written as answer_FALSE"
+                ],
+                {"detailed_feedback": True}
+            ),
         ]
     )
     def test_syntactical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
