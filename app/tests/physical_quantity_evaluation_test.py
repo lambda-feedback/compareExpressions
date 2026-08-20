@@ -269,6 +269,33 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
 
+    @pytest.mark.parametrize(
+        "response, answer, order_operator, value",
+        [
+            ("10 Hz", "5 Hz", ">", True),
+            ("5 Hz", "10 Hz", ">", False),
+            ("10 Hz", "10 Hz", ">", False),
+            ("10 Hz", "5 Hz", "<", False),
+            ("5 Hz", "10 Hz", "<", True),
+            ("10 Hz", "10 Hz", "<", False),
+            ("10 Hz", "5 Hz", ">=", True),
+            ("5 Hz", "10 Hz", ">=", False),
+            ("10 Hz", "10 Hz", ">=", True),
+            ("10 Hz", "5 Hz", "<=", False),
+            ("5 Hz", "10 Hz", "<=", True),
+            ("10 Hz", "10 Hz", "<=", True),
+        ]
+    )
+    def test_order_operators(self, response, answer, order_operator, value):
+        params = {
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary functions": True,
+            "criteria": "response "+order_operator+" answer"
+        }
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+
     def test_radians_to_frequency(self):
         ans = "2*pi*f radian/second"
         res = "f Hz"
