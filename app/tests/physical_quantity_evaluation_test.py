@@ -586,5 +586,122 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
 
+class TestSigFigs:
+
+    base_params = {
+        "strict_syntax": False,
+        "physical_quantity": True,
+        "units_string": "SI",
+        "strictness": "natural",
+    }
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs,outcome",
+        [
+            ("Correct value and precision, with units", "92.00 m", "92 m", 4, True),
+            ("Numerically equal but wrong precision", "92.00 m", "92 m", 2, False),
+            ("Wrong value", "91.00 m", "92 m", 4, False),
+            ("Unit mismatch fails regardless of sig figs", "92 s", "92 m", 2, False),
+            ("No units, plain numeric", "3.14", "3.14159", 3, True),
+            ("Non-numeric response", "two m", "92 m", 2, False),
+        ]
+    )
+    def test_sig_figs(self, description, response, answer, sig_figs, outcome):
+        params = dict(self.base_params, sig_figs=sig_figs)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_significant_figures_alias(self):
+        params = dict(self.base_params, significant_figures=4)
+        result = evaluation_function("92.00 m", "92 m", params)
+        assert result["is_correct"] is True
+
+    def test_sig_figs_mutually_exclusive_with_atol(self):
+        params = dict(self.base_params, sig_figs=4, atol=0.1)
+        with pytest.raises(Exception):
+            evaluation_function("92.00 m", "92 m", params)
+
+    @pytest.mark.parametrize("sig_figs", [0, -1, 3.5, True])
+    def test_sig_figs_invalid_value_raises(self, sig_figs):
+        params = dict(self.base_params, sig_figs=sig_figs)
+        with pytest.raises(Exception):
+            evaluation_function("92.00 m", "92 m", params)
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs,outcome",
+        [
+            ("Different unit, correct value and precision", "1.000 mile", "1609.344 m", 4, True),
+            ("Different unit the other way round", "1609 m", "1 mile", 4, True),
+            ("Correct value, but too few sig figs as written in its own unit", "1 mile", "1609.344 m", 4, False),
+            ("Precision must match exactly, not just be at least sig_figs", "1.0000 mile", "1609.344 m", 4, False),
+            ("Third unit entirely, correct value and precision", "1.6093 km", "1 mile", 5, True),
+            ("Dimension mismatch across unit systems", "1 mile", "1 kg", 4, False),
+        ]
+    )
+    def test_sig_figs_across_units(self, description, response, answer, sig_figs, outcome):
+        params = dict(self.base_params, units_string="SI common imperial", sig_figs=sig_figs)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+
+class TestSigFigsTolerance:
+
+    base_params = {
+        "strict_syntax": False,
+        "physical_quantity": True,
+        "units_string": "SI",
+        "strictness": "natural",
+    }
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs_tol,outcome",
+        [
+            ("Exact value, written precision ignored", "92.00 m", "92 m", 2, True),
+            ("Within tolerance", "91 m", "92 m", 2, True),
+            ("Outside tolerance", "99 m", "92 m", 2, False),
+            ("Tighter tolerance rejects", "92.5 m", "92 m", 4, False),
+            ("Unit mismatch fails regardless", "92 s", "92 m", 2, False),
+            ("No units, plain numeric within tolerance", "3.1416 m", "3.14159 m", 3, True),
+            ("Non-numeric response", "two m", "92 m", 2, False),
+        ]
+    )
+    def test_sig_figs_tolerance(self, description, response, answer, sig_figs_tol, outcome):
+        params = dict(self.base_params, significant_figures_tolerance=sig_figs_tol)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_sig_figs_tol_alias(self):
+        params = dict(self.base_params, sig_figs_tol=2)
+        result = evaluation_function("91 m", "92 m", params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("conflicting", [{"atol": 0.1}, {"rtol": 0.1}, {"significant_figures": 2}])
+    def test_sig_figs_tolerance_mutually_exclusive(self, conflicting):
+        params = dict(self.base_params, significant_figures_tolerance=2, **conflicting)
+        with pytest.raises(Exception):
+            evaluation_function("92 m", "92 m", params)
+
+    @pytest.mark.parametrize("sig_figs_tol", [0, -1, 3.5, True])
+    def test_sig_figs_tolerance_invalid_value_raises(self, sig_figs_tol):
+        params = dict(self.base_params, significant_figures_tolerance=sig_figs_tol)
+        with pytest.raises(Exception):
+            evaluation_function("92 m", "92 m", params)
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs_tol,outcome",
+        [
+            ("Different unit, within tolerance", "1609 m", "1 mile", 3, True),
+            ("Different unit the other way round", "1.000 mile", "1609.344 m", 4, True),
+            ("Different unit, outside tolerance", "1600 m", "1 mile", 4, False),
+            ("Third unit entirely, within tolerance", "1.6093 km", "1 mile", 4, True),
+            ("Dimension mismatch across unit systems", "1 mile", "1 kg", 4, False),
+        ]
+    )
+    def test_sig_figs_tolerance_across_units(self, description, response, answer, sig_figs_tol, outcome):
+        params = dict(self.base_params, units_string="SI common imperial", significant_figures_tolerance=sig_figs_tol)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

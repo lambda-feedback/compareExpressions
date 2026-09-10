@@ -7,6 +7,7 @@ from ..utility.expression_utilities import (
     parse_expression,
     create_sympy_parsing_params,
     preprocess_expression,
+    sig_figs_match,
 )
 
 from ..preview_implementations.symbolic_preview import preview_function
@@ -117,6 +118,31 @@ def do_comparison(comparison_symbol, expression):
 
 def check_equality(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+
+    sig_figs = parameters_dict.get("sig_figs")
+    if sig_figs is not None:
+        # sig_figs is only meaningful for a direct response/answer numeric comparison (not arbitrary
+        # custom criteria), and it fully replaces the ordinary equality logic below rather than
+        # falling back to it — a value that's numerically equal but written to the wrong precision
+        # must still fail, so this can't be gated behind "ordinary equality already returned False".
+        lhs_string = criterion.children[0].content_string().strip()
+        rhs_string = criterion.children[1].content_string().strip()
+        if {lhs_string, rhs_string} == {"response", "answer"}:
+            def replace_pi(expr):
+                pi_symbol = pi
+                for s in expr.free_symbols:
+                    if str(s) == 'pi':
+                        pi_symbol = s
+                return expr.subs(pi_symbol, float(pi))
+            res = N(replace_pi(lhs_expr))
+            ans = N(replace_pi(rhs_expr))
+            response_value, answer_value = (res, ans) if lhs_string == "response" else (ans, res)
+            response_string = parameters_dict["reserved_expressions_strings"]["learner"]["response"]
+            try:
+                return sig_figs_match(response_string, float(response_value), float(answer_value), sig_figs)
+            except TypeError:
+                return False
+
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         result = False
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):
