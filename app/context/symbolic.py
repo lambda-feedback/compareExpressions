@@ -1,9 +1,22 @@
 from copy import deepcopy
 from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo, simplify
 from sympy import re as real_part
-from sympy import StrictLessThan, LessThan, StrictGreaterThan, GreaterThan
+from sympy import StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, And
 
 INEQUALITY_TYPES = (StrictLessThan, LessThan, StrictGreaterThan, GreaterThan)
+
+
+def inequality_bounds(expr):
+    """The list of inequality parts if `expr` is a single inequality or a
+    conjunction of inequalities (a chained inequality such as `1 < x < 5`),
+    otherwise None."""
+    if isinstance(expr, INEQUALITY_TYPES):
+        return [expr]
+    if isinstance(expr, And) and expr.args and all(
+        isinstance(arg, INEQUALITY_TYPES) for arg in expr.args
+    ):
+        return list(expr.args)
+    return None
 
 from ..utility.expression_utilities import (
     default_parameters,
@@ -120,10 +133,10 @@ def do_comparison(comparison_symbol, expression):
 
 def check_equality(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
-    lhs_is_inequality = isinstance(lhs_expr, INEQUALITY_TYPES)
-    rhs_is_inequality = isinstance(rhs_expr, INEQUALITY_TYPES)
+    lhs_is_inequality = inequality_bounds(lhs_expr) is not None
+    rhs_is_inequality = inequality_bounds(rhs_expr) is not None
     if lhs_is_inequality or rhs_is_inequality:
-        # Subtracting two relational objects raises, so these cases must be
+        # Subtracting relational / And objects raises, so these cases must be
         # intercepted before the generic `lhs_expr - rhs_expr` comparison below.
         if lhs_is_inequality and rhs_is_inequality:
             result = check_inequality_equivalence(lhs_expr, rhs_expr, parameters_dict) is True
@@ -200,34 +213,18 @@ def check_order(criterion, parameters_dict, local_substitutions=[]):
     return result
 
 
-def check_inequality_equivalence(res, ans, parameters_dict):
+def _compare_single_inequality(res, ans, constants):
     """
-    Check whether the response inequality `res` is equivalent to the answer
-    inequality `ans` (both `sympy` relational objects).
+    Compare one response inequality to one answer inequality.
 
     Each side `f REL g` is rewritten as `D REL 0` (all terms moved to one side)
     and the relation normalised to `<` or `<=` by negating `D` when the operator
-    is `>` or `>=`. The two inequalities are equivalent when `D_res / D_ans`
-    simplifies to a positive constant and the (normalised) operators match.
+    is `>` or `>=`. The two are equivalent when `D_res / D_ans` simplifies to a
+    positive constant and the (normalised) operators match.
 
-    Returns one of:
-      True                        - equivalent
-      False                       - not equivalent (e.g. zero ratio)
-      "WRONG_DIRECTION"           - ratio is a negative constant (opposite region)
-      "STRICTNESS_MISMATCH"       - positive-constant ratio but `<` vs `<=` differ
-      "RESPONSE_NOT_INEQUALITY"   - the response is not an inequality, the answer is
-      "ANSWER_NOT_INEQUALITY"     - the response is an inequality, the answer is not
-      None                        - undecidable (non-constant/unknown-sign ratio)
+    Returns one of: True, False, None (undecidable), "WRONG_DIRECTION" (negative
+    constant ratio) or "STRICTNESS_MISMATCH" (positive ratio but `<` vs `<=`).
     """
-    res_is_inequality = isinstance(res, INEQUALITY_TYPES)
-    ans_is_inequality = isinstance(ans, INEQUALITY_TYPES)
-    if not res_is_inequality and ans_is_inequality:
-        return "RESPONSE_NOT_INEQUALITY"
-    if res_is_inequality and not ans_is_inequality:
-        return "ANSWER_NOT_INEQUALITY"
-    if not (res_is_inequality and ans_is_inequality):
-        return False
-
     def normalise(relation):
         difference = relation.lhs - relation.rhs
         operator = relation.rel_op
@@ -241,8 +238,6 @@ def check_inequality_equivalence(res, ans, parameters_dict):
         difference_ans, operator_ans = normalise(ans)
     except Exception:
         return None
-
-    constants = set(parameters_dict["parsing_parameters"].get("constants", set()))
 
     # `difference` is `lhs - rhs`, so it is zero when an inequality compares an
     # expression to itself, e.g. `x <= x`. Such an inequality is always true (or
@@ -267,6 +262,68 @@ def check_inequality_equivalence(res, ans, parameters_dict):
     if ratio.is_negative:
         return "WRONG_DIRECTION"
     return None
+
+
+def _compare_chained_inequalities(res_bounds, ans_bounds, constants):
+    """
+    Compare two chained inequalities (`1 < x < 5`) bound by bound. The response's
+    two bound inequalities are matched against the answer's two in either pairing;
+    equivalent only when some pairing makes both bounds equivalent.
+    """
+    res_lower, res_upper = res_bounds
+    saw_none = False
+    saw_strictness = False
+    for ans_first, ans_second in (
+        (ans_bounds[0], ans_bounds[1]),
+        (ans_bounds[1], ans_bounds[0]),
+    ):
+        first = _compare_single_inequality(res_lower, ans_first, constants)
+        second = _compare_single_inequality(res_upper, ans_second, constants)
+        if first is True and second is True:
+            return True
+        if first is None or second is None:
+            saw_none = True
+        elif {first, second} <= {True, "STRICTNESS_MISMATCH"}:
+            saw_strictness = True
+    if saw_strictness:
+        return "STRICTNESS_MISMATCH"
+    if saw_none:
+        return None
+    return False
+
+
+def check_inequality_equivalence(res, ans, parameters_dict):
+    """
+    Check whether the response inequality `res` is equivalent to the answer
+    inequality `ans`. Both may be a single `sympy` relation or a two-part chained
+    inequality (`1 < x < 5`, parsed as an `And` of two relations); a chain is
+    compared to another chain bound by bound.
+
+    Returns one of:
+      True                        - equivalent
+      False                       - not equivalent (e.g. zero ratio, different arity)
+      "WRONG_DIRECTION"           - ratio is a negative constant (opposite region)
+      "STRICTNESS_MISMATCH"       - positive-constant ratio but `<` vs `<=` differ
+      "RESPONSE_NOT_INEQUALITY"   - the response is not an inequality, the answer is
+      "ANSWER_NOT_INEQUALITY"     - the response is an inequality, the answer is not
+      None                        - undecidable (non-constant/unknown-sign ratio)
+    """
+    res_bounds = inequality_bounds(res)
+    ans_bounds = inequality_bounds(ans)
+    if res_bounds is None and ans_bounds is not None:
+        return "RESPONSE_NOT_INEQUALITY"
+    if res_bounds is not None and ans_bounds is None:
+        return "ANSWER_NOT_INEQUALITY"
+    if res_bounds is None and ans_bounds is None:
+        return False
+    if len(res_bounds) != len(ans_bounds):
+        return False
+
+    constants = set(parameters_dict["parsing_parameters"].get("constants", set()))
+
+    if len(res_bounds) == 1:
+        return _compare_single_inequality(res_bounds[0], ans_bounds[0], constants)
+    return _compare_chained_inequalities(res_bounds, ans_bounds, constants)
 
 
 def check_proportionality(criterion, parameters_dict, local_substitutions=[]):
@@ -491,7 +548,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
 
     res = parameters_dict["reserved_expressions"]["response"]
     ans = parameters_dict["reserved_expressions"]["answer"]
-    use_inequality_equivalence = isinstance(res, INEQUALITY_TYPES) or isinstance(ans, INEQUALITY_TYPES)
+    use_inequality_equivalence = inequality_bounds(res) is not None or inequality_bounds(ans) is not None
     use_equality_equivalence = (isinstance(res, Equality) or isinstance(ans, Equality)) and not use_inequality_equivalence
 
     # TODO: Make checking set equivalence its own context that calls symbolic comparisons instead

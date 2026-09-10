@@ -294,7 +294,9 @@ There is (limited) support for using inequalities in the response and answer. If
 
 For example, with answer `2x - 10 >= 0` (`strict_syntax` false, `elementary_functions` true), the responses `x >= 5`, `5 <= x`, `4x - 20 >= 0` and `10 - 2x <= 0` are accepted, while `x > 5` is rejected (wrong strictness) and `x <= 5` is rejected (opposite direction).
 
-**Note:** `!=` is not supported. Chained inequalities such as `1 < x < 5` are not supported. A response that expands to a set of inequalities (e.g. via `plus_minus`) is not supported.
+Two-part chained inequalities that point in one direction (e.g. `1 < x < 5` or `5 >= x > 1`) are also supported, in the answer and/or the response. Each chain is split into its lower- and upper-bound inequality and the bounds are compared with the rule above. For example, with answer `1 < x < 5` the responses `5 > x > 1`, `0 < x - 1 < 4` and `2 < 2x < 10` are accepted, while `1 <= x < 5` is rejected (wrong strictness on the lower bound).
+
+**Note:** `!=` is not supported. Chains of three or more operators (`1 <= x <= y <= 5`) and mixed-direction chains (`1 < x > 5`) are not supported. A response that expands to a set of inequalities (e.g. via `plus_minus`) is not supported.
 
 #### Checking the value of an expression or a physical quantity
 

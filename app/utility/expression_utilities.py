@@ -26,7 +26,7 @@ from .syntactical_comparison_utilities import is_number_regex
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
-from sympy import Basic, Symbol, Equality, Function, Lt, Le, Gt, Ge
+from sympy import Basic, Symbol, Equality, Function, Lt, Le, Gt, Ge, And
 
 import re
 from typing import Dict, List, TypedDict
@@ -847,28 +847,31 @@ def parse_expression(expr_string, parsing_params):
 
         # Relational (inequality) operands must be detected before the "=" split
         # below, since ">=" and "<=" contain an "=" that would otherwise break
-        # `expr.split("=")`. Only a single, unchained relational operator is
-        # supported (chained forms like `1 < x < 5` are rejected).
-        relational_scan = expr.replace("<=", "\x00").replace(">=", "\x01")
-        number_of_relational_operators = (
-            relational_scan.count("<") + relational_scan.count(">")
-            + relational_scan.count("\x00") + relational_scan.count("\x01")
-        )
-        relational_classes = (("<=", Le), (">=", Ge), ("<", Lt), (">", Gt))
+        # `expr.split("=")`. A single inequality (`x < 5`) and a two-operator
+        # chain pointing in one direction (`1 < x < 5`) are supported; longer or
+        # mixed-direction chains are rejected.
+        relational_parts = re.split(r"(<=|>=|<|>)", expr)
+        relational_classes = {"<=": Le, ">=": Ge, "<": Lt, ">": Gt}
 
-        if number_of_relational_operators > 1:
-            raise ValueError(
-                f"Failed to parse Sympy expression `{expr}`: chained or multiple "
-                "relational operators are not supported."
-            )
-        if number_of_relational_operators == 1:
-            for relational_string, relational_class in relational_classes:
-                if relational_string in expr:
-                    left, right = expr.split(relational_string, 1)
-                    lhs = parse_expr(left, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-                    rhs = parse_expr(right, transformations=transformations, local_dict=symbol_dict, evaluate=False)
-                    parsed_expr = relational_class(lhs, rhs, evaluate=False)
-                    break
+        if len(relational_parts) >= 3:
+            operands = relational_parts[0::2]
+            operators = relational_parts[1::2]
+            if len(operators) > 2:
+                raise ValueError(
+                    f"Failed to parse Sympy expression `{expr}`: only single or "
+                    "chained (two-operator) inequalities are supported."
+                )
+            if len(operators) == 2 and len({op.replace("=", "") for op in operators}) > 1:
+                raise ValueError(
+                    f"Failed to parse Sympy expression `{expr}`: a chained "
+                    "inequality must point in one direction, e.g. `1 < x < 5`."
+                )
+            relations = []
+            for left, operator, right in zip(operands[:-1], operators, operands[1:]):
+                lhs = parse_expr(left, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+                rhs = parse_expr(right, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+                relations.append(relational_classes[operator](lhs, rhs, evaluate=False))
+            parsed_expr = relations[0] if len(relations) == 1 else And(*relations, evaluate=False)
         elif "=" in expr:
             expr_parts = expr.split("=")
             lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)

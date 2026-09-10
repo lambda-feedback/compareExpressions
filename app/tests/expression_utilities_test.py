@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 from sympy import Symbol, sqrt, sin as sympy_sin
-from sympy import Equality, StrictLessThan, LessThan, StrictGreaterThan, GreaterThan
+from sympy import Equality, StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, And
 
 from ..utility.expression_utilities import (
     compute_relative_tolerance_from_significant_decimals,
@@ -519,8 +519,25 @@ class TestParseInequalities:
         # These raised before relational operators were handled explicitly.
         parse_expression(expr, self.parsing_params())
 
-    @pytest.mark.parametrize("expr", ["1 < x < 5", "a < b > c", "x <= y <= z"])
+    @pytest.mark.parametrize(
+        "expr,part_types",
+        [
+            ("1 < x < 5", (StrictLessThan, StrictLessThan)),
+            ("5 >= x > 1", (GreaterThan, StrictGreaterThan)),
+            ("0 < x - 1 <= 4", (StrictLessThan, LessThan)),
+        ]
+    )
+    def test_parse_chained_inequality(self, expr, part_types):
+        parsed = parse_expression(expr, self.parsing_params())
+        assert isinstance(parsed, And)
+        assert len(parsed.args) == 2
+        assert {type(arg) for arg in parsed.args} == set(part_types)
+
+    @pytest.mark.parametrize(
+        "expr", ["a < b > c", "1 < x > 5", "1 <= x <= y <= 5", "a < b < c < d"]
+    )
     def test_parse_chained_inequality_rejected(self, expr):
+        # Mixed-direction chains and chains of three or more operators.
         with pytest.raises(ValueError):
             parse_expression(expr, self.parsing_params())
 

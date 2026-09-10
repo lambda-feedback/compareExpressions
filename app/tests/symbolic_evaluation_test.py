@@ -664,10 +664,35 @@ class TestEvaluationFunction():
         result = evaluation_function("x >= plus_minus 5", "x >= 5", params)
         assert result["is_correct"] is False
 
-    @pytest.mark.parametrize("response", ["1 < x < 5", "a < b > c"])
-    def test_chained_inequality_is_rejected(self, response):
+    @pytest.mark.parametrize(
+        "response,answer,value",
+        [
+            ("1 < x < 5", "1 < x < 5", True),
+            ("5 > x > 1", "1 < x < 5", True),
+            ("0 < x - 1 < 4", "1 < x < 5", True),
+            ("2 < 2*x < 10", "1 < x < 5", True),
+            ("-5 < -x < -1", "1 < x < 5", True),
+            ("1 <= x < 5", "1 < x < 5", False),
+            ("1 < x < 6", "1 < x < 5", False),
+            ("x > 1", "1 < x < 5", False),
+            ("1 < x < 5", "x > 1", False),
+        ]
+    )
+    def test_chained_inequality_in_answer_and_response(self, response, answer, value):
         params = {"strict_syntax": False, "elementary_functions": True}
-        result = evaluation_function(response, "x > 5", params)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    def test_chained_inequality_feedback_tags(self):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function("1 <= x < 5", "1 < x < 5", params, include_test_data=True)
+        assert result["is_correct"] is False
+        assert "response = answer_STRICTNESS_MISMATCH" in result["tags"]
+
+    @pytest.mark.parametrize("response", ["1 < x > 5", "1 <= x <= y <= 5", "a < b > c"])
+    def test_chained_inequality_mixed_or_long_is_rejected(self, response):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, "1 < x < 5", params)
         assert result["is_correct"] is False
         assert "could not be parsed" in result["feedback"]
 
