@@ -83,6 +83,8 @@ class TestPreviewFunction():
             ("x >= 5", r"x \geq 5"),
             ("2 x - 10 <= 0", r"2 \cdot x - 10 \leq 0"),
             ("1 < x < 5", r"1 < x \wedge x < 5"),
+            ("x != 5", r"x \neq 5"),
+            ("x ≠ 5", r"x \neq 5"),
         ]
     )
     def test_inequality_preview(self, response, expected_latex):

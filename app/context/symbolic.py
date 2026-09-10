@@ -1,16 +1,19 @@
 from copy import deepcopy
 from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo, simplify
 from sympy import re as real_part
-from sympy import StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, And
+from sympy import StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, Ne, And
 
+# Order relations (chainable as `1 < x < 5`).
 INEQUALITY_TYPES = (StrictLessThan, LessThan, StrictGreaterThan, GreaterThan)
+# Non-order relations handled by the same machinery but never chained.
+RELATION_TYPES = INEQUALITY_TYPES + (Ne,)
 
 
 def inequality_bounds(expr):
-    """The list of inequality parts if `expr` is a single inequality or a
-    conjunction of inequalities (a chained inequality such as `1 < x < 5`),
-    otherwise None."""
-    if isinstance(expr, INEQUALITY_TYPES):
+    """The list of relation parts if `expr` is a single relation (`x < 5`,
+    `x != 5`) or a conjunction of order inequalities (a chained inequality such
+    as `1 < x < 5`), otherwise None."""
+    if isinstance(expr, RELATION_TYPES):
         return [expr]
     if isinstance(expr, And) and expr.args and all(
         isinstance(arg, INEQUALITY_TYPES) for arg in expr.args
@@ -213,18 +216,50 @@ def check_order(criterion, parameters_dict, local_substitutions=[]):
     return result
 
 
+def _compare_not_equal(res, ans, constants):
+    """
+    `f != g` is equivalent to `p != q` when `(f - g) / (p - q)` simplifies to a
+    non-zero constant. Direction and strictness do not apply to `!=`.
+
+    Returns True, False or None (undecidable).
+    """
+    difference_res = simplify(res.lhs - res.rhs)
+    difference_ans = simplify(ans.lhs - ans.rhs)
+    if difference_res == 0 and difference_ans == 0:
+        return True
+    if difference_res == 0 or difference_ans == 0:
+        return None
+    ratio = simplify(difference_res / difference_ans)
+    if not {str(s) for s in ratio.free_symbols}.issubset(constants):
+        return None
+    if ratio.is_zero:
+        return False
+    if ratio.is_positive or ratio.is_negative:
+        return True
+    return None
+
+
 def _compare_single_inequality(res, ans, constants):
     """
-    Compare one response inequality to one answer inequality.
+    Compare one response relation to one answer relation.
 
-    Each side `f REL g` is rewritten as `D REL 0` (all terms moved to one side)
-    and the relation normalised to `<` or `<=` by negating `D` when the operator
-    is `>` or `>=`. The two are equivalent when `D_res / D_ans` simplifies to a
-    positive constant and the (normalised) operators match.
+    For order operators each side `f REL g` is rewritten as `D REL 0` (all terms
+    moved to one side) and normalised to `<` or `<=` by negating `D` when the
+    operator is `>` or `>=`; the two are equivalent when `D_res / D_ans`
+    simplifies to a positive constant and the normalised operators match. `!=` is
+    delegated to `_compare_not_equal`; `!=` against an order operator is never
+    equivalent.
 
     Returns one of: True, False, None (undecidable), "WRONG_DIRECTION" (negative
     constant ratio) or "STRICTNESS_MISMATCH" (positive ratio but `<` vs `<=`).
     """
+    res_is_not_equal = res.rel_op == "!="
+    ans_is_not_equal = ans.rel_op == "!="
+    if res_is_not_equal != ans_is_not_equal:
+        return False
+    if res_is_not_equal and ans_is_not_equal:
+        return _compare_not_equal(res, ans, constants)
+
     def normalise(relation):
         difference = relation.lhs - relation.rhs
         operator = relation.rel_op
@@ -294,18 +329,20 @@ def _compare_chained_inequalities(res_bounds, ans_bounds, constants):
 
 def check_inequality_equivalence(res, ans, parameters_dict):
     """
-    Check whether the response inequality `res` is equivalent to the answer
-    inequality `ans`. Both may be a single `sympy` relation or a two-part chained
-    inequality (`1 < x < 5`, parsed as an `And` of two relations); a chain is
-    compared to another chain bound by bound.
+    Check whether the response relation `res` is equivalent to the answer
+    relation `ans`. Both may be a single `sympy` relation (an order operator or
+    `!=`) or a two-part chained order inequality (`1 < x < 5`, parsed as an `And`
+    of two relations); a chain is compared to another chain bound by bound, and a
+    chain is never equivalent to a single relation.
 
     Returns one of:
       True                        - equivalent
-      False                       - not equivalent (e.g. zero ratio, different arity)
+      False                       - not equivalent (e.g. zero ratio, different arity,
+                                    `!=` vs an order operator)
       "WRONG_DIRECTION"           - ratio is a negative constant (opposite region)
       "STRICTNESS_MISMATCH"       - positive-constant ratio but `<` vs `<=` differ
-      "RESPONSE_NOT_INEQUALITY"   - the response is not an inequality, the answer is
-      "ANSWER_NOT_INEQUALITY"     - the response is an inequality, the answer is not
+      "RESPONSE_NOT_INEQUALITY"   - the response is not a relation, the answer is
+      "ANSWER_NOT_INEQUALITY"     - the response is a relation, the answer is not
       None                        - undecidable (non-constant/unknown-sign ratio)
     """
     res_bounds = inequality_bounds(res)

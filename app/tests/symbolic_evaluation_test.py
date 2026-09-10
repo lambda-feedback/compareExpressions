@@ -715,6 +715,39 @@ class TestEvaluationFunction():
         assert result["is_correct"] is False
         assert "could not be parsed" in result["feedback"]
 
+    @pytest.mark.parametrize(
+        "response,answer,value",
+        [
+            ("x != 5", "x != 5", True),
+            ("5 != x", "x != 5", True),
+            ("x - 5 != 0", "x != 5", True),
+            ("2*x != 10", "x != 5", True),
+            ("-x != -5", "x != 5", True),
+            ("x ≠ 5", "x != 5", True),
+            ("x != 3", "x != 5", False),
+            ("x = 5", "x != 5", False),
+            ("x != 5", "x = 5", False),
+            ("x > 5", "x != 5", False),
+        ]
+    )
+    def test_not_equal_in_answer_and_response(self, response, answer, value):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    def test_not_equal_feedback_tag(self):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function("2*x != 10", "x != 5", params, include_test_data=True)
+        assert result["is_correct"] is True
+        assert "response = answer_TRUE" in result["tags"]
+
+    @pytest.mark.parametrize("response", ["x != y != 5", "1 < x != 5"])
+    def test_not_equal_chained_or_mixed_is_rejected(self, response):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, "x != 5", params)
+        assert result["is_correct"] is False
+        assert "could not be parsed" in result["feedback"]
+
     def test_empty_old_format_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
         response = '(1+(gamma-1)/2)((-1)/(gamma-1))'

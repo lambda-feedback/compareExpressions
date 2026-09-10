@@ -296,7 +296,9 @@ For example, with answer `2x - 10 >= 0` (`strict_syntax` false, `elementary_func
 
 Two-part chained inequalities that point in one direction (e.g. `1 < x < 5` or `5 >= x > 1`) are also supported, in the answer and/or the response. Each chain is split into its lower- and upper-bound inequality and the bounds are compared with the rule above. For example, with answer `1 < x < 5` the responses `5 > x > 1`, `0 < x - 1 < 4` and `2 < 2x < 10` are accepted, while `1 <= x < 5` is rejected (wrong strictness on the lower bound).
 
-**Note:** `!=` is not supported. Chains of three or more operators (`1 <= x <= y <= 5`) and mixed-direction chains (`1 < x > 5`) are not supported. A response that expands to a set of inequalities (e.g. via `plus_minus`) is not supported.
+Not-equal, `!=` (or `≠`), is supported as a single relation. `f != g` is equivalent to `p != q` when `(f - g) / (p - q)` simplifies to a non-zero constant (direction and strictness do not apply). For example, with answer `x != 5` the responses `5 != x`, `2x != 10` and `x - 5 != 0` are accepted; `x = 5` is not.
+
+**Note:** `!=` cannot be chained (`x != y != 5`) or combined with order operators (`1 < x != 5`). Chains of three or more operators (`1 <= x <= y <= 5`) and mixed-direction chains (`1 < x > 5`) are not supported. A response that expands to a set of inequalities (e.g. via `plus_minus`) is not supported.
 
 #### Checking the value of an expression or a physical quantity
 

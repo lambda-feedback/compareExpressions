@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 from sympy import Symbol, sqrt, sin as sympy_sin
-from sympy import Equality, StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, And
+from sympy import Equality, StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, Ne, And
 
 from ..utility.expression_utilities import (
     compute_relative_tolerance_from_significant_decimals,
@@ -535,11 +535,22 @@ class TestParseInequalities:
         assert len(parsed.args) == 2
         assert {type(arg) for arg in parsed.args} == set(part_types)
 
+    @pytest.mark.parametrize("expr", ["x != 5", "5 != x", "x - 5 != 0", "x ≠ 5", "x!=5"])
+    def test_parse_not_equal(self, expr):
+        parsed = parse_expression(expr, self.parsing_params())
+        assert isinstance(parsed, Ne)
+        assert parsed.rel_op == "!="
+
     @pytest.mark.parametrize(
-        "expr", ["a < b > c", "1 < x > 5", "1 <= x <= y <= 5", "a < b < c < d"]
+        "expr",
+        [
+            "a < b > c", "1 < x > 5", "1 <= x <= y <= 5", "a < b < c < d",
+            "x != y != 5", "1 < x != 5",
+        ]
     )
     def test_parse_chained_inequality_rejected(self, expr):
-        # Mixed-direction chains and chains of three or more operators.
+        # Mixed-direction chains, chains of three or more operators, and `!=`
+        # combined with any other relational operator.
         with pytest.raises(ValueError):
             parse_expression(expr, self.parsing_params())
 
