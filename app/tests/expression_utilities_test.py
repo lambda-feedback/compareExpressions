@@ -13,6 +13,7 @@ from ..utility.expression_utilities import (
     latex_symbols,
     preprocess_expression,
     protect_elementary_functions_substitutions,
+    relative_tolerance_from_sig_figs,
     round_to_sig_figs,
     sig_figs_match,
     split_numeric_string,
@@ -249,6 +250,26 @@ class TestComputeRelativeTolerance:
     def test_relative_tolerance(self, string, expected):
         result = compute_relative_tolerance_from_significant_decimals(string)
         assert result == pytest.approx(expected)
+
+
+class TestRelativeToleranceFromSigFigs:
+
+    @pytest.mark.parametrize(
+        "sig_figs, expected",
+        [
+            (1, 0.5),
+            (2, 5e-2),
+            (3, 5e-3),
+            (6, 5e-6),
+        ]
+    )
+    def test_relative_tolerance_from_sig_figs(self, sig_figs, expected):
+        assert relative_tolerance_from_sig_figs(sig_figs) == pytest.approx(expected)
+
+    def test_no_lower_floor(self):
+        # Unlike compute_relative_tolerance_from_significant_decimals there is no
+        # DEFAULT_SIGNIFICANT_FIGURES floor.
+        assert relative_tolerance_from_sig_figs(1) == pytest.approx(0.5)
 
 
 class TestRoundToSigFigs:

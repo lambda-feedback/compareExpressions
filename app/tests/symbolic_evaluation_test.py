@@ -2252,5 +2252,44 @@ class TestSigFigs:
             evaluation_function("3.14", "3.14159", params)
 
 
+class TestSigFigsTolerance:
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs_tol,outcome",
+        [
+            ("Within tolerance", "3.1416", "3.14159", 3, True),
+            ("Within tolerance, fewer digits", "3.14", "3.14159", 3, True),
+            ("Exact response", "3.14159", "3.14159", 3, True),
+            ("Written precision is not checked", "3.14000", "3.14159", 3, True),
+            ("Too few digits, outside tolerance", "3.1", "3.14159", 3, False),
+            ("Wrong value", "3.2", "3.14159", 3, False),
+            ("Tighter tolerance rejects rounded value", "3.14", "3.14159", 5, False),
+            ("Negative numbers", "-3.1416", "-3.14159", 3, True),
+            ("Non-numeric response", "two", "3.14159", 3, False),
+        ]
+    )
+    def test_sig_figs_tolerance(self, description, response, answer, sig_figs_tol, outcome):
+        params = {"strict_syntax": False, "significant_figures_tolerance": sig_figs_tol}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_sig_figs_tol_alias(self):
+        params = {"strict_syntax": False, "sig_figs_tol": 3}
+        result = evaluation_function("3.14", "3.14159", params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("conflicting", [{"atol": 0.1}, {"rtol": 0.1}, {"significant_figures": 3}])
+    def test_sig_figs_tolerance_mutually_exclusive(self, conflicting):
+        params = {"strict_syntax": False, "significant_figures_tolerance": 3, **conflicting}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+    @pytest.mark.parametrize("sig_figs_tol", [0, -1, 3.5, True])
+    def test_sig_figs_tolerance_invalid_value_raises(self, sig_figs_tol):
+        params = {"strict_syntax": False, "significant_figures_tolerance": sig_figs_tol}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

@@ -577,6 +577,20 @@ def compute_relative_tolerance_from_significant_decimals(string):
     return rtol
 
 
+def relative_tolerance_from_sig_figs(sig_figs):
+    '''
+    Input:
+        sig_figs : required number of significant figures (positive int)
+    Output:
+        The relative tolerance that corresponds to agreement to `sig_figs`
+        significant figures, i.e. half a unit in the last significant place:
+        5*10**(-sig_figs).
+    Unlike compute_relative_tolerance_from_significant_decimals this takes the
+    significant-figure count directly and applies no lower floor.
+    '''
+    return 5 * 10 ** (-sig_figs)
+
+
 def round_to_sig_figs(value, sig_figs):
     if value == 0:
         return 0.0

@@ -5,6 +5,7 @@ from .utility.preview_utilities import parse_latex
 from .context.symbolic import context as symbolic_context
 from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from .utility.expression_utilities import relative_tolerance_from_sig_figs
 
 from collections.abc import Mapping
 
@@ -242,13 +243,25 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if "significant_figures" in params:
         params["sig_figs"] = params["significant_figures"]
 
+    if "significant_figures_tolerance" in params:
+        params["sig_figs_tol"] = params["significant_figures_tolerance"]
+
     if "sig_figs" in params:
-        uses_tolerance = any(k in params for k in ("relative_tolerance", "rtol", "absolute_tolerance", "atol"))
+        uses_tolerance = any(k in params for k in ("relative_tolerance", "rtol", "absolute_tolerance", "atol", "significant_figures_tolerance", "sig_figs_tol"))
         if uses_tolerance:
-            raise Exception("`sig_figs`/`significant_figures` cannot be used together with `atol`/`rtol`.")
+            raise Exception("`sig_figs`/`significant_figures` cannot be used together with `atol`/`rtol` or `significant_figures_tolerance`.")
         sig_figs = params["sig_figs"]
         if not isinstance(sig_figs, int) or isinstance(sig_figs, bool) or sig_figs < 1:
             raise Exception("`sig_figs`/`significant_figures` must be a positive integer.")
+
+    if "sig_figs_tol" in params:
+        conflicts = any(k in params for k in ("relative_tolerance", "rtol", "absolute_tolerance", "atol", "significant_figures", "sig_figs"))
+        if conflicts:
+            raise Exception("`sig_figs_tol`/`significant_figures_tolerance` cannot be used together with `atol`/`rtol` or `significant_figures`.")
+        sig_figs_tol = params["sig_figs_tol"]
+        if not isinstance(sig_figs_tol, int) or isinstance(sig_figs_tol, bool) or sig_figs_tol < 1:
+            raise Exception("`sig_figs_tol`/`significant_figures_tolerance` must be a positive integer.")
+        params["rtol"] = relative_tolerance_from_sig_figs(sig_figs_tol)
 
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
@@ -347,6 +360,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "atol": parameters.get("atol", 0),
             "rtol": parameters.get("rtol", 0),
             "sig_figs": parameters.get("sig_figs"),
+            "sig_figs_tol": parameters.get("sig_figs_tol"),
             "custom_feedback": parameters.get("custom_feedback",{}),
         }
     )

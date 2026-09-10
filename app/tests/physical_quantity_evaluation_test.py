@@ -475,5 +475,49 @@ class TestSigFigs:
         assert result["is_correct"] is outcome
 
 
+class TestSigFigsTolerance:
+
+    base_params = {
+        "strict_syntax": False,
+        "physical_quantity": True,
+        "units_string": "SI",
+        "strictness": "natural",
+    }
+
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs_tol,outcome",
+        [
+            ("Exact value, written precision ignored", "92.00 m", "92 m", 2, True),
+            ("Within tolerance", "91 m", "92 m", 2, True),
+            ("Outside tolerance", "99 m", "92 m", 2, False),
+            ("Tighter tolerance rejects", "92.5 m", "92 m", 4, False),
+            ("Unit mismatch fails regardless", "92 s", "92 m", 2, False),
+            ("No units, plain numeric within tolerance", "3.1416 m", "3.14159 m", 3, True),
+            ("Non-numeric response", "two m", "92 m", 2, False),
+        ]
+    )
+    def test_sig_figs_tolerance(self, description, response, answer, sig_figs_tol, outcome):
+        params = dict(self.base_params, significant_figures_tolerance=sig_figs_tol)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_sig_figs_tol_alias(self):
+        params = dict(self.base_params, sig_figs_tol=2)
+        result = evaluation_function("91 m", "92 m", params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("conflicting", [{"atol": 0.1}, {"rtol": 0.1}, {"significant_figures": 2}])
+    def test_sig_figs_tolerance_mutually_exclusive(self, conflicting):
+        params = dict(self.base_params, significant_figures_tolerance=2, **conflicting)
+        with pytest.raises(Exception):
+            evaluation_function("92 m", "92 m", params)
+
+    @pytest.mark.parametrize("sig_figs_tol", [0, -1, 3.5, True])
+    def test_sig_figs_tolerance_invalid_value_raises(self, sig_figs_tol):
+        params = dict(self.base_params, significant_figures_tolerance=sig_figs_tol)
+        with pytest.raises(Exception):
+            evaluation_function("92 m", "92 m", params)
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])
