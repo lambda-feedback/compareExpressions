@@ -201,6 +201,10 @@ along the the following base tokens:
 
 Both integration points restrict `sig_figs` to a direct `response = answer` (or `answer = response`) comparison — it has no effect on other custom criteria.
 
+##### Significant figures as tolerance (`sig_figs_tol`)
+
+The `significant_figures_tolerance`/`sig_figs_tol` parameter is the *fuzzy* counterpart to `sig_figs`: instead of checking written precision, it accepts any response that agrees with the answer to `n` significant figures. It is implemented entirely in `evaluation_function` (`evaluation.py`), before context determination: `relative_tolerance_from_sig_figs(n)` (`app/utility/expression_utilities.py`) returns `5*10**(-n)` and this is written into `params["rtol"]`, so the feature needs no context-specific code — it reuses the existing `rtol` handling in `check_equality` (`context/symbolic.py`) and in `quantity_match`/`comparison_base_graph` (`context/physical_quantity.py`), including the fact that the implicit `compute_relative_tolerance_from_significant_decimals` derivation is skipped whenever `rtol` is non-zero. Unlike that implicit derivation, `relative_tolerance_from_sig_figs` applies no `DEFAULT_SIGNIFICANT_FIGURES` floor — the explicit count is used as given. `sig_figs_tol` is mutually exclusive with `sig_figs`/`significant_figures` and with `atol`/`rtol` (enforced with a raised `Exception` in `evaluation_function`).
+
 ## Feedback and tag generation
 
 - Generate feedback procedures from criteria, each procedure return a boolean that indicates whether the corresponding criterion is satisfied or not, a string intended to be shown to the student, and a list of tags indicating what was found when checking the criteria
