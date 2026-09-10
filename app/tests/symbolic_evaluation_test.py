@@ -676,6 +676,16 @@ class TestEvaluationFunction():
             ("1 < x < 6", "1 < x < 5", False),
             ("x > 1", "1 < x < 5", False),
             ("1 < x < 5", "x > 1", False),
+            # non-strict (closed interval) chains
+            ("1 <= x <= 5", "1 <= x <= 5", True),
+            ("5 >= x >= 1", "1 <= x <= 5", True),
+            ("0 <= x - 1 <= 4", "1 <= x <= 5", True),
+            ("2 <= 2*x <= 10", "1 <= x <= 5", True),
+            ("-5 <= -x <= -1", "1 <= x <= 5", True),
+            ("1 < x <= 5", "1 <= x <= 5", False),
+            ("1 <= x < 5", "1 <= x <= 5", False),
+            ("1 < x < 5", "1 <= x <= 5", False),
+            ("1 <= x <= 6", "1 <= x <= 5", False),
         ]
     )
     def test_chained_inequality_in_answer_and_response(self, response, answer, value):
@@ -683,9 +693,18 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is value
 
-    def test_chained_inequality_feedback_tags(self):
+    @pytest.mark.parametrize(
+        "response,answer",
+        [
+            ("1 <= x < 5", "1 < x < 5"),
+            ("1 < x <= 5", "1 <= x <= 5"),
+            ("1 <= x < 5", "1 <= x <= 5"),
+            ("1 < x < 5", "1 <= x <= 5"),
+        ]
+    )
+    def test_chained_inequality_feedback_tags(self, response, answer):
         params = {"strict_syntax": False, "elementary_functions": True}
-        result = evaluation_function("1 <= x < 5", "1 < x < 5", params, include_test_data=True)
+        result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is False
         assert "response = answer_STRICTNESS_MISMATCH" in result["tags"]
 

@@ -523,6 +523,8 @@ class TestParseInequalities:
         "expr,part_types",
         [
             ("1 < x < 5", (StrictLessThan, StrictLessThan)),
+            ("1 <= x <= 5", (LessThan, LessThan)),
+            ("5 >= x >= 1", (GreaterThan, GreaterThan)),
             ("5 >= x > 1", (GreaterThan, StrictGreaterThan)),
             ("0 < x - 1 <= 4", (StrictLessThan, LessThan)),
         ]
