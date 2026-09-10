@@ -28,6 +28,13 @@ feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "EQUALITIES_EQUIVALENT": None,
     "EQUALITIES_NOT_EQUIVALENT": "The response is not the expected equality.",
     "EQUALITY_EQUIVALENCE_UNKNOWN": "Cannot determine if the given equality is equivalent to the expected equality.",
+    "RESPONSE_NOT_INEQUALITY": "The response was an expression but was expected to be an inequality.",
+    "ANSWER_NOT_INEQUALITY": "The response was an inequality but the answer is not, so they cannot be compared.",
+    "INEQUALITIES_EQUIVALENT": None,
+    "INEQUALITIES_NOT_EQUIVALENT": "The response is not the expected inequality.",
+    "INEQUALITY_EQUIVALENCE_UNKNOWN": "Cannot determine if the given inequality is equivalent to the expected inequality.",
+    "INEQUALITIES_WRONG_DIRECTION": "The response is the opposite inequality to the one expected.",
+    "INEQUALITY_STRICTNESS_MISMATCH": "The response has the wrong strictness (`<` vs `<=`, or `>` vs `>=`).",
     "WITHIN_TOLERANCE": None,  # "The difference between the response the answer is within specified error tolerance.",
     "NOT_NUMERICAL": None,  # "The expression cannot be evaluated numerically.",
 }[tag]

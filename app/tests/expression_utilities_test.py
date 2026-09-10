@@ -1,5 +1,8 @@
+from copy import deepcopy
+
 import pytest
 from sympy import Symbol, sqrt, sin as sympy_sin
+from sympy import Equality, StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, Ne, And
 
 from ..utility.expression_utilities import (
     compute_relative_tolerance_from_significant_decimals,
@@ -7,11 +10,14 @@ from ..utility.expression_utilities import (
     convert_bracket_notation,
     convert_unicode_dashes,
     create_expression_set,
+    create_sympy_parsing_params,
+    default_parameters,
     extract_latex,
     find_matching_parenthesis,
     has_matching_brackets,
     is_multiple_answers_wrapper,
     latex_symbols,
+    parse_expression,
     preprocess_expression,
     protect_elementary_functions_substitutions,
     substitute,
@@ -481,3 +487,74 @@ class TestPreprocessExpression:
         assert result == expr
         assert feedback is not None
         assert feedback[0] == "BRACKET_NOTATION_MISMATCH"
+
+
+class TestParseInequalities:
+
+    def parsing_params(self):
+        params = deepcopy(default_parameters)
+        params.update({"strict_syntax": False, "elementary_functions": True})
+        return create_sympy_parsing_params(params)
+
+    @pytest.mark.parametrize(
+        "expr,expected_type,rel_op",
+        [
+            ("x > 5", StrictGreaterThan, ">"),
+            ("x < 5", StrictLessThan, "<"),
+            ("x >= 5", GreaterThan, ">="),
+            ("x <= 5", LessThan, "<="),
+            ("5 < x", StrictLessThan, "<"),
+            ("2*x - 10 >= 0", GreaterThan, ">="),
+            ("2x - 10 > 0", StrictGreaterThan, ">"),
+            ("x>=5", GreaterThan, ">="),
+        ]
+    )
+    def test_parse_inequality_operators(self, expr, expected_type, rel_op):
+        parsed = parse_expression(expr, self.parsing_params())
+        assert isinstance(parsed, expected_type)
+        assert parsed.rel_op == rel_op
+
+    @pytest.mark.parametrize("expr", ["x >= 5", "x <= 5", "2*x - 10 >= 0"])
+    def test_parse_inequality_regression_le_ge(self, expr):
+        # These raised before relational operators were handled explicitly.
+        parse_expression(expr, self.parsing_params())
+
+    @pytest.mark.parametrize(
+        "expr,part_types",
+        [
+            ("1 < x < 5", (StrictLessThan, StrictLessThan)),
+            ("1 <= x <= 5", (LessThan, LessThan)),
+            ("5 >= x >= 1", (GreaterThan, GreaterThan)),
+            ("5 >= x > 1", (GreaterThan, StrictGreaterThan)),
+            ("0 < x - 1 <= 4", (StrictLessThan, LessThan)),
+        ]
+    )
+    def test_parse_chained_inequality(self, expr, part_types):
+        parsed = parse_expression(expr, self.parsing_params())
+        assert isinstance(parsed, And)
+        assert len(parsed.args) == 2
+        assert {type(arg) for arg in parsed.args} == set(part_types)
+
+    @pytest.mark.parametrize("expr", ["x != 5", "5 != x", "x - 5 != 0", "x ≠ 5", "x!=5"])
+    def test_parse_not_equal(self, expr):
+        parsed = parse_expression(expr, self.parsing_params())
+        assert isinstance(parsed, Ne)
+        assert parsed.rel_op == "!="
+
+    @pytest.mark.parametrize(
+        "expr",
+        [
+            "a < b > c", "1 < x > 5", "1 <= x <= y <= 5", "a < b < c < d",
+            "x != y != 5", "1 < x != 5",
+        ]
+    )
+    def test_parse_chained_inequality_rejected(self, expr):
+        # Mixed-direction chains, chains of three or more operators, and `!=`
+        # combined with any other relational operator.
+        with pytest.raises(ValueError):
+            parse_expression(expr, self.parsing_params())
+
+    @pytest.mark.parametrize("expr", ["x = 5", "2*x**2 = 10*y**2 + 14"])
+    def test_parse_equality_still_works(self, expr):
+        parsed = parse_expression(expr, self.parsing_params())
+        assert isinstance(parsed, Equality)

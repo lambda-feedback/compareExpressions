@@ -26,7 +26,7 @@ from .syntactical_comparison_utilities import is_number_regex
 from sympy.parsing.sympy_parser import parse_expr, split_symbols_custom, _token_splittable
 from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
-from sympy import Basic, Symbol, Equality, Function
+from sympy import Basic, Symbol, Equality, Function, Lt, Le, Gt, Ge, Ne, And
 
 import re
 from typing import Dict, List, TypedDict
@@ -818,6 +818,7 @@ def parse_expression(expr_string, parsing_params):
     parsed_expr_set = set()
 
     for expr in expr_set:
+        expr = expr.replace("≠", "!=")
         if not strict_syntax:
             expr, _ = convert_bracket_notation(expr)
         expr = preprocess_according_to_chosen_convention(expr, parsing_params)
@@ -845,7 +846,40 @@ def parse_expression(expr_string, parsing_params):
             transformations += parser_transformations[11]
 
 
-        if "=" in expr:
+        # Relational operands must be detected before the "=" split below, since
+        # ">=", "<=" and "!=" contain an "=" that would otherwise break
+        # `expr.split("=")`. A single relation (`x < 5`, `x != 5`) and a
+        # two-operator order chain pointing in one direction (`1 < x < 5`) are
+        # supported; longer or mixed-direction chains, and `!=` combined with any
+        # other operator, are rejected.
+        relational_parts = re.split(r"(<=|>=|!=|<|>)", expr)
+        relational_classes = {"<=": Le, ">=": Ge, "<": Lt, ">": Gt, "!=": Ne}
+
+        if len(relational_parts) >= 3:
+            operands = relational_parts[0::2]
+            operators = relational_parts[1::2]
+            if len(operators) > 2:
+                raise ValueError(
+                    f"Failed to parse Sympy expression `{expr}`: only single or "
+                    "chained (two-operator) inequalities are supported."
+                )
+            if "!=" in operators and len(operators) > 1:
+                raise ValueError(
+                    f"Failed to parse Sympy expression `{expr}`: `!=` cannot be "
+                    "combined with other relational operators."
+                )
+            if len(operators) == 2 and len({op.replace("=", "") for op in operators}) > 1:
+                raise ValueError(
+                    f"Failed to parse Sympy expression `{expr}`: a chained "
+                    "inequality must point in one direction, e.g. `1 < x < 5`."
+                )
+            relations = []
+            for left, operator, right in zip(operands[:-1], operators, operands[1:]):
+                lhs = parse_expr(left, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+                rhs = parse_expr(right, transformations=transformations, local_dict=symbol_dict, evaluate=False)
+                relations.append(relational_classes[operator](lhs, rhs, evaluate=False))
+            parsed_expr = relations[0] if len(relations) == 1 else And(*relations, evaluate=False)
+        elif "=" in expr:
             expr_parts = expr.split("=")
             lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
             rhs = parse_expr(expr_parts[1], transformations=transformations, local_dict=symbol_dict)

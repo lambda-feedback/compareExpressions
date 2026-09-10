@@ -37,7 +37,7 @@ The `criteria` parameter reserves `response` and `answer` as keywords that will 
 
 ##### Available criteria
 
-**Note:** In the table below EXPRESSION is used to denote some mathematical expression, i.e. a string that contains mathematical symbols and operators, but no equal signs `=` or inequality signs `>`, '<'.
+**Note:** In the table below EXPRESSION is used to denote some mathematical expression, i.e. a string that contains mathematical symbols and operators, but no equal signs `=` or inequality signs `>`, '<'. (A whole-response inequality such as `2x - 10 >= 0` is still supported when the answer is also an inequality — see *Inequalities in the answer and response* below.)
 
 | Name  | Syntax                         | Description                         | Example             |
 |-------|:-------------------------------|:------------------------------------|:--------------------|
@@ -287,6 +287,18 @@ The example given in the example problem set uses an EXPRESSION response area th
 
 Some examples of expressions that are accepted as correct:
 `x^2-5\*y^2-7=0` $x^2-5y^2-7=0$, `x^2 = 5y^2+7` $x^2=5y^2+7$, `2x^2 = 10y^2+14` $2x^2=10y^2+14=0$.
+
+#### Inequalities in the answer and response
+
+There is (limited) support for using inequalities in the response and answer. If the answer is `p REL q` and the response is `f REL' g`, where `REL` and `REL'` are order operators (`<`, `<=`, `>`, `>=`), the function rewrites each side as `D REL 0` (moving all terms to one side and flipping `>`/`>=` to `<`/`<=`) and checks that `D_response / D_answer` simplifies to a **positive** constant *and* that the two relations have the same strictness. `<` and `<=` are treated as different.
+
+For example, with answer `2x - 10 >= 0` (`strict_syntax` false, `elementary_functions` true), the responses `x >= 5`, `5 <= x`, `4x - 20 >= 0` and `10 - 2x <= 0` are accepted, while `x > 5` is rejected (wrong strictness) and `x <= 5` is rejected (opposite direction).
+
+Two-part chained inequalities that point in one direction (e.g. `1 < x < 5` or `5 >= x > 1`) are also supported, in the answer and/or the response. Each chain is split into its lower- and upper-bound inequality and the bounds are compared with the rule above. For example, with answer `1 < x < 5` the responses `5 > x > 1`, `0 < x - 1 < 4` and `2 < 2x < 10` are accepted, while `1 <= x < 5` is rejected (wrong strictness on the lower bound).
+
+Not-equal, `!=` (or `≠`), is supported as a single relation. `f != g` is equivalent to `p != q` when `(f - g) / (p - q)` simplifies to a non-zero constant (direction and strictness do not apply). For example, with answer `x != 5` the responses `5 != x`, `2x != 10` and `x - 5 != 0` are accepted; `x = 5` is not.
+
+**Note:** `!=` cannot be chained (`x != y != 5`) or combined with order operators (`1 < x != 5`). Chains of three or more operators (`1 <= x <= y <= 5`) and mixed-direction chains (`1 < x > 5`) are not supported. A response that expands to a set of inequalities (e.g. via `plus_minus`) is not supported.
 
 #### Checking the value of an expression or a physical quantity
 
