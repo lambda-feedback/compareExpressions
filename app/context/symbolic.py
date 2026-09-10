@@ -215,8 +215,8 @@ def check_inequality_equivalence(res, ans, parameters_dict):
       False                       - not equivalent (e.g. zero ratio)
       "WRONG_DIRECTION"           - ratio is a negative constant (opposite region)
       "STRICTNESS_MISMATCH"       - positive-constant ratio but `<` vs `<=` differ
-      "EXPRESSION_NOT_INEQUALITY" - response is not an inequality, answer is
-      "INEQUALITY_NOT_EXPRESSION" - response is an inequality, answer is not
+      "RESPONSE_NOT_INEQUALITY"   - the response is not an inequality, the answer is
+      "ANSWER_NOT_INEQUALITY"     - the response is an inequality, the answer is not
       None                        - undecidable (non-constant/unknown-sign ratio)
     """
     res_is_inequality = isinstance(res, INEQUALITY_TYPES)
@@ -244,9 +244,15 @@ def check_inequality_equivalence(res, ans, parameters_dict):
 
     constants = set(parameters_dict["parsing_parameters"].get("constants", set()))
 
+    # `difference` is `lhs - rhs`, so it is zero when an inequality compares an
+    # expression to itself, e.g. `x <= x`. Such an inequality is always true (or
+    # always false for `<` / `>`), and a zero `difference_ans` would make the
+    # ratio below a division by zero, so handle these cases up front.
+    if difference_res == 0 and difference_ans == 0:
+        if operator_res == operator_ans:
+            return True
+        return "STRICTNESS_MISMATCH"
     if difference_res == 0 or difference_ans == 0:
-        if difference_res == 0 and difference_ans == 0:
-            return True if operator_res == operator_ans else "STRICTNESS_MISMATCH"
         return None
 
     ratio = simplify(difference_res / difference_ans)
@@ -255,7 +261,9 @@ def check_inequality_equivalence(res, ans, parameters_dict):
     if ratio.is_zero:
         return False
     if ratio.is_positive:
-        return True if operator_res == operator_ans else "STRICTNESS_MISMATCH"
+        if operator_res == operator_ans:
+            return True
+        return "STRICTNESS_MISMATCH"
     if ratio.is_negative:
         return "WRONG_DIRECTION"
     return None
@@ -437,8 +445,8 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             False: label+"_FALSE",
             "WRONG_DIRECTION": label+"_WRONG_DIRECTION",
             "STRICTNESS_MISMATCH": label+"_STRICTNESS_MISMATCH",
-            "EXPRESSION_NOT_INEQUALITY": label+"_EXPRESSION_NOT_INEQUALITY",
-            "INEQUALITY_NOT_EXPRESSION": label+"_INEQUALITY_NOT_EXPRESSION",
+            "RESPONSE_NOT_INEQUALITY": label+"_RESPONSE_NOT_INEQUALITY",
+            "ANSWER_NOT_INEQUALITY": label+"_ANSWER_NOT_INEQUALITY",
         }
         return {result_to_tag.get(result, label+"_UNKNOWN"): None}
 
@@ -621,20 +629,20 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         graph.attach(label+"_STRICTNESS_MISMATCH", END.label)
         graph.attach(
             label,
-            label+"_EXPRESSION_NOT_INEQUALITY",
+            label+"_RESPONSE_NOT_INEQUALITY",
             summary=str(lhs)+" is an expression, not an inequality.",
             details=str(lhs)+" is an expression, not an inequality.",
-            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EXPRESSION_NOT_INEQUALITY")
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("RESPONSE_NOT_INEQUALITY")
         )
-        graph.attach(label+"_EXPRESSION_NOT_INEQUALITY", END.label)
+        graph.attach(label+"_RESPONSE_NOT_INEQUALITY", END.label)
         graph.attach(
             label,
-            label+"_INEQUALITY_NOT_EXPRESSION",
-            summary=str(lhs)+" is an inequality, not an expression.",
-            details=str(lhs)+" is an inequality, not an expression.",
-            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITY_NOT_EXPRESSION")
+            label+"_ANSWER_NOT_INEQUALITY",
+            summary=str(rhs)+" is an expression, not an inequality.",
+            details=str(rhs)+" is an expression, not an inequality.",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("ANSWER_NOT_INEQUALITY")
         )
-        graph.attach(label+"_INEQUALITY_NOT_EXPRESSION", END.label)
+        graph.attach(label+"_ANSWER_NOT_INEQUALITY", END.label)
     else:
         graph.add_evaluation_node(
             label,

@@ -648,9 +648,9 @@ class TestEvaluationFunction():
             ("x < 5", "x > 5", False, "response = answer_WRONG_DIRECTION"),
             ("x >= 5", "x > 5", False, "response = answer_STRICTNESS_MISMATCH"),
             ("x**2 > 5", "x > 5", False, "response = answer_UNKNOWN"),
-            ("x + 3", "x > 5", False, "response = answer_EXPRESSION_NOT_INEQUALITY"),
-            ("x = 5", "x > 5", False, "response = answer_EXPRESSION_NOT_INEQUALITY"),
-            ("x > 5", "x + 3", False, "response = answer_INEQUALITY_NOT_EXPRESSION"),
+            ("x + 3", "x > 5", False, "response = answer_RESPONSE_NOT_INEQUALITY"),
+            ("x = 5", "x > 5", False, "response = answer_RESPONSE_NOT_INEQUALITY"),
+            ("x > 5", "x + 3", False, "response = answer_ANSWER_NOT_INEQUALITY"),
         ]
     )
     def test_inequality_feedback_tags(self, response, answer, value, tag):
