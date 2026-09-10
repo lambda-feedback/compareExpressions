@@ -606,6 +606,71 @@ class TestEvaluationFunction():
         assert result["is_correct"] is False
         assert "response = answer_EQUALITY_NOT_EXPRESSION" in result["tags"]
 
+    @pytest.mark.parametrize(
+        "response,answer,value",
+        [
+            ("x > 5", "x > 5", True),
+            ("5 < x", "x > 5", True),
+            ("2*x - 10 > 0", "x > 5", True),
+            ("10 - 2*x < 0", "x > 5", True),
+            ("x + 1 > 6", "x > 5", True),
+            ("x >= 5", "2*x - 10 >= 0", True),
+            ("4*x - 20 >= 0", "2*x - 10 >= 0", True),
+            ("x < 5", "x > 5", False),
+            ("x <= 5", "x >= 5", False),
+            ("x > 5", "x >= 5", False),
+            ("x >= 5", "x > 5", False),
+            ("3*x - 15 > 0", "x < 5", False),
+            ("x**2 > 5", "x > 5", False),
+        ]
+    )
+    def test_inequality_in_answer_and_response(self, response, answer, value):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
+        "response,answer",
+        generate_input_variations(
+            response="2*x - 10 > 0",
+            answer="x > 5"
+        )
+    )
+    def test_inequality_in_answer_and_response_notation_variations(self, response, answer):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize(
+        "response,answer,value,tag",
+        [
+            ("x > 5", "x > 5", True, "response = answer_TRUE"),
+            ("x < 5", "x > 5", False, "response = answer_WRONG_DIRECTION"),
+            ("x >= 5", "x > 5", False, "response = answer_STRICTNESS_MISMATCH"),
+            ("x**2 > 5", "x > 5", False, "response = answer_UNKNOWN"),
+            ("x + 3", "x > 5", False, "response = answer_EXPRESSION_NOT_INEQUALITY"),
+            ("x = 5", "x > 5", False, "response = answer_EXPRESSION_NOT_INEQUALITY"),
+            ("x > 5", "x + 3", False, "response = answer_INEQUALITY_NOT_EXPRESSION"),
+        ]
+    )
+    def test_inequality_feedback_tags(self, response, answer, value, tag):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is value
+        assert tag in result["tags"]
+
+    def test_inequality_set_response_is_not_correct(self):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function("x >= plus_minus 5", "x >= 5", params)
+        assert result["is_correct"] is False
+
+    @pytest.mark.parametrize("response", ["1 < x < 5", "a < b > c"])
+    def test_chained_inequality_is_rejected(self, response):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, "x > 5", params)
+        assert result["is_correct"] is False
+        assert "could not be parsed" in result["feedback"]
+
     def test_empty_old_format_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
         response = '(1+(gamma-1)/2)((-1)/(gamma-1))'

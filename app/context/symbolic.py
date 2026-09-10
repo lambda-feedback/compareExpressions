@@ -1,6 +1,9 @@
 from copy import deepcopy
-from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo
+from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo, simplify
 from sympy import re as real_part
+from sympy import StrictLessThan, LessThan, StrictGreaterThan, GreaterThan
+
+INEQUALITY_TYPES = (StrictLessThan, LessThan, StrictGreaterThan, GreaterThan)
 
 from ..utility.expression_utilities import (
     default_parameters,
@@ -117,7 +120,16 @@ def do_comparison(comparison_symbol, expression):
 
 def check_equality(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
-    if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
+    lhs_is_inequality = isinstance(lhs_expr, INEQUALITY_TYPES)
+    rhs_is_inequality = isinstance(rhs_expr, INEQUALITY_TYPES)
+    if lhs_is_inequality or rhs_is_inequality:
+        # Subtracting two relational objects raises, so these cases must be
+        # intercepted before the generic `lhs_expr - rhs_expr` comparison below.
+        if lhs_is_inequality and rhs_is_inequality:
+            result = check_inequality_equivalence(lhs_expr, rhs_expr, parameters_dict) is True
+        else:
+            result = False
+    elif isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         result = False
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):
         result = False
@@ -186,6 +198,67 @@ def check_order(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     result = do_comparison(criterion.content, lhs_expr-rhs_expr)
     return result
+
+
+def check_inequality_equivalence(res, ans, parameters_dict):
+    """
+    Check whether the response inequality `res` is equivalent to the answer
+    inequality `ans` (both `sympy` relational objects).
+
+    Each side `f REL g` is rewritten as `D REL 0` (all terms moved to one side)
+    and the relation normalised to `<` or `<=` by negating `D` when the operator
+    is `>` or `>=`. The two inequalities are equivalent when `D_res / D_ans`
+    simplifies to a positive constant and the (normalised) operators match.
+
+    Returns one of:
+      True                        - equivalent
+      False                       - not equivalent (e.g. zero ratio)
+      "WRONG_DIRECTION"           - ratio is a negative constant (opposite region)
+      "STRICTNESS_MISMATCH"       - positive-constant ratio but `<` vs `<=` differ
+      "EXPRESSION_NOT_INEQUALITY" - response is not an inequality, answer is
+      "INEQUALITY_NOT_EXPRESSION" - response is an inequality, answer is not
+      None                        - undecidable (non-constant/unknown-sign ratio)
+    """
+    res_is_inequality = isinstance(res, INEQUALITY_TYPES)
+    ans_is_inequality = isinstance(ans, INEQUALITY_TYPES)
+    if not res_is_inequality and ans_is_inequality:
+        return "RESPONSE_NOT_INEQUALITY"
+    if res_is_inequality and not ans_is_inequality:
+        return "ANSWER_NOT_INEQUALITY"
+    if not (res_is_inequality and ans_is_inequality):
+        return False
+
+    def normalise(relation):
+        difference = relation.lhs - relation.rhs
+        operator = relation.rel_op
+        if operator in (">", ">="):
+            difference = -difference
+            operator = "<" if operator == ">" else "<="
+        return simplify(difference), operator
+
+    try:
+        difference_res, operator_res = normalise(res)
+        difference_ans, operator_ans = normalise(ans)
+    except Exception:
+        return None
+
+    constants = set(parameters_dict["parsing_parameters"].get("constants", set()))
+
+    if difference_res == 0 or difference_ans == 0:
+        if difference_res == 0 and difference_ans == 0:
+            return True if operator_res == operator_ans else "STRICTNESS_MISMATCH"
+        return None
+
+    ratio = simplify(difference_res / difference_ans)
+    if not {str(s) for s in ratio.free_symbols}.issubset(constants):
+        return None
+    if ratio.is_zero:
+        return False
+    if ratio.is_positive:
+        return True if operator_res == operator_ans else "STRICTNESS_MISMATCH"
+    if ratio.is_negative:
+        return "WRONG_DIRECTION"
+    return None
 
 
 def check_proportionality(criterion, parameters_dict, local_substitutions=[]):
@@ -355,6 +428,20 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                 label+"_FALSE": None
             }
 
+    def inequality_equivalence(unused_input):
+        res = parameters_dict["reserved_expressions"]["response"]
+        ans = parameters_dict["reserved_expressions"]["answer"]
+        result = check_inequality_equivalence(res, ans, parameters_dict)
+        result_to_tag = {
+            True: label+"_TRUE",
+            False: label+"_FALSE",
+            "WRONG_DIRECTION": label+"_WRONG_DIRECTION",
+            "STRICTNESS_MISMATCH": label+"_STRICTNESS_MISMATCH",
+            "EXPRESSION_NOT_INEQUALITY": label+"_EXPRESSION_NOT_INEQUALITY",
+            "INEQUALITY_NOT_EXPRESSION": label+"_INEQUALITY_NOT_EXPRESSION",
+        }
+        return {result_to_tag.get(result, label+"_UNKNOWN"): None}
+
     graph = CriteriaGraph(label)
     END = CriteriaGraph.END
     graph.add_node(END)
@@ -396,7 +483,8 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
 
     res = parameters_dict["reserved_expressions"]["response"]
     ans = parameters_dict["reserved_expressions"]["answer"]
-    use_equality_equivalence = isinstance(res, Equality) or isinstance(ans, Equality)
+    use_inequality_equivalence = isinstance(res, INEQUALITY_TYPES) or isinstance(ans, INEQUALITY_TYPES)
+    use_equality_equivalence = (isinstance(res, Equality) or isinstance(ans, Equality)) and not use_inequality_equivalence
 
     # TODO: Make checking set equivalence its own context that calls symbolic comparisons instead
     if use_set_equivalence is True:
@@ -484,6 +572,69 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_EXPRESSION")
         )
         graph.attach(label+"_EQUALITY_NOT_EXPRESSION", END.label)
+    elif use_inequality_equivalence:
+        graph.add_evaluation_node(
+            label,
+            summary=label,
+            details="Checks if "+str(lhs)+" is an equivalent inequality to "+str(rhs)+".",
+            evaluate=inequality_equivalence
+        )
+        graph.attach(
+            label,
+            label+"_TRUE",
+            summary=str(lhs)+" is equivalent to "+str(rhs),
+            details=str(lhs)+" is an equivalent inequality to "+str(rhs)+".",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITIES_EQUIVALENT")
+        )
+        graph.attach(label+"_TRUE", END.label)
+        graph.attach(
+            label,
+            label+"_FALSE",
+            summary=str(lhs)+" is not equivalent to "+str(rhs),
+            details=str(lhs)+" is not an equivalent inequality to "+str(rhs)+".",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITIES_NOT_EQUIVALENT")
+        )
+        graph.attach(label+"_FALSE", END.label)
+        graph.attach(
+            label,
+            label+"_UNKNOWN",
+            summary="Cannot determine if "+str(lhs)+" is equivalent to "+str(rhs),
+            details="Cannot determine if "+str(lhs)+" is an equivalent inequality to "+str(rhs)+".",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITY_EQUIVALENCE_UNKNOWN")
+        )
+        graph.attach(label+"_UNKNOWN", END.label)
+        graph.attach(
+            label,
+            label+"_WRONG_DIRECTION",
+            summary=str(lhs)+" is the opposite inequality to "+str(rhs),
+            details=str(lhs)+" points in the opposite direction to "+str(rhs)+".",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITIES_WRONG_DIRECTION")
+        )
+        graph.attach(label+"_WRONG_DIRECTION", END.label)
+        graph.attach(
+            label,
+            label+"_STRICTNESS_MISMATCH",
+            summary=str(lhs)+" has a different strictness to "+str(rhs),
+            details=str(lhs)+" uses a strict/non-strict inequality where "+str(rhs)+" does not.",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITY_STRICTNESS_MISMATCH")
+        )
+        graph.attach(label+"_STRICTNESS_MISMATCH", END.label)
+        graph.attach(
+            label,
+            label+"_EXPRESSION_NOT_INEQUALITY",
+            summary=str(lhs)+" is an expression, not an inequality.",
+            details=str(lhs)+" is an expression, not an inequality.",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EXPRESSION_NOT_INEQUALITY")
+        )
+        graph.attach(label+"_EXPRESSION_NOT_INEQUALITY", END.label)
+        graph.attach(
+            label,
+            label+"_INEQUALITY_NOT_EXPRESSION",
+            summary=str(lhs)+" is an inequality, not an expression.",
+            details=str(lhs)+" is an inequality, not an expression.",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITY_NOT_EXPRESSION")
+        )
+        graph.attach(label+"_INEQUALITY_NOT_EXPRESSION", END.label)
     else:
         graph.add_evaluation_node(
             label,

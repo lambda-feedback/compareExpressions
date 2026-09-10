@@ -1,3 +1,5 @@
+import re
+
 from sympy.parsing.sympy_parser import T as parser_transformations
 from ..utility.expression_utilities import (
     default_parameters,
@@ -84,7 +86,9 @@ def preview_function(response: str, params: Params) -> Result:
     if not response:
         return Result(preview=Preview(latex="", sympy=""))
 
-    response_list = response.split("=")
+    # Split on a lone "=" (equality) only, leaving relational operators
+    # (">=", "<=", "==", "!=") intact so inequality previews are not broken up.
+    response_list = re.split(r"(?<![<>=!])=(?!=)", response)
     response_latex = []
     response_sympy = []
 

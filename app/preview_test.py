@@ -77,6 +77,19 @@ class TestPreviewFunction():
         assert preview["latex"] == r"\ln{\left(x \right)}"
 
     @pytest.mark.parametrize(
+        "response,expected_latex",
+        [
+            ("x > 5", "x > 5"),
+            ("x >= 5", r"x \geq 5"),
+            ("2 x - 10 <= 0", r"2 \cdot x - 10 \leq 0"),
+        ]
+    )
+    def test_inequality_preview(self, response, expected_latex):
+        params = Params(is_latex=False, strict_syntax=False, elementary_functions=True)
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == expected_latex
+
+    @pytest.mark.parametrize(
         "response, is_latex, elementary_functions,  response_latex, response_sympy", [
             ("e", False, True, "e", "E",),
             ("oo", False, True, "\\infty", "oo"),

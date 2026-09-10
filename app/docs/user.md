@@ -37,7 +37,7 @@ The `criteria` parameter reserves `response` and `answer` as keywords that will 
 
 ##### Available criteria
 
-**Note:** In the table below EXPRESSION is used to denote some mathematical expression, i.e. a string that contains mathematical symbols and operators, but no equal signs `=` or inequality signs `>`, '<'.
+**Note:** In the table below EXPRESSION is used to denote some mathematical expression, i.e. a string that contains mathematical symbols and operators, but no equal signs `=` or inequality signs `>`, '<'. (A whole-response inequality such as `2x - 10 >= 0` is still supported when the answer is also an inequality — see *Inequalities in the answer and response* below.)
 
 | Name  | Syntax                         | Description                         | Example             |
 |-------|:-------------------------------|:------------------------------------|:--------------------|
@@ -287,6 +287,14 @@ The example given in the example problem set uses an EXPRESSION response area th
 
 Some examples of expressions that are accepted as correct:
 `x^2-5\*y^2-7=0` $x^2-5y^2-7=0$, `x^2 = 5y^2+7` $x^2=5y^2+7$, `2x^2 = 10y^2+14` $2x^2=10y^2+14=0$.
+
+#### Inequalities in the answer and response
+
+There is (limited) support for using inequalities in the response and answer. If the answer is `p REL q` and the response is `f REL' g`, where `REL` and `REL'` are order operators (`<`, `<=`, `>`, `>=`), the function rewrites each side as `D REL 0` (moving all terms to one side and flipping `>`/`>=` to `<`/`<=`) and checks that `D_response / D_answer` simplifies to a **positive** constant *and* that the two relations have the same strictness. `<` and `<=` are treated as different.
+
+For example, with answer `2x - 10 >= 0` (`strict_syntax` false, `elementary_functions` true), the responses `x >= 5`, `5 <= x`, `4x - 20 >= 0` and `10 - 2x <= 0` are accepted, while `x > 5` is rejected (wrong strictness) and `x <= 5` is rejected (opposite direction).
+
+**Note:** `!=` is not supported. Chained inequalities such as `1 < x < 5` are not supported. A response that expands to a set of inequalities (e.g. via `plus_minus`) is not supported.
 
 #### Checking the value of an expression or a physical quantity
 

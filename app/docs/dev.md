@@ -75,6 +75,8 @@ There are currently two different contexts:
 - `symbolic`: Comparison of symbolic expressions that cannot be reduced to numerical values.
 - `equality`: Comparison of mathematical equalities (with the extra complexities that come with equivalence of equalities compared to equality of expressions).
 - `inequality`: Same as `equality` except for mathematical inequalities (which will require different choices when it comes to what can be considered equivalence). It might be appropriate to combine `equality` and `inequality` into one context (called `statements` or similar).
+
+  **Current implementation:** inequality answer/response equivalence is handled *inside* the `symbolic` context, parallel to equality equivalence. `criterion_equality_node` picks the `inequality_equivalence` branch (flag `use_inequality_equivalence`) when either reserved expression parses to a `sympy` order relation, and `check_inequality_equivalence` rewrites both sides as `D REL 0` and checks that `D_response / D_answer` is a positive constant with matching strictness. Order operators `<`, `<=`, `>`, `>=` are parsed into relations by `parse_expression` (`app/utility/expression_utilities.py`); chained forms are rejected. Moving this into a dedicated `statements` context remains future work.
 - `collection`: Comparison of collections (e.g. sets, lists or intervals of the number line). Likely to consist mostly of code for handling comparison of individual elements using the other contexts, and configuring what counts as equivalence between different collections.
 
 ##### `symbolic` Criteria commands and grammar
