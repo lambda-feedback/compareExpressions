@@ -518,6 +518,21 @@ class TestSigFigsTolerance:
         with pytest.raises(Exception):
             evaluation_function("92 m", "92 m", params)
 
+    @pytest.mark.parametrize(
+        "description,response,answer,sig_figs_tol,outcome",
+        [
+            ("Different unit, within tolerance", "1609 m", "1 mile", 3, True),
+            ("Different unit the other way round", "1.000 mile", "1609.344 m", 4, True),
+            ("Different unit, outside tolerance", "1600 m", "1 mile", 4, False),
+            ("Third unit entirely, within tolerance", "1.6093 km", "1 mile", 4, True),
+            ("Dimension mismatch across unit systems", "1 mile", "1 kg", 4, False),
+        ]
+    )
+    def test_sig_figs_tolerance_across_units(self, description, response, answer, sig_figs_tol, outcome):
+        params = dict(self.base_params, units_string="SI common imperial", significant_figures_tolerance=sig_figs_tol)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
 
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])
