@@ -28,6 +28,7 @@ from sympy.parsing.sympy_parser import T as parser_transformations
 from sympy.printing.latex import LatexPrinter
 from sympy import Basic, Symbol, Equality, Function
 
+import math
 import re
 from typing import Dict, List, TypedDict
 
@@ -600,6 +601,173 @@ def compute_relative_tolerance_from_significant_decimals(string):
         significant_characters = significant_characters.lstrip("-0")
         rtol = 5*10**(-max(len(significant_characters), DEFAULT_SIGNIFICANT_FIGURES))
     return rtol
+
+
+def relative_tolerance_from_sig_figs(sig_figs):
+    '''
+    Input:
+        sig_figs : required number of significant figures (positive int)
+    Output:
+        The relative tolerance that corresponds to agreement to `sig_figs`
+        significant figures, i.e. half a unit in the last significant place:
+        5*10**(-sig_figs).
+    Unlike compute_relative_tolerance_from_significant_decimals this takes the
+    significant-figure count directly and applies no lower floor.
+    '''
+    return 5 * 10 ** (-sig_figs)
+
+
+def round_to_sig_figs(value, sig_figs):
+    if value == 0:
+        return 0.0
+    return float(f"{value:.{sig_figs}g}")
+
+
+def split_numeric_string(value):
+    '''
+    Input:
+        value : a string that may represent a plain number (optionally signed,
+                with an optional decimal point and/or exponent)
+    Output:
+        (int_part, frac_part, has_decimal) if value parses as a plain number,
+        None otherwise.
+    '''
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    body = stripped[1:] if stripped[:1] in ("+", "-") else stripped
+
+    mantissa, sep, exponent = body.partition("e") if "e" in body else body.partition("E")
+    if sep and not exponent.lstrip("+-").isdigit():
+        return None
+
+    has_decimal = "." in mantissa
+    int_part, _, frac_part = mantissa.partition(".")
+    if not (int_part.isdigit() or frac_part.isdigit()):
+        return None
+    if int_part and not int_part.isdigit():
+        return None
+    if frac_part and not frac_part.isdigit():
+        return None
+
+    return int_part, frac_part, has_decimal
+
+
+def count_sig_figs(int_part, frac_part, has_decimal):
+    digits = int_part + frac_part
+    first_nonzero = next((i for i, d in enumerate(digits) if d != "0"), None)
+    if first_nonzero is None:
+        return 1
+
+    trimmed = digits[first_nonzero:]
+    if has_decimal:
+        return len(trimmed)
+    return len(trimmed.rstrip("0")) or 1
+
+
+def sig_figs_match(response_string, response_value, answer_value, sig_figs):
+    '''
+    Input:
+        response_string : raw string as written by the learner, used to count
+                           significant figures as written (a parsed float loses
+                           trailing zeros and decimal-point placement)
+        response_value  : response_string parsed to a float
+        answer_value    : answer parsed to a float
+        sig_figs        : required number of significant figures (positive int)
+    Output:
+        True if response_string parses as a plain number, its value rounds to
+        the same value as the answer to sig_figs, and it was written to exactly
+        sig_figs significant figures. False otherwise.
+    '''
+    parts = split_numeric_string(response_string)
+    if parts is None:
+        return False
+
+    rounded_answer = round_to_sig_figs(answer_value, sig_figs)
+    rounded_response = round_to_sig_figs(response_value, sig_figs)
+    numeric_correct = abs(rounded_response - rounded_answer) <= math.ulp(abs(rounded_answer))
+
+    precision_correct = response_value == 0 or count_sig_figs(*parts) == sig_figs
+
+    return numeric_correct and precision_correct
+
+
+def absolute_tolerance_from_decimal_places(decimal_places):
+    '''
+    Input:
+        decimal_places : required number of decimal places (non-negative int)
+    Output:
+        The absolute tolerance that corresponds to agreement to
+        `decimal_places` decimal places, i.e. half a unit in the last decimal
+        place: 0.5*10**(-decimal_places).
+    This is the decimal-place analogue of relative_tolerance_from_sig_figs;
+    it is absolute rather than relative because a decimal-place count is
+    scale-dependent.
+    '''
+    return 0.5 * 10 ** (-decimal_places)
+
+
+def round_to_decimal_places(value, decimal_places):
+    '''
+    Input:
+        value          : a number
+        decimal_places : number of decimal places to round to (non-negative int)
+    Output:
+        `value` rounded to `decimal_places` decimal places, formatted as a
+        string (e.g. round_to_decimal_places(0, 2) is "0.00", not the float
+        0.0) so that trailing zeros are preserved — unlike round_to_sig_figs,
+        a decimal-place count is meaningless once collapsed to a float.
+    '''
+    return f"{value:.{decimal_places}f}"
+
+
+def count_decimal_places(value):
+    '''
+    Input:
+        value : a string that may represent a plain number
+    Output:
+        The number of decimal places `value` is written to, accounting for any
+        scientific-notation exponent (so "5.02e4" is 0 and "5e-3" is 3), or
+        None if `value` does not parse as a plain number.
+    Unlike count_sig_figs this takes the raw string rather than parsed digit
+    parts, since the exponent is needed to determine the written precision.
+    '''
+    parts = split_numeric_string(value)
+    if parts is None:
+        return None
+    _, frac_part, _ = parts
+    exponent_match = re.search(r"[eE]([+-]?\d+)", value.strip())
+    exponent = int(exponent_match.group(1)) if exponent_match else 0
+    return max(len(frac_part) - exponent, 0)
+
+
+def decimal_places_match(response_string, response_value, answer_value, decimal_places):
+    '''
+    Input:
+        response_string : raw string as written by the learner, used to count
+                           decimal places as written (a parsed float loses
+                           trailing zeros and decimal-point placement)
+        response_value  : response_string parsed to a float
+        answer_value    : answer parsed to a float
+        decimal_places  : required number of decimal places (non-negative int)
+    Output:
+        True if response_string parses as a plain number, its value rounds to
+        the same value as the answer to decimal_places, and it was written to
+        exactly decimal_places decimal places. False otherwise.
+    '''
+    parts = split_numeric_string(response_string)
+    if parts is None:
+        return False
+
+    rounded_answer = float(round_to_decimal_places(answer_value, decimal_places))
+    rounded_response = float(round_to_decimal_places(response_value, decimal_places))
+    numeric_correct = abs(rounded_response - rounded_answer) <= math.ulp(abs(rounded_answer))
+
+    # Unlike sig_figs_match, there is no bypass for a zero response: a decimal-place count is
+    # well-defined even at zero ("0" is 0 decimal places, "0.00" is 2), so it is checked as written.
+    precision_correct = count_decimal_places(response_string) == decimal_places
+
+    return numeric_correct and precision_correct
 
 
 # -------- (Sympy) Expression Parsing Utilities
