@@ -2,12 +2,15 @@ import pytest
 from sympy import Symbol, sqrt, sin as sympy_sin
 
 from ..utility.expression_utilities import (
+    absolute_tolerance_from_decimal_places,
     compute_relative_tolerance_from_significant_decimals,
     convert_absolute_notation,
     convert_bracket_notation,
     convert_unicode_dashes,
+    count_decimal_places,
     count_sig_figs,
     create_expression_set,
+    decimal_places_match,
     extract_latex,
     find_matching_parenthesis,
     has_matching_brackets,
@@ -16,6 +19,7 @@ from ..utility.expression_utilities import (
     preprocess_expression,
     protect_elementary_functions_substitutions,
     relative_tolerance_from_sig_figs,
+    round_to_decimal_places,
     round_to_sig_figs,
     sig_figs_match,
     split_numeric_string,
@@ -431,6 +435,107 @@ class TestSigFigsMatch:
     )
     def test_sig_figs_match(self, response_string, response_value, answer_value, sig_figs, expected):
         assert sig_figs_match(response_string, response_value, answer_value, sig_figs) is expected
+
+
+class TestAbsoluteToleranceFromDecimalPlaces:
+
+    @pytest.mark.parametrize(
+        "decimal_places, expected",
+        [
+            (0, 0.5),
+            (1, 5e-2),
+            (2, 5e-3),
+            (3, 5e-4),
+        ]
+    )
+    def test_absolute_tolerance_from_decimal_places(self, decimal_places, expected):
+        assert absolute_tolerance_from_decimal_places(decimal_places) == pytest.approx(expected)
+
+
+class TestRoundToDecimalPlaces:
+
+    @pytest.mark.parametrize(
+        "value, decimal_places, expected",
+        [
+            # Trailing zeros are preserved, unlike round_to_sig_figs (a float can't distinguish
+            # "0.00" from "0.0", but a decimal-place count is meaningful even at zero)
+            (0, 2, "0.00"),
+            (0.0, 2, "0.00"),
+            (92, 2, "92.00"),
+            (3.14159, 2, "3.14"),
+            (3.14159, 4, "3.1416"),
+            (3.146, 2, "3.15"),
+            (2.7, 0, "3"),
+            (-3.14159, 2, "-3.14"),
+        ]
+    )
+    def test_round_to_decimal_places(self, value, decimal_places, expected):
+        assert round_to_decimal_places(value, decimal_places) == expected
+
+
+class TestCountDecimalPlaces:
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ("3.14", 2),
+            ("3.140", 3),
+            ("92.00", 2),
+            ("0.0032", 4),
+            ("540", 0),
+            ("540.", 0),
+            ("0", 0),
+            # Scientific notation: the exponent shifts the written precision
+            ("5.02e4", 0),
+            ("5e-3", 3),
+            ("1.5e-3", 4),
+            # Not a plain number
+            (3.14, None),
+            ("two", None),
+            ("3.14e", None),
+        ]
+    )
+    def test_count_decimal_places(self, value, expected):
+        assert count_decimal_places(value) == expected
+
+
+class TestDecimalPlacesMatch:
+
+    @pytest.mark.parametrize(
+        "response_string, response_value, answer_value, decimal_places, expected",
+        [
+            # Correct value and precision
+            ("3.14", 3.14, 3.14159, 2, True),
+            # Numerically wrong
+            ("3.15", 3.15, 3.14159, 2, False),
+            # Numerically correct but too many decimal places written
+            ("3.142", 3.142, 3.14159, 2, False),
+            # Numerically correct but too few decimal places written
+            ("3.1", 3.1, 3.1, 2, False),
+            ("3.10", 3.1, 3.1, 2, True),
+            # Negative numbers
+            ("-3.14", -3.14, -3.14159, 2, True),
+            # Zero value: precision is still checked, unlike sig_figs_match
+            ("0", 0.0, 0.0, 2, False),
+            ("0.00", 0.0, 0.0, 2, True),
+            # Trailing decimal zeros count
+            ("92.00", 92.00, 92, 2, True),
+            ("92.0", 92.0, 92, 2, False),
+            # decimal_places = 0 requires a whole-number response
+            ("3", 3.0, 3.14159, 0, True),
+            ("3.0", 3.0, 3.14159, 0, False),
+            # Scientific notation
+            ("5e-3", 0.005, 0.005, 3, True),
+            ("5.0e-3", 0.005, 0.005, 3, False),
+            ("5.02e4", 50200, 50200, 0, True),
+            # Non-numeric response
+            (3.14, 3.14, 3.14159, 2, False),
+            ("two", 0, 3.14159, 2, False),
+            ("3.14e", 3.14, 3.14159, 2, False),
+        ]
+    )
+    def test_decimal_places_match(self, response_string, response_value, answer_value, decimal_places, expected):
+        assert decimal_places_match(response_string, response_value, answer_value, decimal_places) is expected
 
 
 class TestSympySymbols:

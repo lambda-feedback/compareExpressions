@@ -703,5 +703,93 @@ class TestSigFigsTolerance:
         assert result["is_correct"] is outcome
 
 
+class TestDecimalPlaces:
+
+    base_params = {
+        "strict_syntax": False,
+        "physical_quantity": True,
+        "units_string": "SI",
+        "strictness": "natural",
+    }
+
+    @pytest.mark.parametrize(
+        "description,response,answer,decimal_places,outcome",
+        [
+            ("Correct value and precision, with units", "92.00 m", "92 m", 2, True),
+            ("Numerically equal but too few decimal places", "92.0 m", "92 m", 2, False),
+            ("Numerically equal but too many decimal places", "92.000 m", "92 m", 2, False),
+            ("Wrong value", "91.00 m", "92 m", 2, False),
+            ("Unit mismatch fails regardless of decimal places", "92.00 s", "92 m", 2, False),
+            ("decimal_places=0 requires a whole number", "92 m", "92 m", 0, True),
+            ("No units, plain numeric", "3.14", "3.14159", 2, True),
+            ("Non-numeric response", "two m", "92 m", 2, False),
+        ]
+    )
+    def test_decimal_places(self, description, response, answer, decimal_places, outcome):
+        params = dict(self.base_params, dp=decimal_places)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_decimal_places_alias(self):
+        params = dict(self.base_params, decimal_places=2)
+        result = evaluation_function("92.00 m", "92 m", params)
+        assert result["is_correct"] is True
+
+    def test_decimal_places_mutually_exclusive_with_atol(self):
+        params = dict(self.base_params, dp=2, atol=0.1)
+        with pytest.raises(Exception):
+            evaluation_function("92.00 m", "92 m", params)
+
+    @pytest.mark.parametrize("decimal_places", [-1, 3.5, True])
+    def test_decimal_places_invalid_value_raises(self, decimal_places):
+        params = dict(self.base_params, dp=decimal_places)
+        with pytest.raises(Exception):
+            evaluation_function("92.00 m", "92 m", params)
+
+
+class TestDecimalPlacesTolerance:
+
+    base_params = {
+        "strict_syntax": False,
+        "physical_quantity": True,
+        "units_string": "SI",
+        "strictness": "natural",
+    }
+
+    @pytest.mark.parametrize(
+        "description,response,answer,decimal_places_tol,outcome",
+        [
+            ("Exact value, written precision ignored", "92.00 m", "92 m", 2, True),
+            ("Within tolerance", "92.004 m", "92 m", 2, True),
+            ("Outside tolerance", "92.5 m", "92 m", 2, False),
+            ("Tighter tolerance rejects", "92.02 m", "92 m", 3, False),
+            ("Unit mismatch fails regardless", "92 s", "92 m", 2, False),
+            ("No units, plain numeric within tolerance", "3.1416 m", "3.14159 m", 3, True),
+            ("Non-numeric response", "two m", "92 m", 2, False),
+        ]
+    )
+    def test_decimal_places_tolerance(self, description, response, answer, decimal_places_tol, outcome):
+        params = dict(self.base_params, decimal_places_tolerance=decimal_places_tol)
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_decimal_places_tol_alias(self):
+        params = dict(self.base_params, dp_tol=2)
+        result = evaluation_function("92.004 m", "92 m", params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("conflicting", [{"atol": 0.1}, {"rtol": 0.1}, {"significant_figures": 2}, {"decimal_places": 2}])
+    def test_decimal_places_tolerance_mutually_exclusive(self, conflicting):
+        params = dict(self.base_params, decimal_places_tolerance=2, **conflicting)
+        with pytest.raises(Exception):
+            evaluation_function("92 m", "92 m", params)
+
+    @pytest.mark.parametrize("decimal_places_tol", [-1, 3.5, True])
+    def test_decimal_places_tolerance_invalid_value_raises(self, decimal_places_tol):
+        params = dict(self.base_params, decimal_places_tolerance=decimal_places_tol)
+        with pytest.raises(Exception):
+            evaluation_function("92 m", "92 m", params)
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

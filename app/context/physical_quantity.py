@@ -17,6 +17,7 @@ from ..utility.expression_utilities import (
     compute_relative_tolerance_from_significant_decimals,
     parse_expression,
     sig_figs_match,
+    decimal_places_match,
 )
 from ..utility.physical_quantity_utilities import (
     units_sets_dictionary,
@@ -219,7 +220,7 @@ def criterion_match_node(criterion, parameters, label=None):
     graph.add_node(END)
     reserved_expressions = parameters["reserved_expressions"].items()
     parsing_params = deepcopy(parameters["parsing_parameters"])
-    if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0 and parameters.get('sig_figs') is None:
+    if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0 and parameters.get('sig_figs') is None and parameters.get('dp') is None:
         ans = parameters["reserved_expressions"]["answer"]["quantity"].value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
@@ -273,22 +274,27 @@ def criterion_match_node(criterion, parameters, label=None):
                 return {label+"_UNEXPECTED_UNIT": {"lhs": lhs_string, "rhs": rhs_string}}
 
         sig_figs = parameters.get('sig_figs')
+        dp = parameters.get('dp')
         is_plain_response_answer_criterion = (
             (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer')
         )
-        if sig_figs is not None and is_plain_response_answer_criterion:
-            # sig_figs fully replaces the ordinary value match below rather than falling back
+        if (sig_figs is not None or dp is not None) and is_plain_response_answer_criterion:
+            # sig_figs / dp fully replace the ordinary value match below rather than falling back
             # from it — a value that's numerically equal but written to the wrong precision must
             # still fail, so this can't be gated behind "ordinary value match already returned False".
             # It requires the response's raw written value string (a parsed float loses trailing
             # zeros), fetched the same way the implicit-tolerance feature above fetches the answer's.
             # Numeric correctness is still checked on the standardised (SI) values, consistent with
-            # how matches/atol/rtol behave.
+            # how matches/atol/rtol behave. sig_figs and dp are mutually exclusive (enforced in
+            # evaluation.py).
             response_string = parameters["reserved_expressions"]["response"]["quantity"].value.content_string()
             ans_value = parameters["reserved_expressions"]["answer"]["standard"]["value"].simplify()
             res_value = parameters["reserved_expressions"]["response"]["standard"]["value"].simplify()
             try:
-                value_match = sig_figs_match(response_string, float(res_value), float(ans_value), sig_figs)
+                if sig_figs is not None:
+                    value_match = sig_figs_match(response_string, float(res_value), float(ans_value), sig_figs)
+                else:
+                    value_match = decimal_places_match(response_string, float(res_value), float(ans_value), dp)
             except TypeError:
                 value_match = False
         else:

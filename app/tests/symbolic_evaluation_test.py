@@ -2335,5 +2335,88 @@ class TestSigFigsTolerance:
             evaluation_function("3.14", "3.14159", params)
 
 
+class TestDecimalPlaces:
+
+    @pytest.mark.parametrize(
+        "description,response,answer,decimal_places,outcome",
+        [
+            ("Correct value and precision", "3.14", "3.14159", 2, True),
+            ("Wrong value", "3.15", "3.14159", 2, False),
+            ("Numerically equal but too many digits written", "3.14159", "3.14159", 2, False),
+            ("Numerically equal but too few digits written", "3.1", "3.10", 2, False),
+            ("Negative numbers", "-3.14", "-3.14159", 2, True),
+            ("Zero value, precision is still checked", "0", "0", 2, False),
+            ("Zero value, written to the required precision", "0.00", "0", 2, True),
+            ("Trailing decimal zeros count", "92.00", "92", 2, True),
+            ("Whole number rejected when decimals required", "3", "3.14159", 2, False),
+            ("decimal_places=0 requires a whole number", "3", "3.14159", 0, True),
+            ("decimal_places=0 rejects a written decimal", "3.0", "3.14159", 0, False),
+            ("Scientific notation", "5.02e4", "50200", 0, True),
+            ("Non-numeric response", "two", "3.14159", 2, False),
+            ("Response with a symbol is rejected", "3.14*x", "3.14159", 2, False),
+        ]
+    )
+    def test_decimal_places(self, description, response, answer, decimal_places, outcome):
+        params = {"strict_syntax": False, "dp": decimal_places}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_decimal_places_alias(self):
+        params = {"strict_syntax": False, "decimal_places": 2}
+        result = evaluation_function("3.14", "3.14159", params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("conflicting", [{"atol": 0.1}, {"rtol": 0.1}, {"significant_figures": 3}, {"decimal_places_tolerance": 2}])
+    def test_decimal_places_mutually_exclusive(self, conflicting):
+        params = {"strict_syntax": False, "decimal_places": 2, **conflicting}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+    @pytest.mark.parametrize("decimal_places", [-1, 3.5, True])
+    def test_decimal_places_invalid_value_raises(self, decimal_places):
+        params = {"strict_syntax": False, "dp": decimal_places}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+
+class TestDecimalPlacesTolerance:
+
+    @pytest.mark.parametrize(
+        "description,response,answer,decimal_places_tol,outcome",
+        [
+            ("Within tolerance", "3.1416", "3.14159", 2, True),
+            ("Within tolerance, fewer digits", "3.14", "3.14159", 2, True),
+            ("Exact response", "3.14159", "3.14159", 2, True),
+            ("Written precision is not checked", "3.14000", "3.14159", 2, True),
+            ("Too few digits, outside tolerance", "3.1", "3.14159", 2, False),
+            ("Wrong value", "3.2", "3.14159", 2, False),
+            ("Tighter tolerance rejects rounded value", "3.14", "3.14159", 4, False),
+            ("Negative numbers", "-3.1416", "-3.14159", 2, True),
+            ("Non-numeric response", "two", "3.14159", 2, False),
+        ]
+    )
+    def test_decimal_places_tolerance(self, description, response, answer, decimal_places_tol, outcome):
+        params = {"strict_syntax": False, "decimal_places_tolerance": decimal_places_tol}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is outcome
+
+    def test_decimal_places_tol_alias(self):
+        params = {"strict_syntax": False, "dp_tol": 2}
+        result = evaluation_function("3.14", "3.14159", params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("conflicting", [{"atol": 0.1}, {"rtol": 0.1}, {"significant_figures": 3}, {"decimal_places": 2}])
+    def test_decimal_places_tolerance_mutually_exclusive(self, conflicting):
+        params = {"strict_syntax": False, "decimal_places_tolerance": 2, **conflicting}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+    @pytest.mark.parametrize("decimal_places_tol", [-1, 3.5, True])
+    def test_decimal_places_tolerance_invalid_value_raises(self, decimal_places_tol):
+        params = {"strict_syntax": False, "decimal_places_tolerance": decimal_places_tol}
+        with pytest.raises(Exception):
+            evaluation_function("3.14", "3.14159", params)
+
+
 if __name__ == "__main__":
     pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

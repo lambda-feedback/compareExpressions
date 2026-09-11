@@ -8,7 +8,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 
 ### Optional parameters
 
-There are 17 optional parameters that can be set: `absolute_tolerance`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `significant_figures`, `significant_figures_tolerance`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
+There are 19 optional parameters that can be set: `absolute_tolerance`, `complexNumbers`, `convention`, `criteria`, `decimal_places`, `decimal_places_tolerance`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `significant_figures`, `significant_figures_tolerance`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
 
 #### `absolute_tolerance` (`atol`)
 Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $|x-\tilde{x}| \leq e_aBy default `absolute_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
@@ -76,6 +76,26 @@ When `physical_quantity` the evaluation function will generate feedback based on
 
 **TODO:** Generate new flowchart for updated physical quantity feedback generation procedure.
 
+#### `decimal_places` (`dp`)
+
+Checks the response against the answer to a fixed number of decimal places, both for numerical correctness and for the precision the response was actually *written* to. It only applies to a plain numeric response (or, when `physical_quantity` is `true`, a numeric value with units) being compared directly against the answer — it is ignored for any other kind of criterion. This is the decimal-place counterpart of `significant_figures`.
+
+For example, with an answer of `3.14159` and `decimal_places` set to `2`: the response `3.14` is accepted (correct value, written to 2 decimal places). `3.1` is rejected for having too few decimal places, and `3.142` is rejected for having too many — even though both are numerically close to the answer.
+
+Decimal places are counted as written, after accounting for any scientific-notation exponent (`5.0e-3` is written to 4 decimal places, `5.02e4` to 0). `decimal_places` may be `0`, which requires the response to be written as a whole number.
+
+When `physical_quantity` is `true`, the numerical comparison is performed at the answer's scale (its SI value), so `decimal_places` is intended for a response given in the same unit as the answer; a response in a different unit is compared after conversion and its written decimal-place count may then not correspond to the answer's scale. `significant_figures`, being scale-invariant, does not have this restriction.
+
+`decimal_places` cannot be combined with `atol`/`absolute_tolerance`, `rtol`/`relative_tolerance`, `significant_figures`/`significant_figures_tolerance` or `decimal_places_tolerance` — setting more than one of them will raise an error. Like `significant_figures`, a `decimal_places` failure produces the same generic feedback as any other incorrect response; it does not distinguish "wrong value" from "wrong precision" from "not a number".
+
+#### `decimal_places_tolerance` (`dp_tol`)
+
+Uses a decimal-place count to derive a *numerical tolerance*, i.e. it accepts the response if it agrees with the answer to the given number of decimal places. With `decimal_places_tolerance` set to $n$ the response, $\tilde{x}$, is considered equal to the answer, $x$, when $|x-\tilde{x}| \leq 0.5\cdot10^{-n}$ (an *absolute* tolerance, unlike `significant_figures_tolerance` which is relative, because a decimal-place count is scale-dependent). It is implemented by setting `absolute_tolerance` to $0.5\cdot10^{-n}$. Like `atol`/`rtol` it only applies to a plain numeric response (or, when `physical_quantity` is `true`, a numeric value with units) being compared directly against the answer.
+
+Unlike `decimal_places`, the precision the response was *written* to is not checked — only its value matters. For example, with an answer of `3.14159` and `decimal_places_tolerance` set to `2` (so the tolerance is $0.005$): the responses `3.1416`, `3.14` and `3.14000` are all accepted, while `3.1` is rejected for being outside the tolerance.
+
+`decimal_places_tolerance` cannot be combined with `decimal_places`/`dp`, `significant_figures`/`significant_figures_tolerance`, `atol`/`absolute_tolerance` or `rtol`/`relative_tolerance` — setting more than one of them will raise an error.
+
 #### `relative_tolerance` (`rtol`)
 Sets the relative tolerance, $e_r$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $\left|\frac{x-\tilde{x}}{x}\right| \leq e_r$. By default `relative_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
 
@@ -87,7 +107,7 @@ For example, with an answer of `3.14159` and `significant_figures` set to `3`: t
 
 Significant figures are counted as written: leading zeros are never significant (`0.0032` has 2), trailing zeros after a decimal point are always significant (`92.00` has 4), and trailing zeros in a whole number are only significant if a decimal point is explicitly written (`540` has 2, but `540.` has 3).
 
-`significant_figures` cannot be combined with `atol`/`absolute_tolerance` or `rtol`/`relative_tolerance` — setting both will raise an error. Unlike those tolerance parameters, a `significant_figures` failure produces the same generic feedback as any other incorrect response; it does not distinguish "wrong value" from "wrong precision" from "not a number".
+`significant_figures` cannot be combined with `atol`/`absolute_tolerance`, `rtol`/`relative_tolerance` or `decimal_places`/`decimal_places_tolerance` — setting more than one of them will raise an error. Unlike those tolerance parameters, a `significant_figures` failure produces the same generic feedback as any other incorrect response; it does not distinguish "wrong value" from "wrong precision" from "not a number".
 
 #### `significant_figures_tolerance` (`sig_figs_tol`)
 
@@ -95,7 +115,7 @@ Uses a significant-figure count to derive a *numerical tolerance*, i.e. it accep
 
 Unlike `significant_figures`, the precision the response was *written* to is not checked — only its value matters. For example, with an answer of `3.14159` and `significant_figures_tolerance` set to `3` (so the tolerance is $5\cdot10^{-3}$): the responses `3.1416`, `3.14` and `3.14159` are all accepted, while `3.1` is rejected for being outside the tolerance.
 
-`significant_figures_tolerance` cannot be combined with `significant_figures`/`sig_figs`, `atol`/`absolute_tolerance` or `rtol`/`relative_tolerance` — setting more than one of them will raise an error.
+`significant_figures_tolerance` cannot be combined with `significant_figures`/`sig_figs`, `decimal_places`/`decimal_places_tolerance`, `atol`/`absolute_tolerance` or `rtol`/`relative_tolerance` — setting more than one of them will raise an error.
 
 #### `strictness`
 
