@@ -48,7 +48,7 @@ The overall flow of the evaluation procedure can be described as follows:
 ### Context
 
 The context is a data structure that contains at least the following seven pieces of information:
-- `default_parameters` A dictionary where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts use the default parameters found in `utility\expression_utilities.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context\physical_quantity.py`.
+- `default_parameters` A dictionary where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts use the default parameters found in `context\symbolic.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context\physical_quantity.py`.
 - `expression_parse` function that parses expressions (i.e. the `response` and `answer` inputs) into the form used by the feedback generation procedure.
 - `expression_preprocess` function that performs string manipulations that makes ensures that correctly written input expressions follows the conventions expected by `expression_parse`.
 - `expression_preview` is a function that generates a string that can be turned into a human-readable representation of how the evaluation function interpreted the response.
@@ -206,11 +206,32 @@ The function returns result dictionary with the following fields:
 
 # Preview function
 
-When the evaluation function preview is called the code in `preview.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions can be found in `preview_implementations`.
+When the evaluation function preview is called the code in `preview.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions come from the `compareexpressions-expression-parsing` (symbolic expressions) and `compareexpressions-units` (physical quantities) packages, see [Packages](#packages).
 
 **Remark**: Since it is likely that there will be significant overlap between the response preview and the response evaluation (e.g. code for parsing and interpreting the response), it is good practice if they can share as much code as possible to ensure consistency. For this reason it might be better to move the preview functions fully inside the context (either by making a `preview` subfolder in the `context` folder, or by moving the implementation of the preview function inside the context files themselves). In this case the `preview.py` and `evaluation.py` could also share the same code for determining the right context to use.
 
 `E` is treated as `E` in when `is_latex` is enabled. As latex2sympy2 does not parse E correctly. More details can be found ont the PR: https://github.com/lambda-feedback/compareExpressions/pull/235
+
+# Packages
+
+The parsing, unit-handling and criteria code lives in four packages from [compareExpressions-packages](https://github.com/lambda-feedback/compareExpressions-packages), installed through `requirements.txt`:
+
+| Package | Import | Used for |
+|---|---|---|
+| `compareexpressions-slr-parsing` | `compareexpressions.slr_parsing` | The SLR parser behind the criteria and quantity grammars |
+| `compareexpressions-criteria` | `compareexpressions.criteria` | Parsing criteria, criteria graphs, turning reached criteria into feedback |
+| `compareexpressions-expression-parsing` | `compareexpressions.expression_parsing` | Preprocessing and parsing expressions with SymPy, LaTeX, the symbolic preview |
+| `compareexpressions-units` | `compareexpressions.units` | Unit data, reading physical quantities, dimensional analysis, the quantity preview |
+
+The packages don't contain feedback text. Where they report something to the learner they return a `FeedbackTag` (a tag plus the inputs needed to render it), and `internal_feedback` in `feedback/symbolic.py` and `feedback/physical_quantity.py` turns it into text. `result.py` holds the `EvaluationResult` that collects feedback and serialises the response.
+
+To work on the app and the packages together, install the packages from a local checkout in editable mode instead of from git:
+
+```bash
+pip install -e ../compareExpressions-packages/slr_parsing -e ../compareExpressions-packages/criteria \
+            -e ../compareExpressions-packages/expression_parsing -e ../compareExpressions-packages/units
+grep -v compareexpressions app/requirements.txt | pip install -r /dev/stdin
+```
 
 # Tests
 There are two main groups of tests, evaluation tests and preview tests. The evaluation test can be run by calling `evaluation_tests.py`

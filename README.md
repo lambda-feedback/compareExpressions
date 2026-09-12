@@ -36,6 +36,10 @@ This version is specifically for python, however the ultimate goal is to make si
 
 The function is built on top of a custom base layer, [BaseEvaluationFunctionLayer](https://github.com/lambda-feedback/BaseEvalutionFunctionLayer), which tools, tests and schema checking relevant to all evaluation functions.
 
+### Packages
+
+Expression parsing, unit handling and the criteria machinery come from the [compareExpressions-packages](https://github.com/lambda-feedback/compareExpressions-packages) repository, installed as git dependencies in `app/requirements.txt`. See the "Packages" section of `app/docs/dev.md` for what each package does and how to develop against a local checkout.
+
 ### Docker & Amazon Web Services (AWS)
 
 The grading scripts are hosted AWS Lambda, using containers to run a docker image of the app. Docker is a popular tool in software development that allows programs to be hosted on any machine by bundling all its requirements and dependencies into a single file called an **image**.
