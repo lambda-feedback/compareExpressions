@@ -2,14 +2,15 @@ import pytest
 import os
 
 # Import necessary data and reference cases for tests
-from .slr_quantity_test import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
+from .physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from ..evaluation import evaluation_function
-from ..utility.unit_system_conversions import (
-    set_of_SI_prefixes,
-    set_of_SI_base_unit_dimensions,
-    set_of_derived_SI_units_in_SI_base_units,
-    set_of_common_units_in_SI, set_of_very_common_units_in_SI,
-    set_of_imperial_units
+from compareexpressions.units import (
+    COMMON_UNITS,
+    IMPERIAL_UNITS,
+    SI_BASE_UNITS,
+    SI_DERIVED_UNITS,
+    SI_PREFIXES,
+    VERY_COMMON_UNITS,
 )
 
 
@@ -30,9 +31,6 @@ class TestEvaluationFunction():
 
     Use evaluation_function() to call the evaluation function.
     """
-
-    # Import tests that makes sure that physical quantity parsing works as expected
-    from .slr_quantity_test import TestEvaluationFunction as TestStrictSLRSyntax
 
     log_details = True
 
@@ -76,12 +74,12 @@ class TestEvaluationFunction():
     @pytest.mark.skip("Too resource intensive")
     def test_slow_quantity_alternative_names_natural_syntax(self):
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI common imperial", "strictness": "natural"}
-        units = set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI | set_of_imperial_units
+        units = SI_BASE_UNITS + SI_DERIVED_UNITS + COMMON_UNITS + VERY_COMMON_UNITS + IMPERIAL_UNITS
         incorrect = []
         errors = []
         n = 0
         k = 0
-        for prefix in set_of_SI_prefixes:
+        for prefix in SI_PREFIXES:
             for u1 in units:
                 for u2 in units:
                     if u1 is not u2:
@@ -110,12 +108,12 @@ class TestEvaluationFunction():
     @pytest.mark.skip("Too resource intensive")
     def test_slow_quantity_short_forms_natural_syntax(self):
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI common imperial", "strictness": "natural"}
-        units = set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI | set_of_imperial_units
+        units = SI_BASE_UNITS + SI_DERIVED_UNITS + COMMON_UNITS + VERY_COMMON_UNITS + IMPERIAL_UNITS
         incorrect = []
         errors = []
         n = 0
         k = 0
-        for prefix in set_of_SI_prefixes:
+        for prefix in SI_PREFIXES:
             for u1 in units:
                 for u2 in units:
                     if u1 is not u2 and (prefix[1]+u1[1] not in [u[1] for u in units]):

@@ -21,13 +21,10 @@ class TestPreviewFunction():
 
     Use preview_function() to check your algorithm works
     as it should.
+
+    The symbolic and physical quantity previews themselves are tested in the
+    compareexpressions-expression-parsing and compareexpressions-units packages.
     """
-
-    # Import tests that makes sure that mathematical expression comparison works as expected
-    from .tests.symbolic_preview_test import TestPreviewFunction as TestSymbolicComparison
-
-    # Import tests that makes sure that physical quantities are handled as expected
-    from .tests.physical_quantity_preview_test import TestPreviewFunction as TestQuantityComparison
 
     def test_empty_latex_expression(self):
         response = ""

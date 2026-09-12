@@ -28,25 +28,11 @@ COPY context/symbolic.py ./app/context/
 COPY feedback/physical_quantity.py ./app/feedback/
 COPY feedback/symbolic.py ./app/feedback/
 
-# Copy preview implementations
-COPY preview_implementations/physical_quantity_preview.py ./app/preview_implementations/
-COPY preview_implementations/symbolic_preview.py ./app/preview_implementations/
-
 # Copy tests
 COPY tests/example_test.py ./app/tests/
 COPY tests/physical_quantity_evaluation_test.py ./app/tests/
-COPY tests/physical_quantity_preview_test.py ./app/tests/
-COPY tests/slr_quantity_test.py ./app/tests/
+COPY tests/physical_quantity_test_cases.py ./app/tests/
 COPY tests/symbolic_evaluation_test.py ./app/tests/
-COPY tests/symbolic_preview_test.py ./app/tests/
-
-# Copy utility code
-COPY utility/expression_utilities.py ./app/utility/
-COPY utility/physical_quantity_utilities.py ./app/utility/
-COPY utility/preview_utilities.py ./app/utility/
-COPY utility/slr_parsing_utilities.py ./app/utility/
-COPY utility/syntactical_comparison_utilities.py ./app/utility/
-COPY utility/unit_system_conversions.py ./app/utility/
 
 # Copy Documentation
 COPY docs/dev.md ./app/docs/dev.md

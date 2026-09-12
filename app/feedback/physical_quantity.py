@@ -20,3 +20,8 @@ feedback_string_generators["COMPARISON"] = lambda tag: lambda inputs: {
     "TRUE": "",  # TODO: Replace with more specialised messages for different comparisons
     "FALSE": "",  # TODO: Replace with more specialised messages for different comparisons
 }[tag]
+
+
+def internal_feedback(feedback_tag):
+    """Text for a `FeedbackTag` raised by the compareexpressions packages (e.g. `REVERTED_UNIT`)."""
+    return feedback_string_generators["INTERNAL"](str(feedback_tag.tag))(feedback_tag.inputs)

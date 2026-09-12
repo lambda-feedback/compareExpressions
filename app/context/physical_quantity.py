@@ -2,47 +2,33 @@
 # IMPORTS
 # -------
 
-import re
 from copy import deepcopy
-from compareexpressions.units import preprocess_quantity
-from ..utility.physical_quantity_utilities import (
-    SLR_quantity_parser,
-    SLR_quantity_parsing,
-)
-from ..preview_implementations.physical_quantity_preview import preview_function
-from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
-from .symbolic import default_parameters as symbolic_default_parameters
-from ..utility.expression_utilities import (
-    substitute_input_symbols,
-    create_sympy_parsing_params,
-    compute_relative_tolerance_from_significant_decimals,
-    parse_expression
-)
-from ..utility.physical_quantity_utilities import (
-    units_sets_dictionary,
-    set_of_SI_prefixes,
-    set_of_SI_base_unit_dimensions,
-    set_of_derived_SI_units_in_SI_base_units,
-    set_of_common_units_in_SI,
-    set_of_very_common_units_in_SI,
-    set_of_imperial_units,
-)
 from compareexpressions.criteria import CriteriaGraph
+from compareexpressions.expression_parsing import (
+    ExpressionParams,
+    SympyParsingConfig,
+    compute_relative_tolerance_from_significant_decimals,
+    parse_expression,
+)
+from compareexpressions.units import QuantityParams, preprocess_quantity, preview_function
+from compareexpressions.units import parse_quantity as parse_physical_quantity
+from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
+from ..feedback.physical_quantity import internal_feedback
+from .symbolic import default_parameters as symbolic_default_parameters
 from compareexpressions.slr_parsing import SLRParser, catch_undefined, create_node, infix, operate
 from sympy import Symbol
 
 
 def parse_quantity(name, expr, parameters, evaluation_result):
-    parser = SLR_quantity_parser(parameters)
-    quantity = SLR_quantity_parsing(expr, parameters, parser, name)
+    quantity = parse_physical_quantity(expr, parameters["quantity"], name)
     for (tag, message) in quantity.messages:
-        evaluation_result.add_feedback(tag, message)
+        evaluation_result.add_feedback(tag, internal_feedback(message))
     if quantity.standard_value is not None:
         standard_value = quantity.standard_value
     else:
         standard_value = None
     if quantity.value is not None:
-        value = parse_expression(quantity.value.content_string(), quantity.parsing_params)
+        value = parse_expression(quantity.value.content_string(), quantity.parsing_config)
     else:
         value = None
     if quantity.standard_unit is not None:
@@ -50,7 +36,7 @@ def parse_quantity(name, expr, parameters, evaluation_result):
     else:
         standard_unit = None
     if quantity.unit is not None:
-        unit = parse_expression(quantity.unit.content_string(), quantity.parsing_params)
+        unit = parse_expression(quantity.unit.content_string(), quantity.parsing_config)
     else:
         unit = None
     quantity_dict = {
@@ -139,13 +125,7 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
     END = CriteriaGraph.END
     graph.add_node(END)
     reserved_expressions = parameters["reserved_expressions"].items()
-    parsing_params = deepcopy(parameters["parsing_parameters"])
-    if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
-        ans = parameters["reserved_expressions"]["answer"]["quantity"].value
-        if ans is not None:
-            rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
-            parsing_params.update({'rtol': rtol})
-    parsing_params.update({"simplify": False, "evaluate": False})
+    parsing_params = parameters["parsing_parameters"]["sympy"].replace(simplify=False)
 
     if label is None:
         label = criterion.content_string()
@@ -217,13 +197,13 @@ def criterion_match_node(criterion, parameters, label=None):
     END = CriteriaGraph.END
     graph.add_node(END)
     reserved_expressions = parameters["reserved_expressions"].items()
-    parsing_params = deepcopy(parameters["parsing_parameters"])
+    parsing_params = parameters["parsing_parameters"]["sympy"].replace(simplify=False)
+    rtol = parameters["parsing_parameters"]["rtol"]
+    atol = parameters["parsing_parameters"]["atol"]
     if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
         ans = parameters["reserved_expressions"]["answer"]["quantity"].value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
-            parsing_params.update({'rtol': rtol})
-    parsing_params.update({"simplify": False, "evaluate": False})
 
     if label is None:
         label = criterion.content_string()
@@ -277,16 +257,16 @@ def criterion_match_node(criterion, parameters, label=None):
         if value_match is False:
             # TODO: better analysis of where `answer` is found in the criteria so that
             #       numerical tolerances can be applied appropriately
-            if parsing_params.get('rtol', 0) > 0 or parsing_params.get('atol', 0) > 0:
+            if rtol > 0 or atol > 0:
                 if (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer'):
                     ans = parameters["reserved_expressions"]["answer"]["standard"]["value"].simplify()
                     res = parameters["reserved_expressions"]["response"]["standard"]["value"].simplify()
                 if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
-                    if parsing_params.get('rtol', 0) > 0 and (ans != 0):
-                        value_match = bool(abs(float((ans-res)/ans)) < parsing_params['rtol'])
-                    elif parsing_params.get('atol', 0) > 0 or (ans == 0):
-                        answer_unit_factor = float(parameters["reserved_expressions"]["answer"]["quantity"].converted_unit_factor)
-                        value_match = bool(abs(float(ans-res)) < parsing_params['atol']*answer_unit_factor)
+                    if rtol > 0 and (ans != 0):
+                        value_match = bool(abs(float((ans-res)/ans)) < rtol)
+                    elif atol > 0 or (ans == 0):
+                        answer_unit_factor = float(parameters["reserved_expressions"]["answer"]["quantity"].unit_factor)
+                        value_match = bool(abs(float(ans-res)) < atol*answer_unit_factor)
 
         substitutions = [(key, expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
         unit_match = is_equal(lhs, rhs, substitutions)
@@ -488,14 +468,28 @@ def feedback_string_generator(tags, graph, parameters_dict):
     return
 
 
+# The evaluation parameters that affect how quantities are read. Other parameters
+# (e.g. `symbols`, `units_string` and `is_latex`) have never applied when reading
+# the response and answer as quantities during evaluation, only in the preview.
+QUANTITY_PARSING_PARAMETERS = (
+    "complexNumbers",
+    "convention",
+    "elementary_functions",
+    "rationalise",
+    "reserved_keywords",
+    "simplify",
+    "strict_syntax",
+    "strictness",
+)
+
+
 def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
-    parsing_parameters = create_sympy_parsing_params(params)
-    parsing_parameters.update({
-        "strictness": params.get("strictness", "natural"),
+    return {
+        "sympy": SympyParsingConfig.from_params(ExpressionParams.from_dict(params)),
+        "quantity": QuantityParams.from_dict({key: params[key] for key in QUANTITY_PARSING_PARAMETERS if key in params}),
         "rtol": float(params.get("rtol", 0)),
         "atol": float(params.get("atol", 0)),
-    })
-    return parsing_parameters
+    }
 
 
 # CONSIDER: Move these to separate file so that they can be shared with
