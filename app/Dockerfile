@@ -18,6 +18,7 @@ COPY evaluation.py ./app/
 COPY evaluation_test.py ./app/
 COPY preview.py ./app/
 COPY preview_test.py ./app/
+COPY result.py ./app/
 
 # Copy contexts
 COPY context/physical_quantity.py ./app/context/
@@ -40,9 +41,6 @@ COPY tests/symbolic_evaluation_test.py ./app/tests/
 COPY tests/symbolic_preview_test.py ./app/tests/
 
 # Copy utility code
-COPY utility/criteria_graph_utilities.py ./app/utility/
-COPY utility/criteria_parsing.py ./app/utility/
-COPY utility/evaluation_result_utilities.py ./app/utility/
 COPY utility/expression_utilities.py ./app/utility/
 COPY utility/physical_quantity_utilities.py ./app/utility/
 COPY utility/preview_utilities.py ./app/utility/

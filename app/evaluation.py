@@ -1,6 +1,8 @@
 from copy import deepcopy
 
-from .utility.evaluation_result_utilities import EvaluationResult
+from compareexpressions.criteria import add_feedback_from_tags
+
+from .result import EvaluationResult
 from .utility.preview_utilities import parse_latex
 from .context.symbolic import context as symbolic_context
 from .context.physical_quantity import context as quantity_context
@@ -117,7 +119,7 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
             preprocess_success, expr, preprocess_feedback = preprocess(key, expr, parameters)
             if preprocess_success is False:
                 if key == "learner":
-                    result.add_feedback(preprocess_feedback)
+                    result.add_feedback(*preprocess_feedback)
                     preprocess_success = True  # Preprocess can only create warnings for responses in this case
                 else:
                     raise Exception(preprocess_feedback[1], preprocess_feedback[0])
@@ -127,10 +129,8 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
             if len(expr.strip()) == 0:
                 if key == "learner":
                     result.add_feedback(
-                        (
-                            f"RESERVED_EXPRESSION_MISSING_{label}",
-                            messages["RESERVED_EXPRESSION_MISSING"](label)
-                        )
+                        f"RESERVED_EXPRESSION_MISSING_{label}",
+                        messages["RESERVED_EXPRESSION_MISSING"](label)
                     )
                 else:
                     raise Exception(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
@@ -143,10 +143,8 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                     success = False
                     if key == "learner":
                         result.add_feedback(
-                            (
-                                f"PARSE_ERROR_{label}",
-                                symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
-                            )
+                            f"PARSE_ERROR_{label}",
+                            symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
                         )
                     else:
                         raise Exception(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
@@ -213,14 +211,14 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
 
         # TODO: Implement way to define completeness of task other than "all main criteria satisfied"
         is_correct = is_correct and main_criteria in criteria_feedback
-        evaluation_result.add_criteria_graph(criterion_identifier, graph)
+        evaluation_result.criteria_graphs[criterion_identifier] = graph
 
         # Generate feedback strings from found feedback
         # NOTE: Feedback strings are generated for each graph due to the
         #       assumption that some way to return partial feedback
         #       before script has executed completely will be available
         #       in the future
-        evaluation_result.add_feedback_from_tags(criteria_feedback, graph, custom_feedback=custom_feedback)
+        add_feedback_from_tags(evaluation_result, criteria_feedback, graph, custom_feedback=custom_feedback)
     evaluation_result.is_correct = is_correct
     return
 
@@ -290,13 +288,13 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     # FIXME: Move this into expression_utilities
     if params.get("strict_syntax", False):
         if "^" in response:
-            evaluation_result.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict())))
+            evaluation_result.add_feedback("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict()))
         if "!" in response:
-            evaluation_result.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict())))
+            evaluation_result.add_feedback("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict()))
 
     if "!!!" in response:
         evaluation_result.add_feedback(
-            ("NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict())))
+            "NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict()))
 
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:

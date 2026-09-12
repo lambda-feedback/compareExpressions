@@ -26,17 +26,16 @@ from ..utility.physical_quantity_utilities import (
     set_of_very_common_units_in_SI,
     set_of_imperial_units,
 )
-from ..utility.slr_parsing_utilities import create_node, infix, operate, catch_undefined, SLR_Parser
+from compareexpressions.criteria import CriteriaGraph
+from compareexpressions.slr_parsing import SLRParser, catch_undefined, create_node, infix, operate
 from sympy import Symbol
-
-from ..utility.criteria_graph_utilities import CriteriaGraph
 
 
 def parse_quantity(name, expr, parameters, evaluation_result):
     parser = SLR_quantity_parser(parameters)
     quantity = SLR_quantity_parsing(expr, parameters, parser, name)
-    for message in quantity.messages:
-        evaluation_result.add_feedback(message)
+    for (tag, message) in quantity.messages:
+        evaluation_result.add_feedback(tag, message)
     if quantity.standard_value is not None:
         standard_value = quantity.standard_value
     else:
@@ -111,7 +110,7 @@ def generate_criteria_parser(reserved_expressions):
         ("DIMENSION", "dimension(QUANTITY)", operate(1)),
     ]
 
-    return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
+    return SLRParser(token_list, productions, start_symbol, end_symbol, null_symbol)
 
 
 def comparison_function(comparison_operator):

@@ -15,8 +15,7 @@ from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_
 from ..utility.syntactical_comparison_utilities import patterns as syntactical_forms
 from ..utility.syntactical_comparison_utilities import generate_arbitrary_number_pattern_matcher
 
-from ..utility.criteria_parsing import generate_criteria_parser
-from ..utility.criteria_graph_utilities import CriteriaGraph
+from compareexpressions.criteria import CriteriaGraph, build_criteria_parser
 
 
 def expression_preprocess(name, expr, parameters):
@@ -879,8 +878,7 @@ def feedback_string_generator(tags, graph, parameters_dict):
 
 context = {
     "expression_preview": preview_function,
-    "generate_criteria_parser": generate_criteria_parser,
-    "generate_feedback": generate_criteria_parser,
+    "generate_criteria_parser": build_criteria_parser,
     "expression_preprocess": expression_preprocess,
     "expression_parse": expression_parse,
     "default_parameters": default_parameters,
