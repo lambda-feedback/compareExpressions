@@ -214,7 +214,7 @@ When the evaluation function preview is called the code in `preview.py` will be 
 
 # Packages
 
-The parsing, unit-handling and criteria code lives in four packages from [compareExpressions-packages](https://github.com/lambda-feedback/compareExpressions-packages), installed through `requirements.txt`:
+The parsing, unit-handling and criteria code lives in four packages from [compareExpressions-packages](https://github.com/m-messer/compare-expressions-packages), installed through `requirements.txt`:
 
 | Package | Import | Used for |
 |---|---|---|
