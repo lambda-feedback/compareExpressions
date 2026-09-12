@@ -4,13 +4,14 @@
 
 import re
 from copy import deepcopy
+from compareexpressions.units import preprocess_quantity
 from ..utility.physical_quantity_utilities import (
     SLR_quantity_parser,
-    SLR_quantity_parsing, expression_preprocess
+    SLR_quantity_parsing,
 )
 from ..preview_implementations.physical_quantity_preview import preview_function
 from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
-from ..utility.expression_utilities import default_parameters as symbolic_default_parameters
+from .symbolic import default_parameters as symbolic_default_parameters
 from ..utility.expression_utilities import (
     substitute_input_symbols,
     create_sympy_parsing_params,
@@ -515,7 +516,7 @@ default_criteria = ["response matches answer"]
 context = {
     "expression_preview": preview_function,
     "generate_criteria_parser": generate_criteria_parser,
-    "expression_preprocess": expression_preprocess,
+    "expression_preprocess": preprocess_quantity,
     "expression_parse": parse_quantity,
     "default_parameters": default_parameters,
     "default_criteria": default_criteria,

@@ -77,3 +77,8 @@ feedback_generators["PROPORTIONAL_TO"] = lambda tag: lambda inputs: {
     "FALSE": None,
     "UNKNOWN": None,
 }[tag]
+
+
+def internal_feedback(feedback_tag):
+    """Text for a `FeedbackTag` raised by the compareexpressions packages (e.g. `BRACKET_NOTATION_MISMATCH`)."""
+    return feedback_generators["INTERNAL"](str(feedback_tag.tag))(feedback_tag.inputs)

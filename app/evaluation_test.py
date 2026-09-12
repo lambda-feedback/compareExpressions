@@ -2,7 +2,6 @@ import pytest
 import os
 
 from .preview import preview_function
-from .utility.preview_utilities import Params
 from .evaluation import evaluation_function
 
 
@@ -96,7 +95,7 @@ class TestEvaluationFunction():
 
     def test_euler_preview_evaluate(self):
         response = "ER_2"
-        params = Params(is_latex=True, elementary_functions=False, strict_syntax=False)
+        params = dict(is_latex=True, elementary_functions=False, strict_syntax=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -214,7 +213,7 @@ class TestEvaluationFunction():
 
     def test_mu_preview_evaluate(self):
         response = "10 μA"
-        params = Params(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantity=True)
+        params = dict(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantity=True)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 

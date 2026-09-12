@@ -1,25 +1,32 @@
-from copy import deepcopy
 from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo
 from sympy import re as real_part
 
-from ..utility.expression_utilities import (
-    default_parameters,
+from compareexpressions.expression_parsing import (
+    PATTERNS as syntactical_forms,
+    ExpressionParams,
+    SympyParsingConfig,
+    generate_arbitrary_number_pattern_matcher,
     parse_expression,
-    create_sympy_parsing_params,
     preprocess_expression,
+    preview_function,
 )
 
-from ..preview_implementations.symbolic_preview import preview_function
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-
-from ..utility.syntactical_comparison_utilities import patterns as syntactical_forms
-from ..utility.syntactical_comparison_utilities import generate_arbitrary_number_pattern_matcher
 
 from compareexpressions.criteria import CriteriaGraph, build_criteria_parser
 
 
+default_parameters = {
+    "complexNumbers": False,
+    "convention": "equal_precedence",
+    "elementary_functions": False,
+    "strict_syntax": False,
+    "multiple_answers_criteria": "all",
+}
+
+
 def expression_preprocess(name, expr, parameters):
-    return preprocess_expression(name, expr, parameters)
+    return preprocess_expression(name, expr, ExpressionParams.from_dict(parameters))
 
 
 def expression_parse(name, expr, parameters, evaluation_result):
@@ -31,8 +38,7 @@ default_criteria = ["response = answer"]
 
 def check_criterion(criterion, parameters_dict, generate_feedback=True):
     label = criterion.label.strip()
-    parsing_params = deepcopy(parameters_dict["parsing_parameters"])
-    parsing_params.update({"simplify": False})
+    parsing_params = parameters_dict["parsing_parameters"].replace(simplify=False)
     if label in {"EQUALITY", "WRITTEN_AS"}:
         result = check_equality(criterion, parameters_dict)
     elif label == "ORDER":
@@ -60,20 +66,17 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
 
 
 def create_expressions_for_comparison(criterion, parameters_dict, local_substitutions=[]):
-    parsing_params = deepcopy(parameters_dict["parsing_parameters"])
+    parsing_params = parameters_dict["parsing_parameters"]
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
-    parsing_params.update(
-        {
-            "simplify": False,
-            "evaluate": False,
-            "unsplittable_symbols": parsing_params["unsplittable_symbols"]+list((parameters_dict["reserved_expressions"].keys())),
-        }
+    parsing_params = parsing_params.replace(
+        simplify=False,
+        unsplittable_symbols=parsing_params.unsplittable_symbols+tuple(parameters_dict["reserved_expressions"].keys()),
     )
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
     lhs_expr = parse_expression(lhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
     rhs_expr = parse_expression(rhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
-    if parsing_params.get("complexNumbers", False):
+    if parsing_params.complex_numbers:
         simplified_lhs_expr = lhs_expr.cancel().simplify()
         simplified_rhs_expr = rhs_expr.cancel().simplify()
         if (im(lhs_expr) != 0) or (im(lhs_expr) != 0):
@@ -344,7 +347,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                 symbols_in_equality_ratio = (res.args[0]-res.args[1]).simplify().free_symbols
             else:
                 symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
-            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"]["constants"])
+            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"].constants)
         if result is True:
             return {
                 label+"_TRUE": None
@@ -361,13 +364,11 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     rhs = criterion.children[1].content_string()
 
     def same_symbols(unused_input):
-        parsing_params = deepcopy(parameters_dict["parsing_parameters"])
+        parsing_params = parameters_dict["parsing_parameters"]
         local_substitutions = list(parameters_dict["reserved_expressions"].items())
-        parsing_params.update(
-            {
-                "simplify": False,
-                "unsplittable_symbols": parsing_params["unsplittable_symbols"]+list((parameters_dict["reserved_expressions"].keys())),
-            }
+        parsing_params = parsing_params.replace(
+            simplify=False,
+            unsplittable_symbols=parsing_params.unsplittable_symbols+tuple(parameters_dict["reserved_expressions"].keys()),
         )
         lsym = parse_expression(lhs, parsing_params).subs(local_substitutions)
         rsym = parse_expression(rhs, parsing_params).subs(local_substitutions)
@@ -547,7 +548,7 @@ def criterion_written_as_node(criterion, parameters_dict, label=None):
         def find_form(unused_input):
             forms = set()
             for form_label in syntactical_forms.keys():
-                if syntactical_forms[form_label]["matcher"](string) is True:
+                if syntactical_forms[form_label].matcher(string) is True:
                     forms.add(form_label)
             if len(forms) > 0:
                 return {name+"_WRITTEN_AS_"+form_label: None for form_label in forms}
@@ -558,7 +559,7 @@ def criterion_written_as_node(criterion, parameters_dict, label=None):
     def compare_to_form(string, form_label):
         def inner(unused_input):
             result = dict()
-            if syntactical_forms[form_label]["matcher"](string) is True:
+            if syntactical_forms[form_label].matcher(string) is True:
                 result.update({label+"_TRUE": None})
             else:
                 result.update({label+"_FALSE": None})
@@ -625,15 +626,15 @@ def criterion_written_as_node(criterion, parameters_dict, label=None):
             graph.attach(
                 str(rhs)+"_WRITTEN_AS_KNOWN_FORM",
                 str(rhs)+"_WRITTEN_AS_"+form_label,
-                summary=str(rhs)+" in written in "+syntactical_forms[form_label]["name"]+" form.",
-                details=str(rhs)+" in written in "+syntactical_forms[form_label]["name"]+" form.",
+                summary=str(rhs)+" in written in "+syntactical_forms[form_label].name+" form.",
+                details=str(rhs)+" in written in "+syntactical_forms[form_label].name+" form.",
                 feedback_string_generator=symbolic_feedback_string_generators["WRITTEN_AS"](form_label),
             )
             graph.attach(
                 str(rhs)+"_WRITTEN_AS_"+form_label,
                 str(lhs)+"_COMPARE_FORM_TO_"+form_label,
-                summary="Is "+str(lhs)+" written in "+syntactical_forms[form_label]["name"]+" form.",
-                details="Checks if "+str(lhs)+" is written in "+syntactical_forms[form_label]["name"]+" form.",
+                summary="Is "+str(lhs)+" written in "+syntactical_forms[form_label].name+" form.",
+                details="Checks if "+str(lhs)+" is written in "+syntactical_forms[form_label].name+" form.",
                 evaluate=compare_to_form(response, form_label),
                 sufficiencies={str(rhs)+"_WRITTEN_AS_"+form_label}
             )
@@ -876,6 +877,10 @@ def feedback_string_generator(tags, graph, parameters_dict):
     return
 
 
+def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
+    return SympyParsingConfig.from_params(ExpressionParams.from_dict(params), unsplittable_symbols, symbol_assumptions)
+
+
 context = {
     "expression_preview": preview_function,
     "generate_criteria_parser": build_criteria_parser,
@@ -885,5 +890,5 @@ context = {
     "default_criteria": default_criteria,
     "feedback_procedure_generator": feedback_procedure_generator,
     "feedback_string_generator": feedback_string_generator,
-    "parsing_parameters_generator": create_sympy_parsing_params,
+    "parsing_parameters_generator": parsing_parameters_generator,
 }

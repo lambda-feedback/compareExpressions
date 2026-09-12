@@ -1,12 +1,13 @@
 from copy import deepcopy
 
 from compareexpressions.criteria import add_feedback_from_tags
+from compareexpressions.expression_parsing import ExpressionParams, parse_latex
 
 from .result import EvaluationResult
-from .utility.preview_utilities import parse_latex
 from .context.symbolic import context as symbolic_context
 from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from .feedback.symbolic import internal_feedback
 
 from collections.abc import Mapping
 
@@ -116,13 +117,15 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
         reserved_expressions_dict.update({key: FrozenValuesDictionary()})
         for (label, expr) in reserved_expressions[key].items():
             expr_parsed = None
-            preprocess_success, expr, preprocess_feedback = preprocess(key, expr, parameters)
-            if preprocess_success is False:
+            preprocessed = preprocess(key, expr, parameters)
+            expr = preprocessed.expression
+            if preprocessed.success is False:
+                feedback_tag = str(preprocessed.feedback.tag)
                 if key == "learner":
-                    result.add_feedback(*preprocess_feedback)
-                    preprocess_success = True  # Preprocess can only create warnings for responses in this case
+                    # Preprocess can only create warnings for responses in this case
+                    result.add_feedback(feedback_tag, internal_feedback(preprocessed.feedback))
                 else:
-                    raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+                    raise Exception(internal_feedback(preprocessed.feedback), feedback_tag)
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
                 raise Exception(f"Reserved expression {label} must be given as a string.")
@@ -164,9 +167,10 @@ def get_criteria_string(parameters):
 def create_criteria_dict(criteria_parser, parsing_params):
     preprocess = parsing_params["context"]["expression_preprocess"]
     criteria_string = get_criteria_string(parsing_params)
-    preprocess_success, criteria_string, preprocess_feedback = preprocess("criteria", criteria_string, parsing_params)
-    if preprocess_success is False:
-        raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+    preprocessed = preprocess("criteria", criteria_string, parsing_params)
+    criteria_string = preprocessed.expression
+    if preprocessed.success is False:
+        raise Exception(internal_feedback(preprocessed.feedback), str(preprocessed.feedback.tag))
     criteria_string_list = []
     delims = [
         ("(", ")"),
@@ -281,7 +285,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if parameters.get("is_latex", False):
         parameters["reserved_expressions_strings"]["learner"].update(
             {
-                "response": parse_latex(response, parameters.get("symbols", {}), False, parameters=parameters),
+                "response": parse_latex(response, ExpressionParams.from_dict(parameters).symbols),
             }
         )
 

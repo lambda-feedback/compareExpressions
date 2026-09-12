@@ -1,7 +1,6 @@
 import os
 import pytest
 
-from .utility.preview_utilities import Params
 from .preview import preview_function
 
 
@@ -32,7 +31,7 @@ class TestPreviewFunction():
 
     def test_empty_latex_expression(self):
         response = ""
-        params = Params(is_latex=True)
+        params = dict(is_latex=True)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -41,7 +40,7 @@ class TestPreviewFunction():
 
     def test_empty_non_latex_expression(self):
         response = ""
-        params = Params(is_latex=False)
+        params = dict(is_latex=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -50,7 +49,7 @@ class TestPreviewFunction():
 
     def test_latex_and_sympy_are_returned(self):
         response = "x+1"
-        params = Params(is_latex=True)
+        params = dict(is_latex=True)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -59,7 +58,7 @@ class TestPreviewFunction():
         assert "sympy" in preview.keys()
 
         response = "x+1"
-        params = Params(is_latex=False)
+        params = dict(is_latex=False)
         result = preview_function(response, params)
         assert "preview" in result
 
@@ -69,7 +68,7 @@ class TestPreviewFunction():
 
     def test_natural_logarithm_notation(self):
         response = "ln(x)"
-        params = Params(is_latex=False)
+        params = dict(is_latex=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -108,7 +107,7 @@ class TestPreviewFunction():
         ]
     )
     def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
-        params = Params(is_latex=is_latex, elementary_functions=elementary_functions, strict_syntax=False)
+        params = dict(is_latex=is_latex, elementary_functions=elementary_functions, strict_syntax=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -199,7 +198,7 @@ class TestPreviewFunction():
                 },
             },
         }
-        params = Params(**params)
+        params = dict(**params)
         result = preview_function(response, params)
         assert result["preview"]["latex"] == response_latex
         assert result["preview"]["sympy"] == response_sympy
@@ -220,7 +219,7 @@ class TestPreviewFunction():
                 },
             },
         }
-        params = Params(**params)
+        params = dict(**params)
         result = preview_function("x + y = y + x", params)
         assert result["preview"]["latex"] == "x + y=x + y"
         assert result["preview"]["sympy"] == "x + y=y + x"
@@ -336,13 +335,15 @@ class TestPreviewFunction():
             preview_function(response, params)
 
     @pytest.mark.parametrize(
-        "response, latex, sympy", [
-            ("{x+y}*{x+z}", "\\left\\{x + y\\right\\} \\cdot \\left\\{x + z\\right\\}", "{x+y}*{x+z}"),
-            ("{x+y}*x+z", "\\left\\{x + y\\right\\} \\cdot x + z", "{x+y}*x+z"),
-            ("x+y*{x+z}", "x + y \\cdot \\left\\{x + z\\right\\}", "x+y*{x+z}"),
+        "response", [
+            "{x+y}*{x+z}",
+            "{x+y}*x+z",
+            "x+y*{x+z}",
         ]
     )
-    def test_curly_braces_not_converted_with_strict_syntax(self, response, latex, sympy):
+    def test_curly_braces_not_converted_with_strict_syntax(self, response):
+        # With strict syntax `{}` is a set literal, not a bracket, and arithmetic on
+        # sets is rejected (SymPy deprecates it, and evaluating it used to crash).
         params = {
             "is_latex": False,
             "strict_syntax": True,
@@ -350,9 +351,8 @@ class TestPreviewFunction():
             "convention": "implicit_higher_precedence",
         }
 
-        result = preview_function(response, params)
-        assert result["preview"]["latex"] == latex
-        assert result["preview"]["sympy"] == sympy
+        with pytest.raises(ValueError):
+            preview_function(response, params)
 
     @pytest.mark.parametrize("strict_syntax", [False, True])
     def test_curly_brace_multiple_answers_still_works(self, strict_syntax):
