@@ -10,13 +10,18 @@ from compareexpressions.expression_parsing import (
     compute_relative_tolerance_from_significant_decimals,
     parse_expression,
 )
-from compareexpressions.units import QuantityParams, preprocess_quantity, preview_function
+from compareexpressions.units import QuantityParams, preprocess_quantity
 from compareexpressions.units import parse_quantity as parse_physical_quantity
+from .physical_quantity_preview import preview_function
 from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 from ..feedback.physical_quantity import internal_feedback
 from .symbolic import default_parameters as symbolic_default_parameters
 from compareexpressions.slr_parsing import SLRParser, catch_undefined, create_node, infix, operate
 from sympy import Symbol
+
+
+def expression_preprocess(name, expr, parameters):
+    return preprocess_quantity(name, expr, QuantityParams.from_dict(parameters))
 
 
 def parse_quantity(name, expr, parameters, evaluation_result):
@@ -510,7 +515,7 @@ default_criteria = ["response matches answer"]
 context = {
     "expression_preview": preview_function,
     "generate_criteria_parser": generate_criteria_parser,
-    "expression_preprocess": preprocess_quantity,
+    "expression_preprocess": expression_preprocess,
     "expression_parse": parse_quantity,
     "default_parameters": default_parameters,
     "default_criteria": default_criteria,

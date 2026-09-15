@@ -3,7 +3,7 @@ from typing import Any
 
 from compareexpressions.expression_parsing import Result
 from compareexpressions.expression_parsing import preview_function as symbolic_preview
-from compareexpressions.units import preview_function as physical_quantity_preview
+from .context.physical_quantity_preview import preview_function as physical_quantity_preview
 
 
 def preview_function(response: str, params: Mapping[str, Any]) -> Result:
