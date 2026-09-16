@@ -1,19 +1,32 @@
 from copy import deepcopy
 
 from compareexpressions.criteria import add_feedback_from_tags
-from compareexpressions.expression_parsing import ExpressionParams, parse_latex
+from compareexpressions.expression_parsing import (
+    AbsoluteValueNotationError,
+    BracketNotationError,
+    ExpressionParams,
+    parse_latex,
+)
 
 from .result import EvaluationResult
 from .context.symbolic import context as symbolic_context
 from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from .feedback.symbolic import internal_feedback
+from .feedback.tags import FeedbackTag, FeedbackTagName
 
 from collections.abc import Mapping
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
 }
+
+
+def notation_error_feedback(error, original_text):
+    """`FeedbackTag` for a `BracketNotationError`/`AbsoluteValueNotationError` raised while preprocessing."""
+    if isinstance(error, BracketNotationError):
+        return FeedbackTag(FeedbackTagName.BRACKET_NOTATION_MISMATCH, {"x": original_text})
+    return FeedbackTag(FeedbackTagName.ABSOLUTE_VALUE_NOTATION_AMBIGUITY, {"name": error.name})
 
 
 class FrozenValuesDictionary(dict):
@@ -117,15 +130,17 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
         reserved_expressions_dict.update({key: FrozenValuesDictionary()})
         for (label, expr) in reserved_expressions[key].items():
             expr_parsed = None
-            preprocessed = preprocess(key, expr, parameters)
-            expr = preprocessed.expression
-            if preprocessed.success is False:
-                feedback_tag = str(preprocessed.feedback.tag)
+            original_expr = expr
+            try:
+                expr = preprocess(key, expr, parameters)
+            except (BracketNotationError, AbsoluteValueNotationError) as e:
+                feedback = notation_error_feedback(e, original_expr)
+                expr = e.expression
                 if key == "learner":
                     # Preprocess can only create warnings for responses in this case
-                    result.add_feedback(feedback_tag, internal_feedback(preprocessed.feedback))
+                    result.add_feedback(str(feedback.tag), internal_feedback(feedback))
                 else:
-                    raise Exception(internal_feedback(preprocessed.feedback), feedback_tag)
+                    raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
                 raise Exception(f"Reserved expression {label} must be given as a string.")
@@ -166,11 +181,12 @@ def get_criteria_string(parameters):
 
 def create_criteria_dict(criteria_parser, parsing_params):
     preprocess = parsing_params["context"]["expression_preprocess"]
-    criteria_string = get_criteria_string(parsing_params)
-    preprocessed = preprocess("criteria", criteria_string, parsing_params)
-    criteria_string = preprocessed.expression
-    if preprocessed.success is False:
-        raise Exception(internal_feedback(preprocessed.feedback), str(preprocessed.feedback.tag))
+    original_criteria_string = get_criteria_string(parsing_params)
+    try:
+        criteria_string = preprocess("criteria", original_criteria_string, parsing_params)
+    except (BracketNotationError, AbsoluteValueNotationError) as e:
+        feedback = notation_error_feedback(e, original_criteria_string)
+        raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
     criteria_string_list = []
     delims = [
         ("(", ")"),
