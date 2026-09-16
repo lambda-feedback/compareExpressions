@@ -7,8 +7,6 @@ from collections.abc import Mapping
 from typing import Any
 
 from compareexpressions.expression_parsing import (
-    Preview,
-    Result,
     SympyParsingConfig,
     find_matching_parenthesis,
     parse_expression,
@@ -23,6 +21,8 @@ from compareexpressions.units import (
     parse_quantity,
     preprocess_quantity,
 )
+
+from ..symbolic_preview import Preview, Result
 
 
 def fix_exponents(response: str) -> str:
@@ -78,7 +78,7 @@ def preview_function(response: str, params: QuantityParams | Mapping[str, Any]) 
             latex_out = value_latex + separators[0] + (unit_latex or "")
             sympy_out = value_sympy + separators[1] + unit_sympy
         else:
-            preprocessed = preprocess_quantity("response", response, params).expression
+            preprocessed = preprocess_quantity("response", response, params)
             latex_out = parse_quantity(preprocessed, params).latex
             sympy_out = response
     except QuantityError:
