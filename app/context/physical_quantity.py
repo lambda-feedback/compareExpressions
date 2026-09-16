@@ -14,7 +14,7 @@ from compareexpressions.units import QuantityParams, preprocess_quantity
 from compareexpressions.units import parse_quantity as parse_physical_quantity
 from .physical_quantity_preview import preview_function
 from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
-from ..feedback.physical_quantity import internal_feedback
+from ..feedback.physical_quantity import reverted_unit_feedback
 from .symbolic import default_parameters as symbolic_default_parameters
 from compareexpressions.slr_parsing import SLRParser, catch_undefined, create_node, infix, operate
 from sympy import Symbol
@@ -26,8 +26,8 @@ def expression_preprocess(name, expr, parameters):
 
 def parse_quantity(name, expr, parameters, evaluation_result):
     quantity = parse_physical_quantity(expr, parameters["quantity"], name)
-    for (tag, message) in quantity.messages:
-        evaluation_result.add_feedback(tag, internal_feedback(message))
+    for index, reverted in enumerate(quantity.reverted_units):
+        evaluation_result.add_feedback(f"{name}_REVERTED_UNIT_{index}", reverted_unit_feedback(reverted))
     if quantity.standard_value is not None:
         standard_value = quantity.standard_value
     else:
