@@ -8,9 +8,9 @@ from compareexpressions.expression_parsing import (
     generate_arbitrary_number_pattern_matcher,
     parse_expression,
     preprocess_expression,
-    preview_function,
 )
 
+from ..symbolic_preview import preview_function
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 from compareexpressions.criteria import CriteriaGraph, build_criteria_parser

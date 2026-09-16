@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from typing import Any
 
-from compareexpressions.expression_parsing import Result
-from compareexpressions.expression_parsing import preview_function as symbolic_preview
+from .symbolic_preview import Result
+from .symbolic_preview import preview_function as symbolic_preview
 from .context.physical_quantity_preview import preview_function as physical_quantity_preview
 
 
