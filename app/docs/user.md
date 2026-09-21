@@ -288,6 +288,12 @@ The example given in the example problem set uses an EXPRESSION response area th
 Some examples of expressions that are accepted as correct:
 `x^2-5\*y^2-7=0` $x^2-5y^2-7=0$, `x^2 = 5y^2+7` $x^2=5y^2+7$, `2x^2 = 10y^2+14` $2x^2=10y^2+14=0$.
 
+Chained equalities of any length (e.g. `x = y = z`) are supported, in the answer and/or the response. A chain asserts that all of its operands are equal to one another, so it is parsed as the conjunction of the equalities between adjacent operands and compared by solution set. The order the operands are written in therefore carries no meaning: with answer `x = y = z` the responses `z = y = x`, `y = x = z`, `2x = 2y = 2z` and `x + 1 = y + 1 = z + 1` are all accepted, while `x = y = w` and `x = y = 5` are rejected. A degenerate chain that asserts no more than a single equality (e.g. `x = y = y`) matches that equality.
+
+A chain is not equivalent to a single equality that omits one of its constraints: with answer `x = y = z` the response `x = y` is rejected, and vice versa. Every `=` must have an expression on both sides, so `x = = y` and `x =` are rejected as unparseable.
+
+**Note:** equalities cannot be mixed with order operators in one expression (e.g. `x = y < z`), and chains whose parts are not affine are compared by matching the parts one-to-one instead of by solution set, which is order-insensitive but otherwise stricter.
+
 #### Inequalities in the answer and response
 
 There is (limited) support for using inequalities in the response and answer. If the answer is `p REL q` and the response is `f REL' g`, where `REL` and `REL'` are order operators (`<`, `<=`, `>`, `>=`), the function rewrites each side as `D REL 0` (moving all terms to one side and flipping `>`/`>=` to `<`/`<=`) and checks that `D_response / D_answer` simplifies to a **positive** constant *and* that the two relations have the same strictness. `<` and `<=` are treated as different.
