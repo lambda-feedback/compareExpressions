@@ -558,3 +558,30 @@ class TestParseInequalities:
     def test_parse_equality_still_works(self, expr):
         parsed = parse_expression(expr, self.parsing_params())
         assert isinstance(parsed, Equality)
+
+    @pytest.mark.parametrize(
+        "expr,number_of_parts",
+        [
+            ("x = y = z", 2),
+            ("x = y = z = w", 3),
+            ("2*x = y + 1 = z", 2),
+            ("a = b = c = d = e", 4),
+        ]
+    )
+    def test_parse_chained_equality(self, expr, number_of_parts):
+        # A chained equality becomes the conjunction of the equalities between
+        # adjacent operands; before this every operand after the second was
+        # silently discarded.
+        parsed = parse_expression(expr, self.parsing_params())
+        assert isinstance(parsed, And)
+        assert len(parsed.args) == number_of_parts
+        assert all(isinstance(arg, Equality) for arg in parsed.args)
+
+    def test_parse_chained_equality_keeps_all_operands(self):
+        parsed = parse_expression("x = y = z", self.parsing_params())
+        assert {str(s) for s in parsed.free_symbols} == {"x", "y", "z"}
+
+    @pytest.mark.parametrize("expr", ["x = = y", "= x", "x =", "x = y ="])
+    def test_parse_equality_with_empty_operand_rejected(self, expr):
+        with pytest.raises(ValueError):
+            parse_expression(expr, self.parsing_params())
