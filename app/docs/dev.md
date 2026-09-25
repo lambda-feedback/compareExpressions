@@ -206,7 +206,7 @@ The function returns result dictionary with the following fields:
 
 # Preview function
 
-When the evaluation function preview is called the code in `preview.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions come from the `compareexpressions-expression-parsing` (symbolic expressions) and `compareexpressions-units` (physical quantities) packages, see [Packages](#packages).
+When the evaluation function preview is called the code in `preview.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions come from the `lambdafeedback-expression-parsing` (symbolic expressions) and `lambdafeedback-units` (physical quantities) packages, see [Packages](#packages).
 
 **Remark**: Since it is likely that there will be significant overlap between the response preview and the response evaluation (e.g. code for parsing and interpreting the response), it is good practice if they can share as much code as possible to ensure consistency. For this reason it might be better to move the preview functions fully inside the context (either by making a `preview` subfolder in the `context` folder, or by moving the implementation of the preview function inside the context files themselves). In this case the `preview.py` and `evaluation.py` could also share the same code for determining the right context to use.
 
@@ -214,23 +214,23 @@ When the evaluation function preview is called the code in `preview.py` will be 
 
 # Packages
 
-The parsing, unit-handling and criteria code lives in four packages from [compareExpressions-packages](https://github.com/m-messer/compare-expressions-packages), installed through `requirements.txt`:
+The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/m-messer/lambda-feedback-packages), installed through `requirements.txt`:
 
 | Package | Import | Used for |
 |---|---|---|
-| `compareexpressions-slr-parsing` | `compareexpressions.slr_parsing` | The SLR parser behind the criteria and quantity grammars |
-| `compareexpressions-criteria` | `compareexpressions.criteria` | Parsing criteria, criteria graphs, turning reached criteria into feedback |
-| `compareexpressions-expression-parsing` | `compareexpressions.expression_parsing` | Preprocessing and parsing expressions with SymPy, LaTeX, the symbolic preview |
-| `compareexpressions-units` | `compareexpressions.units` | Unit data, reading physical quantities, dimensional analysis, the quantity preview |
+| `lambdafeedback-slr-parsing` | `lambdafeedback.slr_parsing` | The SLR parser behind the criteria and quantity grammars |
+| `lambdafeedback-criteria` | `lambdafeedback.criteria` | Parsing criteria, criteria graphs, turning reached criteria into feedback |
+| `lambdafeedback-expression-parsing` | `lambdafeedback.expression_parsing` | Preprocessing and parsing expressions with SymPy, LaTeX, the symbolic preview |
+| `lambdafeedback-units` | `lambdafeedback.units` | Unit data, reading physical quantities, dimensional analysis, the quantity preview |
 
 The packages don't contain feedback text. Where they report something to the learner they return a `FeedbackTag` (a tag plus the inputs needed to render it), and `internal_feedback` in `feedback/symbolic.py` and `feedback/physical_quantity.py` turns it into text. `result.py` holds the `EvaluationResult` that collects feedback and serialises the response.
 
 To work on the app and the packages together, install the packages from a local checkout in editable mode instead of from git:
 
 ```bash
-pip install -e ../compareExpressions-packages/slr_parsing -e ../compareExpressions-packages/criteria \
-            -e ../compareExpressions-packages/expression_parsing -e ../compareExpressions-packages/units
-grep -v compareexpressions app/requirements.txt | pip install -r /dev/stdin
+pip install -e ../lambda-feedback-packages/slr_parsing -e ../lambda-feedback-packages/criteria \
+            -e ../lambda-feedback-packages/expression_parsing -e ../lambda-feedback-packages/units
+grep -v lambdafeedback app/requirements.txt | pip install -r /dev/stdin
 ```
 
 # Tests

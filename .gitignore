@@ -137,6 +137,3 @@ app/benchmark.py
 app/profiling_examples.py
 
 .idea/
-
-# Extracted packages live here as their own separate git repo
-/compareExpressions-packages/

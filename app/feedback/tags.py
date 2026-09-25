@@ -1,4 +1,4 @@
-"""Feedback tags raised by the compareexpressions packages, and this app's own preview logic.
+"""Feedback tags raised by the lambdafeedback packages, and this app's own preview logic.
 
 The packages don't carry compareExpressions' feedback text: a
 :class:`FeedbackTag` is the tag plus the inputs needed to render it (see

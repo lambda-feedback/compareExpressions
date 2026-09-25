@@ -1,7 +1,7 @@
 from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo
 from sympy import re as real_part
 
-from compareexpressions.expression_parsing import (
+from lambdafeedback.expression_parsing import (
     PATTERNS as syntactical_forms,
     ExpressionParams,
     SympyParsingConfig,
@@ -13,7 +13,7 @@ from compareexpressions.expression_parsing import (
 from ..symbolic_preview import preview_function
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
-from compareexpressions.criteria import CriteriaGraph, build_criteria_parser
+from lambdafeedback.criteria import CriteriaGraph, build_criteria_parser
 
 
 default_parameters = {

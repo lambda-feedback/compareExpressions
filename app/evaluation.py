@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from compareexpressions.expression_parsing import (
+from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
     ExpressionParams,

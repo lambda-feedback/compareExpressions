@@ -4,7 +4,7 @@ import os
 # Import necessary data and reference cases for tests
 from .physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from ..evaluation import evaluation_function
-from compareexpressions.units import (
+from lambdafeedback.units import (
     COMMON_UNITS,
     IMPERIAL_UNITS,
     SI_BASE_UNITS,

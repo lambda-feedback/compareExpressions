@@ -6,7 +6,7 @@ import tokenize
 from collections.abc import Mapping
 from typing import Any
 
-from compareexpressions.expression_parsing import (
+from lambdafeedback.expression_parsing import (
     SympyParsingConfig,
     find_matching_parenthesis,
     parse_expression,
@@ -14,7 +14,7 @@ from compareexpressions.expression_parsing import (
     sanitise_latex,
     sympy_to_latex,
 )
-from compareexpressions.units import (
+from lambdafeedback.units import (
     QuantityError,
     QuantityParams,
     QuantityParseError,

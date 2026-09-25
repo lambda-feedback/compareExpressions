@@ -2,8 +2,8 @@ import pytest
 import os
 
 from ..evaluation import evaluation_function
-from compareexpressions.expression_parsing import substitute
-from compareexpressions.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
+from lambdafeedback.expression_parsing import substitute
+from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
 
 # REMARK: If a case is marked with an alternative output, this means that it is difficult in this case to prevent sympy from simplifying for that particular case
 elementary_function_test_cases = [

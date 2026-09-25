@@ -1,6 +1,6 @@
 """Previewing a learner's response: LaTeX and SymPy renderings of what was typed.
 
-Moved here from ``compareexpressions.expression_parsing``: rendering a
+Moved here from ``lambdafeedback.expression_parsing``: rendering a
 response for display, and mapping a parse failure to a tag for the learner,
 are app-layer concerns.
 """
@@ -13,7 +13,7 @@ from typing import Any, NotRequired, TypedDict
 from sympy import Basic
 from sympy.parsing.sympy_parser import T as TRANSFORMATIONS
 
-from compareexpressions.expression_parsing import (
+from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
     ExpressionParams,

@@ -1,4 +1,4 @@
-from compareexpressions.criteria import CriteriaGraph
+from lambdafeedback.criteria import CriteriaGraph
 
 
 class EvaluationResult:
@@ -6,7 +6,7 @@ class EvaluationResult:
         Collects the outcome of an evaluation and serialises it into the
         response returned by `evaluation_function`.
 
-        Satisfies `compareexpressions.criteria.ResultLike`, so
+        Satisfies `lambdafeedback.criteria.ResultLike`, so
         `CriteriaGraph.export_feedback` can add to it.
     """
     def __init__(self):

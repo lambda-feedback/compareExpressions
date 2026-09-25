@@ -3,10 +3,10 @@ mpmath==1.3.0
 sympy==1.14
 antlr4-python3-runtime==4.7.2
 # Parsing, units and criteria packages extracted from this function
-# (https://github.com/m-messer/compare-expressions-packages), pinned to a commit
+# (https://github.com/m-messer/lambda-feedback-packages), pinned to a commit
 # on its main branch (0.2.0). All four are listed: they depend on each other by
 # name and aren't published on PyPI.
-compareexpressions-slr-parsing @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=slr_parsing
-compareexpressions-criteria @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=criteria
-compareexpressions-expression-parsing @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=expression_parsing
-compareexpressions-units @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=units
+lambdafeedback-slr-parsing @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=slr_parsing
+lambdafeedback-criteria @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=criteria
+lambdafeedback-expression-parsing @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=expression_parsing
+lambdafeedback-units @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=units

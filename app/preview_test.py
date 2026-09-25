@@ -22,7 +22,7 @@ class TestPreviewFunction():
     Use preview_function() to check your algorithm works
     as it should.
 
-    The symbolic preview itself is tested in the compareexpressions-expression-parsing
+    The symbolic preview itself is tested in the lambdafeedback-expression-parsing
     package. The physical quantity preview is tested in physical_quantity_preview_test.py.
     """
 
