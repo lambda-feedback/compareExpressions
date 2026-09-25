@@ -6,7 +6,7 @@ antlr4-python3-runtime==4.7.2
 # (https://github.com/m-messer/compare-expressions-packages), pinned to a commit
 # on its main branch (0.2.0). All four are listed: they depend on each other by
 # name and aren't published on PyPI.
-compareexpressions-slr-parsing @ git+https://github.com/m-messer/compare-expressions-packages.git@fe90efe3a2501816c755fea39033f84fc33f483c#subdirectory=slr_parsing
-compareexpressions-criteria @ git+https://github.com/m-messer/compare-expressions-packages.git@fe90efe3a2501816c755fea39033f84fc33f483c#subdirectory=criteria
-compareexpressions-expression-parsing @ git+https://github.com/m-messer/compare-expressions-packages.git@fe90efe3a2501816c755fea39033f84fc33f483c#subdirectory=expression_parsing
-compareexpressions-units @ git+https://github.com/m-messer/compare-expressions-packages.git@fe90efe3a2501816c755fea39033f84fc33f483c#subdirectory=units
+compareexpressions-slr-parsing @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=slr_parsing
+compareexpressions-criteria @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=criteria
+compareexpressions-expression-parsing @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=expression_parsing
+compareexpressions-units @ git+https://github.com/m-messer/compare-expressions-packages.git@2848e58af94b04674b044ff557bf698a7e59fedf#subdirectory=units
