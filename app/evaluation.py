@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-from compareexpressions.criteria import add_feedback_from_tags
 from compareexpressions.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
@@ -238,7 +237,7 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
         #       assumption that some way to return partial feedback
         #       before script has executed completely will be available
         #       in the future
-        add_feedback_from_tags(evaluation_result, criteria_feedback, graph, custom_feedback=custom_feedback)
+        graph.export_feedback(evaluation_result, criteria_feedback, custom_feedback=custom_feedback)
     evaluation_result.is_correct = is_correct
     return
 

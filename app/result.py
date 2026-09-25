@@ -1,4 +1,4 @@
-from compareexpressions.criteria import criteria_test_data
+from compareexpressions.criteria import CriteriaGraph
 
 
 class EvaluationResult:
@@ -6,8 +6,8 @@ class EvaluationResult:
         Collects the outcome of an evaluation and serialises it into the
         response returned by `evaluation_function`.
 
-        Satisfies `compareexpressions.criteria.ResultLike`, so the feedback
-        helpers in `compareexpressions.criteria.feedback` can add to it.
+        Satisfies `compareexpressions.criteria.ResultLike`, so
+        `CriteriaGraph.export_feedback` can add to it.
     """
     def __init__(self):
         self.is_correct = False
@@ -33,7 +33,7 @@ class EvaluationResult:
     def serialise(self, include_test_data=False) -> dict:
         out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback(), tags=self.tags)
         if include_test_data is True:
-            out.update(criteria_test_data(self.criteria_graphs))
+            out.update(CriteriaGraph.test_data(self.criteria_graphs))
         if self.latex is not None:
             out.update(dict(response_latex=self.latex))
         if self.simplified is not None:
