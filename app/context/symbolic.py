@@ -10,7 +10,7 @@ from lambdafeedback.expression_parsing import (
     preprocess_expression,
 )
 
-from ..symbolic_preview import preview_function
+from ..preview.symbolic import preview_function
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ..feedback.syntactical_forms import PATTERNS as syntactical_forms
 
