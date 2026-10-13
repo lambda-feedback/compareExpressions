@@ -1,8 +1,6 @@
 import pytest
-import os
 
 from .preview import preview_function
-from .utility.preview_utilities import Params
 from .evaluation import evaluation_function
 
 
@@ -23,15 +21,6 @@ class TestEvaluationFunction():
 
     Use evaluation_function() to call the evaluation function.
     """
-
-    # Import tests that makes sure that mathematical expression comparison works as expected
-    from .tests.symbolic_evaluation_test import TestEvaluationFunction as TestSymbolicComparison
-
-    # Import tests that makes sure that physical quantities are handled as expected
-    from .tests.physical_quantity_evaluation_test import TestEvaluationFunction as TestQuantities
-
-    # Import tests that corresponds to examples in documentation and examples module
-    from .tests.example_test import TestEvaluationFunction as TestExamples
 
     def test_eval_function_can_handle_latex_input(self):
         response = r"\sin x + x^{7}"
@@ -96,7 +85,7 @@ class TestEvaluationFunction():
 
     def test_euler_preview_evaluate(self):
         response = "ER_2"
-        params = Params(is_latex=True, elementary_functions=False, strict_syntax=False)
+        params = dict(is_latex=True, elementary_functions=False, strict_syntax=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -116,7 +105,6 @@ class TestEvaluationFunction():
         answer = "E*R_2"
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-
 
     def test_theta_character_implict_multi_variable(self):
         params = {
@@ -190,8 +178,6 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] == is_correct
 
-
-
     @pytest.mark.parametrize("params, is_correct", [
         ({}, True),
         ({"atol": 0.0, "rtol": 0.0, "strict_syntax": False, "physical_quantity": False, "elementary_functions": False}, True),
@@ -214,7 +200,7 @@ class TestEvaluationFunction():
 
     def test_mu_preview_evaluate(self):
         response = "10 μA"
-        params = Params(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantity=True)
+        params = dict(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantity=True)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -257,8 +243,3 @@ class TestEvaluationFunction():
 
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] == is_correct
-
-
-
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', '--tb=short', '--durations=10', os.path.abspath(__file__)])

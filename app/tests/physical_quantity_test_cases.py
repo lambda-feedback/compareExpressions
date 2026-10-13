@@ -1,10 +1,6 @@
-import pytest
-import os
-
-from ..context.physical_quantity import SLR_quantity_parser, SLR_quantity_parsing, default_parameters
-from ..utility.unit_system_conversions import\
-    set_of_SI_base_unit_dimensions, set_of_derived_SI_units_in_SI_base_units,\
-    set_of_common_units_in_SI, set_of_very_common_units_in_SI, set_of_imperial_units
+# Physical quantities with their expected value, unit and LaTeX forms, shared by
+# the physical quantity evaluation tests. The quantity parser itself is tested in
+# the lambdafeedback-units package.
 
 slr_strict_si_syntax_test_cases = [
     ("q",  # String that will be used as response / answer
@@ -54,21 +50,21 @@ slr_strict_si_syntax_test_cases = [
      "kilogram/(metre second^2)",
      "kilogram/(metre second^2)",
      None,
-     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     r"\frac{\mathrm{kilogram}}{\mathrm{metre}~\mathrm{second}^{2}}",
      ["NO_VALUE"]),
     ("metre^(3/2)",
      None,
      "metre^(3/2)",
      "metre^(3/2)",
      None,
-     r"\mathrm{metre}^{(\frac{3}{2})}",
+     r"\mathrm{metre}^{\frac{3}{2}}",
      ["NO_VALUE"]),
     ("10 kilogram/(metre second^2)",
      "10",
      "kilogram/(metre second^2)",
      "10 kilogram/(metre second^2)",
      "10",
-     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     r"\frac{\mathrm{kilogram}}{\mathrm{metre}~\mathrm{second}^{2}}",
      ["FULL_QUANTITY", "NUMBER_VALUE"]),
     ("10 kilogram*metre/second**2",
      "10",
@@ -89,7 +85,7 @@ slr_strict_si_syntax_test_cases = [
      "kilogram*metre*second**(-2)",
      "10 kilogram*metre*second**(-2)",
      "10",
-     r"\mathrm{kilogram}\cdot\mathrm{metre}\cdot\mathrm{second}^{(-2)}",
+     r"\mathrm{kilogram}\cdot\mathrm{metre}\cdot\mathrm{second}^{-2}",
      ["FULL_QUANTITY", "NUMBER_VALUE"]),
     ("10*pi kilogram*metre/second^2",
      "10*pi",
@@ -109,26 +105,26 @@ slr_strict_si_syntax_test_cases = [
      "(kilogram megametre^2)/(fs^4 daA)",
      "(kilogram megametre^2)/(femtosecond^4 decaampere)",
      None,
-     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     r"\frac{\mathrm{kilogram}~\mathrm{megametre}^{2}}{\mathrm{femtosecond}^{4}~\mathrm{decaampere}}",
      ["NO_VALUE"]),
     ("(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(fs^4 daA)",
      "(5.27*pi/sqrt(11) + 5*7)^(4.3)", "(kilogram megametre^2)/(fs^4 daA)",
      "(5.27*pi/sqrt(11) + 5*7)^(4.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",
      r"\left(\frac{5.27 \cdot \pi}{\sqrt{11}} + 5 \cdot 7\right)^{4.3}",
-     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     r"\frac{\mathrm{kilogram}~\mathrm{megametre}^{2}}{\mathrm{femtosecond}^{4}~\mathrm{decaampere}}",
      ["FULL_QUANTITY", "EXPR_VALUE"]),
     ("(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(fs^4 daA)",
      "(5.27*pi/sqrt(11) + 5*7)^(2+2.3)", "(kilogram megametre^2)/(fs^4 daA)",
      "(5.27*pi/sqrt(11) + 5*7)^(2+2.3) (kilogram megametre^2)/(femtosecond^4 decaampere)",
      r"\left(\frac{5.27 \cdot \pi}{\sqrt{11}} + 5 \cdot 7\right)^{2 + 2.3}",
-     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     r"\frac{\mathrm{kilogram}~\mathrm{megametre}^{2}}{\mathrm{femtosecond}^{4}~\mathrm{decaampere}}",
      ["FULL_QUANTITY", "EXPR_VALUE"]),
     ("(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(fs^4 daA)",
      "(5*27/11 + 5*7)^(2*3)",
      "(kilogram megametre^2)/(fs^4 daA)",
      "(5*27/11 + 5*7)^(2*3) (kilogram megametre^2)/(femtosecond^4 decaampere)",
      r"\left(5 \cdot 27 \cdot \frac{1}{11} + 5 \cdot 7\right)^{2 \cdot 3}",
-     r"\frac{(\mathrm{kilogram}~\mathrm{megametre}^{2})}{(\mathrm{femtosecond}^{4}~\mathrm{decaampere})}",
+     r"\frac{\mathrm{kilogram}~\mathrm{megametre}^{2}}{\mathrm{femtosecond}^{4}~\mathrm{decaampere}}",
      ["FULL_QUANTITY", "EXPR_VALUE"]),
     ("(pi+10) kg*m/s^2",
      "(pi+10)",
@@ -298,14 +294,14 @@ slr_natural_si_syntax_test_cases = [
      "kilogram/(metresecond^2)",
      "kilogram/(metre second^2)",
      None,
-     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     r"\frac{\mathrm{kilogram}}{\mathrm{metre}~\mathrm{second}^{2}}",
      ["NO_VALUE"]),
     ("10 kilogram/(metresecond^2)",
      "10",
      "kilogram/(metresecond^2)",
      "10 kilogram/(metre second^2)",
      "10",
-     r"\frac{\mathrm{kilogram}}{(\mathrm{metre}~\mathrm{second}^{2})}",
+     r"\frac{\mathrm{kilogram}}{\mathrm{metre}~\mathrm{second}^{2}}",
      ["FULL_QUANTITY", "NUMBER_VALUE"]),
     ("10 kilogrammetre/second**2",
      "10",
@@ -340,7 +336,7 @@ slr_natural_si_syntax_test_cases = [
      "kilogrammetresecond**(-2)",
      "10 kilogram metre second**(-2)",
      "10",
-     r"\mathrm{kilogram}~\mathrm{metre}~\mathrm{second}^{(-2)}",
+     r"\mathrm{kilogram}~\mathrm{metre}~\mathrm{second}^{-2}",
      ["FULL_QUANTITY", "NUMBER_VALUE"]),
     ("10*pi kilogrammetre/second^2",
      "10*pi",
@@ -447,130 +443,3 @@ slr_natural_si_syntax_test_cases = [
      r"\frac{1}{\mathrm{second}^{2}}",
      ["FULL_QUANTITY", "NUMBER_VALUE"]),
 ]
-
-
-class TestEvaluationFunction():
-    @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
-    def test_strict_si_syntax(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        parameters = default_parameters
-        parameters.update(
-            {
-                "strict_syntax": False,
-                "units_string": "SI",
-                "strictness": "strict",
-                "elementary_functions": True,
-            }
-        )
-        parser = SLR_quantity_parser(parameters)
-        quantity = SLR_quantity_parsing(string, parameters, parser, "quantity")
-        parsed_value = quantity.value.original_string() if quantity.value is not None else None
-        parsed_unit = quantity.unit.original_string() if quantity.unit is not None else None
-        parsed_value_latex = quantity.value_latex_string
-        parsed_unit_latex = quantity.unit_latex_string
-        parsed_content = quantity.ast_root.content_string()
-        assert parsed_value == value
-        assert parsed_unit == unit
-        assert parsed_content == content
-        assert parsed_value_latex == value_latex
-        assert parsed_unit_latex == unit_latex
-
-    @pytest.mark.parametrize(
-        "long_form,short_form",
-        [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units]
-    )
-    def test_short_forms_strict_SI(self, long_form, short_form):
-        parameters = default_parameters
-        parameters.update(
-            {
-                "strict_syntax": False,
-                "units_string": "SI",
-                "strictness": "strict"
-            }
-        )
-        parser = SLR_quantity_parser(parameters)
-        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
-        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
-        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
-
-    @pytest.mark.parametrize(
-        "long_form,short_form",
-        [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI]
-    )
-    def test_short_forms_common_SI(self, long_form, short_form):
-        parameters = default_parameters
-        parameters.update(
-            {
-                "strict_syntax": False,
-                "units_string": "common",
-                "strictness": "strict"
-            }
-        )
-        parser = SLR_quantity_parser(parameters)
-        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
-        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
-        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
-
-    @pytest.mark.parametrize(
-        "long_form,short_form",
-        [(x[0], x[1]) for x in set_of_imperial_units]
-    )
-    def test_short_forms_imperial(self, long_form, short_form):
-        parameters = default_parameters
-        parameters.update(
-            {
-                "strict_syntax": False,
-                "units_string": "imperial",
-                "strictness": "strict"
-            }
-        )
-        parser = SLR_quantity_parser(parameters)
-        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
-        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
-        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
-
-    @pytest.mark.parametrize(
-        "long_form,short_form",
-        [(x[0], x[1]) for x in set_of_SI_base_unit_dimensions | set_of_derived_SI_units_in_SI_base_units | set_of_common_units_in_SI | set_of_very_common_units_in_SI | set_of_imperial_units]
-    )
-    def test_short_forms_all(self, long_form, short_form):
-        parameters = default_parameters
-        parameters.update(
-            {
-                "strict_syntax": False,
-                "units_string": "SI common imperial",
-                "strictness": "strict"
-            }
-        )
-        parser = SLR_quantity_parser(parameters)
-        long_quantity = SLR_quantity_parsing(long_form, parameters, parser, "quantity")
-        short_quantity = SLR_quantity_parsing(short_form, parameters, parser, "quantity")
-        assert long_quantity.unit.content_string() == short_quantity.unit.content_string()
-
-    @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
-    def test_natural_si_syntax(self, string, value, unit, content, value_latex, unit_latex, criteria):
-        parameters = default_parameters
-        parameters.update(
-            {
-                "strict_syntax": False,
-                "units_string": "SI common imperial",
-                "strictness": "natural",
-                "elementary_functions": True
-            }
-        )
-        parser = SLR_quantity_parser(parameters)
-        quantity = SLR_quantity_parsing(string, parameters, parser, "quantity")
-        parsed_unit_latex = quantity.unit_latex_string
-        parsed_value = quantity.value.original_string() if quantity.value is not None else None
-        parsed_unit = quantity.unit.original_string() if quantity.unit is not None else None
-        parsed_value_latex = quantity.value_latex_string
-        parsed_unit_latex = quantity.unit_latex_string
-        parsed_content = quantity.ast_root.content_string()
-        assert parsed_value == value
-        assert parsed_unit == unit
-        assert parsed_content == content
-        assert parsed_value_latex == value_latex
-        assert parsed_unit_latex == unit_latex
-
-
-if __name__ == "__main__":
-    pytest.main(["-xs", "--tb=line", os.path.abspath(__file__)])

@@ -1,13 +1,12 @@
-from .utility.preview_utilities import (
-    Params,
-    Result,
-)
+from collections.abc import Mapping
+from typing import Any
 
-from .preview_implementations.physical_quantity_preview import preview_function as physical_quantity_preview
-from .preview_implementations.symbolic_preview import preview_function as symbolic_preview
+from .symbolic_preview import Result
+from .symbolic_preview import preview_function as symbolic_preview
+from .context.physical_quantity_preview import preview_function as physical_quantity_preview
 
 
-def preview_function(response: str, params: Params) -> Result:
+def preview_function(response: str, params: Mapping[str, Any]) -> Result:
     """
     Function used to preview a student response.
     ---

@@ -1,16 +1,31 @@
 from copy import deepcopy
 
-from .utility.evaluation_result_utilities import EvaluationResult
-from .utility.preview_utilities import parse_latex
+from lambdafeedback.expression_parsing import (
+    AbsoluteValueNotationError,
+    BracketNotationError,
+    ExpressionParams,
+    parse_latex,
+)
+
+from .result import EvaluationResult
 from .context.symbolic import context as symbolic_context
 from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from .feedback.symbolic import internal_feedback
+from .feedback.tags import FeedbackTag, FeedbackTagName
 
 from collections.abc import Mapping
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
 }
+
+
+def notation_error_feedback(error, original_text):
+    """`FeedbackTag` for a `BracketNotationError`/`AbsoluteValueNotationError` raised while preprocessing."""
+    if isinstance(error, BracketNotationError):
+        return FeedbackTag(FeedbackTagName.BRACKET_NOTATION_MISMATCH, {"x": original_text})
+    return FeedbackTag(FeedbackTagName.ABSOLUTE_VALUE_NOTATION_AMBIGUITY, {"name": error.name})
 
 
 class FrozenValuesDictionary(dict):
@@ -57,11 +72,8 @@ def determine_context(parameters):
 
     reserved_keywords_codes = {"where", "written as", "contains", "proportional to"}
     reserved_keywords_aliases = {"plus_minus", "minus_plus"}
-    for re in parameters["reserved_expressions_strings"].values():
-        reserved_keywords_aliases = reserved_keywords_aliases.union(set(re.keys()))
-
-    for value in parameters["reserved_expressions_strings"].values():
-        reserved_keywords = reserved_keywords_aliases.union(set(value.keys()))
+    for expressions in parameters["reserved_expressions_strings"].values():
+        reserved_keywords_aliases = reserved_keywords_aliases.union(set(expressions.keys()))
 
     reserved_keywords_codes_collisions = []
     for keyword in reserved_keywords_codes:
@@ -75,7 +87,6 @@ def determine_context(parameters):
     reserved_keywords_aliases_collisions = []
     for keyword in reserved_keywords_aliases:
         if keyword in input_symbols_reserved_aliases:
-            print("Collision found")
             reserved_keywords_aliases_collisions.append(keyword)
     if len(reserved_keywords_aliases_collisions) > 0:
         if len(reserved_keywords_aliases_collisions) == 1:
@@ -83,8 +94,7 @@ def determine_context(parameters):
         else:
             raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
 
-    reserved_keywords = reserved_keywords_codes
-    context.update({"reserved_keywords": list(reserved_keywords)})
+    context.update({"reserved_keywords": list(reserved_keywords_codes)})
     return context
 
 
@@ -114,23 +124,25 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
         reserved_expressions_dict.update({key: FrozenValuesDictionary()})
         for (label, expr) in reserved_expressions[key].items():
             expr_parsed = None
-            preprocess_success, expr, preprocess_feedback = preprocess(key, expr, parameters)
-            if preprocess_success is False:
+            original_expr = expr
+            try:
+                expr = preprocess(key, expr, parameters)
+            except (BracketNotationError, AbsoluteValueNotationError) as e:
+                feedback = notation_error_feedback(e, original_expr)
+                expr = e.expression
                 if key == "learner":
-                    result.add_feedback(preprocess_feedback)
-                    preprocess_success = True  # Preprocess can only create warnings for responses in this case
+                    # Preprocess can only create warnings for responses in this case
+                    result.add_feedback(str(feedback.tag), internal_feedback(feedback))
                 else:
-                    raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+                    raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
                 raise Exception(f"Reserved expression {label} must be given as a string.")
             if len(expr.strip()) == 0:
                 if key == "learner":
                     result.add_feedback(
-                        (
-                            f"RESERVED_EXPRESSION_MISSING_{label}",
-                            messages["RESERVED_EXPRESSION_MISSING"](label)
-                        )
+                        f"RESERVED_EXPRESSION_MISSING_{label}",
+                        messages["RESERVED_EXPRESSION_MISSING"](label)
                     )
                 else:
                     raise Exception(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
@@ -143,10 +155,8 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                     success = False
                     if key == "learner":
                         result.add_feedback(
-                            (
-                                f"PARSE_ERROR_{label}",
-                                symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
-                            )
+                            f"PARSE_ERROR_{label}",
+                            symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
                         )
                     else:
                         raise Exception(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
@@ -165,10 +175,12 @@ def get_criteria_string(parameters):
 
 def create_criteria_dict(criteria_parser, parsing_params):
     preprocess = parsing_params["context"]["expression_preprocess"]
-    criteria_string = get_criteria_string(parsing_params)
-    preprocess_success, criteria_string, preprocess_feedback = preprocess("criteria", criteria_string, parsing_params)
-    if preprocess_success is False:
-        raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+    original_criteria_string = get_criteria_string(parsing_params)
+    try:
+        criteria_string = preprocess("criteria", original_criteria_string, parsing_params)
+    except (BracketNotationError, AbsoluteValueNotationError) as e:
+        feedback = notation_error_feedback(e, original_criteria_string)
+        raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
     criteria_string_list = []
     delims = [
         ("(", ")"),
@@ -205,7 +217,7 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
     response = evaluation_parameters["reserved_expressions"]["response"]
     criteria_feedback = set()
     is_correct = True
-    custom_feedback = evaluation_parameters.get("custom_feedback",{})
+    custom_feedback = evaluation_parameters.get("custom_feedback", {})
     for (criterion_identifier, graph) in criteria_graphs.items():
         # TODO: Find better way to identify main criteria for criteria graph
         main_criteria = criterion_identifier+"_TRUE"
@@ -213,14 +225,14 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
 
         # TODO: Implement way to define completeness of task other than "all main criteria satisfied"
         is_correct = is_correct and main_criteria in criteria_feedback
-        evaluation_result.add_criteria_graph(criterion_identifier, graph)
+        evaluation_result.criteria_graphs[criterion_identifier] = graph
 
         # Generate feedback strings from found feedback
         # NOTE: Feedback strings are generated for each graph due to the
         #       assumption that some way to return partial feedback
         #       before script has executed completely will be available
         #       in the future
-        evaluation_result.add_feedback_from_tags(criteria_feedback, graph, custom_feedback=custom_feedback)
+        graph.export_feedback(evaluation_result, criteria_feedback, custom_feedback=custom_feedback)
     evaluation_result.is_correct = is_correct
     return
 
@@ -270,7 +282,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "reserved_keywords": context["reserved_keywords"]+reserved_expressions_keys,
         }
     )
-    parsing_parameters = context["parsing_parameters_generator"](parameters, unsplittable_symbols=reserved_expressions_keys) 
+    parsing_parameters = context["parsing_parameters_generator"](parameters, unsplittable_symbols=reserved_expressions_keys)
     parameters.update(
         {
             "parsing_parameters": parsing_parameters,
@@ -283,20 +295,20 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     if parameters.get("is_latex", False):
         parameters["reserved_expressions_strings"]["learner"].update(
             {
-                "response": parse_latex(response, parameters.get("symbols", {}), False, parameters=parameters),
+                "response": parse_latex(response, ExpressionParams.from_dict(parameters).symbols),
             }
         )
 
-    # FIXME: Move this into expression_utilities
+    # FIXME: Move these notation warnings into lambdafeedback.expression_parsing
     if params.get("strict_syntax", False):
         if "^" in response:
-            evaluation_result.add_feedback(("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict())))
+            evaluation_result.add_feedback("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict()))
         if "!" in response:
-            evaluation_result.add_feedback(("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict())))
+            evaluation_result.add_feedback("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict()))
 
     if "!!!" in response:
         evaluation_result.add_feedback(
-            ("NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict())))
+            "NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict()))
 
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:
@@ -335,7 +347,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "numerical": parameters.get("numerical", False),
             "atol": parameters.get("atol", 0),
             "rtol": parameters.get("rtol", 0),
-            "custom_feedback": parameters.get("custom_feedback",{}),
+            "custom_feedback": parameters.get("custom_feedback", {}),
         }
     )
 

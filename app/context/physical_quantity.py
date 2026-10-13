@@ -2,47 +2,40 @@
 # IMPORTS
 # -------
 
-import re
 from copy import deepcopy
-from ..utility.physical_quantity_utilities import (
-    SLR_quantity_parser,
-    SLR_quantity_parsing, expression_preprocess
-)
-from ..preview_implementations.physical_quantity_preview import preview_function
-from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
-from ..utility.expression_utilities import default_parameters as symbolic_default_parameters
-from ..utility.expression_utilities import (
-    substitute_input_symbols,
-    create_sympy_parsing_params,
+from lambdafeedback.criteria import CriteriaGraph
+from lambdafeedback.expression_parsing import (
+    ExpressionParams,
+    SympyParsingConfig,
     compute_relative_tolerance_from_significant_decimals,
-    parse_expression
+    parse_expression,
 )
-from ..utility.physical_quantity_utilities import (
-    units_sets_dictionary,
-    set_of_SI_prefixes,
-    set_of_SI_base_unit_dimensions,
-    set_of_derived_SI_units_in_SI_base_units,
-    set_of_common_units_in_SI,
-    set_of_very_common_units_in_SI,
-    set_of_imperial_units,
-)
-from ..utility.slr_parsing_utilities import create_node, infix, operate, catch_undefined, SLR_Parser
+from lambdafeedback.units import QuantityParams, preprocess_quantity
+from lambdafeedback.units import parse_quantity as parse_physical_quantity
+from .physical_quantity_preview import preview_function
+from ..feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
+from ..feedback.physical_quantity import reverted_unit_feedback
+from .symbolic import default_parameters as symbolic_default_parameters
+from lambdafeedback.slr_parsing import CatchAll, Lexeme, SLRParser, TokenPattern, create_node, infix, operate
 from sympy import Symbol
 
-from ..utility.criteria_graph_utilities import CriteriaGraph
+
+def expression_preprocess(name, expr, parameters):
+    return preprocess_quantity(expr, QuantityParams.from_dict(parameters), name=name)
 
 
 def parse_quantity(name, expr, parameters, evaluation_result):
-    parser = SLR_quantity_parser(parameters)
-    quantity = SLR_quantity_parsing(expr, parameters, parser, name)
-    for message in quantity.messages:
-        evaluation_result.add_feedback(message)
-    if quantity.standard_value is not None:
-        standard_value = quantity.standard_value
-    else:
+    quantity = parse_physical_quantity(expr, parameters["quantity"], name)
+    for index, reverted in enumerate(quantity.reverted_units):
+        evaluation_result.add_feedback(f"{name}_REVERTED_UNIT_{index}", reverted_unit_feedback(reverted))
+    if quantity.standard_values is None:
         standard_value = None
+    elif len(quantity.standard_values) == 1:
+        standard_value = quantity.standard_values[0]
+    else:
+        standard_value = set(quantity.standard_values)
     if quantity.value is not None:
-        value = parse_expression(quantity.value.content_string(), quantity.parsing_params)
+        value = parse_expression(quantity.value.content_string(), quantity.parsing_config)
     else:
         value = None
     if quantity.standard_unit is not None:
@@ -50,7 +43,7 @@ def parse_quantity(name, expr, parameters, evaluation_result):
     else:
         standard_unit = None
     if quantity.unit is not None:
-        unit = parse_expression(quantity.unit.content_string(), quantity.parsing_params)
+        unit = parse_expression(quantity.unit.content_string(), quantity.parsing_config)
     else:
         unit = None
     quantity_dict = {
@@ -84,19 +77,19 @@ def generate_criteria_parser(reserved_expressions):
     }
 
     token_list = [
-        (start_symbol,   start_symbol),
-        (end_symbol,     end_symbol),
-        (null_symbol,    null_symbol),
-        (" *BOOL *",     "BOOL"),
-        (" *QUANTITY *", "QUANTITY"),
-        (" *DIMENSION *", "DIMENSION"),
-        ("\( *",         "START_DELIMITER"),
-        (" *\)",         "END_DELIMITER"),
-        ("response",     "QUANTITY"),
-        ("answer",       "QUANTITY"),
-        ("INPUT",        "INPUT", catch_undefined),
+        TokenPattern(start_symbol, start_symbol),
+        TokenPattern(end_symbol, end_symbol),
+        TokenPattern(null_symbol, null_symbol),
+        TokenPattern(Lexeme(("BOOL",), space_before=True, space_after=True), "BOOL"),
+        TokenPattern(Lexeme(("QUANTITY",), space_before=True, space_after=True), "QUANTITY"),
+        TokenPattern(Lexeme(("DIMENSION",), space_before=True, space_after=True), "DIMENSION"),
+        TokenPattern(Lexeme(("(",), space_after=True), "START_DELIMITER"),
+        TokenPattern(Lexeme((")",), space_before=True), "END_DELIMITER"),
+        TokenPattern("response", "QUANTITY"),
+        TokenPattern("answer", "QUANTITY"),
+        CatchAll("INPUT", "INPUT"),
     ]
-    token_list += [(" *"+x+" *", " "+x+" ") for x in criteria_operations]
+    token_list += [TokenPattern(Lexeme((x,), space_before=True, space_after=True), " "+x+" ") for x in criteria_operations]
 
     productions = [
         ("START",     "BOOL", create_node),
@@ -111,7 +104,7 @@ def generate_criteria_parser(reserved_expressions):
         ("DIMENSION", "dimension(QUANTITY)", operate(1)),
     ]
 
-    return SLR_Parser(token_list, productions, start_symbol, end_symbol, null_symbol)
+    return SLRParser(token_list, productions, start_symbol, end_symbol, null_symbol)
 
 
 def comparison_function(comparison_operator):
@@ -136,16 +129,9 @@ def comparison_function(comparison_operator):
 
 def comparison_base_graph(criterion, parameters, comparison_operator="=", label=None):
     graph = CriteriaGraph(label)
-    END = CriteriaGraph.END
-    graph.add_node(END)
+    END = graph.add_end_node()
     reserved_expressions = parameters["reserved_expressions"].items()
-    parsing_params = deepcopy(parameters["parsing_parameters"])
-    if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
-        ans = parameters["reserved_expressions"]["answer"]["quantity"].value
-        if ans is not None:
-            rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
-            parsing_params.update({'rtol': rtol})
-    parsing_params.update({"simplify": False, "evaluate": False})
+    parsing_params = parameters["parsing_parameters"]["sympy"].replace(simplify=False)
 
     if label is None:
         label = criterion.content_string()
@@ -171,7 +157,7 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
         details=f"checks if {inputs[0]} {comparison_operator} {inputs[1]}.",
         evaluate=compare_evaluate
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_TRUE",
         summary=f"{inputs[0]} {comparison_operator} {inputs[1]} is true.",
@@ -179,7 +165,7 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
         feedback_string_generator=physical_quantity_feedback_string_generators["COMPARISON"]("TRUE")
     )
     graph.attach(label+"_TRUE", END.label)
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_FALSE",
         summary=f"{inputs[0]} {comparison_operator} {inputs[1]} is false.",
@@ -214,16 +200,15 @@ def less_than_or_equal_node(criterion, parameters, label=None):
 
 def criterion_match_node(criterion, parameters, label=None):
     graph = CriteriaGraph(label)
-    END = CriteriaGraph.END
-    graph.add_node(END)
+    END = graph.add_end_node()
     reserved_expressions = parameters["reserved_expressions"].items()
-    parsing_params = deepcopy(parameters["parsing_parameters"])
+    parsing_params = parameters["parsing_parameters"]["sympy"].replace(simplify=False)
+    rtol = parameters["parsing_parameters"]["rtol"]
+    atol = parameters["parsing_parameters"]["atol"]
     if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
         ans = parameters["reserved_expressions"]["answer"]["quantity"].value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
-            parsing_params.update({'rtol': rtol})
-    parsing_params.update({"simplify": False, "evaluate": False})
 
     if label is None:
         label = criterion.content_string()
@@ -277,16 +262,16 @@ def criterion_match_node(criterion, parameters, label=None):
         if value_match is False:
             # TODO: better analysis of where `answer` is found in the criteria so that
             #       numerical tolerances can be applied appropriately
-            if parsing_params.get('rtol', 0) > 0 or parsing_params.get('atol', 0) > 0:
+            if rtol > 0 or atol > 0:
                 if (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer'):
                     ans = parameters["reserved_expressions"]["answer"]["standard"]["value"].simplify()
                     res = parameters["reserved_expressions"]["response"]["standard"]["value"].simplify()
                 if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
-                    if parsing_params.get('rtol', 0) > 0 and (ans != 0):
-                        value_match = bool(abs(float((ans-res)/ans)) < parsing_params['rtol'])
-                    elif parsing_params.get('atol', 0) > 0 or (ans == 0):
-                        answer_unit_factor = float(parameters["reserved_expressions"]["answer"]["quantity"].converted_unit_factor)
-                        value_match = bool(abs(float(ans-res)) < parsing_params['atol']*answer_unit_factor)
+                    if rtol > 0 and (ans != 0):
+                        value_match = bool(abs(float((ans-res)/ans)) < rtol)
+                    elif atol > 0 or (ans == 0):
+                        answer_unit_factor = float(parameters["reserved_expressions"]["answer"]["quantity"].unit_factor)
+                        value_match = bool(abs(float(ans-res)) < atol*answer_unit_factor)
 
         substitutions = [(key, expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
         unit_match = is_equal(lhs, rhs, substitutions)
@@ -349,21 +334,21 @@ def criterion_match_node(criterion, parameters, label=None):
         details=f"Converts {inputs[0]} and {inputs[1]} match to a common set of base units and compares their values.",
         evaluate=quantity_match
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_TRUE",
         summary=f"The quantities {inputs[0]} and {inputs[1]} match.",
         details=f"The quantities {inputs[0]} and {inputs[1]} match.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("QUANTITY_MATCH")
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_FALSE",
         summary=f"The quantities {inputs[0]} and {inputs[1]} does not match.",
         details=f"The quantities {inputs[0]} and {inputs[1]} does not match.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("QUANTITY_MISMATCH")
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_MISSING_VALUE",
         summary="The response is missing a value.",
@@ -371,7 +356,7 @@ def criterion_match_node(criterion, parameters, label=None):
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("MISSING_VALUE")
     )
     graph.attach(label+"_MISSING_VALUE", END.label)
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_UNEXPECTED_VALUE",
         summary="The response is expected only have unit(s), no value.",
@@ -379,7 +364,7 @@ def criterion_match_node(criterion, parameters, label=None):
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNEXPECTED_VALUE")
     )
     graph.attach(label+"_UNEXPECTED_VALUE", END.label)
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_MISSING_UNIT",
         summary="The response is missing unit(s).",
@@ -387,7 +372,7 @@ def criterion_match_node(criterion, parameters, label=None):
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("MISSING_UNIT")
     )
     graph.attach(label+"_MISSING_UNIT", END.label)
-    graph.attach(
+    graph.attach_new_criterion(
         label,
         label+"_UNEXPECTED_UNIT",
         summary="The response is expected to be a value without unit(s).",
@@ -395,21 +380,21 @@ def criterion_match_node(criterion, parameters, label=None):
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNEXPECTED_UNIT")
     )
     graph.attach(label+"_UNEXPECTED_UNIT", END.label)
-    graph.attach(
+    graph.attach_new_evaluation(
         label+"_FALSE",
         label+"_DIMENSION_MATCH",
         summary=f"Do the dimensions of {inputs[0]} and {inputs[1]} match?",
         details=f"Do the dimensions of {inputs[0]} and {inputs[1]} match?",
         evaluate=dimension_match
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label+"_DIMENSION_MATCH",
         label+"_DIMENSION_MATCH"+"_TRUE",
         summary=f"The quantities {inputs[0]} and {inputs[1]} have the same dimensions.",
         details=f"The quantities {inputs[0]} and {inputs[1]} have the same dimensions.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("DIMENSION_MATCH")
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label+"_DIMENSION_MATCH",
         label+"_DIMENSION_MATCH"+"_FALSE",
         summary=f"The quantities {inputs[0]} and {inputs[1]} have different dimensions.",
@@ -418,28 +403,28 @@ def criterion_match_node(criterion, parameters, label=None):
     )
     graph.attach(label+"_DIMENSION_MATCH"+"_TRUE", END.label)
     graph.attach(label+"_DIMENSION_MATCH"+"_FALSE", END.label)
-    graph.attach(
+    graph.attach_new_evaluation(
         label+"_TRUE",
         label+"_UNIT_COMPARISON",
         summary=f"Compares how similar the units of {inputs[0]} and {inputs[1]} are.",
         details=f"Compares how similar the units of {inputs[0]} and {inputs[1]} are.",
         evaluate=unit_comparison
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label+"_UNIT_COMPARISON",
         label+"_UNIT_COMPARISON"+"_IDENTICAL",
         summary=f"The units of quantities {inputs[0]} and {inputs[1]} are identical.",
         details=f"The units of quantities {inputs[0]} and {inputs[1]} are identical.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNIT_COMPARISON_IDENTICAL")
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label+"_UNIT_COMPARISON",
         label+"_UNIT_COMPARISON"+"_SIMILAR",
         summary=f"The units of quantities {inputs[0]} and {inputs[1]} are similar.",
         details=f"The units of quantities {inputs[0]} and {inputs[1]} are similar.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNIT_COMPARISON_SIMILAR")
     )
-    graph.attach(
+    graph.attach_new_criterion(
         label+"_UNIT_COMPARISON",
         label+"_UNIT_COMPARISON"+"_PREFIX_IS_LARGE",
         summary=f"The units of {inputs[0]} are much greater than the units of {inputs[1]}.",
@@ -447,7 +432,7 @@ def criterion_match_node(criterion, parameters, label=None):
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("PREFIX_IS_LARGE")
     )
     graph.attach(label+"_UNIT_COMPARISON"+"_PREFIX_IS_LARGE", END.label)
-    graph.attach(
+    graph.attach_new_criterion(
         label+"_UNIT_COMPARISON",
         label+"_UNIT_COMPARISON"+"_PREFIX_IS_SMALL",
         summary=f"The units of {inputs[0]} are much smaller than the units of {inputs[1]}.",
@@ -473,29 +458,33 @@ def feedback_procedure_generator(parameters_dict):
         graph = graph_template(criterion, parameters_dict)
         for evaluation in graph.evaluations.values():
             if evaluation.label in parameters_dict.get("disabled_evaluation_nodes", set()):
-                evaluation.replacement = CriteriaGraph.END
+                evaluation.replacement = CriteriaGraph.END_LABEL
         graphs.update({label: graph})
     return graphs
 
 
-def feedback_string_generator(tags, graph, parameters_dict):
-    strings = dict()
-    for tag in tags:
-        # feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
-        feedback_string = "PLACEHOLDER"
-        if feedback_string is not None:
-            strings.update({tag: feedback_string})
-    return
+# The evaluation parameters that affect how quantities are read. Other parameters
+# (e.g. `symbols`, `units_string` and `is_latex`) have never applied when reading
+# the response and answer as quantities during evaluation, only in the preview.
+QUANTITY_PARSING_PARAMETERS = (
+    "complexNumbers",
+    "convention",
+    "elementary_functions",
+    "rationalise",
+    "reserved_keywords",
+    "simplify",
+    "strict_syntax",
+    "strictness",
+)
 
 
 def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
-    parsing_parameters = create_sympy_parsing_params(params)
-    parsing_parameters.update({
-        "strictness": params.get("strictness", "natural"),
+    return {
+        "sympy": SympyParsingConfig.from_params(ExpressionParams.from_dict(params)),
+        "quantity": QuantityParams.from_dict({key: params[key] for key in QUANTITY_PARSING_PARAMETERS if key in params}),
         "rtol": float(params.get("rtol", 0)),
         "atol": float(params.get("atol", 0)),
-    })
-    return parsing_parameters
+    }
 
 
 # CONSIDER: Move these to separate file so that they can be shared with
@@ -521,6 +510,5 @@ context = {
     "default_parameters": default_parameters,
     "default_criteria": default_criteria,
     "feedback_procedure_generator": feedback_procedure_generator,
-    "feedback_string_generator": feedback_string_generator,
     "parsing_parameters_generator": parsing_parameters_generator,
 }

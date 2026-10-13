@@ -20,3 +20,10 @@ feedback_string_generators["COMPARISON"] = lambda tag: lambda inputs: {
     "TRUE": "",  # TODO: Replace with more specialised messages for different comparisons
     "FALSE": "",  # TODO: Replace with more specialised messages for different comparisons
 }[tag]
+
+
+def reverted_unit_feedback(reverted_unit):
+    """Text for a `RevertedUnit` fact from the units package."""
+    return feedback_string_generators["INTERNAL"]("REVERTED_UNIT")(
+        {"before": reverted_unit.before, "marked": reverted_unit.marked, "after": reverted_unit.after}
+    )

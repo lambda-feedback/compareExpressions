@@ -1,7 +1,5 @@
-import os
 import pytest
 
-from .utility.preview_utilities import Params
 from .preview import preview_function
 
 
@@ -22,17 +20,14 @@ class TestPreviewFunction():
 
     Use preview_function() to check your algorithm works
     as it should.
+
+    The symbolic preview itself is tested in the lambdafeedback-expression-parsing
+    package. The physical quantity preview is tested in physical_quantity_preview_test.py.
     """
-
-    # Import tests that makes sure that mathematical expression comparison works as expected
-    from .tests.symbolic_preview_test import TestPreviewFunction as TestSymbolicComparison
-
-    # Import tests that makes sure that physical quantities are handled as expected
-    from .tests.physical_quantity_preview_test import TestPreviewFunction as TestQuantityComparison
 
     def test_empty_latex_expression(self):
         response = ""
-        params = Params(is_latex=True)
+        params = dict(is_latex=True)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -41,7 +36,7 @@ class TestPreviewFunction():
 
     def test_empty_non_latex_expression(self):
         response = ""
-        params = Params(is_latex=False)
+        params = dict(is_latex=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -50,7 +45,7 @@ class TestPreviewFunction():
 
     def test_latex_and_sympy_are_returned(self):
         response = "x+1"
-        params = Params(is_latex=True)
+        params = dict(is_latex=True)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -59,7 +54,7 @@ class TestPreviewFunction():
         assert "sympy" in preview.keys()
 
         response = "x+1"
-        params = Params(is_latex=False)
+        params = dict(is_latex=False)
         result = preview_function(response, params)
         assert "preview" in result
 
@@ -69,7 +64,7 @@ class TestPreviewFunction():
 
     def test_natural_logarithm_notation(self):
         response = "ln(x)"
-        params = Params(is_latex=False)
+        params = dict(is_latex=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -88,27 +83,27 @@ class TestPreviewFunction():
             ("e * x", False, False, "e \\cdot x", "e * x"),
             ("E", False, False, "E", "E",),
             ("E", True, True, "E", "E",),
-            ("e", True, False, "e", "E",),
-            ("ex", True, False, "ex", "E*x"),
-            ("e * x", True, False, "e * x", "E*x"),
+            ("e", True, False, "e", "e",),
+            ("ex", True, False, "ex", "e*x"),
+            ("e * x", True, False, "e * x", "e*x"),
             ("E", True, False, "E", "E",),
             ("ER_2", True, False, "ER_2", "E*R_2",),
             ("exp(1)", False, True, "e^{1}", "exp(1)"),
             ("e**1", False, True, "e^{1}", "E**1"),
-            ("e^{1}", True, True, "e^{1}", "E"),
+            ("e^{1}", True, True, "e^{1}", "e"),
             ("exp(0)", False, True, "e^{0}", "exp(0)"),
             ("e**0", False, True, "e^{0}", "E**0"),
             ("e^{0}", True, True, "e^{0}", "1"),
             ("exp(2)", False, True, "e^{2}", "exp(2)"),
             ("e**2", False, True, "e^{2}", "E**2"),
-            ("e^{2}", True, True, "e^{2}", "exp(2)"),
+            ("e^{2}", True, True, "e^{2}", "e**2"),
             ("exp(x)", False, True, "e^{x}", "exp(x)"),
             ("e**x", False, True, "e^{x}", "E**x"),
-            ("e^{x}", True, True, "e^{x}", "exp(x)")
+            ("e^{x}", True, True, "e^{x}", "e**x")
         ]
     )
     def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
-        params = Params(is_latex=is_latex, elementary_functions=elementary_functions, strict_syntax=False)
+        params = dict(is_latex=is_latex, elementary_functions=elementary_functions, strict_syntax=False)
         result = preview_function(response, params)
         assert "preview" in result.keys()
 
@@ -120,11 +115,11 @@ class TestPreviewFunction():
         "response, is_latex, response_latex, response_sympy, symbols", [
             ("e**ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e**Ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
-            ("e^{ea}", True, "e^{ea}", "exp(ea)", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e^{ea}", True, "e^{ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e^{Ea}", True, "e^{Ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e**aea", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             ("e**aEa", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
-            ("e^{aea}", True, "e^{aea}", "exp(aea)", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e^{aea}", True, "e^{aea}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             ("e^{aEa}", True, "e^{aEa}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
         ]
     )
@@ -175,7 +170,7 @@ class TestPreviewFunction():
         [
             ("plus_minus x", False, '\\left\\{- x,~x\\right\\}', "plus_minus x"),
             ("\\pm x", True, '\\pm x', '{-x, x}'),
-            (r"\pm x^{2}+\mp y^{2}", True, "\pm x^{2}+\mp y^{2}", "{-x**2 + y**2, x**2 - y**2}"),
+            (r"\pm x^{2}+\mp y^{2}", True, r"\pm x^{2}+\mp y^{2}", "{-x**2 + y**2, x**2 - y**2}"),
             ("plus_minus x**2 + minus_plus y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
             ("- minus_plus x^2 minus_plus y^2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 minus_plus y^2"),
             ("- minus_plus x^2 - plus_minus y^2", False, r"\left\{- x^{2} - - y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 - plus_minus y^2"),
@@ -199,7 +194,7 @@ class TestPreviewFunction():
                 },
             },
         }
-        params = Params(**params)
+        params = dict(**params)
         result = preview_function(response, params)
         assert result["preview"]["latex"] == response_latex
         assert result["preview"]["sympy"] == response_sympy
@@ -220,7 +215,7 @@ class TestPreviewFunction():
                 },
             },
         }
-        params = Params(**params)
+        params = dict(**params)
         result = preview_function("x + y = y + x", params)
         assert result["preview"]["latex"] == "x + y=x + y"
         assert result["preview"]["sympy"] == "x + y=y + x"
@@ -250,15 +245,15 @@ class TestPreviewFunction():
         assert result["preview"]["sympy"] == "a/(bcd)"
 
         result = preview_function(response_implicit_no_bracket, params)
-        assert result["preview"]["latex"] =='\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["latex"] == '\\frac{a}{bc \\cdot d}'
         assert result["preview"]["sympy"] == "a/bcd"
 
     @pytest.mark.parametrize(
         "response, is_latex, latex, sympy", [
             ("A/s(e**(-a*s)-e**(-b*s))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
-            ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-bs))"),
-            ("(A/s)( e^{-a*s}-e^{-b*s})", True, r"(A/s)( e^{-a*s}-e^{-b*s})", "A*(-exp(-b*s) + exp(-a*s))/s"),
-            ("(A/s)( e^{-as}-e^{-bs})", True, r"(A/s)( e^{-as}-e^{-bs})", "A*(-exp(-b*s) + exp(-a*s))/s"),
+            ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-as)- E**(-bs))"),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, r"(A/s)( e^{-a*s}-e^{-b*s})", "A*(-1/e**(b*s) + e**(-a*s))/s"),
+            ("(A/s)( e^{-as}-e^{-bs})", True, r"(A/s)( e^{-as}-e^{-bs})", "A*(-1/e**(b*s) + e**(-a*s))/s"),
         ]
     )
     def test_laplace_transforms(self, response, is_latex, latex, sympy):
@@ -275,7 +270,7 @@ class TestPreviewFunction():
 
     @pytest.mark.parametrize(
         "response, is_latex, latex, sympy", [
-            ("(x+y)*(x+z)", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)","(x+y)*(x+z)"),
+            ("(x+y)*(x+z)", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
             ("(x+y)*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
             ("x+y*(x+z)", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
             ("[x+y]*[x+z]", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
@@ -336,13 +331,15 @@ class TestPreviewFunction():
             preview_function(response, params)
 
     @pytest.mark.parametrize(
-        "response, latex, sympy", [
-            ("{x+y}*{x+z}", "\\left\\{x + y\\right\\} \\cdot \\left\\{x + z\\right\\}", "{x+y}*{x+z}"),
-            ("{x+y}*x+z", "\\left\\{x + y\\right\\} \\cdot x + z", "{x+y}*x+z"),
-            ("x+y*{x+z}", "x + y \\cdot \\left\\{x + z\\right\\}", "x+y*{x+z}"),
+        "response", [
+            "{x+y}*{x+z}",
+            "{x+y}*x+z",
+            "x+y*{x+z}",
         ]
     )
-    def test_curly_braces_not_converted_with_strict_syntax(self, response, latex, sympy):
+    def test_curly_braces_not_converted_with_strict_syntax(self, response):
+        # With strict syntax `{}` is a set literal, not a bracket, and arithmetic on
+        # sets is rejected (SymPy deprecates it, and evaluating it used to crash).
         params = {
             "is_latex": False,
             "strict_syntax": True,
@@ -350,9 +347,8 @@ class TestPreviewFunction():
             "convention": "implicit_higher_precedence",
         }
 
-        result = preview_function(response, params)
-        assert result["preview"]["latex"] == latex
-        assert result["preview"]["sympy"] == sympy
+        with pytest.raises(ValueError):
+            preview_function(response, params)
 
     @pytest.mark.parametrize("strict_syntax", [False, True])
     def test_curly_brace_multiple_answers_still_works(self, strict_syntax):
@@ -366,7 +362,3 @@ class TestPreviewFunction():
         result = preview_function("{1, 2}", params)
         assert result["preview"]["latex"] == "\\left\\{1,~2\\right\\}"
         assert result["preview"]["sympy"] == "{1, 2}"
-
-
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
