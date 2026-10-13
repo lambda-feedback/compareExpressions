@@ -1,12 +1,11 @@
 pydot
 mpmath==1.3.0
 sympy==1.14
-antlr4-python3-runtime==4.7.2
 # Parsing, units and criteria packages extracted from this function
-# (https://github.com/m-messer/lambda-feedback-packages), pinned to a commit
-# on its main branch (0.2.0). All four are listed: they depend on each other by
-# name and aren't published on PyPI.
-lambdafeedback-slr-parsing @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=slr_parsing
-lambdafeedback-criteria @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=criteria
-lambdafeedback-expression-parsing @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=expression_parsing
-lambdafeedback-units @ git+https://github.com/m-messer/lambda-feedback-packages.git@865d39999fdf9fc63839d6b1690eab2b6f3c432d#subdirectory=units
+# (https://github.com/lambda-feedback/lambda-feedback-packages), pinned to the
+# v0.3.0-rc.1 release candidate (0.3.0rc1). All four are listed: they depend on
+# each other by name and aren't published on PyPI.
+lambdafeedback-slr-parsing @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.1#subdirectory=slr_parsing
+lambdafeedback-criteria @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.1#subdirectory=criteria
+lambdafeedback-expression-parsing @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.1#subdirectory=expression_parsing
+lambdafeedback-units @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.1#subdirectory=units

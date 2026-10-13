@@ -11,7 +11,6 @@ from collections.abc import Mapping
 from typing import Any, NotRequired, TypedDict
 
 from sympy import Basic
-from sympy.parsing.sympy_parser import T as TRANSFORMATIONS
 
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
@@ -25,7 +24,6 @@ from lambdafeedback.expression_parsing import (
     parse_latex,
     preprocess_expression,
     substitute_input_symbols,
-    sympy_symbols,
     sympy_to_latex,
 )
 
@@ -68,19 +66,15 @@ def parse_symbolic(response: str, params: ExpressionParams) -> tuple[list[Basic 
     responses = []
     feedback: list[FeedbackTag] = []
     for expression in create_expression_set(response, params):
-        expression = substitute_input_symbols([expression.strip()], params)[0]
+        expression = substitute_input_symbols(expression.strip(), params)
         try:
-            expression = convert_absolute_notation(expression, "response")
+            expression = convert_absolute_notation(expression, name="response")
         except AbsoluteValueNotationError as exc:
             feedback.append(FeedbackTag(FeedbackTagName.ABSOLUTE_VALUE_NOTATION_AMBIGUITY, {"name": exc.name}))
             expression = exc.expression
         responses.append(expression)
 
-    config = SympyParsingConfig.from_params(params)
-    config = config.replace(
-        extra_transformations=TRANSFORMATIONS[9],  # convert equals signs
-        symbol_dict={**config.symbol_dict, **sympy_symbols(params.symbols)},
-    )
+    config = SympyParsingConfig.from_params(params, unsplittable_symbols=params.symbols)
     parsed = []
     for expression in responses:
         try:
@@ -112,7 +106,7 @@ def preview_function(response: str, params: ExpressionParams | Mapping[str, Any]
             else:
                 symbolic_params = params.replace(rationalise=False)
                 try:
-                    preprocessed = preprocess_expression("response", part, symbolic_params)
+                    preprocessed = preprocess_expression(part, symbolic_params, name="response")
                 except (BracketNotationError, AbsoluteValueNotationError) as exc:
                     preprocessed = exc.expression
                 expressions, _ = parse_symbolic(preprocessed, symbolic_params)

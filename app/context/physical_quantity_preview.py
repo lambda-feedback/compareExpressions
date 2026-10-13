@@ -78,7 +78,7 @@ def preview_function(response: str, params: QuantityParams | Mapping[str, Any]) 
             latex_out = value_latex + separators[0] + (unit_latex or "")
             sympy_out = value_sympy + separators[1] + unit_sympy
         else:
-            preprocessed = preprocess_quantity("response", response, params)
+            preprocessed = preprocess_quantity(response, params, name="response")
             latex_out = parse_quantity(preprocessed, params).latex
             sympy_out = response
     except QuantityError:
