@@ -25,7 +25,7 @@ This version is specifically for python, however the ultimate goal is to make si
 5. You are now ready to start developing your function:
    
    - Edit the `app/evaluation.py` file, which ultimately gets called when the function is given the `eval` command
-   - Add pytest tests to `app/evaluation_test.py`, `app/preview_test.py` or `app/tests/`. They get run:
+   - Add pytest tests to `app/tests/`. They get run:
        - On every pull request and before the image is built and deployed (`pytest` from the repo root)
        - Whenever the `healthcheck` command is supplied to the deployed function (via `app/evaluation_tests.py`)
    - Edit `app/docs/user.md` and `app/docs/dev.md` to reflect your changes. These files are baked into the function's image, and is made available using the `docs` command. This feature is used to display this function's documentation on our [Documentation](https://lambda-feedback.github.io/Documentation/) website once it's been hooked up!
