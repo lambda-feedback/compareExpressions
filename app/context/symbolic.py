@@ -1,4 +1,4 @@
-from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo
+from sympy import Add, Pow, Mul, Equality, pi, im, I, N
 from sympy import re as real_part
 
 from lambdafeedback.expression_parsing import (
@@ -570,7 +570,7 @@ def criterion_written_as_node(criterion, parameters_dict, label=None):
         return inner
 
     graph = CriteriaGraph(label)
-    END = graph.add_end_node()
+    graph.add_end_node()
 
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()

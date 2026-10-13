@@ -11,6 +11,9 @@ ENV PYTHONPATH=/app
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
+# The healthcheck command runs the pytest suite (see evaluation_tests.py)
+RUN pip3 install pytest
+
 # Copy the evaluation function source, tests and docs (exclusions in .dockerignore)
 COPY . ./app/
 

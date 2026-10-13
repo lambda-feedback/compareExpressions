@@ -1,5 +1,4 @@
 import pytest
-import os
 
 from .preview import preview_function
 from .evaluation import evaluation_function
@@ -247,8 +246,3 @@ class TestEvaluationFunction():
 
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] == is_correct
-
-
-
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', '--tb=short', '--durations=10', os.path.abspath(__file__)])

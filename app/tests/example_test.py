@@ -1,4 +1,3 @@
-import os
 import pytest
 
 from ..evaluation import evaluation_function
@@ -654,6 +653,3 @@ class TestEvaluationFunction():
         assert set(feedback_tags) == set(result["tags"])
         for string in custom_feedback.values():
             assert string in result["feedback"]
-
-if __name__ == "__main__":
-    pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

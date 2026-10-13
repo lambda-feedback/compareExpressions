@@ -214,7 +214,7 @@ When `is_latex` is enabled, `e` and `E` are read as plain symbols by the LaTeX p
 
 # Packages
 
-The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.1` release candidate. Each package's `CHANGELOG.md` lists the API changes:
+The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.2` release candidate. Each package's `CHANGELOG.md` lists the API changes:
 
 | Package | Import | Used for |
 |---|---|---|
@@ -234,4 +234,6 @@ grep -v lambdafeedback app/requirements.txt | pip install -r /dev/stdin
 ```
 
 # Tests
-There are two main groups of tests, evaluation tests and preview tests. The evaluation test can be run by calling `evaluation_tests.py`
+There are two main groups of tests, evaluation tests (`evaluation_test.py` and `tests/*_evaluation_test.py`) and preview tests (`preview_test.py` and `tests/*_preview_test.py`). Run them all with `pytest` from the repository root.
+
+The deployed function's `healthcheck` command loads `unittest` classes from `evaluation_tests.py` and `preview_tests.py`; `evaluation_tests.py` runs the same pytest suite inside the image, so new tests only need to be written for pytest.

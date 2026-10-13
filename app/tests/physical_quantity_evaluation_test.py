@@ -1,5 +1,4 @@
 import pytest
-import os
 
 # Import necessary data and reference cases for tests
 from .physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
@@ -297,6 +296,7 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is False
 
+    @pytest.mark.filterwarnings("ignore:legacy_preprocessing is deprecated:DeprecationWarning")
     def test_legacy_strictness(self):
         ans = "100*kilo*pascal*ohm"
         res = "100 kilopascal ohm"
@@ -305,7 +305,8 @@ class TestEvaluationFunction():
             'physical_quantity': True,
             'strictness': 'legacy',
         }
-        result = evaluation_function(res, ans, params, include_test_data=True)
+        with pytest.warns(DeprecationWarning, match="legacy_preprocessing is deprecated"):
+            result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is True
         ans = "8650*watt"
         res = "8.65kW"
@@ -562,7 +563,3 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(res, ans, params)
         assert result["is_correct"] is True
-
-
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--no-header", os.path.abspath(__file__)])

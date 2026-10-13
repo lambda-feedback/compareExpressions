@@ -1,5 +1,4 @@
 import pytest
-import os
 
 from ..evaluation import evaluation_function
 from lambdafeedback.expression_parsing import substitute
@@ -2248,7 +2247,3 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-
-
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

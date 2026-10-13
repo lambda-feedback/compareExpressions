@@ -1,4 +1,3 @@
-import os
 from copy import deepcopy
 
 import pytest
@@ -143,7 +142,3 @@ class TestPreviewFunction:
         before = deepcopy(params)
         preview_function(r"3 \mathrm{kg}", params)
         assert params == before
-
-
-if __name__ == "__main__":
-    pytest.main(["-xk not slow", "--tb=line", os.path.abspath(__file__)])

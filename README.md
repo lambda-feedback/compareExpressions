@@ -20,15 +20,15 @@ This version is specifically for python, however the ultimate goal is to make si
    - [Production API Gateway Integrations](https://eu-west-2.console.aws.amazon.com/apigateway/main/develop/integrations/attach?api=cttolq2oph&integration=qpbgva8&region=eu-west-2&routes=0xsoy4q)
 
 4. Merge commits into the default branch
-   - This will trigger the `test-and-deploy.yml` workflow, which will build the docker image, push it to a shared ECR repository, then call the backend `grading-function/ensure` route to build the necessary infrastructure to make the function available from the client app.
+   - This will trigger the `staging-deploy.yml` workflow (and `production-deploy.yml` on release), which will build the docker image, push it to a shared ECR repository, then call the backend `grading-function/ensure` route to build the necessary infrastructure to make the function available from the client app.
 
 5. You are now ready to start developing your function:
    
    - Edit the `app/evaluation.py` file, which ultimately gets called when the function is given the `eval` command
-   - Edit the `app/evaluation_tests.py` file to add tests which get run:
-       - Every time you commit to this repo, before the image is built and deployed 
-       - Whenever the `healthcheck` command is supplied to the deployed function
-   - Edit the `app/docs.md` file to reflect your changes. This file is baked into the function's image, and is made available using the `docs` command. This feature is used to display this function's documentation on our [Documentation](https://lambda-feedback.github.io/Documentation/) website once it's been hooked up!
+   - Add pytest tests to `app/evaluation_test.py`, `app/preview_test.py` or `app/tests/`. They get run:
+       - On every pull request and before the image is built and deployed (`pytest` from the repo root)
+       - Whenever the `healthcheck` command is supplied to the deployed function (via `app/evaluation_tests.py`)
+   - Edit `app/docs/user.md` and `app/docs/dev.md` to reflect your changes. These files are baked into the function's image, and is made available using the `docs` command. This feature is used to display this function's documentation on our [Documentation](https://lambda-feedback.github.io/Documentation/) website once it's been hooked up!
 
 ---
 
@@ -38,7 +38,7 @@ The function is built on top of a custom base layer, [BaseEvaluationFunctionLaye
 
 ### Packages
 
-Expression parsing, unit handling and the criteria machinery come from the [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages) repository (currently the `v0.3.0-rc.1` release candidate), installed as git dependencies in `app/requirements.txt`. See the "Packages" section of `app/docs/dev.md` for what each package does and how to develop against a local checkout.
+Expression parsing, unit handling and the criteria machinery come from the [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages) repository (currently the `v0.3.0-rc.2` release candidate), installed as git dependencies in `app/requirements.txt`. See the "Packages" section of `app/docs/dev.md` for what each package does and how to develop against a local checkout.
 
 ### Docker & Amazon Web Services (AWS)
 
@@ -61,7 +61,7 @@ Once the code passes all these tests, it will then be uploaded to AWS and will b
 ## Pre-requisites
 Although all programming can be done through the GitHub interface, it is recommended you do this locally on your machine. To do this, you must have installed:
 
-- Python 3.8 or higher.
+- Python 3.12 (the version used by CI and the production image).
 
 - GitHub Desktop or the `git` CLI.
 

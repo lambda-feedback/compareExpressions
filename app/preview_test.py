@@ -1,4 +1,3 @@
-import os
 import pytest
 
 from .preview import preview_function
@@ -171,7 +170,7 @@ class TestPreviewFunction():
         [
             ("plus_minus x", False, '\\left\\{- x,~x\\right\\}', "plus_minus x"),
             ("\\pm x", True, '\\pm x', '{-x, x}'),
-            (r"\pm x^{2}+\mp y^{2}", True, "\pm x^{2}+\mp y^{2}", "{-x**2 + y**2, x**2 - y**2}"),
+            (r"\pm x^{2}+\mp y^{2}", True, r"\pm x^{2}+\mp y^{2}", "{-x**2 + y**2, x**2 - y**2}"),
             ("plus_minus x**2 + minus_plus y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
             ("- minus_plus x^2 minus_plus y^2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 minus_plus y^2"),
             ("- minus_plus x^2 - plus_minus y^2", False, r"\left\{- x^{2} - - y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 - plus_minus y^2"),
@@ -363,7 +362,3 @@ class TestPreviewFunction():
         result = preview_function("{1, 2}", params)
         assert result["preview"]["latex"] == "\\left\\{1,~2\\right\\}"
         assert result["preview"]["sympy"] == "{1, 2}"
-
-
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
