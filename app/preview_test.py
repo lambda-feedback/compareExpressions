@@ -84,23 +84,23 @@ class TestPreviewFunction():
             ("e * x", False, False, "e \\cdot x", "e * x"),
             ("E", False, False, "E", "E",),
             ("E", True, True, "E", "E",),
-            ("e", True, False, "e", "E",),
-            ("ex", True, False, "ex", "E*x"),
-            ("e * x", True, False, "e * x", "E*x"),
+            ("e", True, False, "e", "e",),
+            ("ex", True, False, "ex", "e*x"),
+            ("e * x", True, False, "e * x", "e*x"),
             ("E", True, False, "E", "E",),
             ("ER_2", True, False, "ER_2", "E*R_2",),
             ("exp(1)", False, True, "e^{1}", "exp(1)"),
             ("e**1", False, True, "e^{1}", "E**1"),
-            ("e^{1}", True, True, "e^{1}", "E"),
+            ("e^{1}", True, True, "e^{1}", "e"),
             ("exp(0)", False, True, "e^{0}", "exp(0)"),
             ("e**0", False, True, "e^{0}", "E**0"),
             ("e^{0}", True, True, "e^{0}", "1"),
             ("exp(2)", False, True, "e^{2}", "exp(2)"),
             ("e**2", False, True, "e^{2}", "E**2"),
-            ("e^{2}", True, True, "e^{2}", "exp(2)"),
+            ("e^{2}", True, True, "e^{2}", "e**2"),
             ("exp(x)", False, True, "e^{x}", "exp(x)"),
             ("e**x", False, True, "e^{x}", "E**x"),
-            ("e^{x}", True, True, "e^{x}", "exp(x)")
+            ("e^{x}", True, True, "e^{x}", "e**x")
         ]
     )
     def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
@@ -116,11 +116,11 @@ class TestPreviewFunction():
         "response, is_latex, response_latex, response_sympy, symbols", [
             ("e**ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e**Ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
-            ("e^{ea}", True, "e^{ea}", "exp(ea)", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e^{ea}", True, "e^{ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e^{Ea}", True, "e^{Ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
             ("e**aea", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             ("e**aEa", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
-            ("e^{aea}", True, "e^{aea}", "exp(aea)", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e^{aea}", True, "e^{aea}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
             ("e^{aEa}", True, "e^{aEa}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
         ]
     )
@@ -252,9 +252,9 @@ class TestPreviewFunction():
     @pytest.mark.parametrize(
         "response, is_latex, latex, sympy", [
             ("A/s(e**(-a*s)-e**(-b*s))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
-            ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-bs))"),
-            ("(A/s)( e^{-a*s}-e^{-b*s})", True, r"(A/s)( e^{-a*s}-e^{-b*s})", "A*(-exp(-b*s) + exp(-a*s))/s"),
-            ("(A/s)( e^{-as}-e^{-bs})", True, r"(A/s)( e^{-as}-e^{-bs})", "A*(-exp(-b*s) + exp(-a*s))/s"),
+            ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-as)- E**(-bs))"),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, r"(A/s)( e^{-a*s}-e^{-b*s})", "A*(-1/e**(b*s) + e**(-a*s))/s"),
+            ("(A/s)( e^{-as}-e^{-bs})", True, r"(A/s)( e^{-as}-e^{-bs})", "A*(-1/e**(b*s) + e**(-a*s))/s"),
         ]
     )
     def test_laplace_transforms(self, response, is_latex, latex, sympy):

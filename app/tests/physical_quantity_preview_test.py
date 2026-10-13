@@ -92,9 +92,7 @@ class TestPreviewFunction:
         }
         response = "162 \\mathrm{~N} / \\mathrm{m}^{2}"
         result = preview_function(response, params)["preview"]
-        assert (
-            result["latex"] == r"162~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}"
-        )  # TODO: Fix so that unnecessary parenthesis are simplified away
+        assert result["latex"] == r"162~\frac{\mathrm{newton}}{\mathrm{metre}^{2}}"
         assert result["sympy"] == "162 newton/metre**(2)"
 
     @pytest.mark.parametrize(
