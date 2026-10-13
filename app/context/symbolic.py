@@ -1,5 +1,3 @@
-import dataclasses
-
 from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo
 from sympy import re as real_part
 
@@ -42,8 +40,8 @@ default_criteria = ["response = answer"]
 
 def unsimplified_with_unsplittable(parsing_params, symbols):
     """`parsing_params` without simplification, with `symbols` also read as single symbols."""
-    return dataclasses.replace(
-        parsing_params.replace(simplify=False),
+    return parsing_params.replace(
+        simplify=False,
         extra_unsplittable_symbols=parsing_params.extra_unsplittable_symbols+tuple(symbols),
     )
 
