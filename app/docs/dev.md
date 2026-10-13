@@ -236,4 +236,4 @@ grep -v lambdafeedback app/requirements.txt | pip install -r /dev/stdin
 # Tests
 There are two main groups of tests, evaluation tests (`evaluation_test.py` and `tests/*_evaluation_test.py`) and preview tests (`preview_test.py` and `tests/*_preview_test.py`). Run them all with `pytest` from the repository root.
 
-The deployed function's `healthcheck` command loads `unittest` classes from `evaluation_tests.py` and `preview_tests.py`; `evaluation_tests.py` runs the same pytest suite inside the image, so new tests only need to be written for pytest.
+The deployed function's `healthcheck` command loads `unittest` classes from `evaluation_tests.py` and `preview_tests.py`; `evaluation_tests.py` runs the same pytest suite inside the image, so new tests only need to be written for pytest. Tests marked `@pytest.mark.slow` are left out of the healthcheck to keep it within the request timeout; mark any test function whose cases take more than about 0.5s in total.

@@ -44,7 +44,7 @@ def fix_exponents(response: str) -> str:
             if response.startswith("{", index):
                 exponent_end = find_matching_parenthesis(response, index, delimiters=("{", "}"))
                 if exponent_end > 0:
-                    processed.append("(" + response[index + 1 : exponent_end] + ")")
+                    processed.append("(" + response[index + 1:exponent_end] + ")")
                     index = exponent_end + 1
         response = "".join(processed)
     return response

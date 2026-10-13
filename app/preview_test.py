@@ -245,7 +245,7 @@ class TestPreviewFunction():
         assert result["preview"]["sympy"] == "a/(bcd)"
 
         result = preview_function(response_implicit_no_bracket, params)
-        assert result["preview"]["latex"] =='\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["latex"] == '\\frac{a}{bc \\cdot d}'
         assert result["preview"]["sympy"] == "a/bcd"
 
     @pytest.mark.parametrize(
@@ -270,7 +270,7 @@ class TestPreviewFunction():
 
     @pytest.mark.parametrize(
         "response, is_latex, latex, sympy", [
-            ("(x+y)*(x+z)", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)","(x+y)*(x+z)"),
+            ("(x+y)*(x+z)", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
             ("(x+y)*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
             ("x+y*(x+z)", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
             ("[x+y]*[x+z]", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),

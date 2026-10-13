@@ -867,16 +867,6 @@ def feedback_procedure_generator(parameters_dict):
     return graphs
 
 
-def feedback_string_generator(tags, graph, parameters_dict):
-    strings = dict()
-    for tag in tags:
-        # feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
-        feedback_string = "PLACEHOLDER"
-        if feedback_string is not None:
-            strings.update({tag: feedback_string})
-    return
-
-
 def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
     return SympyParsingConfig.from_params(ExpressionParams.from_dict(params), unsplittable_symbols, symbol_assumptions)
 
@@ -889,6 +879,5 @@ context = {
     "default_parameters": default_parameters,
     "default_criteria": default_criteria,
     "feedback_procedure_generator": feedback_procedure_generator,
-    "feedback_string_generator": feedback_string_generator,
     "parsing_parameters_generator": parsing_parameters_generator,
 }

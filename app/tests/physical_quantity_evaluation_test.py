@@ -32,6 +32,7 @@ class TestEvaluationFunction():
     """
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
+    @pytest.mark.slow
     def test_strict_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
         params = {
             "strict_syntax": False,
@@ -47,6 +48,7 @@ class TestEvaluationFunction():
         assert result["response_latex"] == "~".join([latex for latex in [value_latex, unit_latex] if latex is not None])
 
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
+    @pytest.mark.slow
     def test_natural_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
         params = {
             "strict_syntax": False,
@@ -127,6 +129,7 @@ class TestEvaluationFunction():
             ("100*10**10", "kg m/s^2", 4*10**9, 6*10**9)
         ]
     )
+    @pytest.mark.slow
     def test_compute_relative_tolerance_from_significant_digits(self, value, unit, small_diff, large_diff):
         ans = value+" "+unit
         res_correct_under = str(eval(value)-small_diff)+" "+unit
@@ -404,7 +407,6 @@ class TestEvaluationFunction():
         result = evaluation_function(res, ans, params, include_test_data=True)
         assert result["is_correct"] is False
 
-
     def test_physical_quantity_with_atol_and_kg_unit(self):
         ans = "20 kg"
         params = {
@@ -555,6 +557,7 @@ class TestEvaluationFunction():
             ("30 degree", "30 °"),
         ]
     )
+    @pytest.mark.slow
     def test_greek_letter_units(self, ans, res):
         params = {
             'strict_syntax': False,

@@ -72,11 +72,8 @@ def determine_context(parameters):
 
     reserved_keywords_codes = {"where", "written as", "contains", "proportional to"}
     reserved_keywords_aliases = {"plus_minus", "minus_plus"}
-    for re in parameters["reserved_expressions_strings"].values():
-        reserved_keywords_aliases = reserved_keywords_aliases.union(set(re.keys()))
-
-    for value in parameters["reserved_expressions_strings"].values():
-        reserved_keywords = reserved_keywords_aliases.union(set(value.keys()))
+    for expressions in parameters["reserved_expressions_strings"].values():
+        reserved_keywords_aliases = reserved_keywords_aliases.union(set(expressions.keys()))
 
     reserved_keywords_codes_collisions = []
     for keyword in reserved_keywords_codes:
@@ -90,7 +87,6 @@ def determine_context(parameters):
     reserved_keywords_aliases_collisions = []
     for keyword in reserved_keywords_aliases:
         if keyword in input_symbols_reserved_aliases:
-            print("Collision found")
             reserved_keywords_aliases_collisions.append(keyword)
     if len(reserved_keywords_aliases_collisions) > 0:
         if len(reserved_keywords_aliases_collisions) == 1:
@@ -98,8 +94,7 @@ def determine_context(parameters):
         else:
             raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
 
-    reserved_keywords = reserved_keywords_codes
-    context.update({"reserved_keywords": list(reserved_keywords)})
+    context.update({"reserved_keywords": list(reserved_keywords_codes)})
     return context
 
 
@@ -222,7 +217,7 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
     response = evaluation_parameters["reserved_expressions"]["response"]
     criteria_feedback = set()
     is_correct = True
-    custom_feedback = evaluation_parameters.get("custom_feedback",{})
+    custom_feedback = evaluation_parameters.get("custom_feedback", {})
     for (criterion_identifier, graph) in criteria_graphs.items():
         # TODO: Find better way to identify main criteria for criteria graph
         main_criteria = criterion_identifier+"_TRUE"
@@ -287,7 +282,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "reserved_keywords": context["reserved_keywords"]+reserved_expressions_keys,
         }
     )
-    parsing_parameters = context["parsing_parameters_generator"](parameters, unsplittable_symbols=reserved_expressions_keys) 
+    parsing_parameters = context["parsing_parameters_generator"](parameters, unsplittable_symbols=reserved_expressions_keys)
     parameters.update(
         {
             "parsing_parameters": parsing_parameters,
@@ -304,7 +299,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             }
         )
 
-    # FIXME: Move this into expression_utilities
+    # FIXME: Move these notation warnings into lambdafeedback.expression_parsing
     if params.get("strict_syntax", False):
         if "^" in response:
             evaluation_result.add_feedback("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict()))
@@ -352,7 +347,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "numerical": parameters.get("numerical", False),
             "atol": parameters.get("atol", 0),
             "rtol": parameters.get("rtol", 0),
-            "custom_feedback": parameters.get("custom_feedback",{}),
+            "custom_feedback": parameters.get("custom_feedback", {}),
         }
     )
 

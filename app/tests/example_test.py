@@ -55,6 +55,7 @@ class TestEvaluationFunction():
             ("+- x**2 + -+ y**2",  False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
         ]
     )
+    @pytest.mark.slow
     def test_using_plus_minus_symbols(self, response, is_latex, response_latex):
         answer = "plus_minus x**2 + minus_plus y**2"
         params = {
@@ -78,7 +79,6 @@ class TestEvaluationFunction():
             params.update({"is_latex": True})
         # Checking latex output disabled as the function return a few different
         # variants of the latex in an unpredictable way
-        # preview = preview_function(response, params)["preview"]
         # assert preview["latex"] == response_latex
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
@@ -142,7 +142,7 @@ class TestEvaluationFunction():
         assert tags == set(result["tags"])
         assert result["is_correct"] == value
 
-    def test_checking_the_value_of_a_physical_quantity(self):
+    def test_checking_the_value_of_a_physical_quantity_long_and_short_unit_names(self):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -151,7 +151,7 @@ class TestEvaluationFunction():
         response = "2.00 kilometre/hour"
         answer = "2.00 km/h"
         result = evaluation_function(response, answer, params, include_test_data=True)
-        assert result["is_correct"] == True
+        assert result["is_correct"] is True
 
     @pytest.mark.parametrize(
         "res,ans,convention,value",
@@ -195,6 +195,7 @@ class TestEvaluationFunction():
             )
         ]
     )
+    @pytest.mark.slow
     def test_setting_absolute_or_relative_tolerances_for_numerical_comparison(self, answer, atol_response_true, atol_response_false, rtol_response_true, rtol_response_false):
         params = {
             "strict_syntax": False,
@@ -273,6 +274,7 @@ class TestEvaluationFunction():
             ("cos(x)+2", "sin(x)", r"\cos{\left(x \right)} + 2", "diff(response,x)=cos(x)", False, [], dict()),
         ]
     )
+    @pytest.mark.slow
     def test_customizing_comparison(self, response, answer, response_latex, criteria, value, feedback_tags, extra_params):
         params = {
             "strict_syntax": False,
@@ -317,6 +319,7 @@ class TestEvaluationFunction():
             ("Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)", True),
         ]
     )
+    @pytest.mark.slow
     def test_MECH50001_2_24_a(self, response, value):
         params = {
             "strict_syntax": False,

@@ -463,16 +463,6 @@ def feedback_procedure_generator(parameters_dict):
     return graphs
 
 
-def feedback_string_generator(tags, graph, parameters_dict):
-    strings = dict()
-    for tag in tags:
-        # feedback_string = graph.criteria[tag].feedback_string_generator(inputs)
-        feedback_string = "PLACEHOLDER"
-        if feedback_string is not None:
-            strings.update({tag: feedback_string})
-    return
-
-
 # The evaluation parameters that affect how quantities are read. Other parameters
 # (e.g. `symbols`, `units_string` and `is_latex`) have never applied when reading
 # the response and answer as quantities during evaluation, only in the preview.
@@ -520,6 +510,5 @@ context = {
     "default_parameters": default_parameters,
     "default_criteria": default_criteria,
     "feedback_procedure_generator": feedback_procedure_generator,
-    "feedback_string_generator": feedback_string_generator,
     "parsing_parameters_generator": parsing_parameters_generator,
 }

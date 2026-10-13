@@ -211,6 +211,7 @@ class TestEvaluationFunction():
     input_variations += generate_input_variations(response, answer)
 
     @pytest.mark.parametrize("response,answer", input_variations)
+    @pytest.mark.slow
     def test_simple_fractional_powers_correct(self, response, answer):
         params = {"strict_syntax": False, "symbol_assumptions": "('g','positive') ('v','positive')"}
         result = evaluation_function(response, answer, params)
@@ -452,6 +453,7 @@ class TestEvaluationFunction():
             answer="plus_minus x**2 + minus_plus y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_all_correct(self, response, answer):
         params = {
             "strict_syntax": False,
@@ -467,6 +469,7 @@ class TestEvaluationFunction():
             answer="+- x**2 + -+ y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_replace_symbols_all_correct(self, response, answer):
         params = {"plus_minus": "+-", "minus_plus": "-+", "strict_syntax": False}
         result = evaluation_function(response, answer, params)
@@ -479,6 +482,7 @@ class TestEvaluationFunction():
             answer="plus_minus x**2 + minus_plus y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_all_incorrect(self, response, answer):
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params)
@@ -503,6 +507,7 @@ class TestEvaluationFunction():
             answer="plus_minus x**2 + minus_plus y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_all_responses_incorrect(self, response, answer):
         params = {"multiple_answers_criteria": "all_responses", "strict_syntax": False}
         result = evaluation_function(response, answer, params)
@@ -1004,6 +1009,7 @@ class TestEvaluationFunction():
             ]
         ]
     )
+    @pytest.mark.slow
     def test_PHYS40002_2_2_b(self, response, outcome):
         params = {"strict_syntax": False}
         answer = "-(y*sin(x*y) + e^(y)) / (x*(e^(y) + sin(x*y)))"
@@ -1031,6 +1037,7 @@ class TestEvaluationFunction():
             ]
         ]
     )
+    @pytest.mark.slow
     def test_PHYS40002_2_6_a(self, response, outcome):
         params = {"strict_syntax": False}
         answer = "6*cos(5*x+1)-90*x*sin(5*x+1)-225*x**2*cos(5*x+1)+125*x**3*sin(5*x+1)"
@@ -1054,6 +1061,7 @@ class TestEvaluationFunction():
             []
         )
     )
+    @pytest.mark.slow
     def test_elementary_functions(self, description, response, answer):
         params = {"strict_syntax": False, "elementary_functions": True}
         result = evaluation_function(response, answer, params)
@@ -1272,6 +1280,7 @@ class TestEvaluationFunction():
             ("2*pi", "0", "tan(response) = 0", True, [], {}),
         ]
     )
+    @pytest.mark.slow
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
         params = {
             "strict_syntax": False,
@@ -1892,6 +1901,7 @@ class TestEvaluationFunction():
             ),
         ]
     )
+    @pytest.mark.slow
     def test_criteria_where_numerical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
         params = {
             "strict_syntax": False,
@@ -2042,6 +2052,7 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
+    @pytest.mark.slow
     def test_elementary_function_symbol_with_implicit_multiplication_on_both_sides(self):
         response = "momega^3 l^2/2(exp(2omegat)-exp(-2omegat))"
         answer = "m*omega^3*l^2*sinh(2*omega*t)"
@@ -2053,7 +2064,7 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     def test_curly_braces_used_for_grouping_in_response(self):
-        response = "2 pi e^{-a |omega|}" # {} is accepted as another way of writing () for grouping
+        response = "2 pi e^{-a |omega|}"  # {} is accepted as another way of writing () for grouping
         answer = "2 pi e^(-a|omega|)"
         params = {
             'atol': 0,
@@ -2066,8 +2077,8 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     def test_unexpected_equalities_in_response_that_generates_set(self):
-        response = "z= plus_minus 1 + 2*i" # plus_minus generates a set of two equalities
-        answer = "2i plus_minus 1" # plus_minus generates a set of two expressions
+        response = "z= plus_minus 1 + 2*i"  # plus_minus generates a set of two equalities
+        answer = "2i plus_minus 1"  # plus_minus generates a set of two expressions
         params = {
             'atol': 0,
             'rtol': 0,
@@ -2144,7 +2155,7 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
-        
+
     def test_integral(self):
         response = "6y"
         answer = "int(3*x*y, (x, 0, 2))"

@@ -28,6 +28,7 @@ class TestPreviewFunction:
     @pytest.mark.parametrize(
         "response,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases
     )
+    @pytest.mark.slow
     def test_strict_syntax_cases(self, response, value, unit, content, value_latex, unit_latex, criteria):
         params = {
             "strict_syntax": False,

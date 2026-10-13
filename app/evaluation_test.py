@@ -106,7 +106,6 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
 
-
     def test_theta_character_implict_multi_variable(self):
         params = {
             "strict_syntax": False,
@@ -178,8 +177,6 @@ class TestEvaluationFunction():
 
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] == is_correct
-
-
 
     @pytest.mark.parametrize("params, is_correct", [
         ({}, True),
