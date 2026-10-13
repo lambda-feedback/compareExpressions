@@ -32,15 +32,6 @@ class TestEvaluationFunction():
     Use evaluation_function() to call the evaluation function.
     """
 
-    log_details = True
-
-    def log_details_to_file(self, details, filename):
-        if self.log_details:
-            f = open(filename, "w")
-            f.write(details)
-            f.close()
-        return
-
     @pytest.mark.parametrize("string,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
     def test_strict_syntax_cases(self, string, value, unit, content, value_latex, unit_latex, criteria):
         params = {
@@ -78,7 +69,6 @@ class TestEvaluationFunction():
         incorrect = []
         errors = []
         n = 0
-        k = 0
         for prefix in SI_PREFIXES:
             for u1 in units:
                 for u2 in units:
@@ -95,15 +85,10 @@ class TestEvaluationFunction():
                                     continue
                                 if result["is_correct"] is False:
                                     incorrect.append((answer, response, result["response_latex"]))
-                                    print("Incorrect: "+str((answer, response, result["response_latex"])))
-                                if n-k > 0:
-                                    print(k)
-                                    k += 1000
         m = len(errors)+len(incorrect)
         details = "Total: "+str(m)+"/"+str(n)+"\nIncorrect:\n"+"".join([str(x)+"\n" for x in incorrect])+"\nErrors:\n"+"".join([str(x)+"\n" for x in errors])
-        self.log_details_to_file(details, "test_quantity_alternative_names_natural_syntax_log.txt")
         # Current number of collisions caused by concatenating two units, e.g. "barnewton" has "barn" as substring, "aremole" has "rem" as substring etc.
-        assert len(errors)+len(incorrect) <= 144
+        assert m <= 144, details
 
     @pytest.mark.skip("Too resource intensive")
     def test_slow_quantity_short_forms_natural_syntax(self):
@@ -112,7 +97,6 @@ class TestEvaluationFunction():
         incorrect = []
         errors = []
         n = 0
-        k = 0
         for prefix in SI_PREFIXES:
             for u1 in units:
                 for u2 in units:
@@ -128,14 +112,10 @@ class TestEvaluationFunction():
                             continue
                         if result["is_correct"] is False:
                             incorrect.append((answer, response, result["response_latex"]))
-                        if n-k > 0:
-                            print(k)
-                            k += 1000
         m = len(errors)+len(incorrect)
         details = "Total: "+str(m)+"/"+str(n)+"\nIncorrect:\n"+"".join([str(x)+"\n" for x in incorrect])+"\nErrors:\n"+"".join([str(x)+"\n" for x in errors])
-        self.log_details_to_file(details, "test_quantity_short_forms_natural_syntax_units_log.txt")
         # Current number of collisions caused by concatenating short forms for units, e.g. 'femtometre inch' and 'femtominute' both have short form 'fmin'
-        assert len(errors)+len(incorrect) <= 551
+        assert m <= 551, details
 
     @pytest.mark.parametrize(
         "value,unit,small_diff,large_diff",
