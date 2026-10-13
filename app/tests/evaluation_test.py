@@ -1,7 +1,7 @@
 import pytest
 
-from .preview import preview_function
-from .evaluation import evaluation_function
+from ..preview import preview_function
+from ..evaluation import evaluation_function
 
 
 class TestEvaluationFunction():

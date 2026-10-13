@@ -3,7 +3,7 @@
 
     The base image's healthcheck loads `TestEvaluationFunction` from this module
     with `unittest`, so this wraps a run of the pytest suite in this directory
-    (`*_test.py` and `tests/`). Tests marked `@pytest.mark.slow` are left out so
+    (`tests/`). Tests marked `@pytest.mark.slow` are left out so
     the healthcheck stays within the request timeout; CI runs them all. pytest
     doesn't collect `*_tests.py`, so this module isn't picked up by that run.
 """
