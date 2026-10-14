@@ -1,5 +1,8 @@
+import time
+
 import pytest
 
+from .. import time_budget
 from ..evaluation import evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2258,3 +2261,46 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
+
+    # Simplifying a number such as 10^8*log(0.1) builds 10^(10^8) exactly, which
+    # never finishes, so these rely on the time budgets (see `app.time_budget`)
+    large_power_in_log_params = {
+        "elementary_functions": True,
+        "strict_syntax": False,
+        "physical_quantity": False,
+        "rtol": 0,
+        "atol": 0,
+        "symbols": {"pi": {"latex": r"\pi", "aliases": []}},
+    }
+
+    @pytest.fixture
+    def short_comparison_budget(self, monkeypatch):
+        monkeypatch.setattr(time_budget, "COMPARISON_BUDGET", 1)
+
+    @pytest.mark.parametrize("response,answer", [
+        ("log(0.1)*(10^8/ pi)", "(-1/(100*pi*k))*ln(r)+c"),
+        ("900000+10^8* pi* log(100)", "1.47*10**8"),
+    ])
+    def test_large_power_times_numeric_log_is_graded_in_time(self, short_comparison_budget, response, answer):
+        start = time.monotonic()
+        result = evaluation_function(response, answer, self.large_power_in_log_params)
+        assert result["is_correct"] is False
+        assert time.monotonic()-start < 10
+
+    def test_large_power_times_numeric_log_is_compared_numerically(self, short_comparison_budget):
+        response = "log(0.1)*(10^8/ pi)"
+        params = self.large_power_in_log_params
+        assert evaluation_function(response, "-10^8*log(10)/pi", params)["is_correct"] is True
+        assert evaluation_function(response, "-10^8*log(10)/pi+10^-20", params)["is_correct"] is False
+
+    def test_large_power_times_symbolic_log_is_simplified(self):
+        start = time.monotonic()
+        result = evaluation_function("-10^8/( pi) log(r)", "(-1/(100*pi*k))*ln(r)+c", self.large_power_in_log_params)
+        assert result["is_correct"] is False
+        assert time.monotonic()-start < 5
+
+    def test_evaluation_that_runs_out_of_time(self, monkeypatch):
+        monkeypatch.setattr(time_budget, "REQUEST_BUDGET", 1)
+        result = evaluation_function("log(0.1)*(10^8/ pi)", "(-1/(100*pi*k))*ln(r)+c", self.large_power_in_log_params)
+        assert result["is_correct"] is False
+        assert "TIME_LIMIT_EXCEEDED" in result["tags"]

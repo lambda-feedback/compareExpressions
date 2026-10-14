@@ -11,10 +11,11 @@ from lambdafeedback.expression_parsing import (
 )
 
 from ..preview.symbolic import preview_function
-from .numerical import compare_numerically
+from .numerical import compare_numerically, numerically_equal
 from .set_equivalence import add_set_equivalence_nodes, as_sets
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ..feedback.syntactical_forms import PATTERNS as syntactical_forms
+from ..time_budget import comparison_budget
 
 from lambdafeedback.criteria import CriteriaGraph, build_criteria_parser
 
@@ -133,23 +134,28 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):
         result = False
     else:
-        try:
-            either_is_infinite = lhs_expr.is_infinite or rhs_expr.is_infinite
-        except (KeyError, TypeError):
-            either_is_infinite = False
-        if either_is_infinite:
-            result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
-        else:
-            result = do_comparison(criterion.content, lhs_expr-rhs_expr)
-        # There are some types of expression, e.g. those containing hyperbolic trigonometric functions, that can behave
-        # unpredictably when simplification is applied. For that reason we check several different combinations of
-        # simplifications here in order to reduce the likelihood of false negatives.
-        if result is False:
-            result = do_comparison(criterion.content, lhs_expr-rhs_expr.simplify())
-        if result is False:
-            result = do_comparison(criterion.content, lhs_expr.simplify()-rhs_expr)
-        if result is False:
-            result = do_comparison(criterion.content, lhs_expr.simplify()-rhs_expr.simplify())
+        result = None
+        with comparison_budget() as budget:
+            try:
+                either_is_infinite = lhs_expr.is_infinite or rhs_expr.is_infinite
+            except (KeyError, TypeError):
+                either_is_infinite = False
+            if either_is_infinite:
+                result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
+            else:
+                result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+            # There are some types of expression, e.g. those containing hyperbolic trigonometric functions, that can behave
+            # unpredictably when simplification is applied. For that reason we check several different combinations of
+            # simplifications here in order to reduce the likelihood of false negatives.
+            if result is False:
+                result = do_comparison(criterion.content, lhs_expr-rhs_expr.simplify())
+            if result is False:
+                result = do_comparison(criterion.content, lhs_expr.simplify()-rhs_expr)
+            if result is False:
+                result = do_comparison(criterion.content, lhs_expr.simplify()-rhs_expr.simplify())
+        if budget.exceeded:
+            # Simplifying took too long (e.g. 10^8*log(0.1) builds 10^(10^8)), so compare numbers by value instead
+            result = numerically_equal(lhs_expr, rhs_expr) if criterion.content.strip() == "=" else None
 
         if result is False:
             result = compare_numerically(lhs_expr, rhs_expr, parameters_dict)
@@ -159,17 +165,20 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
 
 def check_order(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
-    result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+    result = None
+    with comparison_budget():
+        result = do_comparison(criterion.content, lhs_expr-rhs_expr)
     return result
 
 
 def check_proportionality(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     result = None
-    if lhs_expr.cancel().simplify().simplify() != 0:
-        result = (rhs_expr/lhs_expr).cancel().simplify()
-    elif rhs_expr.cancel().simplify().simplify() != 0:
-        result = (lhs_expr/rhs_expr).cancel().simplify()
+    with comparison_budget():
+        if lhs_expr.cancel().simplify().simplify() != 0:
+            result = (rhs_expr/lhs_expr).cancel().simplify()
+        elif rhs_expr.cancel().simplify().simplify() != 0:
+            result = (lhs_expr/rhs_expr).cancel().simplify()
     if result == 0 or result is None:
         result = False
     else:
@@ -275,13 +284,14 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
 
         # TODO: Remove when criteria for checking proportionality is implemented
         if isinstance(res, Equality) and isinstance(ans, Equality):
-            if (res.args[0]-res.args[1]).simplify() == 0:
-                symbols_in_equality_ratio = (ans.args[0]-ans.args[1]).simplify().free_symbols
-            elif (ans.args[0]-ans.args[1]).simplify() == 0:
-                symbols_in_equality_ratio = (res.args[0]-res.args[1]).simplify().free_symbols
-            else:
-                symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
-            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"].constants)
+            with comparison_budget():
+                if (res.args[0]-res.args[1]).simplify() == 0:
+                    symbols_in_equality_ratio = (ans.args[0]-ans.args[1]).simplify().free_symbols
+                elif (ans.args[0]-ans.args[1]).simplify() == 0:
+                    symbols_in_equality_ratio = (res.args[0]-res.args[1]).simplify().free_symbols
+                else:
+                    symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
+                result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"].constants)
         if result is True:
             return {
                 label+"_TRUE": None

@@ -13,6 +13,7 @@ from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from .feedback.symbolic import internal_feedback
 from .feedback.tags import FeedbackTag, FeedbackTagName
+from .time_budget import comparison_budget, request_budget
 
 from collections.abc import Mapping
 
@@ -310,50 +311,59 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         evaluation_result.add_feedback(
             "NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict()))
 
-    reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
-    if reserved_expressions_success is False:
-        return evaluation_result.serialise(include_test_data)
-    reserved_expressions_parsed = {**reserved_expressions["learner"], **reserved_expressions["task"]}
+    # Simplifying can take practically forever (see `time_budget`), so the request
+    # ends with a grade rather than running into the Lambda timeout.
+    with request_budget() as budget:
+        reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
+        if reserved_expressions_success is False:
+            return evaluation_result.serialise(include_test_data)
+        reserved_expressions_parsed = {**reserved_expressions["learner"], **reserved_expressions["task"]}
 
-    try:
-        preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
-    except Exception:
-        evaluation_result.latex = response
-        evaluation_result.simplified = response
-    else:
-        evaluation_result.latex = preview["latex"]
-        parsed_response = reserved_expressions["learner"]["response"]
-        if isinstance(parsed_response, list) or isinstance(parsed_response, set):
-            evaluation_result.simplified = ", ".join([str(ex.simplify()) for ex in parsed_response])
+        try:
+            preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
+        except Exception:
+            evaluation_result.latex = response
+            evaluation_result.simplified = response
         else:
-            try:
-                evaluation_result.simplified = str(parsed_response.simplify())
-            except Exception:
+            evaluation_result.latex = preview["latex"]
+            parsed_response = reserved_expressions["learner"]["response"]
+            with comparison_budget() as simplification:
+                if isinstance(parsed_response, list) or isinstance(parsed_response, set):
+                    evaluation_result.simplified = ", ".join([str(ex.simplify()) for ex in parsed_response])
+                else:
+                    try:
+                        evaluation_result.simplified = str(parsed_response.simplify())
+                    except Exception:
+                        evaluation_result.simplified = response
+            if simplification.exceeded:
                 evaluation_result.simplified = response
 
-    criteria_parser = context["generate_criteria_parser"](reserved_expressions)
-    criteria = create_criteria_dict(criteria_parser, parameters)
+        criteria_parser = context["generate_criteria_parser"](reserved_expressions)
+        criteria = create_criteria_dict(criteria_parser, parameters)
 
-    evaluation_parameters = FrozenValuesDictionary(
-        {
-            "reserved_expressions_strings": reserved_expressions_strings,
-            "reserved_expressions": reserved_expressions_parsed,
-            "criteria": criteria,
-            "disabled_evaluation_nodes": parameters.get("disabled_evaluation_nodes", set()),
-            "parsing_parameters": parsing_parameters,
-            "evaluation_result": evaluation_result,
-            "syntactical_comparison": parameters.get("syntactical_comparison", False),
-            "multiple_answers_criteria": parameters.get("multiple_answers_criteria", "all"),
-            "numerical": parameters.get("numerical", False),
-            "atol": parameters.get("atol", 0),
-            "rtol": parameters.get("rtol", 0),
-            "custom_feedback": parameters.get("custom_feedback", {}),
-        }
-    )
+        evaluation_parameters = FrozenValuesDictionary(
+            {
+                "reserved_expressions_strings": reserved_expressions_strings,
+                "reserved_expressions": reserved_expressions_parsed,
+                "criteria": criteria,
+                "disabled_evaluation_nodes": parameters.get("disabled_evaluation_nodes", set()),
+                "parsing_parameters": parsing_parameters,
+                "evaluation_result": evaluation_result,
+                "syntactical_comparison": parameters.get("syntactical_comparison", False),
+                "multiple_answers_criteria": parameters.get("multiple_answers_criteria", "all"),
+                "numerical": parameters.get("numerical", False),
+                "atol": parameters.get("atol", 0),
+                "rtol": parameters.get("rtol", 0),
+                "custom_feedback": parameters.get("custom_feedback", {}),
+            }
+        )
 
-    # Performs evaluation of response
-    feedback_procedures = parameters["context"]["feedback_procedure_generator"](evaluation_parameters)
-    generate_feedback(criteria, feedback_procedures, evaluation_parameters)
+        # Performs evaluation of response
+        feedback_procedures = parameters["context"]["feedback_procedure_generator"](evaluation_parameters)
+        generate_feedback(criteria, feedback_procedures, evaluation_parameters)
+    if budget.exceeded:
+        evaluation_result.is_correct = False
+        evaluation_result.add_feedback("TIME_LIMIT_EXCEEDED", symbolic_comparison_internal_messages("TIME_LIMIT_EXCEEDED")(dict()))
 
     result = evaluation_result.serialise(include_test_data)
 
