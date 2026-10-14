@@ -1,4 +1,4 @@
-from sympy import Add, Pow, Mul, Equality, pi, im, I, N
+from sympy import Add, Pow, Mul, Equality, im, I
 from sympy import re as real_part
 
 from lambdafeedback.expression_parsing import (
@@ -11,6 +11,8 @@ from lambdafeedback.expression_parsing import (
 )
 
 from ..preview.symbolic import preview_function
+from .numerical import compare_numerically
+from .set_equivalence import add_set_equivalence_nodes, as_sets
 from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ..feedback.syntactical_forms import PATTERNS as syntactical_forms
 
@@ -149,44 +151,8 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
         if result is False:
             result = do_comparison(criterion.content, lhs_expr.simplify()-rhs_expr.simplify())
 
-        # TODO: Make numerical comparison its own context
         if result is False:
-            error_below_rtol = None
-            error_below_atol = None
-            if parameters_dict.get("numerical", False) or float(parameters_dict.get("rtol", 0)) > 0 or float(parameters_dict.get("atol", 0)) > 0:
-                # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
-                # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
-                # are other reserved symbols.
-                def replace_pi(expr):
-                    pi_symbol = pi
-                    for s in expr.free_symbols:
-                        if str(s) == 'pi':
-                            pi_symbol = s
-                    return expr.subs(pi_symbol, float(pi))
-                # NOTE: This code assumes that the left hand side is the response and the right hand side is the answer
-                # Separates LHS and RHS, parses and evaluates them
-                res = N(replace_pi(lhs_expr))
-                ans = N(replace_pi(rhs_expr))
-                if float(parameters_dict.get("atol", 0)) > 0:
-                    try:
-                        absolute_error = abs(float(ans-res))
-                        error_below_atol = bool(absolute_error < float(parameters_dict["atol"]))
-                    except TypeError:
-                        error_below_atol = None
-                else:
-                    error_below_atol = True
-                if float(parameters_dict.get("rtol", 0)) > 0:
-                    try:
-                        relative_error = abs(float((ans-res)/ans))
-                        error_below_rtol = bool(relative_error < float(parameters_dict["rtol"]))
-                    except TypeError:
-                        error_below_rtol = None
-                else:
-                    error_below_rtol = True
-                if error_below_atol is None or error_below_rtol is None:
-                    result = False
-                elif error_below_atol is True and error_below_rtol is True:
-                    result = True
+            result = compare_numerically(lhs_expr, rhs_expr, parameters_dict)
 
     return result
 
@@ -292,45 +258,6 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                 label+"_UNKNOWN": None
             }
 
-    def set_equivalence(unused_input):
-        matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
-        for i, response in enumerate(response_list):
-            result = None
-            for j, answer in enumerate(answer_list):
-                current_pair = [("response", response), ("answer", answer)]
-                if isinstance(response, Equality) and not isinstance(answer, Equality):
-                    result = False
-                elif not isinstance(response, Equality) and isinstance(answer, Equality):
-                    result = False
-                else:
-                    result = check_equality(criterion, parameters_dict, local_substitutions=current_pair)
-                if result is True:
-                    matches["responses"][i] = True
-                    matches["answers"][j] = True
-        if parameters_dict["multiple_answers_criteria"] == "all":
-            is_correct = all(matches["responses"]) and all(matches["answers"])
-            if is_correct is False:
-                return {
-                    label+"_MULTIPLE_ANSWER_FAIL_ALL": None
-                }
-        elif parameters_dict["multiple_answers_criteria"] == "all_responses":
-            is_correct = all(matches["responses"])
-            if is_correct is False:
-                return {
-                    label+"_MULTIPLE_ANSWER_FAIL_RESPONSE": None
-                }
-        elif parameters_dict["multiple_answers_criteria"] == "all_answers":
-            is_correct = all(matches["answers"])
-            if is_correct is False:
-                return {
-                    label+"_MULTIPLE_ANSWER_FAIL_ANSWER": None
-                }
-        else:
-            raise SyntaxWarning(f"Unknown multiple_answers_criteria: {parameters_dict['multiple_answers_critera']}")
-        return {
-            label+"_TRUE": None
-        }
-
     def equality_equivalence(unused_input):
         result = False
         res = parameters_dict["reserved_expressions"]["response"]
@@ -385,61 +312,19 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
                 label+"_SAME_SYMBOLS"+"_FALSE": None
             }
 
-    use_set_equivalence = False
-    response_list = parameters_dict["reserved_expressions"]["response"]
-    answer_list = parameters_dict["reserved_expressions"]["answer"]
-    if isinstance(response_list, set) and isinstance(answer_list, set):
-        use_set_equivalence = True
-    elif isinstance(response_list, set) and not isinstance(answer_list, set):
-        use_set_equivalence = True
-        answer_list = set([answer_list])
-    elif not isinstance(response_list, set) and isinstance(answer_list, set):
-        use_set_equivalence = True
-        response_list = set([response_list])
+    use_set_equivalence, response_list, answer_list = as_sets(
+        parameters_dict["reserved_expressions"]["response"],
+        parameters_dict["reserved_expressions"]["answer"],
+    )
 
     res = parameters_dict["reserved_expressions"]["response"]
     ans = parameters_dict["reserved_expressions"]["answer"]
     use_equality_equivalence = isinstance(res, Equality) or isinstance(ans, Equality)
 
-    # TODO: Make checking set equivalence its own context that calls symbolic comparisons instead
     if use_set_equivalence is True:
-        graph.add_evaluation_node(
-            label,
-            summary=label,
-            details="Checks if "+str(lhs)+"="+str(rhs)+".",
-            evaluate=set_equivalence
+        add_set_equivalence_nodes(
+            graph, END, criterion, parameters_dict, label, lhs, rhs, response_list, answer_list, check_equality
         )
-        graph.attach_new_criterion(
-            label,
-            label+"_TRUE",
-            summary=str(lhs)+"="+str(rhs),
-            details=str(lhs)+" is equal to "+str(rhs)+".",
-            feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("TRUE")
-        )
-        graph.attach_new_criterion(
-            label,
-            label+"_MULTIPLE_ANSWER_FAIL_ALL",
-            summary=str(lhs)+" is not equal to "+str(rhs),
-            details="At least one answer or response was incorrect.",
-            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("MULTIPLE_ANSWER_FAIL_ALL")
-        )
-        graph.attach(label+"_MULTIPLE_ANSWER_FAIL_ALL", END.label)
-        graph.attach_new_criterion(
-            label,
-            label+"_MULTIPLE_ANSWER_FAIL_RESPONSE",
-            summary="Unexpected element in response.",
-            details="At least one response was incorrect.",
-            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("MULTIPLE_ANSWER_FAIL_RESPONSE")
-        )
-        graph.attach(label+"_MULTIPLE_ANSWER_FAIL_RESPONSE", END.label)
-        graph.attach_new_criterion(
-            label,
-            label+"_MULTIPLE_ANSWER_FAIL_ANSWER",
-            summary="Missing element in response",
-            details="At least one answer is missing in the response.",
-            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("MULTIPLE_ANSWER_FAIL_ANSWER")
-        )
-        graph.attach(label+"_MULTIPLE_ANSWER_FAIL_ANSWER", END.label)
     elif use_equality_equivalence is True:
         graph.add_evaluation_node(
             label,
