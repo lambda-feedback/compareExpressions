@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+from lambdafeedback.criteria import CriteriaGraph
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
@@ -191,6 +192,13 @@ def create_criteria_dict(criteria_parser, parsing_params):
     return criteria_parsed
 
 
+def _disable_evaluation_nodes(graph, disabled_evaluation_nodes):
+    """Makes each evaluation in `disabled_evaluation_nodes` skip straight to the end of `graph`."""
+    for evaluation in graph.evaluations.values():
+        if evaluation.label in disabled_evaluation_nodes:
+            evaluation.replacement = CriteriaGraph.END_LABEL
+
+
 def generate_feedback(criteria_graphs, evaluation_parameters):
     # Generate feedback from criteria graphs
     evaluation_result = evaluation_parameters["evaluation_result"]
@@ -365,6 +373,8 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
 
     # Performs evaluation of response
     feedback_procedures = context["feedback_procedure_generator"](evaluation_parameters)
+    for graph in feedback_procedures.values():
+        _disable_evaluation_nodes(graph, evaluation_parameters["disabled_evaluation_nodes"])
     generate_feedback(feedback_procedures, evaluation_parameters)
 
     result = evaluation_result.serialise(include_test_data)

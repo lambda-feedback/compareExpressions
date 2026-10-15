@@ -1,9 +1,9 @@
 from lambdafeedback.criteria import CriteriaGraph
-from lambdafeedback.expression_parsing import compute_relative_tolerance_from_significant_decimals, parse_expression
+from lambdafeedback.expression_parsing import compute_relative_tolerance_from_significant_decimals
 
 from ....feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 from ...graph_helpers import attach_terminal_criterion, outcome_tag
-from ..comparison import comparison_function, is_proportional
+from ..comparison import comparison_function, is_proportional, parse_criterion_sides
 
 is_equal = comparison_function("=")
 
@@ -242,17 +242,13 @@ def _add_match_nodes(graph, END, label, inputs, quantity_match, dimension_match,
 def criterion_match_node(criterion, parameters, label=None):
     graph = CriteriaGraph(label)
     END = graph.add_end_node()
-    parsing_params = parameters["parsing_parameters"]["sympy"].replace(simplify=False)
     rtol, atol = _tolerances(parameters)
 
     if label is None:
         label = criterion.content_string()
 
     inputs = criterion.children
-    lhs_string = criterion.children[0].content_string()
-    rhs_string = criterion.children[1].content_string()
-    lhs = parse_expression(lhs_string, parsing_params)
-    rhs = parse_expression(rhs_string, parsing_params)
+    lhs_string, rhs_string, lhs, rhs = parse_criterion_sides(criterion, parameters)
 
     _add_match_nodes(
         graph,

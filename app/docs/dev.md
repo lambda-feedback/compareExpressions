@@ -48,7 +48,7 @@ The overall flow of the evaluation procedure can be described as follows:
 ### Context
 
 The context is a data structure that contains at least the following seven pieces of information:
-- `default_parameters` A dictionary where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts use the default parameters found in `context/symbolic/__init__.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context/physical_quantity/__init__.py`.
+- `default_parameters` A dictionary where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts start from the default parameters found in `context/defaults.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context/physical_quantity/__init__.py`.
 - `expression_parse` function that parses expressions (i.e. the `response` and `answer` inputs) into the form used by the feedback generation procedure.
 - `expression_preprocess` function that performs string manipulations that makes ensures that correctly written input expressions follows the conventions expected by `expression_parse`.
 - `expression_preview` is a function that generates a string that can be turned into a human-readable representation of how the evaluation function interpreted the response.

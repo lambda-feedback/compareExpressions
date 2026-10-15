@@ -5,14 +5,14 @@ from ...graph_helpers import attach_terminal_criterion, outcome_tag
 from ..comparison import check_criterion
 
 
-def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
+def criterion_eval_node(criterion, parameters_dict):
     feedback_string_generator_inputs = {'criterion': criterion}
+    label = criterion.content_string()
 
     def evaluation_node_internal(unused_input):
-        result = check_criterion(criterion, parameters_dict, generate_feedback)
-        return outcome_tag(criterion.content_string(), result, feedback_string_generator_inputs)
+        result = check_criterion(criterion, parameters_dict)
+        return outcome_tag(label, result, feedback_string_generator_inputs)
 
-    label = criterion.content_string()
     graph = CriteriaGraph(label)
     END = graph.add_end_node()
     graph.add_evaluation_node(label, summary=label, details="Checks if "+label+" is true.", evaluate=evaluation_node_internal)
