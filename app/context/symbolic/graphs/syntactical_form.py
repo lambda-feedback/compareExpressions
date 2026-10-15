@@ -7,7 +7,7 @@ from ...graph_helpers import outcome_tag
 
 
 def written_as_known_form(string, name):
-    def find_form(unused_input):
+    def find_form(_response):
         forms = set()
         for form_label in syntactical_forms.keys():
             if syntactical_forms[form_label].matcher(string) is True:
@@ -20,13 +20,13 @@ def written_as_known_form(string, name):
 
 
 def compare_to_form(string, form_label, label):
-    def inner(unused_input):
+    def inner(_response):
         return outcome_tag(label, syntactical_forms[form_label].matcher(string) is True)
     return inner
 
 
 def response_written_as_answer(response, answer, label):
-    def inner(unused_input):
+    def inner(_response):
         matcher = generate_arbitrary_number_pattern_matcher(answer)
         return outcome_tag(label, bool(matcher(response)))
     return inner

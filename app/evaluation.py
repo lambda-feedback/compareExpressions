@@ -173,11 +173,11 @@ def split_criteria(criteria_string):
     return criteria_string_list
 
 
-def create_criteria_dict(criteria_parser, parsing_params):
-    preprocess = parsing_params["context"]["expression_preprocess"]
-    original_criteria_string = get_criteria_string(parsing_params)
+def create_criteria_dict(criteria_parser, parameters):
+    preprocess = parameters["context"]["expression_preprocess"]
+    original_criteria_string = get_criteria_string(parameters)
     try:
-        criteria_string = preprocess("criteria", original_criteria_string, parsing_params)
+        criteria_string = preprocess("criteria", original_criteria_string, parameters)
     except (BracketNotationError, AbsoluteValueNotationError) as e:
         feedback = notation_error_feedback(e, original_criteria_string)
         raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
@@ -331,7 +331,6 @@ def _build_evaluation_parameters(parameters, reserved_expressions, criteria, eva
             "disabled_evaluation_nodes": parameters.get("disabled_evaluation_nodes", set()),
             "parsing_parameters": parameters["parsing_parameters"],
             "evaluation_result": evaluation_result,
-            "syntactical_comparison": parameters.get("syntactical_comparison", False),
             "multiple_answers_criteria": parameters.get("multiple_answers_criteria", "all"),
             "numerical": parameters.get("numerical", False),
             "atol": parameters.get("atol", 0),

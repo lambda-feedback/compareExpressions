@@ -1,10 +1,9 @@
-import operator
-
 from sympy import Equality, im, I
 from sympy import re as real_part
 
 from lambdafeedback.expression_parsing import parse_expression
 
+from ..operators import COMPARISON_OPERATORS
 from .numerical import compare_numerically
 
 
@@ -45,17 +44,12 @@ def check_criterion(criterion, parameters_dict):
         result = check_contains_symbol(criterion, parameters_dict)
     elif label == "PROPORTIONAL_TO":
         result = check_proportionality(criterion, parameters_dict)
-    elif label == "WHERE":
-        crit = criterion.children[0]
-        parsing_params = parameters_dict["parsing_parameters"].replace(simplify=False)
-        local_subs = parse_where_substitutions(criterion.children[1], parsing_params)
-        result = check_criterion(crit, {**parameters_dict, **{"local_substitutions": local_subs}})
     else:
         raise Exception(label)
     return result
 
 
-def create_expressions_for_comparison(criterion, parameters_dict, local_substitutions=[]):
+def create_expressions_for_comparison(criterion, parameters_dict, local_substitutions=()):
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
     lhs = criterion.children[0].content_string()
@@ -87,15 +81,6 @@ def do_comparison_infinite(comparison_symbol, lhs_expr, rhs_expr):
         return None
 
 
-COMPARISON_OPERATORS = {
-    "=": operator.eq,
-    ">": operator.gt,
-    ">=": operator.ge,
-    "<": operator.lt,
-    "<=": operator.le,
-}
-
-
 def do_comparison(comparison_symbol, expression):
     comparison = COMPARISON_OPERATORS[comparison_symbol.strip()]
     try:
@@ -105,7 +90,7 @@ def do_comparison(comparison_symbol, expression):
     return result
 
 
-def check_equality(criterion, parameters_dict, local_substitutions=[]):
+def check_equality(criterion, parameters_dict, local_substitutions=()):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         return False
@@ -148,14 +133,14 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
     return result
 
 
-def check_order(criterion, parameters_dict, local_substitutions=[]):
-    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+def check_order(criterion, parameters_dict):
+    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = do_comparison(criterion.content, lhs_expr-rhs_expr)
     return result
 
 
-def check_proportionality(criterion, parameters_dict, local_substitutions=[]):
-    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+def check_proportionality(criterion, parameters_dict):
+    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = None
     if lhs_expr.cancel().simplify().simplify() != 0:
         result = (rhs_expr/lhs_expr).cancel().simplify()
@@ -168,7 +153,7 @@ def check_proportionality(criterion, parameters_dict, local_substitutions=[]):
     return result
 
 
-def check_contains_symbol(criterion, parameters_dict, local_substitutions=[]):
-    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
+def check_contains_symbol(criterion, parameters_dict):
+    lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = rhs_expr in lhs_expr.atoms()
     return result

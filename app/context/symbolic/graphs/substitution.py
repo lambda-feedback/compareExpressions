@@ -63,7 +63,7 @@ def _group_values(expression_to_vary, variation_groups, local_subs):
 def _add_identify_reason_nodes(graph, END, label, criterion, expression, variation_groups,
                                values_and_expressions, values_and_variations_group, response_value):
     """Adds the nodes that try to identify which variation of the expression the response matches."""
-    def identify_reason(unused_input):
+    def identify_reason(_response):
         reasons = {
             label+"_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group.get(str(response_value), {"UNKNOWN"})
         }
@@ -85,7 +85,7 @@ def _add_identify_reason_nodes(graph, END, label, criterion, expression, variati
         feedback_string_generator=symbolic_feedback_string_generators["IDENTIFY_REASON"]("UNKNOWN")
     )
 
-    def get_candidates(unused_input):
+    def get_candidates(_response):
         candidates = {
             label+"_RESPONSE_CANDIDATES_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group[str(response_value)]
         }
@@ -131,7 +131,7 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     if label is None:
         label = criterion.content_string()
 
-    def expression_check(unused_input):
+    def expression_check(_response):
         result = check_equality(expression, parameters_dict, local_substitutions=local_subs)
         return outcome_tag(label, result is True)
 

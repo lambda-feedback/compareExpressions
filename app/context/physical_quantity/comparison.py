@@ -1,18 +1,10 @@
-import operator
-
 from sympy import Symbol
 
 from lambdafeedback.expression_parsing import parse_expression
 
-NONE_PLACEHOLDER = Symbol('NONE_PLACEHOLDER')
+from ..operators import COMPARISON_OPERATORS
 
-COMPARISON_OPERATORS = {
-    "=": operator.eq,
-    ">": operator.gt,
-    "<": operator.lt,
-    ">=": operator.ge,
-    "<=": operator.le,
-}
+NONE_PLACEHOLDER = Symbol('NONE_PLACEHOLDER')
 
 
 def parse_criterion_sides(criterion, parameters):

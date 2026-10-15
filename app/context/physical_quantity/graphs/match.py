@@ -59,7 +59,7 @@ def _within_tolerance(parameters, lhs_string, rhs_string, rtol, atol):
 def _quantity_match(parameters, label, lhs, rhs, lhs_string, rhs_string, rtol, atol):
     reserved_expressions = parameters["reserved_expressions"].items()
 
-    def quantity_match(unused_inputs):
+    def quantity_match(_response):
         missing_or_unexpected = _missing_or_unexpected(parameters, label, lhs_string, rhs_string)
         if missing_or_unexpected is not None:
             return missing_or_unexpected
@@ -79,7 +79,7 @@ def _quantity_match(parameters, label, lhs, rhs, lhs_string, rhs_string, rtol, a
 def _dimension_match(parameters, label, lhs, rhs, lhs_string, rhs_string):
     reserved_expressions = parameters["reserved_expressions"].items()
 
-    def dimension_match(unused_inputs):
+    def dimension_match(_response):
         substitutions = [(key, expr["dimension"]) for (key, expr) in reserved_expressions]
         dimension_match, _ = is_proportional(lhs, rhs, substitutions)
         return outcome_tag(label+"_DIMENSION_MATCH", dimension_match is True, {"lhs": lhs_string, "rhs": rhs_string})
@@ -89,7 +89,7 @@ def _dimension_match(parameters, label, lhs, rhs, lhs_string, rhs_string):
 def _unit_comparison(parameters, label, lhs, rhs):
     reserved_expressions = parameters["reserved_expressions"].items()
 
-    def unit_comparison(unused_inputs):
+    def unit_comparison(_response):
         substitutions = [(key, expr["original"]["unit"]) for (key, expr) in reserved_expressions]
 
         if is_equal(lhs, rhs, substitutions) is True:

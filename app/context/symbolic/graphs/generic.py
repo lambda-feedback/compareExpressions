@@ -9,7 +9,7 @@ def criterion_eval_node(criterion, parameters_dict):
     feedback_string_generator_inputs = {'criterion': criterion}
     label = criterion.content_string()
 
-    def evaluation_node_internal(unused_input):
+    def evaluation_node_internal(_response):
         result = check_criterion(criterion, parameters_dict)
         return outcome_tag(label, result, feedback_string_generator_inputs)
 
