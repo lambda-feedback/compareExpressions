@@ -1,7 +1,7 @@
 from sympy import Equality
 
-from ...feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-from ..graph_helpers import attach_terminal_criterion
+from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from ...graph_helpers import attach_terminal_criterion
 
 
 def as_sets(response, answer):
