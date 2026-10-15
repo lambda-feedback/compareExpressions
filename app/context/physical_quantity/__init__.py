@@ -16,6 +16,7 @@ from ...preview.physical_quantity import preview_function
 from ...feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 from ...feedback.physical_quantity import reverted_unit_feedback
 from ..symbolic import default_parameters as symbolic_default_parameters
+from ..graph_helpers import attach_terminal_criterion, disable_nodes, outcome_tag
 from lambdafeedback.slr_parsing import CatchAll, Lexeme, SLRParser, TokenPattern, create_node, infix, operate
 from sympy import Symbol
 
@@ -146,10 +147,7 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
     compare = comparison_function(comparison_operator)
 
     def compare_evaluate(unused_input):
-        if compare(lhs, rhs, stardard_forms) is True:
-            return {label+"_TRUE": None}
-        else:
-            return {label+"_FALSE": None}
+        return outcome_tag(label, compare(lhs, rhs, stardard_forms) is True)
 
     graph.add_evaluation_node(
         label,
@@ -157,22 +155,24 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
         details=f"checks if {inputs[0]} {comparison_operator} {inputs[1]}.",
         evaluate=compare_evaluate
     )
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_TRUE",
+        END,
         summary=f"{inputs[0]} {comparison_operator} {inputs[1]} is true.",
         details=f"{inputs[0]} {comparison_operator} {inputs[1]} is true.",
         feedback_string_generator=physical_quantity_feedback_string_generators["COMPARISON"]("TRUE")
     )
-    graph.attach(label+"_TRUE", END.label)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_FALSE",
+        END,
         summary=f"{inputs[0]} {comparison_operator} {inputs[1]} is false.",
         details=f"{inputs[0]} {comparison_operator} {inputs[1]} is false.",
         feedback_string_generator=physical_quantity_feedback_string_generators["COMPARISON"]("FALSE")
     )
-    graph.attach(label+"_FALSE", END.label)
     # TODO: Consider adding node for cases where comparison cannot be done / cannot be determined
 
     return graph
@@ -276,32 +276,12 @@ def criterion_match_node(criterion, parameters, label=None):
         substitutions = [(key, expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
         unit_match = is_equal(lhs, rhs, substitutions)
 
-        output_tags = None
-        if value_match is True and unit_match is True:
-            output_tags = {
-                label+"_TRUE": {"lhs": lhs_string, "rhs": rhs_string}
-            }
-        else:
-            output_tags = {
-                label+"_FALSE": {"lhs": lhs_string, "rhs": rhs_string}
-            }
-
-        return output_tags
+        return outcome_tag(label, value_match is True and unit_match is True, {"lhs": lhs_string, "rhs": rhs_string})
 
     def dimension_match(unused_inputs):
         substitutions = [(key, expr["dimension"]) for (key, expr) in reserved_expressions]
         dimension_match, _ = is_proportional(lhs, rhs, substitutions)
-
-        output_tags = None
-        if dimension_match is True:
-            output_tags = {
-                label+"_DIMENSION_MATCH"+"_TRUE": {"lhs": lhs_string, "rhs": rhs_string}
-            }
-        else:
-            output_tags = {
-                label+"_DIMENSION_MATCH"+"_FALSE": {"lhs": lhs_string, "rhs": rhs_string}
-            }
-        return output_tags
+        return outcome_tag(label+"_DIMENSION_MATCH", dimension_match is True, {"lhs": lhs_string, "rhs": rhs_string})
 
     def unit_comparison(unused_inputs):
         substitutions = [(key, expr["original"]["unit"]) for (key, expr) in reserved_expressions]
@@ -348,38 +328,42 @@ def criterion_match_node(criterion, parameters, label=None):
         details=f"The quantities {inputs[0]} and {inputs[1]} does not match.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("QUANTITY_MISMATCH")
     )
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_MISSING_VALUE",
+        END,
         summary="The response is missing a value.",
         details="The response is missing a value.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("MISSING_VALUE")
     )
-    graph.attach(label+"_MISSING_VALUE", END.label)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_UNEXPECTED_VALUE",
+        END,
         summary="The response is expected only have unit(s), no value.",
         details="The response is expected only have unit(s), no value.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNEXPECTED_VALUE")
     )
-    graph.attach(label+"_UNEXPECTED_VALUE", END.label)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_MISSING_UNIT",
+        END,
         summary="The response is missing unit(s).",
         details="The response is missing unit(s).",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("MISSING_UNIT")
     )
-    graph.attach(label+"_MISSING_UNIT", END.label)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_UNEXPECTED_UNIT",
+        END,
         summary="The response is expected to be a value without unit(s).",
         details="The response is expected to be a value without unit(s).",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNEXPECTED_UNIT")
     )
-    graph.attach(label+"_UNEXPECTED_UNIT", END.label)
     graph.attach_new_evaluation(
         label+"_FALSE",
         label+"_DIMENSION_MATCH",
@@ -387,22 +371,24 @@ def criterion_match_node(criterion, parameters, label=None):
         details=f"Do the dimensions of {inputs[0]} and {inputs[1]} match?",
         evaluate=dimension_match
     )
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label+"_DIMENSION_MATCH",
         label+"_DIMENSION_MATCH"+"_TRUE",
+        END,
         summary=f"The quantities {inputs[0]} and {inputs[1]} have the same dimensions.",
         details=f"The quantities {inputs[0]} and {inputs[1]} have the same dimensions.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("DIMENSION_MATCH")
     )
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label+"_DIMENSION_MATCH",
         label+"_DIMENSION_MATCH"+"_FALSE",
+        END,
         summary=f"The quantities {inputs[0]} and {inputs[1]} have different dimensions.",
         details=f"The quantities {inputs[0]} and {inputs[1]} have different dimensions.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("DIMENSION_MISMATCH")
     )
-    graph.attach(label+"_DIMENSION_MATCH"+"_TRUE", END.label)
-    graph.attach(label+"_DIMENSION_MATCH"+"_FALSE", END.label)
     graph.attach_new_evaluation(
         label+"_TRUE",
         label+"_UNIT_COMPARISON",
@@ -424,22 +410,24 @@ def criterion_match_node(criterion, parameters, label=None):
         details=f"The units of quantities {inputs[0]} and {inputs[1]} are similar.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNIT_COMPARISON_SIMILAR")
     )
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label+"_UNIT_COMPARISON",
         label+"_UNIT_COMPARISON"+"_PREFIX_IS_LARGE",
+        END,
         summary=f"The units of {inputs[0]} are much greater than the units of {inputs[1]}.",
         details=f"The units of {inputs[0]} are at least 1000 times greater than the units of {inputs[1]}.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("PREFIX_IS_LARGE")
     )
-    graph.attach(label+"_UNIT_COMPARISON"+"_PREFIX_IS_LARGE", END.label)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label+"_UNIT_COMPARISON",
         label+"_UNIT_COMPARISON"+"_PREFIX_IS_SMALL",
+        END,
         summary=f"The units of {inputs[0]} are much smaller than the units of {inputs[1]}.",
         details=f"The units of {inputs[0]} are at least 1000 times smaller than the units of {inputs[1]}.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("PREFIX_IS_SMALL")
     )
-    graph.attach(label+"_UNIT_COMPARISON"+"_PREFIX_IS_SMALL", END.label)
 
     return graph
 
@@ -456,9 +444,7 @@ def feedback_procedure_generator(parameters_dict):
         }
         graph_template = graph_templates.get(criterion.label.strip(), criterion_match_node)
         graph = graph_template(criterion, parameters_dict)
-        for evaluation in graph.evaluations.values():
-            if evaluation.label in parameters_dict.get("disabled_evaluation_nodes", set()):
-                evaluation.replacement = CriteriaGraph.END_LABEL
+        disable_nodes(graph, parameters_dict.get("disabled_evaluation_nodes", set()))
         graphs.update({label: graph})
     return graphs
 
