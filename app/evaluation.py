@@ -13,8 +13,7 @@ from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from .feedback.symbolic import internal_feedback
 from .feedback.tags import FeedbackTag, FeedbackTagName
-
-from collections.abc import Mapping
+from .frozen_dict import FrozenValuesDictionary
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
@@ -28,28 +27,30 @@ def notation_error_feedback(error, original_text):
     return FeedbackTag(FeedbackTagName.ABSOLUTE_VALUE_NOTATION_AMBIGUITY, {"name": error.name})
 
 
-class FrozenValuesDictionary(dict):
-    """
-        A dictionary where new key:value pairs can be added,
-        but changing the value for an existing key raises
-        a TypeError
-    """
-    def __init__(self, other=None, **kwargs):
-        super().__init__()
-        self.update(other, **kwargs)
+def _input_symbol_codes_and_aliases(parameters):
+    """The codes and (non-empty) aliases of the input symbols, from both `symbols` and the legacy `input_symbols`."""
+    codes = list(parameters.get("symbols", dict()))
+    aliases = []
 
-    def __setitem__(self, key, value):
-        if key in self:
-            msg = 'key {!r} already exists with value {!r}'
-            raise TypeError(msg.format(key, self[key]))
-        super().__setitem__(key, value)
+    for input_symbol in parameters.get("symbols", dict()).values():
+        aliases += [alias for alias in input_symbol.get("aliases", []) if len(alias.strip()) > 0]
 
-    def update(self, other=None, **kwargs):
-        if other is not None:
-            for k, v in other.items() if isinstance(other, Mapping) else other:
-                self[k] = v
-        for k, v in kwargs.items():
-            self[k] = v
+    # This code is to ensure compatibility with legacy system for defining input symbols
+    for input_symbol in parameters.get("input_symbols", []):
+        if len(input_symbol[0].strip()) > 0:
+            codes.append(input_symbol[0])
+            aliases += [ip for ip in input_symbol[1] if len(ip.strip()) > 0]
+
+    return codes, aliases
+
+
+def _raise_on_collisions(keywords, symbols, kind):
+    """Raises if any of `keywords` is used as an input symbol `kind` (e.g. "code" or "alternative")."""
+    collisions = [keyword for keyword in keywords if keyword in symbols]
+    if len(collisions) == 1:
+        raise Exception("`"+"`, `".join(collisions)+f"` is a reserved keyword and cannot be used as an input symbol {kind}.")
+    elif len(collisions) > 1:
+        raise Exception("`"+"`, `".join(collisions)+f"` are reserved keywords and cannot be used as input symbol {kind}s.")
 
 
 def determine_context(parameters):
@@ -58,41 +59,15 @@ def determine_context(parameters):
     else:
         context = deepcopy(symbolic_context)
 
-    input_symbols_reserved_codes = list(parameters.get("symbols", dict()))
-    input_symbols_reserved_aliases = []
-
-    for input_symbol in parameters.get("symbols", dict()).values():
-        input_symbols_reserved_aliases += [alias for alias in input_symbol.get("aliases", []) if len(alias.strip()) > 0]
-
-    # This code is to ensure compatibility with legacy system for defining input symbols
-    for input_symbol in parameters.get("input_symbols", []):
-        if len(input_symbol[0].strip()) > 0:
-            input_symbols_reserved_codes.append(input_symbol[0])
-            input_symbols_reserved_aliases += [ip for ip in input_symbol[1] if len(ip.strip()) > 0]
+    input_symbols_reserved_codes, input_symbols_reserved_aliases = _input_symbol_codes_and_aliases(parameters)
 
     reserved_keywords_codes = {"where", "written as", "contains", "proportional to"}
     reserved_keywords_aliases = {"plus_minus", "minus_plus"}
     for expressions in parameters["reserved_expressions_strings"].values():
         reserved_keywords_aliases = reserved_keywords_aliases.union(set(expressions.keys()))
 
-    reserved_keywords_codes_collisions = []
-    for keyword in reserved_keywords_codes:
-        if keyword in input_symbols_reserved_codes:
-            reserved_keywords_codes_collisions.append(keyword)
-    if len(reserved_keywords_codes_collisions) > 0:
-        if len(reserved_keywords_codes_collisions) == 1:
-            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` is a reserved keyword and cannot be used as an input symbol code.")
-        else:
-            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` are reserved keywords and cannot be used as input symbol codes.")
-    reserved_keywords_aliases_collisions = []
-    for keyword in reserved_keywords_aliases:
-        if keyword in input_symbols_reserved_aliases:
-            reserved_keywords_aliases_collisions.append(keyword)
-    if len(reserved_keywords_aliases_collisions) > 0:
-        if len(reserved_keywords_aliases_collisions) == 1:
-            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` is a reserved keyword and cannot be used as an input symbol alternative.")
-        else:
-            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
+    _raise_on_collisions(reserved_keywords_codes, input_symbols_reserved_codes, "code")
+    _raise_on_collisions(reserved_keywords_aliases, input_symbols_reserved_aliases, "alternative")
 
     context.update({"reserved_keywords": list(reserved_keywords_codes)})
     return context
@@ -173,14 +148,8 @@ def get_criteria_string(parameters):
     return criteria
 
 
-def create_criteria_dict(criteria_parser, parsing_params):
-    preprocess = parsing_params["context"]["expression_preprocess"]
-    original_criteria_string = get_criteria_string(parsing_params)
-    try:
-        criteria_string = preprocess("criteria", original_criteria_string, parsing_params)
-    except (BracketNotationError, AbsoluteValueNotationError) as e:
-        feedback = notation_error_feedback(e, original_criteria_string)
-        raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
+def split_criteria(criteria_string):
+    """Splits `criteria_string` on the commas that are not inside brackets, and strips each criterion."""
     criteria_string_list = []
     delims = [
         ("(", ")"),
@@ -200,8 +169,19 @@ def create_criteria_dict(criteria_parser, parsing_params):
             criteria_string_list.append(criteria_string[criterion_start:n].strip())
             criterion_start = n+1
     criteria_string_list.append(criteria_string[criterion_start:].strip())
+    return criteria_string_list
+
+
+def create_criteria_dict(criteria_parser, parsing_params):
+    preprocess = parsing_params["context"]["expression_preprocess"]
+    original_criteria_string = get_criteria_string(parsing_params)
+    try:
+        criteria_string = preprocess("criteria", original_criteria_string, parsing_params)
+    except (BracketNotationError, AbsoluteValueNotationError) as e:
+        feedback = notation_error_feedback(e, original_criteria_string)
+        raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
     criteria_parsed = FrozenValuesDictionary()
-    for criterion in criteria_string_list:
+    for criterion in split_criteria(criteria_string):
         try:
             criterion_tokens = criteria_parser.scan(criterion)
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
@@ -211,11 +191,10 @@ def create_criteria_dict(criteria_parser, parsing_params):
     return criteria_parsed
 
 
-def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
+def generate_feedback(criteria_graphs, evaluation_parameters):
     # Generate feedback from criteria graphs
     evaluation_result = evaluation_parameters["evaluation_result"]
     response = evaluation_parameters["reserved_expressions"]["response"]
-    criteria_feedback = set()
     is_correct = True
     custom_feedback = evaluation_parameters.get("custom_feedback", {})
     for (criterion_identifier, graph) in criteria_graphs.items():
@@ -237,25 +216,20 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
     return
 
 
-def evaluation_function(response, answer, params, include_test_data=False) -> dict:
-    """
-    Function that allows for various types of comparison of various kinds of expressions.
-    Supported input parameters:
-    strict_SI_syntax:
-        - if set to True, use basic dimensional analysis functionality.
-    """
-
+def _apply_tolerance_aliases(params):
+    """Copies `relative_tolerance`/`absolute_tolerance` to `rtol`/`atol` in `params`."""
     if "relative_tolerance" in params:
         params["rtol"] = params["relative_tolerance"]
 
     if "absolute_tolerance" in params:
         params["atol"] = params["absolute_tolerance"]
 
-    evaluation_result = EvaluationResult()
-    evaluation_result.is_correct = False
 
-    symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
-
+def _build_parameters(params, response, answer):
+    """
+    A copy of `params` completed with the context's defaults, the reserved expressions
+    (with `response` read as LaTeX if `is_latex` is set), the context and the parsing parameters.
+    """
     parameters = deepcopy(params)
 
     reserved_expressions_strings = {
@@ -298,25 +272,33 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
                 "response": parse_latex(response, ExpressionParams.from_dict(parameters).symbols),
             }
         )
+    return parameters
 
+
+def notation_warnings(response, strict_syntax):
+    """The tags of the notation warnings for `response`."""
     # FIXME: Move these notation warnings into lambdafeedback.expression_parsing
-    if params.get("strict_syntax", False):
+    tags = []
+    if strict_syntax:
         if "^" in response:
-            evaluation_result.add_feedback("NOTATION_WARNING_EXPONENT", symbolic_comparison_internal_messages("NOTATION_WARNING_EXPONENT")(dict()))
+            tags.append("NOTATION_WARNING_EXPONENT")
         if "!" in response:
-            evaluation_result.add_feedback("NOTATION_WARNING_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_FACTORIAL")(dict()))
-
+            tags.append("NOTATION_WARNING_FACTORIAL")
     if "!!!" in response:
-        evaluation_result.add_feedback(
-            "NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict()))
+        tags.append("NOTATION_WARNING_TRIPLE_FACTORIAL")
+    return tags
 
-    reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
-    if reserved_expressions_success is False:
-        return evaluation_result.serialise(include_test_data)
-    reserved_expressions_parsed = {**reserved_expressions["learner"], **reserved_expressions["task"]}
 
+def _add_notation_warnings(evaluation_result, response, params):
+    symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
+    for tag in notation_warnings(response, params.get("strict_syntax", False)):
+        evaluation_result.add_feedback(tag, symbolic_comparison_internal_messages(tag)(dict()))
+
+
+def _set_preview_fields(evaluation_result, response, parameters, reserved_expressions):
+    """Sets the `latex` and `simplified` forms of the response on `evaluation_result`."""
     try:
-        preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
+        preview = parameters["context"]["expression_preview"](response, deepcopy(parameters))["preview"]
     except Exception:
         evaluation_result.latex = response
         evaluation_result.simplified = response
@@ -331,16 +313,15 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             except Exception:
                 evaluation_result.simplified = response
 
-    criteria_parser = context["generate_criteria_parser"](reserved_expressions)
-    criteria = create_criteria_dict(criteria_parser, parameters)
 
-    evaluation_parameters = FrozenValuesDictionary(
+def _build_evaluation_parameters(parameters, reserved_expressions, criteria, evaluation_result):
+    return FrozenValuesDictionary(
         {
-            "reserved_expressions_strings": reserved_expressions_strings,
-            "reserved_expressions": reserved_expressions_parsed,
+            "reserved_expressions_strings": parameters["reserved_expressions_strings"],
+            "reserved_expressions": {**reserved_expressions["learner"], **reserved_expressions["task"]},
             "criteria": criteria,
             "disabled_evaluation_nodes": parameters.get("disabled_evaluation_nodes", set()),
-            "parsing_parameters": parsing_parameters,
+            "parsing_parameters": parameters["parsing_parameters"],
             "evaluation_result": evaluation_result,
             "syntactical_comparison": parameters.get("syntactical_comparison", False),
             "multiple_answers_criteria": parameters.get("multiple_answers_criteria", "all"),
@@ -351,9 +332,40 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         }
     )
 
+
+def evaluation_function(response, answer, params, include_test_data=False) -> dict:
+    """
+    Function that allows for various types of comparison of various kinds of expressions.
+    Supported input parameters:
+    strict_SI_syntax:
+        - if set to True, use basic dimensional analysis functionality.
+    """
+    _apply_tolerance_aliases(params)
+
+    evaluation_result = EvaluationResult()
+    evaluation_result.is_correct = False
+
+    parameters = _build_parameters(params, response, answer)
+    context = parameters["context"]
+
+    _add_notation_warnings(evaluation_result, response, params)
+
+    reserved_expressions_success, reserved_expressions = parse_reserved_expressions(
+        parameters["reserved_expressions_strings"], parameters, evaluation_result
+    )
+    if reserved_expressions_success is False:
+        return evaluation_result.serialise(include_test_data)
+
+    _set_preview_fields(evaluation_result, response, parameters, reserved_expressions)
+
+    criteria_parser = context["generate_criteria_parser"](reserved_expressions)
+    criteria = create_criteria_dict(criteria_parser, parameters)
+
+    evaluation_parameters = _build_evaluation_parameters(parameters, reserved_expressions, criteria, evaluation_result)
+
     # Performs evaluation of response
-    feedback_procedures = parameters["context"]["feedback_procedure_generator"](evaluation_parameters)
-    generate_feedback(criteria, feedback_procedures, evaluation_parameters)
+    feedback_procedures = context["feedback_procedure_generator"](evaluation_parameters)
+    generate_feedback(feedback_procedures, evaluation_parameters)
 
     result = evaluation_result.serialise(include_test_data)
 
