@@ -15,6 +15,7 @@ from .numerical import compare_numerically
 from .set_equivalence import add_set_equivalence_nodes, as_sets
 from ...feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ...feedback.syntactical_forms import PATTERNS as syntactical_forms
+from ..graph_helpers import attach_terminal_criterion, disable_nodes, outcome_tag
 
 from lambdafeedback.criteria import CriteriaGraph, build_criteria_parser
 
@@ -244,19 +245,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         label = criterion.content_string()
 
     def mathematical_equivalence(unused_input):
-        result = check_equality(criterion, parameters_dict)
-        if result is True:
-            return {
-                label+"_TRUE": None
-            }
-        elif result is False:
-            return {
-                label+"_FALSE": None
-            }
-        else:
-            return {
-                label+"_UNKNOWN": None
-            }
+        return outcome_tag(label, check_equality(criterion, parameters_dict))
 
     def equality_equivalence(unused_input):
         result = False
@@ -282,14 +271,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             else:
                 symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
             result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"].constants)
-        if result is True:
-            return {
-                label+"_TRUE": None
-            }
-        else:
-            return {
-                label+"_FALSE": None
-            }
+        return outcome_tag(label, result is True)
 
     graph = CriteriaGraph(label)
     END = graph.add_end_node()
@@ -303,14 +285,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         lsym = parse_expression(lhs, parsing_params).subs(local_substitutions)
         rsym = parse_expression(rhs, parsing_params).subs(local_substitutions)
         result = lsym.free_symbols == rsym.free_symbols
-        if result is True:
-            return {
-                label+"_SAME_SYMBOLS"+"_TRUE": None
-            }
-        else:
-            return {
-                label+"_SAME_SYMBOLS"+"_FALSE": None
-            }
+        return outcome_tag(label+"_SAME_SYMBOLS", result is True)
 
     use_set_equivalence, response_list, answer_list = as_sets(
         parameters_dict["reserved_expressions"]["response"],
@@ -332,46 +307,51 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             details="Checks if "+str(lhs)+" is equivalent to "+str(rhs)+".",
             evaluate=equality_equivalence
         )
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label,
             label+"_UNKNOWN",
+            END,
             summary="Cannot determine if "+str(lhs)+" is equivalent to "+str(rhs),
             details="Cannot determine if "+str(lhs)+" is equivalent to "+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_EQUIVALENCE_UNKNOWN")
         )
-        graph.attach(label+"_UNKNOWN", END.label)
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label,
             label+"_TRUE",
+            END,
             summary=str(lhs)+" is equivalent to "+str(rhs),
             details=str(lhs)+" is equivalent to "+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITIES_EQUIVALENT")
         )
-        graph.attach(label+"_TRUE", END.label)
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label,
             label+"_FALSE",
+            END,
             summary=str(lhs)+" is not equivalent to "+str(rhs),
             details=str(lhs)+" is not equivalent to "+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITIES_NOT_EQUIVALENT")
         )
-        graph.attach(label+"_FALSE", END.label)
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label,
             label+"_EXPRESSION_NOT_EQUALITY",
+            END,
             summary=str(lhs)+" is an expression, not an equality.",
             details=str(lhs)+" is an expression, not an equality.",
             feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EXPRESSION_NOT_EQUALITY")
         )
-        graph.attach(label+"_EXPRESSION_NOT_EQUALITY", END.label)
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label,
             label+"_EQUALITY_NOT_EXPRESSION",
+            END,
             summary=str(lhs)+" is an equality, not an expression.",
             details=str(lhs)+" is an equality, not an expression.",
             feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_EXPRESSION")
         )
-        graph.attach(label+"_EQUALITY_NOT_EXPRESSION", END.label)
     else:
         graph.add_evaluation_node(
             label,
@@ -393,38 +373,42 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
             evaluate=same_symbols
         )
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label+"_SAME_SYMBOLS",
             label+"_SAME_SYMBOLS"+"_TRUE",
+            END,
             summary=str(lhs)+" has the same symbols as "+str(rhs),
             details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["SAME_SYMBOLS"]("TRUE")
         )
-        graph.attach(label+"_SAME_SYMBOLS"+"_TRUE", END.label)
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label+"_SAME_SYMBOLS",
             label+"_SAME_SYMBOLS"+"_FALSE",
+            END,
             summary=str(lhs)+" does not have the same symbols as "+str(rhs),
             details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["SAME_SYMBOLS"]("FALSE")
         )
-        graph.attach(label+"_SAME_SYMBOLS"+"_FALSE", END.label)
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label,
             label+"_FALSE",
+            END,
             summary=str(lhs)+"=\\="+str(rhs),
             details=str(lhs)+" is not equal to"+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("FALSE")
         )
-        graph.attach(label+"_FALSE", END.label)
-        graph.attach_new_criterion(
+        attach_terminal_criterion(
+            graph,
             label,
             label+"_UNKNOWN",
+            END,
             summary="Cannot detrmine if "+str(lhs)+"="+str(rhs),
             details="Cannot detrmine if "+str(lhs)+" is equal to "+str(rhs)+".",
             feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("UNKNOWN")
         )
-        graph.attach(label+"_UNKNOWN", END.label)
     return graph
 
 
@@ -549,14 +533,7 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     def create_expression_check(crit):
         def expression_check(unused_input):
             result = check_equality(crit, parameters_dict, local_substitutions=local_subs)
-            if result is True:
-                return {
-                    label+"_TRUE": None
-                }
-            else:
-                return {
-                    label+"_FALSE": None
-                }
+            return outcome_tag(label, result is True)
         return expression_check
 
     graph = CriteriaGraph(label)
@@ -567,14 +544,15 @@ def criterion_where_node(criterion, parameters_dict, label=None):
         details="Checks if "+expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+".",
         evaluate=create_expression_check(expression)
     )
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_TRUE",
+        END,
         summary=expression.content_string()+" where "+", ".join([s.content_string() for s in subs]),
         details=expression.content_string()+" where "+", ".join([s.content_string() for s in subs])+"is true.",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer_where"]("TRUE")
     )
-    graph.attach(label+"_TRUE", END.label)
     graph.attach_new_criterion(
         label,
         label+"_FALSE",
@@ -634,14 +612,15 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                 details="Attempt to identify why the response is incorrect.",
                 evaluate=identify_reason
             )
-            graph.attach_new_criterion(
+            attach_terminal_criterion(
+                graph,
                 label+"_IDENTIFY_REASON",
                 label+"_UNKNOWN",
+                END,
                 summary="Unknown reason",
                 details="No candidates for how the response was computed were found.",
                 feedback_string_generator=symbolic_feedback_string_generators["IDENTIFY_REASON"]("UNKNOWN")
             )
-            graph.attach(label+"_UNKNOWN", END.label)
 
             def get_candidates(unused_input):
                 candidates = {
@@ -671,15 +650,13 @@ def criterion_where_node(criterion, parameters_dict, label=None):
                     if group_label != "UNKNOWN":
                         group_candidates_eval = graph.evaluations[label+"_GET_CANDIDATES_"+group_label]
                         if label+"_RESPONSE_CANDIDATES_"+group_label not in [edge.target.label for edge in group_candidates_eval.outgoing]:
-                            graph.attach_new_criterion(
+                            attach_terminal_criterion(
+                                graph,
                                 label+"_GET_CANDIDATES_"+group_label,
                                 label+"_RESPONSE_CANDIDATES_"+group_label,
+                                END,
                                 summary="response = "+str(value),
                                 details="Response candidates: "+expressions_string
-                            )
-                            graph.attach(
-                                label+"_RESPONSE_CANDIDATES_"+group_label,
-                                END.label
                             )
     return graph
 
@@ -689,48 +666,39 @@ def criterion_eval_node(criterion, parameters_dict, generate_feedback=True):
 
     def evaluation_node_internal(unused_input):
         result = check_criterion(criterion, parameters_dict, generate_feedback)
-        label = criterion.content_string()
-        if result is True:
-            return {
-                label+"_TRUE": feedback_string_generator_inputs
-            }
-        elif result is False:
-            return {
-                label+"_FALSE": feedback_string_generator_inputs
-            }
-        else:
-            return {
-                label+"_UNKNOWN": feedback_string_generator_inputs
-            }
+        return outcome_tag(criterion.content_string(), result, feedback_string_generator_inputs)
 
     label = criterion.content_string()
     graph = CriteriaGraph(label)
     END = graph.add_end_node()
     graph.add_evaluation_node(label, summary=label, details="Checks if "+label+" is true.", evaluate=evaluation_node_internal)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_TRUE",
+        END,
         summary="True",
         details=label+" is true.",
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("TRUE")
     )
-    graph.attach(label+"_TRUE", END.label)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_FALSE",
+        END,
         summary="True",
         details=label+" is false.",
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
     )
-    graph.attach(label+"_FALSE", END.label)
-    graph.attach_new_criterion(
+    attach_terminal_criterion(
+        graph,
         label,
         label+"_UNKNOWN",
+        END,
         summary="True",
         details=label+" is false.",
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
     )
-    graph.attach(label+"_UNKNOWN", END.label)
     return graph
 
 
@@ -745,9 +713,7 @@ def feedback_procedure_generator(parameters_dict):
         }
         graph_template = graph_templates.get(criterion.label, criterion_eval_node)
         graph = graph_template(criterion, parameters_dict)
-        for evaluation in graph.evaluations.values():
-            if evaluation.label in parameters_dict.get("disabled_evaluation_nodes", set()):
-                evaluation.replacement = CriteriaGraph.END_LABEL
+        disable_nodes(graph, parameters_dict.get("disabled_evaluation_nodes", set()))
         graphs.update({label: graph})
     return graphs
 
