@@ -46,7 +46,7 @@ def _input_symbol_codes_and_aliases(parameters):
 
 def _raise_on_collisions(keywords, symbols, kind):
     """Raises if any of `keywords` is used as an input symbol `kind` (e.g. "code" or "alternative")."""
-    collisions = [keyword for keyword in keywords if keyword in symbols]
+    collisions = sorted(keyword for keyword in keywords if keyword in symbols)
     if len(collisions) == 1:
         raise Exception("`"+"`, `".join(collisions)+f"` is a reserved keyword and cannot be used as an input symbol {kind}.")
     elif len(collisions) > 1:
