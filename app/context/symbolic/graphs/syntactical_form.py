@@ -3,6 +3,7 @@ from lambdafeedback.expression_parsing import generate_arbitrary_number_pattern_
 
 from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ....feedback.syntactical_forms import PATTERNS as syntactical_forms
+from ...graph_helpers import outcome_tag
 
 
 def written_as_known_form(string, name):
@@ -20,22 +21,14 @@ def written_as_known_form(string, name):
 
 def compare_to_form(string, form_label, label):
     def inner(unused_input):
-        result = dict()
-        if syntactical_forms[form_label].matcher(string) is True:
-            result.update({label+"_TRUE": None})
-        else:
-            result.update({label+"_FALSE": None})
-        return result
+        return outcome_tag(label, syntactical_forms[form_label].matcher(string) is True)
     return inner
 
 
 def response_written_as_answer(response, answer, label):
     def inner(unused_input):
         matcher = generate_arbitrary_number_pattern_matcher(answer)
-        if matcher(response):
-            return {label+"_TRUE": None}
-        else:
-            return {label+"_FALSE": None}
+        return outcome_tag(label, bool(matcher(response)))
     return inner
 
 
