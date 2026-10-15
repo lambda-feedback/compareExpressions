@@ -10,11 +10,11 @@ from lambdafeedback.expression_parsing import (
     preprocess_expression,
 )
 
-from ..preview.symbolic import preview_function
+from ...preview.symbolic import preview_function
 from .numerical import compare_numerically
 from .set_equivalence import add_set_equivalence_nodes, as_sets
-from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-from ..feedback.syntactical_forms import PATTERNS as syntactical_forms
+from ...feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from ...feedback.syntactical_forms import PATTERNS as syntactical_forms
 
 from lambdafeedback.criteria import CriteriaGraph, build_criteria_parser
 

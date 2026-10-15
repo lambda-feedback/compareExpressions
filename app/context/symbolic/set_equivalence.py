@@ -1,6 +1,6 @@
 from sympy import Equality
 
-from ..feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from ...feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
 def as_sets(response, answer):
