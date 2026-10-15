@@ -2,6 +2,7 @@ from sympy import Equality
 
 from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ...graph_helpers import attach_terminal_criterion
+from ..comparison import check_equality
 
 
 def as_sets(response, answer):
@@ -11,29 +12,24 @@ def as_sets(response, answer):
     """
     if isinstance(response, set) and isinstance(answer, set):
         return True, response, answer
-    elif isinstance(response, set) and not isinstance(answer, set):
+    elif isinstance(response, set):
         return True, response, set([answer])
-    elif not isinstance(response, set) and isinstance(answer, set):
+    elif isinstance(answer, set):
         return True, set([response]), answer
     return False, response, answer
 
 
-def add_set_equivalence_nodes(graph, END, criterion, parameters_dict, label, lhs, rhs,
-                              response_list, answer_list, check_equality):
+def add_set_equivalence_nodes(graph, END, criterion, parameters_dict, label, lhs, rhs, response_list, answer_list):
     """
     Adds the nodes that check if each element of `response_list` is equal to an element of
     `answer_list` (and vice versa, depending on `multiple_answers_criteria`) to `graph`.
-    `check_equality` compares a single response with a single answer.
     """
     def set_equivalence(unused_input):
         matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         for i, response in enumerate(response_list):
-            result = None
             for j, answer in enumerate(answer_list):
                 current_pair = [("response", response), ("answer", answer)]
-                if isinstance(response, Equality) and not isinstance(answer, Equality):
-                    result = False
-                elif not isinstance(response, Equality) and isinstance(answer, Equality):
+                if isinstance(response, Equality) != isinstance(answer, Equality):
                     result = False
                 else:
                     result = check_equality(criterion, parameters_dict, local_substitutions=current_pair)

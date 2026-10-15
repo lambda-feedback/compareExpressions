@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from lambdafeedback.expression_parsing import (
     ExpressionParams,
     SympyParsingConfig,
@@ -6,7 +8,7 @@ from lambdafeedback.expression_parsing import (
 )
 
 from ...preview.symbolic import preview_function
-from ..graph_helpers import disable_nodes
+from ..defaults import base_default_parameters
 from .graphs.equivalence import criterion_equality_node
 from .graphs.generic import criterion_eval_node
 from .graphs.substitution import criterion_where_node
@@ -15,13 +17,7 @@ from .graphs.syntactical_form import criterion_written_as_node
 from lambdafeedback.criteria import build_criteria_parser
 
 
-default_parameters = {
-    "complexNumbers": False,
-    "convention": "equal_precedence",
-    "elementary_functions": False,
-    "strict_syntax": False,
-    "multiple_answers_criteria": "all",
-}
+default_parameters = deepcopy(base_default_parameters)
 
 
 def expression_preprocess(name, expr, parameters):
@@ -48,9 +44,7 @@ def feedback_procedure_generator(parameters_dict):
     criteria = set(parameters_dict["criteria"].items())
     for (label, criterion) in criteria:
         graph_template = graph_templates.get(criterion.label, criterion_eval_node)
-        graph = graph_template(criterion, parameters_dict)
-        disable_nodes(graph, parameters_dict.get("disabled_evaluation_nodes", set()))
-        graphs.update({label: graph})
+        graphs.update({label: graph_template(criterion, parameters_dict)})
     return graphs
 
 

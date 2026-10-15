@@ -1,3 +1,5 @@
+import operator
+
 from sympy import Equality, im, I
 from sympy import re as real_part
 
@@ -33,9 +35,8 @@ def parse_where_substitutions(subs_node, parsing_params):
     return local_subs
 
 
-def check_criterion(criterion, parameters_dict, generate_feedback=True):
+def check_criterion(criterion, parameters_dict):
     label = criterion.label.strip()
-    parsing_params = parameters_dict["parsing_parameters"].replace(simplify=False)
     if label in {"EQUALITY", "WRITTEN_AS"}:
         result = check_equality(criterion, parameters_dict)
     elif label == "ORDER":
@@ -46,17 +47,17 @@ def check_criterion(criterion, parameters_dict, generate_feedback=True):
         result = check_proportionality(criterion, parameters_dict)
     elif label == "WHERE":
         crit = criterion.children[0]
+        parsing_params = parameters_dict["parsing_parameters"].replace(simplify=False)
         local_subs = parse_where_substitutions(criterion.children[1], parsing_params)
-        result = check_criterion(crit, {**parameters_dict, **{"local_substitutions": local_subs}}, generate_feedback)
+        result = check_criterion(crit, {**parameters_dict, **{"local_substitutions": local_subs}})
     else:
         raise Exception(label)
     return result
 
 
 def create_expressions_for_comparison(criterion, parameters_dict, local_substitutions=[]):
-    parsing_params = parameters_dict["parsing_parameters"]
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
-    parsing_params = unsimplified_with_unsplittable(parsing_params, parameters_dict["reserved_expressions"].keys())
+    parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
     lhs_expr = parse_expression(lhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
@@ -86,17 +87,19 @@ def do_comparison_infinite(comparison_symbol, lhs_expr, rhs_expr):
         return None
 
 
+COMPARISON_OPERATORS = {
+    "=": operator.eq,
+    ">": operator.gt,
+    ">=": operator.ge,
+    "<": operator.lt,
+    "<=": operator.le,
+}
+
+
 def do_comparison(comparison_symbol, expression):
-    comparisons = {
-        "=": lambda expr: bool(expression.cancel().simplify().simplify() == 0),
-        ">": lambda expr: bool(expression.cancel().simplify().simplify() > 0),
-        ">=": lambda expr: bool(expression.cancel().simplify().simplify() >= 0),
-        "<": lambda expr: bool(expression.cancel().simplify().simplify() < 0),
-        "<=": lambda expr: bool(expression.cancel().simplify().simplify() <= 0),
-    }
-    comparison = comparisons[comparison_symbol.strip()]
+    comparison = COMPARISON_OPERATORS[comparison_symbol.strip()]
     try:
-        result = comparison(expression)
+        result = bool(comparison(expression.cancel().simplify().simplify(), 0))
     except Exception:
         result = None
     return result
@@ -121,10 +124,18 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
     # There are some types of expression, e.g. those containing hyperbolic trigonometric functions, that can behave
     # unpredictably when simplification is applied. For that reason we check several different combinations of
     # simplifications here in order to reduce the likelihood of false negatives.
+    # Each side is simplified at most once, and only if a retry needs it
+    simplified = {}
+
+    def simplified_side(side, expr):
+        if side not in simplified:
+            simplified[side] = expr.simplify()
+        return simplified[side]
+
     differences_to_retry = (
-        lambda: lhs_expr-rhs_expr.simplify(),
-        lambda: lhs_expr.simplify()-rhs_expr,
-        lambda: lhs_expr.simplify()-rhs_expr.simplify(),
+        lambda: lhs_expr-simplified_side("rhs", rhs_expr),
+        lambda: simplified_side("lhs", lhs_expr)-rhs_expr,
+        lambda: simplified_side("lhs", lhs_expr)-simplified_side("rhs", rhs_expr),
     )
     for difference in differences_to_retry:
         if result is not False:

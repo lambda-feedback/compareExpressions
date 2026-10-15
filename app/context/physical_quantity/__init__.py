@@ -4,8 +4,7 @@ from lambdafeedback.expression_parsing import ExpressionParams, SympyParsingConf
 from lambdafeedback.units import QuantityParams, preprocess_quantity
 
 from ...preview.physical_quantity import preview_function
-from ..symbolic import default_parameters as symbolic_default_parameters
-from ..graph_helpers import disable_nodes
+from ..defaults import base_default_parameters
 from .criteria_parser import generate_criteria_parser
 from .graphs.match import criterion_match_node
 from .graphs.order import greater_than_node, greater_than_or_equal_node, less_than_node, less_than_or_equal_node
@@ -29,9 +28,7 @@ def feedback_procedure_generator(parameters_dict):
     graphs = dict()
     for (label, criterion) in parameters_dict["criteria"].items():
         graph_template = graph_templates.get(criterion.label.strip(), criterion_match_node)
-        graph = graph_template(criterion, parameters_dict)
-        disable_nodes(graph, parameters_dict.get("disabled_evaluation_nodes", set()))
-        graphs.update({label: graph})
+        graphs.update({label: graph_template(criterion, parameters_dict)})
     return graphs
 
 
@@ -59,9 +56,8 @@ def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_as
     }
 
 
-# CONSIDER: Move these to separate file so that they can be shared with
-# the preview function implementation (or move preview implementation here)
-default_parameters = deepcopy(symbolic_default_parameters)
+# CONSIDER: Share these with the preview function implementation (or move preview implementation here)
+default_parameters = deepcopy(base_default_parameters)
 default_parameters.update(
     {
         "physical_quantity": True,

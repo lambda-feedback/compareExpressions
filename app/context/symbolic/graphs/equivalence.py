@@ -27,10 +27,11 @@ def _equality_equivalence(label, parameters_dict):
 
         # TODO: Remove when criteria for checking proportionality is implemented
         if isinstance(res, Equality) and isinstance(ans, Equality):
-            if (res.args[0]-res.args[1]).simplify() == 0:
+            res_difference = (res.args[0]-res.args[1]).simplify()
+            if res_difference == 0:
                 symbols_in_equality_ratio = (ans.args[0]-ans.args[1]).simplify().free_symbols
             elif (ans.args[0]-ans.args[1]).simplify() == 0:
-                symbols_in_equality_ratio = (res.args[0]-res.args[1]).simplify().free_symbols
+                symbols_in_equality_ratio = res_difference.free_symbols
             else:
                 symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
             result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"].constants)
@@ -40,9 +41,8 @@ def _equality_equivalence(label, parameters_dict):
 
 def _same_symbols(label, lhs, rhs, parameters_dict):
     def same_symbols(unused_input):
-        parsing_params = parameters_dict["parsing_parameters"]
         local_substitutions = list(parameters_dict["reserved_expressions"].items())
-        parsing_params = unsimplified_with_unsplittable(parsing_params, parameters_dict["reserved_expressions"].keys())
+        parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
         lsym = parse_expression(lhs, parsing_params).subs(local_substitutions)
         rsym = parse_expression(rhs, parsing_params).subs(local_substitutions)
         result = lsym.free_symbols == rsym.free_symbols
@@ -185,9 +185,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     use_set_equivalence, response_list, answer_list = as_sets(res, ans)
 
     if use_set_equivalence is True:
-        add_set_equivalence_nodes(
-            graph, END, criterion, parameters_dict, label, lhs, rhs, response_list, answer_list, check_equality
-        )
+        add_set_equivalence_nodes(graph, END, criterion, parameters_dict, label, lhs, rhs, response_list, answer_list)
     elif isinstance(res, Equality) or isinstance(ans, Equality):
         add_equality_equivalence_nodes(graph, END, parameters_dict, label, lhs, rhs)
     else:
