@@ -10,7 +10,7 @@ from .set_equivalence import add_set_equivalence_nodes, as_sets
 
 
 def _equality_equivalence(label, parameters_dict):
-    def equality_equivalence(unused_input):
+    def equality_equivalence(_response):
         result = False
         res = parameters_dict["reserved_expressions"]["response"]
         ans = parameters_dict["reserved_expressions"]["answer"]
@@ -40,7 +40,7 @@ def _equality_equivalence(label, parameters_dict):
 
 
 def _same_symbols(label, lhs, rhs, parameters_dict):
-    def same_symbols(unused_input):
+    def same_symbols(_response):
         local_substitutions = list(parameters_dict["reserved_expressions"].items())
         parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
         lsym = parse_expression(lhs, parsing_params).subs(local_substitutions)
@@ -110,7 +110,7 @@ def add_mathematical_equivalence_nodes(graph, END, criterion, parameters_dict, l
     Adds the nodes that check if `lhs` and `rhs` are mathematically equal to `graph`,
     and if they are, whether they have the same symbols.
     """
-    def mathematical_equivalence(unused_input):
+    def mathematical_equivalence(_response):
         return outcome_tag(label, check_equality(criterion, parameters_dict))
 
     graph.add_evaluation_node(

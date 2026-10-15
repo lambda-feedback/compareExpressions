@@ -5,7 +5,7 @@ from ...graph_helpers import attach_terminal_criterion, outcome_tag
 from ..comparison import comparison_function, parse_criterion_sides
 
 
-def comparison_base_graph(criterion, parameters, comparison_operator="=", label=None):
+def comparison_base_graph(criterion, parameters, comparison_operator, label=None):
     graph = CriteriaGraph(label)
     END = graph.add_end_node()
     reserved_expressions = parameters["reserved_expressions"].items()
@@ -19,7 +19,7 @@ def comparison_base_graph(criterion, parameters, comparison_operator="=", label=
     stardard_forms = [(key, expr["standard"]["value"]*expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
     compare = comparison_function(comparison_operator)
 
-    def compare_evaluate(unused_input):
+    def compare_evaluate(_response):
         return outcome_tag(label, compare(lhs, rhs, stardard_forms) is True)
 
     graph.add_evaluation_node(

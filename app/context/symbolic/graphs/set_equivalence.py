@@ -24,7 +24,7 @@ def add_set_equivalence_nodes(graph, END, criterion, parameters_dict, label, lhs
     Adds the nodes that check if each element of `response_list` is equal to an element of
     `answer_list` (and vice versa, depending on `multiple_answers_criteria`) to `graph`.
     """
-    def set_equivalence(unused_input):
+    def set_equivalence(_response):
         matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         for i, response in enumerate(response_list):
             for j, answer in enumerate(answer_list):

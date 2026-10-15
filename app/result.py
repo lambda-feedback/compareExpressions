@@ -20,9 +20,6 @@ class EvaluationResult:
     def tags(self):
         return list(dict.fromkeys(tag for (tag, _) in self._feedback))
 
-    def get_feedback(self, tag):
-        return [text for (t, text) in self._feedback if t == tag]
-
     def add_feedback(self, tag, feedback):
         """Record `feedback` under `tag`. Blank feedback records the tag without adding any text."""
         self._feedback.append((tag, feedback or ""))
