@@ -241,7 +241,7 @@ The tests are in `tests/` and fall into two main groups: evaluation tests (`eval
 The deployed function's `healthcheck` command loads `unittest` classes from `evaluation_tests.py` and `preview_tests.py`; `evaluation_tests.py` runs the same pytest suite inside the image, so new tests only need to be written for pytest. Tests marked `@pytest.mark.slow` are left out of the healthcheck to keep it within the request timeout; mark any test function whose cases take more than about 0.5s in total.
 
 # Imports
-Modules import each other with absolute imports rooted at the `app` package (e.g. `from app.context.types import Parameters`), including the tests; relative imports are not used. This works both locally (run `pytest` and `mypy` from the repository root) and in the deployed image, which sets `PYTHONPATH=/app` and imports the function as `app.handler`.
+Modules import each other with absolute imports rooted at the `app` package (e.g. `from app.types import Parameters`), including the tests; relative imports are not used. This works both locally (run `pytest` and `mypy` from the repository root) and in the deployed image, which sets `PYTHONPATH=/app` and imports the function as `app.handler`.
 
 # Type checking
 All code in `app/` except the tests is type annotated and checked with mypy, using the configuration in `mypy.ini`. Run `mypy` from the repository root; the tools used for testing, linting and type checking (including the pinned mypy version) are listed in `requirements-dev.txt`, which CI also installs. Shared type aliases, such as `Parameters` and `GraphTemplate`, are in `types.py`. Each `# type: ignore` comment says why it is there; most mark a place where an honest type exposes a known bug.
