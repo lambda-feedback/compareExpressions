@@ -22,7 +22,7 @@ def _tolerances(parameters: Parameters) -> tuple[float, float]:
     rtol = parameters["parsing_parameters"]["rtol"]
     atol = parameters["parsing_parameters"]["atol"]
     if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
-        ans = parameters["reserved_expressions"]["answer"]["quantity"].value
+        ans = parameters["reserved_expressions"]["answer"].quantity.value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
     return rtol, atol
@@ -32,10 +32,10 @@ def _missing_or_unexpected(parameters: Parameters, label: str, lhs_string: str, 
     """Tag for a response missing a value or unit that the answer has (or vice versa), otherwise None."""
     # TODO: Better system for identifying if we expect the response to have value/unit or not
     if ('answer' in lhs_string and 'response' in rhs_string) or ('response' in lhs_string and 'answer' in rhs_string):
-        res_value = parameters["reserved_expressions"]["response"]["original"]["value"]
-        ans_value = parameters["reserved_expressions"]["answer"]["original"]["value"]
-        res_unit = parameters["reserved_expressions"]["response"]["original"]["unit"]
-        ans_unit = parameters["reserved_expressions"]["answer"]["original"]["unit"]
+        res_value = parameters["reserved_expressions"]["response"].original_value
+        ans_value = parameters["reserved_expressions"]["answer"].original_value
+        res_unit = parameters["reserved_expressions"]["response"].original_unit
+        ans_unit = parameters["reserved_expressions"]["answer"].original_unit
         if res_value is None and ans_value is not None:
             return {label+"_MISSING_VALUE": {"lhs": lhs_string, "rhs": rhs_string}}
         if res_value is not None and ans_value is None:
@@ -54,13 +54,13 @@ def _within_tolerance(parameters: Parameters, lhs_string: str, rhs_string: str, 
     #       numerical tolerances can be applied appropriately
     if rtol > 0 or atol > 0:
         if (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer'):
-            ans = parameters["reserved_expressions"]["answer"]["standard"]["value"].simplify()
-            res = parameters["reserved_expressions"]["response"]["standard"]["value"].simplify()
+            ans = parameters["reserved_expressions"]["answer"].standard_value.simplify()
+            res = parameters["reserved_expressions"]["response"].standard_value.simplify()
         if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
             if rtol > 0 and (ans != 0):
                 value_match = bool(abs(float((ans-res)/ans)) < rtol)
             elif atol > 0 or (ans == 0):
-                answer_unit_factor = float(parameters["reserved_expressions"]["answer"]["quantity"].unit_factor)
+                answer_unit_factor = float(parameters["reserved_expressions"]["answer"].quantity.unit_factor)
                 value_match = bool(abs(float(ans-res)) < atol*answer_unit_factor)
     return value_match
 
@@ -75,12 +75,12 @@ def _quantity_match(
         if missing_or_unexpected is not None:
             return missing_or_unexpected
 
-        substitutions = [(key, expr["standard"]["value"]) for (key, expr) in reserved_expressions]
+        substitutions = [(key, expr.standard_value) for (key, expr) in reserved_expressions]
         value_match = is_equal(lhs, rhs, substitutions)
         if value_match is False:
             value_match = _within_tolerance(parameters, lhs_string, rhs_string, rtol, atol)
 
-        substitutions = [(key, expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
+        substitutions = [(key, expr.standard_unit) for (key, expr) in reserved_expressions]
         unit_match = is_equal(lhs, rhs, substitutions)
 
         return outcome_tag(label, value_match is True and unit_match is True, {"lhs": lhs_string, "rhs": rhs_string})
@@ -91,7 +91,7 @@ def _dimension_match(parameters: Parameters, label: str, lhs: Basic, rhs: Basic,
     reserved_expressions = parameters["reserved_expressions"].items()
 
     def dimension_match(_response: Any) -> ReachedCriteria:
-        substitutions = [(key, expr["dimension"]) for (key, expr) in reserved_expressions]
+        substitutions = [(key, expr.dimension) for (key, expr) in reserved_expressions]
         dimension_match, _ = is_proportional(lhs, rhs, substitutions)
         return outcome_tag(label+"_DIMENSION_MATCH", dimension_match is True, {"lhs": lhs_string, "rhs": rhs_string})
     return dimension_match
@@ -101,14 +101,14 @@ def _unit_comparison(parameters: Parameters, label: str, lhs: Basic, rhs: Basic)
     reserved_expressions = parameters["reserved_expressions"].items()
 
     def unit_comparison(_response: Any) -> ReachedCriteria:
-        substitutions = [(key, expr["original"]["unit"]) for (key, expr) in reserved_expressions]
+        substitutions = [(key, expr.original_unit) for (key, expr) in reserved_expressions]
 
         if is_equal(lhs, rhs, substitutions) is True:
             output_tags = {
                 label+"_UNIT_COMPARISON"+"_IDENTICAL": None
             }
         else:
-            local_substitutions = [(key, expr["quantity"].expanded_unit) for (key, expr) in reserved_expressions]
+            local_substitutions = [(key, expr.quantity.expanded_unit) for (key, expr) in reserved_expressions]
             result, ratio = is_proportional(lhs, rhs, local_substitutions)
             # `is_proportional` returns a ratio whenever the result is True
             if result is True and ratio is not None and ratio >= 1000:

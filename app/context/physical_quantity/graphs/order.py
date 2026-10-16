@@ -22,7 +22,7 @@ def comparison_base_graph(
     inputs = criterion.children
     _, _, lhs, rhs = parse_criterion_sides(criterion, parameters)
 
-    stardard_forms = [(key, expr["standard"]["value"]*expr["standard"]["unit"]) for (key, expr) in reserved_expressions]
+    stardard_forms = [(key, expr.standard_value*expr.standard_unit) for (key, expr) in reserved_expressions]
     compare = comparison_function(comparison_operator)
 
     def compare_evaluate(_response: Any) -> ReachedCriteria:
