@@ -12,16 +12,16 @@ from lambdafeedback.expression_parsing import (
     preprocess_expression,
 )
 
-from ...preview.symbolic import preview_function
-from ..defaults import base_default_parameters
-from ..types import Expression, GraphTemplate, Parameters
-from .graphs.equivalence import criterion_equality_node
-from .graphs.generic import criterion_eval_node
-from .graphs.substitution import criterion_where_node
-from .graphs.syntactical_form import criterion_written_as_node
+from app.context.defaults import base_default_parameters
+from app.context.symbolic.graphs.equivalence import criterion_equality_node
+from app.context.symbolic.graphs.generic import criterion_eval_node
+from app.context.symbolic.graphs.substitution import criterion_where_node
+from app.context.symbolic.graphs.syntactical_form import criterion_written_as_node
+from app.context.types import Expression, GraphTemplate, Parameters
+from app.preview.symbolic import preview_function
 
 if TYPE_CHECKING:
-    from ...result import EvaluationResult
+    from app.result import EvaluationResult
 
 
 default_parameters = deepcopy(base_default_parameters)

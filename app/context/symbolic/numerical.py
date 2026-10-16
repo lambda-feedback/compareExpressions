@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sympy import Basic, pi, N
 
-from ..types import Parameters
+from app.context.types import Parameters
 
 
 def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters_dict: Parameters) -> bool:

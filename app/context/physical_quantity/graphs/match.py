@@ -9,10 +9,10 @@ from lambdafeedback.criteria import CriteriaGraph, Evaluate, OutputNode, Reached
 from lambdafeedback.expression_parsing import compute_relative_tolerance_from_significant_decimals
 from lambdafeedback.slr_parsing import ExprNode
 
-from ....feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
-from ...graph_helpers import attach_terminal_criterion, outcome_tag
-from ...types import Parameters
-from ..comparison import comparison_function, is_proportional, parse_criterion_sides
+from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
+from app.context.physical_quantity.comparison import comparison_function, is_proportional, parse_criterion_sides
+from app.context.types import Parameters
+from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
 is_equal = comparison_function("=")
 

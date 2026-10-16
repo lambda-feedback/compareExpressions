@@ -1,6 +1,6 @@
 import pytest
 
-from ..preview import preview_function
+from app.preview import preview_function
 
 
 class TestPreviewFunction():

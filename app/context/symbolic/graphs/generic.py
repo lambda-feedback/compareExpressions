@@ -5,10 +5,10 @@ from typing import Any
 from lambdafeedback.criteria import CriteriaGraph, ReachedCriteria
 from lambdafeedback.slr_parsing import ExprNode
 
-from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-from ...graph_helpers import attach_terminal_criterion, outcome_tag
-from ...types import Parameters
-from ..comparison import check_criterion
+from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
+from app.context.symbolic.comparison import check_criterion
+from app.context.types import Parameters
+from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
 def criterion_eval_node(criterion: ExprNode, parameters_dict: Parameters) -> CriteriaGraph:

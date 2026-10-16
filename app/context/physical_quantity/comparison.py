@@ -8,8 +8,8 @@ from sympy import Basic, Symbol
 from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
-from ..operators import COMPARISON_OPERATORS
-from ..types import Parameters
+from app.context.operators import COMPARISON_OPERATORS
+from app.context.types import Parameters
 
 # Substitutions where a value may be missing (None)
 OptionalSubstitutions = Iterable[tuple[str, Any]]

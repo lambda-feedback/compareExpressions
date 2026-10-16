@@ -5,10 +5,10 @@ from typing import Any
 from lambdafeedback.criteria import CriteriaGraph, ReachedCriteria
 from lambdafeedback.slr_parsing import ExprNode
 
-from ....feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
-from ...graph_helpers import attach_terminal_criterion, outcome_tag
-from ...types import Parameters
-from ..comparison import comparison_function, parse_criterion_sides
+from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
+from app.context.physical_quantity.comparison import comparison_function, parse_criterion_sides
+from app.context.types import Parameters
+from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
 
 def comparison_base_graph(

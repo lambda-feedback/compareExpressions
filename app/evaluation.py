@@ -13,13 +13,13 @@ from lambdafeedback.expression_parsing import (
     parse_latex,
 )
 
-from .result import EvaluationResult
-from .context.symbolic import context as symbolic_context
-from .context.physical_quantity import context as quantity_context
-from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-from .feedback.symbolic import internal_feedback
-from .feedback.tags import FeedbackTag, FeedbackTagName
-from .frozen_dict import FrozenValuesDictionary
+from app.context.physical_quantity import context as quantity_context
+from app.context.symbolic import context as symbolic_context
+from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from app.feedback.symbolic import internal_feedback
+from app.feedback.tags import FeedbackTag, FeedbackTagName
+from app.frozen_dict import FrozenValuesDictionary
+from app.result import EvaluationResult
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."

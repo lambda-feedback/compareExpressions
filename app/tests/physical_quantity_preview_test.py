@@ -2,8 +2,8 @@ from copy import deepcopy
 
 import pytest
 
-from ..preview.physical_quantity import fix_exponents, preview_function
-from .physical_quantity_test_cases import slr_natural_si_syntax_test_cases, slr_strict_si_syntax_test_cases
+from app.preview.physical_quantity import fix_exponents, preview_function
+from app.tests.physical_quantity_test_cases import slr_natural_si_syntax_test_cases, slr_strict_si_syntax_test_cases
 
 
 class TestPreviewFunction:

@@ -6,10 +6,10 @@ from lambdafeedback.criteria import CriteriaGraph, Evaluate, ReachedCriteria
 from lambdafeedback.expression_parsing import generate_arbitrary_number_pattern_matcher
 from lambdafeedback.slr_parsing import ExprNode
 
-from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-from ....feedback.syntactical_forms import PATTERNS as syntactical_forms
-from ...graph_helpers import outcome_tag
-from ...types import Parameters
+from app.context.graph_helpers import outcome_tag
+from app.context.types import Parameters
+from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
+from app.feedback.syntactical_forms import PATTERNS as syntactical_forms
 
 
 def written_as_known_form(string: str, name: str) -> Evaluate:

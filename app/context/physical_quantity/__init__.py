@@ -8,13 +8,13 @@ from lambdafeedback.criteria import CriteriaGraph
 from lambdafeedback.expression_parsing import ExpressionParams, SympyParsingConfig
 from lambdafeedback.units import QuantityParams, preprocess_quantity
 
-from ...preview.physical_quantity import preview_function
-from ..defaults import base_default_parameters
-from ..types import GraphTemplate, Parameters
-from .criteria_parser import generate_criteria_parser
-from .graphs.match import criterion_match_node
-from .graphs.order import greater_than_node, greater_than_or_equal_node, less_than_node, less_than_or_equal_node
-from .parsing import parse_quantity
+from app.context.defaults import base_default_parameters
+from app.context.physical_quantity.criteria_parser import generate_criteria_parser
+from app.context.physical_quantity.graphs.match import criterion_match_node
+from app.context.physical_quantity.graphs.order import greater_than_node, greater_than_or_equal_node, less_than_node, less_than_or_equal_node
+from app.context.physical_quantity.parsing import parse_quantity
+from app.context.types import GraphTemplate, Parameters
+from app.preview.physical_quantity import preview_function
 
 
 def expression_preprocess(name: str, expr: str, parameters: Parameters) -> str:

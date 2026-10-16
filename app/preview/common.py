@@ -6,7 +6,7 @@ from typing import NotRequired, TypedDict
 
 from lambdafeedback.expression_parsing import ExpressionParsingError
 
-from ..feedback.tags import FeedbackTag
+from app.feedback.tags import FeedbackTag
 
 
 class ExpressionSyntaxError(ExpressionParsingError):
