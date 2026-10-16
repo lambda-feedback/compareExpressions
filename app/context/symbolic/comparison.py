@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
-from typing import Any
+from collections.abc import Callable, Iterable
 
 from sympy import Basic, Equality, im, I
 from sympy import re as real_part
@@ -11,7 +10,7 @@ from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.operators import COMPARISON_OPERATORS
 from app.context.symbolic.numerical import compare_numerically
-from app.context.types import Parameters, Substitutions
+from app.types import Parameters, SubstitutionList, Substitutions
 
 
 def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: Iterable[str]) -> SympyParsingConfig:
@@ -31,7 +30,7 @@ def where_substitution_nodes(subs_node: ExprNode) -> list[ExprNode]:
     return subs_node  # type: ignore[return-value]  # Bug 6 in the bug report: should be a list or raise
 
 
-def parse_where_substitutions(subs_node: ExprNode, parsing_params: SympyParsingConfig) -> Substitutions:
+def parse_where_substitutions(subs_node: ExprNode, parsing_params: SympyParsingConfig) -> SubstitutionList:
     """`[(name, expression), ...]` for each substitution in the substitution part of a WHERE criterion."""
     local_subs = []
     for sub in where_substitution_nodes(subs_node):
@@ -57,7 +56,7 @@ def check_criterion(criterion: ExprNode, parameters_dict: Parameters) -> bool | 
 
 
 def create_expressions_for_comparison(
-    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Sequence[tuple[str, Any]] = ()
+    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Substitutions = ()
 ) -> tuple[Basic, Basic]:
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
@@ -101,7 +100,7 @@ def do_comparison(comparison_symbol: str, expression: Basic) -> bool | None:
 
 
 def check_equality(
-    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Sequence[tuple[str, Any]] = ()
+    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Substitutions = ()
 ) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
