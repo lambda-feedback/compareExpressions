@@ -70,17 +70,14 @@ def comparison_function(comparison_operator: str) -> Callable[[Basic, Basic, Sub
 
 
 def is_proportional(lhs: Basic, rhs: Basic, substitutions: Substitutions) -> tuple[bool | None, float | None]:
+    """Whether `lhs` is a constant multiple of `rhs`, and the ratio lhs/rhs when it is."""
     expr0, expr1 = _substitute(lhs, rhs, substitutions)
-    if expr0.cancel().simplify().simplify() != 0:
-        ratio = (expr0 / expr1).cancel().simplify()
-        result = ratio.is_constant()
-    elif expr0.cancel().simplify().simplify() != 0:
-        ratio = (expr1 / expr0).cancel().simplify()
-        result = ratio.is_constant()
-    else:
-        result = False
-    if result is True:
-        ratio = float(ratio)
-    else:
-        ratio = None
-    return result, ratio
+    # A zero side is not proportional to anything, and dividing by it would give zoo, which counts as constant
+    if expr0.cancel().simplify().simplify() == 0 or expr1.cancel().simplify().simplify() == 0:
+        return False, None
+    # Keep the ratio as lhs/rhs, because the prefix feedback relies on its direction
+    ratio = (expr0 / expr1).cancel().simplify()
+    result = ratio.is_constant()
+    if result:
+        return result, float(ratio)
+    return result, None
