@@ -33,11 +33,11 @@ graph_templates: dict[str, GraphTemplate] = {
 }
 
 
-def feedback_procedure_generator(parameters_dict: EvaluationParameters) -> dict[str, CriteriaGraph]:
+def feedback_procedure_generator(parameters: EvaluationParameters) -> dict[str, CriteriaGraph]:
     graphs = dict()
-    for (label, criterion) in parameters_dict.criteria.items():
+    for (label, criterion) in parameters.criteria.items():
         graph_template = graph_templates.get(criterion.label.strip(), criterion_match_node)
-        graphs.update({label: graph_template(criterion, parameters_dict)})
+        graphs.update({label: graph_template(criterion, parameters)})
     return graphs
 
 

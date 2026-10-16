@@ -29,7 +29,7 @@ def as_sets(response: Expression, answer: Expression) -> tuple[bool, Expression,
 
 
 def add_set_equivalence_nodes(
-    graph: CriteriaGraph, END: OutputNode, criterion: ExprNode, parameters_dict: EvaluationParameters, label: str, lhs: str, rhs: str,
+    graph: CriteriaGraph, END: OutputNode, criterion: ExprNode, parameters: EvaluationParameters, label: str, lhs: str, rhs: str,
     response_list: set[Basic], answer_list: set[Basic],
 ) -> None:
     """
@@ -45,30 +45,30 @@ def add_set_equivalence_nodes(
                 if isinstance(response, Equality) != isinstance(answer, Equality):
                     result = False
                 else:
-                    result = check_equality(criterion, parameters_dict, local_substitutions=current_pair)
+                    result = check_equality(criterion, parameters, local_substitutions=current_pair)
                 if result is True:
                     matches["responses"][i] = True
                     matches["answers"][j] = True
-        if parameters_dict.multiple_answers_criteria == "all":
+        if parameters.multiple_answers_criteria == "all":
             is_correct = all(matches["responses"]) and all(matches["answers"])
             if is_correct is False:
                 return {
                     label+"_MULTIPLE_ANSWER_FAIL_ALL": None
                 }
-        elif parameters_dict.multiple_answers_criteria == "all_responses":
+        elif parameters.multiple_answers_criteria == "all_responses":
             is_correct = all(matches["responses"])
             if is_correct is False:
                 return {
                     label+"_MULTIPLE_ANSWER_FAIL_RESPONSE": None
                 }
-        elif parameters_dict.multiple_answers_criteria == "all_answers":
+        elif parameters.multiple_answers_criteria == "all_answers":
             is_correct = all(matches["answers"])
             if is_correct is False:
                 return {
                     label+"_MULTIPLE_ANSWER_FAIL_ANSWER": None
                 }
         else:
-            raise SyntaxWarning(f"Unknown multiple_answers_criteria: {parameters_dict.multiple_answers_criteria}")
+            raise SyntaxWarning(f"Unknown multiple_answers_criteria: {parameters.multiple_answers_criteria}")
         return {
             label+"_TRUE": None
         }

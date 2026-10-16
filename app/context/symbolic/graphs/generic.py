@@ -11,12 +11,12 @@ from app.evaluation_parameters import EvaluationParameters
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
-def criterion_eval_node(criterion: ExprNode, parameters_dict: EvaluationParameters) -> CriteriaGraph:
+def criterion_eval_node(criterion: ExprNode, parameters: EvaluationParameters) -> CriteriaGraph:
     feedback_string_generator_inputs = {'criterion': criterion}
     label = criterion.content_string()
 
     def evaluation_node_internal(_response: Any) -> ReachedCriteria:
-        result = check_criterion(criterion, parameters_dict)
+        result = check_criterion(criterion, parameters)
         return outcome_tag(label, result, feedback_string_generator_inputs)
 
     graph, END = outcome_graph(label, summary=label, details="Checks if "+label+" is true.", evaluate=evaluation_node_internal)
