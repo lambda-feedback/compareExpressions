@@ -549,6 +549,74 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     @pytest.mark.parametrize(
+        "criteria,is_correct",
+        [
+            ("response matches 2 m", False),
+            ("response matches 2", False),
+            ("2 m matches response", False),
+            # Only checks that it no longer raises: the value match ignores `dimension(...)`
+            ("dimension(response) matches dimension(answer)", None),
+            ("answer matches answer", True),
+        ]
+    )
+    def test_matches_criteria_other_than_response_and_answer_when_values_differ(self, criteria, is_correct):
+        # Used to raise UnboundLocalError in the tolerance check (bug 1 in the bug report)
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        result = evaluation_function("2.1 m", "1.0 m", params)
+        if is_correct is not None:
+            assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "res,ans,criteria,is_correct",
+        [
+            # Used to raise TypeError: cannot determine truth value of Relational (bug 14 in the bug report)
+            ("2.1 m", "1 m", "response > 1.5 m", True),
+            ("2.1 m", "1 m", "response > 1.5 metre", True),
+            ("2.1 m", "1 m", "response > 3 m", False),
+            ("2.1 m", "1 m", "response > answer", True),
+            # Used to raise TypeError when the quantities have no units
+            ("2.1", "1", "response > answer", True),
+            ("2.1", "1", "response < 2", False),
+        ]
+    )
+    def test_order_criteria_against_written_out_quantity(self, res, ans, criteria, is_correct):
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        result = evaluation_function(res, ans, params)
+        assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "res,criteria,is_correct",
+        [
+            # Used to be false for every response (bug 16 in the bug report)
+            ("2 m", "response matches 2 m", True),
+            ("2 m", "response matches 2 metre", True),
+            ("2 m", "2 m matches response", True),
+            ("2000 mm", "response matches 2 m", True),
+            ("2.1 m", "response matches 2 m", False),
+            ("2 s", "response matches 2 m", False),
+        ]
+    )
+    def test_matches_criteria_against_written_out_quantity(self, res, criteria, is_correct):
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        result = evaluation_function(res, "1 m", params)
+        assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
         "ans,res",
         [
             ("10 ohm", "10 Ω"),
