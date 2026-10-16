@@ -49,19 +49,32 @@ def _missing_or_unexpected(parameters: EvaluationParameters, label: str, lhs_str
 
 def _within_tolerance(parameters: EvaluationParameters, lhs_string: str, rhs_string: str, rtol: float, atol: float) -> bool:
     """Whether the standard values of the response and answer are within the numerical tolerances."""
-    value_match = False
     # TODO: better analysis of where `answer` is found in the criteria so that
     #       numerical tolerances can be applied appropriately
-    if rtol > 0 or atol > 0:
-        if (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer'):
-            ans = parameters.reserved_expressions["answer"].standard_value.simplify()
-            res = parameters.reserved_expressions["response"].standard_value.simplify()
-        if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
-            if rtol > 0 and (ans != 0):
-                value_match = bool(abs(float((ans-res)/ans)) < rtol)
-            elif atol > 0 or (ans == 0):
-                answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
-                value_match = bool(abs(float(ans-res)) < atol*answer_unit_factor)
+    if rtol == 0 and atol == 0:
+        return False
+
+    if not ((lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer')):
+        return False
+
+    ans_value = parameters.reserved_expressions["answer"].standard_value
+    res_value = parameters.reserved_expressions["response"].standard_value
+
+    # Quantities with several standard values are a set, and quantities without a value are None
+    if not (isinstance(ans_value, Basic) and isinstance(res_value, Basic)):
+        return False
+
+    ans = ans_value.simplify()
+    res = res_value.simplify()
+
+    value_match = False
+
+    if ans.is_constant() and res.is_constant():
+        if rtol > 0 and (ans != 0):
+            value_match = bool(abs(float((ans-res)/ans)) < rtol)
+        elif atol > 0 or (ans == 0):
+            answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
+            value_match = bool(abs(float(ans-res)) < atol*answer_unit_factor)
     return value_match
 
 

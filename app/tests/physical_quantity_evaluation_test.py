@@ -549,6 +549,29 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     @pytest.mark.parametrize(
+        "criteria,is_correct",
+        [
+            ("response matches 2 m", False),
+            ("response matches 2", False),
+            ("2 m matches response", False),
+            # Only checks that it no longer raises: the value match ignores `dimension(...)`
+            ("dimension(response) matches dimension(answer)", None),
+            ("answer matches answer", True),
+        ]
+    )
+    def test_matches_criteria_other_than_response_and_answer_when_values_differ(self, criteria, is_correct):
+        # Used to raise UnboundLocalError in the tolerance check (bug 1 in the bug report)
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        result = evaluation_function("2.1 m", "1.0 m", params)
+        if is_correct is not None:
+            assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
         "ans,res",
         [
             ("10 ohm", "10 Ω"),
