@@ -11,15 +11,15 @@ from lambdafeedback.slr_parsing import ExprNode
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.symbolic.comparison import check_equality, unsimplified_with_unsplittable
 from app.context.symbolic.graphs.set_equivalence import add_set_equivalence_nodes, as_sets
-from app.types import Parameters
+from app.evaluation_parameters import EvaluationParameters
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
-def _equality_equivalence(label: str, parameters_dict: Parameters) -> Evaluate:
+def _equality_equivalence(label: str, parameters_dict: EvaluationParameters) -> Evaluate:
     def equality_equivalence(_response: Any) -> ReachedCriteria:
         result = False
-        res = parameters_dict["reserved_expressions"]["response"]
-        ans = parameters_dict["reserved_expressions"]["answer"]
+        res = parameters_dict.reserved_expressions["response"]
+        ans = parameters_dict.reserved_expressions["answer"]
 
         if (not isinstance(res, Equality)) and isinstance(ans, Equality):
             return {
@@ -40,15 +40,15 @@ def _equality_equivalence(label: str, parameters_dict: Parameters) -> Evaluate:
                 symbols_in_equality_ratio = res_difference.free_symbols
             else:
                 symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
-            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"].constants)
+            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict.parsing_parameters.constants)
         return outcome_tag(label, result is True)
     return equality_equivalence
 
 
-def _same_symbols(label: str, lhs: str, rhs: str, parameters_dict: Parameters) -> Evaluate:
+def _same_symbols(label: str, lhs: str, rhs: str, parameters_dict: EvaluationParameters) -> Evaluate:
     def same_symbols(_response: Any) -> ReachedCriteria:
-        local_substitutions = list(parameters_dict["reserved_expressions"].items())
-        parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
+        local_substitutions = list(parameters_dict.reserved_expressions.items())
+        parsing_params = unsimplified_with_unsplittable(parameters_dict.parsing_parameters, parameters_dict.reserved_expressions.keys())
         lsym = parse_expression(lhs, parsing_params).subs(local_substitutions)
         rsym = parse_expression(rhs, parsing_params).subs(local_substitutions)
         result = lsym.free_symbols == rsym.free_symbols
@@ -57,7 +57,7 @@ def _same_symbols(label: str, lhs: str, rhs: str, parameters_dict: Parameters) -
 
 
 def add_equality_equivalence_nodes(
-    graph: CriteriaGraph, END: OutputNode, parameters_dict: Parameters, label: str, lhs: str, rhs: str
+    graph: CriteriaGraph, END: OutputNode, parameters_dict: EvaluationParameters, label: str, lhs: str, rhs: str
 ) -> None:
     """Adds the nodes that check if the equalities `lhs` and `rhs` are equivalent to `graph`."""
     graph.add_evaluation_node(
@@ -114,7 +114,7 @@ def add_equality_equivalence_nodes(
 
 
 def add_mathematical_equivalence_nodes(
-    graph: CriteriaGraph, END: OutputNode, criterion: ExprNode, parameters_dict: Parameters, label: str, lhs: str, rhs: str
+    graph: CriteriaGraph, END: OutputNode, criterion: ExprNode, parameters_dict: EvaluationParameters, label: str, lhs: str, rhs: str
 ) -> None:
     """
     Adds the nodes that check if `lhs` and `rhs` are mathematically equal to `graph`,
@@ -181,7 +181,7 @@ def add_mathematical_equivalence_nodes(
     )
 
 
-def criterion_equality_node(criterion: ExprNode, parameters_dict: Parameters, label: str | None = None) -> CriteriaGraph:
+def criterion_equality_node(criterion: ExprNode, parameters_dict: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     if label is None:
         label = criterion.content_string()
 
@@ -190,8 +190,8 @@ def criterion_equality_node(criterion: ExprNode, parameters_dict: Parameters, la
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
 
-    res = parameters_dict["reserved_expressions"]["response"]
-    ans = parameters_dict["reserved_expressions"]["answer"]
+    res = parameters_dict.reserved_expressions["response"]
+    ans = parameters_dict.reserved_expressions["answer"]
     use_set_equivalence, response_list, answer_list = as_sets(res, ans)
 
     if use_set_equivalence is True:

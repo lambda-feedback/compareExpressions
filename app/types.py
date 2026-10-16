@@ -9,8 +9,10 @@ from lambdafeedback.criteria import CriteriaGraph, FeedbackStringGenerator
 from lambdafeedback.slr_parsing import ExprNode
 from sympy import Basic
 
-# The evaluation parameters passed to the contexts.
-# CONSIDER: Replace with a dataclass so that the available parameters are explicit.
+from app.evaluation_parameters import EvaluationParameters
+
+# The request parameters, completed with the context's defaults.
+# The criteria graphs use `EvaluationParameters` instead.
 Parameters: TypeAlias = Mapping[str, Any]
 
 # A parsed response or answer: one expression, or a set of them for a list of answers.
@@ -23,7 +25,7 @@ Substitutions: TypeAlias = Iterable[tuple[str, Any]]
 SubstitutionList: TypeAlias = list[tuple[str, Basic]]
 
 # Builds the criteria graph for a criterion.
-GraphTemplate: TypeAlias = Callable[[ExprNode, Parameters], CriteriaGraph]
+GraphTemplate: TypeAlias = Callable[[ExprNode, EvaluationParameters], CriteriaGraph]
 
 # Feedback text generators by group: `generators[group](tag)(inputs)` is the text (or None).
 FeedbackGenerators: TypeAlias = dict[str, Callable[[str], FeedbackStringGenerator]]

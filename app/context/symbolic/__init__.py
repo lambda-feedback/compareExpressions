@@ -18,6 +18,7 @@ from app.context.symbolic.graphs.equivalence import criterion_equality_node
 from app.context.symbolic.graphs.generic import criterion_eval_node
 from app.context.symbolic.graphs.substitution import criterion_where_node
 from app.context.symbolic.graphs.syntactical_form import criterion_written_as_node
+from app.evaluation_parameters import EvaluationParameters
 from app.result import EvaluationResult
 from app.types import Expression, GraphTemplate, Parameters
 from app.preview.symbolic import preview_function
@@ -45,9 +46,9 @@ graph_templates: dict[str, GraphTemplate] = {
 }
 
 
-def feedback_procedure_generator(parameters_dict: Parameters) -> dict[str, CriteriaGraph]:
+def feedback_procedure_generator(parameters_dict: EvaluationParameters) -> dict[str, CriteriaGraph]:
     graphs = dict()
-    criteria = set(parameters_dict["criteria"].items())
+    criteria = set(parameters_dict.criteria.items())
     for (label, criterion) in criteria:
         graph_template = graph_templates.get(criterion.label, criterion_eval_node)
         graphs.update({label: graph_template(criterion, parameters_dict)})

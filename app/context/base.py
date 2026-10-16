@@ -9,6 +9,7 @@ from typing import Any
 from lambdafeedback.criteria import CriteriaGraph
 from lambdafeedback.slr_parsing import SLRParser
 
+from app.evaluation_parameters import EvaluationParameters
 from app.preview.common import Result
 from app.result import EvaluationResult
 from app.types import Parameters
@@ -29,6 +30,6 @@ class Context:
     # Criteria used when none are given
     default_criteria: tuple[str, ...]
     # Builds the criteria graph for each parsed criterion
-    feedback_procedure_generator: Callable[[Parameters], dict[str, CriteriaGraph]]
+    feedback_procedure_generator: Callable[[EvaluationParameters], dict[str, CriteriaGraph]]
     # `(parameters, unsplittable_symbols=...)`: the parsing parameters passed to `expression_parse`
     parsing_parameters_generator: Callable[..., Any]

@@ -7,14 +7,14 @@ from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
 from app.context.physical_quantity.comparison import comparison_function, parse_criterion_sides
-from app.types import Parameters
+from app.evaluation_parameters import EvaluationParameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
 
 def comparison_base_graph(
-    criterion: ExprNode, parameters: Parameters, comparison_operator: str, label: str | None = None
+    criterion: ExprNode, parameters: EvaluationParameters, comparison_operator: str, label: str | None = None
 ) -> CriteriaGraph:
-    reserved_expressions = parameters["reserved_expressions"].items()
+    reserved_expressions = parameters.reserved_expressions.items()
 
     if label is None:
         label = criterion.content_string()
@@ -57,19 +57,19 @@ def comparison_base_graph(
     return graph
 
 
-def greater_than_node(criterion: ExprNode, parameters: Parameters, label: str | None = None) -> CriteriaGraph:
+def greater_than_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     return comparison_base_graph(criterion, parameters, comparison_operator=">", label=label)
 
 
-def greater_than_or_equal_node(criterion: ExprNode, parameters: Parameters, label: str | None = None) -> CriteriaGraph:
+def greater_than_or_equal_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     # TODO: Add nodes for the equal case
     return comparison_base_graph(criterion, parameters, comparison_operator=">=", label=label)
 
 
-def less_than_node(criterion: ExprNode, parameters: Parameters, label: str | None = None) -> CriteriaGraph:
+def less_than_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     return comparison_base_graph(criterion, parameters, comparison_operator="<", label=label)
 
 
-def less_than_or_equal_node(criterion: ExprNode, parameters: Parameters, label: str | None = None) -> CriteriaGraph:
+def less_than_or_equal_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     # TODO: Add nodes for the equal case
     return comparison_base_graph(criterion, parameters, comparison_operator="<=", label=label)

@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Any
 
 from lambdafeedback.criteria import CriteriaGraph
-from lambdafeedback.slr_parsing import SLRParser
+from lambdafeedback.slr_parsing import ExprNode, SLRParser
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
@@ -18,7 +18,7 @@ from app.context.physical_quantity import context as quantity_context
 from app.context.symbolic import context as symbolic_context
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators, internal_feedback
 from app.feedback.tags import FeedbackTag, FeedbackTagName
-from app.frozen_dict import FrozenValuesDictionary
+from app.evaluation_parameters import EvaluationParameters
 from app.result import EvaluationResult
 from app.types import Parameters
 
@@ -87,7 +87,7 @@ def _reserved_keywords(parameters: Parameters) -> list[str]:
 
 def parse_reserved_expressions(
     context: Context, reserved_expressions: dict[str, dict[str, str]], parameters: Parameters, result: EvaluationResult
-) -> tuple[bool, FrozenValuesDictionary]:
+) -> tuple[bool, dict[str, dict[str, Any]]]:
     """
     Input:
     context: the context used to preprocess and parse the expressions
@@ -108,10 +108,10 @@ def parse_reserved_expressions(
     preprocess = context.expression_preprocess
     parsing_parameters = deepcopy(parameters["parsing_parameters"])
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
-    reserved_expressions_dict = FrozenValuesDictionary()
+    reserved_expressions_dict: dict[str, dict[str, Any]] = {}
     success = True
     for key in reserved_expressions.keys():
-        reserved_expressions_dict.update({key: FrozenValuesDictionary()})
+        reserved_expressions_dict.update({key: {}})
         for (label, expr) in reserved_expressions[key].items():
             expr_parsed = None
             original_expr = expr
@@ -187,7 +187,7 @@ def split_criteria(criteria_string: str) -> list[str]:
     return criteria_string_list
 
 
-def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameters: Parameters) -> FrozenValuesDictionary:
+def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameters: Parameters) -> dict[str, ExprNode]:
     preprocess = context.expression_preprocess
     original_criteria_string = get_criteria_string(context, parameters)
     try:
@@ -195,11 +195,14 @@ def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameter
     except (BracketNotationError, AbsoluteValueNotationError) as e:
         feedback = notation_error_feedback(e, original_criteria_string)
         raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
-    criteria_parsed = FrozenValuesDictionary()
+    criteria_parsed: dict[str, ExprNode] = {}
     for criterion in split_criteria(criteria_string):
         try:
             criterion_tokens = criteria_parser.scan(criterion)
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+            # A criterion that is given twice cannot be parsed
+            if criterion_parsed.content_string() in criteria_parsed:
+                raise TypeError(f"criterion {criterion_parsed.content_string()!r} is given more than once")
             criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
@@ -213,12 +216,12 @@ def _disable_evaluation_nodes(graph: CriteriaGraph, disabled_evaluation_nodes: C
             evaluation.replacement = CriteriaGraph.END_LABEL
 
 
-def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_parameters: Parameters) -> None:
+def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_parameters: EvaluationParameters) -> None:
     # Generate feedback from criteria graphs
-    evaluation_result = evaluation_parameters["evaluation_result"]
-    response = evaluation_parameters["reserved_expressions"]["response"]
+    evaluation_result = evaluation_parameters.evaluation_result
+    response = evaluation_parameters.reserved_expressions["response"]
     is_correct = True
-    custom_feedback = evaluation_parameters.get("custom_feedback", {})
+    custom_feedback = evaluation_parameters.custom_feedback
     for (criterion_identifier, graph) in criteria_graphs.items():
         # TODO: Find better way to identify main criteria for criteria graph
         main_criteria = criterion_identifier+"_TRUE"
@@ -338,22 +341,21 @@ def _set_preview_fields(
 
 
 def _build_evaluation_parameters(
-    parameters: Parameters, reserved_expressions: Mapping[str, Mapping[str, Any]], criteria: Mapping[str, Any], evaluation_result: EvaluationResult
-) -> FrozenValuesDictionary:
-    return FrozenValuesDictionary(
-        {
-            "reserved_expressions_strings": parameters["reserved_expressions_strings"],
-            "reserved_expressions": {**reserved_expressions["learner"], **reserved_expressions["task"]},
-            "criteria": criteria,
-            "disabled_evaluation_nodes": parameters.get("disabled_evaluation_nodes", set()),
-            "parsing_parameters": parameters["parsing_parameters"],
-            "evaluation_result": evaluation_result,
-            "multiple_answers_criteria": parameters.get("multiple_answers_criteria", "all"),
-            "numerical": parameters.get("numerical", False),
-            "atol": parameters.get("atol", 0),
-            "rtol": parameters.get("rtol", 0),
-            "custom_feedback": parameters.get("custom_feedback", {}),
-        }
+    parameters: Parameters, reserved_expressions: Mapping[str, Mapping[str, Any]], criteria: Mapping[str, ExprNode],
+    evaluation_result: EvaluationResult
+) -> EvaluationParameters:
+    return EvaluationParameters(
+        reserved_expressions_strings=parameters["reserved_expressions_strings"],
+        reserved_expressions={**reserved_expressions["learner"], **reserved_expressions["task"]},
+        criteria=criteria,
+        disabled_evaluation_nodes=parameters.get("disabled_evaluation_nodes", set()),
+        parsing_parameters=parameters["parsing_parameters"],
+        evaluation_result=evaluation_result,
+        multiple_answers_criteria=parameters.get("multiple_answers_criteria", "all"),
+        numerical=parameters.get("numerical", False),
+        atol=parameters.get("atol", 0),
+        rtol=parameters.get("rtol", 0),
+        custom_feedback=parameters.get("custom_feedback", {}),
     )
 
 
@@ -390,7 +392,7 @@ def evaluation_function(response: str, answer: str, params: dict[str, Any], incl
     # Performs evaluation of response
     feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
     for graph in feedback_procedures.values():
-        _disable_evaluation_nodes(graph, evaluation_parameters["disabled_evaluation_nodes"])
+        _disable_evaluation_nodes(graph, evaluation_parameters.disabled_evaluation_nodes)
     generate_feedback(feedback_procedures, evaluation_parameters)
 
     result = evaluation_result.serialise(include_test_data)
