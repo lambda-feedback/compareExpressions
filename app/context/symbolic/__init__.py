@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from copy import deepcopy
-from typing import Any
+from types import MappingProxyType
 
 from lambdafeedback.criteria import CriteriaGraph, build_criteria_parser
 from lambdafeedback.expression_parsing import (
@@ -12,6 +12,7 @@ from lambdafeedback.expression_parsing import (
     preprocess_expression,
 )
 
+from app.context.base import Context
 from app.context.defaults import base_default_parameters
 from app.context.symbolic.graphs.equivalence import criterion_equality_node
 from app.context.symbolic.graphs.generic import criterion_eval_node
@@ -34,7 +35,7 @@ def expression_parse(name: str, expr: str, parameters: SympyParsingConfig, evalu
     return expressions[0] if len(expressions) == 1 else set(expressions)
 
 
-default_criteria = ["response = answer"]
+default_criteria = ("response = answer",)
 
 
 graph_templates: dict[str, GraphTemplate] = {
@@ -59,13 +60,13 @@ def parsing_parameters_generator(
     return SympyParsingConfig.from_params(ExpressionParams.from_dict(params), unsplittable_symbols, symbol_assumptions)
 
 
-context: dict[str, Any] = {
-    "expression_preview": preview_function,
-    "generate_criteria_parser": build_criteria_parser,
-    "expression_preprocess": expression_preprocess,
-    "expression_parse": expression_parse,
-    "default_parameters": default_parameters,
-    "default_criteria": default_criteria,
-    "feedback_procedure_generator": feedback_procedure_generator,
-    "parsing_parameters_generator": parsing_parameters_generator,
-}
+context = Context(
+    expression_preview=preview_function,
+    generate_criteria_parser=build_criteria_parser,
+    expression_preprocess=expression_preprocess,
+    expression_parse=expression_parse,
+    default_parameters=MappingProxyType(default_parameters),
+    default_criteria=default_criteria,
+    feedback_procedure_generator=feedback_procedure_generator,
+    parsing_parameters_generator=parsing_parameters_generator,
+)

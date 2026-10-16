@@ -47,24 +47,23 @@ The overall flow of the evaluation procedure can be described as follows:
 
 ### Context
 
-The context is a data structure that contains at least the following seven pieces of information:
-- `default_parameters` A dictionary where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts start from the default parameters found in `context/defaults.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context/physical_quantity/__init__.py`.
+The context is a frozen `Context` dataclass, defined in `context/base.py`, with the following fields:
+- `default_parameters` A read-only mapping where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts start from the default parameters found in `context/defaults.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context/physical_quantity/__init__.py`.
 - `expression_parse` function that parses expressions (i.e. the `response` and `answer` inputs) into the form used by the feedback generation procedure.
 - `expression_preprocess` function that performs string manipulations that makes ensures that correctly written input expressions follows the conventions expected by `expression_parse`.
 - `expression_preview` is a function that generates a string that can be turned into a human-readable representation of how the evaluation function interpreted the response.
 - `feedback_procedure_generator` function that generates a function for each criteria that can be used to evaluate if the criteria is satisfied or not. The output from this function should be a list of tags that the feedback string generator can use to produce human readable feedback.
-- `feedback_string_generator` function that takes tags and outputs human readable feedback strings.
 - `generate_criteria_parser` function that generates a parser that can be used to turn the criteria (given in string form) into a form that the feedback generation procedure can use to determine if they are correct or not.
+- `default_criteria` the criteria used when none are given in `params`.
+- `parsing_parameters_generator` function that builds the parsing parameters passed to `expression_parse` from the evaluation parameters.
 
-The context can also contain other fields if necessary.
-
-**Remark:** The current implementation uses a dictionary rather than a dedicated class for ease of iteration during the initial development phase.
+`select_context` in `evaluation.py` picks the context from `params`.
 
 There are currently two different contexts:
 - `symbolic`: Handles comparisons of various symbolic expressions. Defined in the `context/symbolic/` package.
 - `physical_quantity`: Handles comparisons of expressions involving units. Defined in the `context/physical_quantity/` package.
 
-Each context package exposes its `context` dictionary from its `__init__.py`.
+Each context package exposes its `context` (a `Context`) from its `__init__.py`.
 
 **Remark:** Handwritten expressions are sent as latex, which requires extra preprocessing before the right context can be determined in some cases. It should be considered whether a new context, perhaps called `handwritten`, should be created for this purpose.
 
