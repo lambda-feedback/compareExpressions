@@ -11,7 +11,7 @@ from lambdafeedback.slr_parsing import ExprNode
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.symbolic.comparison import check_equality, parse_where_substitutions, where_substitution_nodes
 from app.context.symbolic.variations import one_addition_to_subtraction, one_exponent_flip, one_swap_addition_and_multiplication
-from app.context.types import Parameters, Substitutions
+from app.types import Parameters, Substitutions
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 

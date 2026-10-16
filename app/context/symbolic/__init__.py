@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from lambdafeedback.criteria import CriteriaGraph, build_criteria_parser
 from lambdafeedback.expression_parsing import (
@@ -17,11 +17,9 @@ from app.context.symbolic.graphs.equivalence import criterion_equality_node
 from app.context.symbolic.graphs.generic import criterion_eval_node
 from app.context.symbolic.graphs.substitution import criterion_where_node
 from app.context.symbolic.graphs.syntactical_form import criterion_written_as_node
-from app.context.types import Expression, GraphTemplate, Parameters
+from app.result import EvaluationResult
+from app.types import Expression, GraphTemplate, Parameters
 from app.preview.symbolic import preview_function
-
-if TYPE_CHECKING:
-    from app.result import EvaluationResult
 
 
 default_parameters = deepcopy(base_default_parameters)

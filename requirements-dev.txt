@@ -1,0 +1,5 @@
+# Tools for testing, linting and type checking, used locally and in CI
+# (the deployed function's own dependencies are in app/requirements.txt)
+pytest
+flake8
+mypy==1.15.0

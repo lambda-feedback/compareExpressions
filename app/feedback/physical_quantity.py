@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
-from lambdafeedback.criteria import FeedbackStringGenerator
 from lambdafeedback.units import RevertedUnit
 
-feedback_string_generators: dict[str, Callable[[str], FeedbackStringGenerator]] = dict()
+from app.types import FeedbackGenerators
+
+feedback_string_generators: FeedbackGenerators = dict()
 feedback_string_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "REVERTED_UNIT": f"Possible ambiguity: <strong>`{inputs.get('marked', '')}`</strong> was not interpreted as a unit in<br>`{inputs['before']}`<strong>`{inputs['marked']}`</strong>`{inputs['after']}`",
 }[tag]

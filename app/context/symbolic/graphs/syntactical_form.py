@@ -7,7 +7,7 @@ from lambdafeedback.expression_parsing import generate_arbitrary_number_pattern_
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import outcome_tag
-from app.context.types import Parameters
+from app.types import Parameters
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from app.feedback.syntactical_forms import PATTERNS as syntactical_forms
 

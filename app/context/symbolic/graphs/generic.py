@@ -7,7 +7,7 @@ from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.symbolic.comparison import check_criterion
-from app.context.types import Parameters
+from app.types import Parameters
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
