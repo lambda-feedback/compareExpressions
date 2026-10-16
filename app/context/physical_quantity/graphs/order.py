@@ -14,19 +14,21 @@ from app.feedback.physical_quantity import feedback_string_generators as physica
 def comparison_base_graph(
     criterion: ExprNode, parameters: EvaluationParameters, comparison_operator: str, label: str | None = None
 ) -> CriteriaGraph:
-    reserved_expressions = parameters.reserved_expressions.items()
-
     if label is None:
         label = criterion.content_string()
 
     inputs = criterion.children
-    _, _, lhs, rhs = parse_criterion_sides(criterion, parameters)
+    sides = parse_criterion_sides(criterion, parameters)
 
-    stardard_forms = [(key, expr.standard_value*expr.standard_unit) for (key, expr) in reserved_expressions]
+    # A quantity without a unit (standard_unit None) is just its value
+    stardard_forms = [
+        (key, expr.standard_value if expr.standard_unit is None else expr.standard_value*expr.standard_unit)
+        for (key, expr) in sides.quantities.items()
+    ]
     compare = comparison_function(comparison_operator)
 
     def compare_evaluate(_response: Any) -> ReachedCriteria:
-        return outcome_tag(label, compare(lhs, rhs, stardard_forms) is True)
+        return outcome_tag(label, compare(sides.lhs, sides.rhs, stardard_forms) is True)
 
     graph, END = outcome_graph(
         label,
