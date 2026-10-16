@@ -1,8 +1,8 @@
 import pytest
 
-from sympy import Integer, Symbol, oo, zoo
+from sympy import I, Integer, Symbol, oo, zoo
 
-from app.context.symbolic.comparison import do_comparison_infinite
+from app.context.symbolic.comparison import do_comparison_infinite, normalise_complex
 from app.evaluation import evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2136,6 +2136,18 @@ class TestEvaluationFunction():
     def test_do_comparison_infinite_only_evaluates_requested_comparison(self, comparison_symbol, lhs, rhs, expected):
         # The end-to-end test above only reaches this function in some runs, so check it directly
         assert do_comparison_infinite(comparison_symbol, lhs, rhs) is expected
+
+    @pytest.mark.parametrize(
+        "lhs,rhs,expected_lhs,expected_rhs",
+        [
+            ((1 + I)**2, Integer(1), 2 * I, Integer(1)),
+            # Used to be left as written when only the right-hand side has an imaginary part (bug 3 in the bug report)
+            (Integer(1), (1 + I)**2, Integer(1), 2 * I),
+            ((1 + Symbol("x", real=True))**2, Integer(1), (1 + Symbol("x", real=True))**2, Integer(1)),
+        ]
+    )
+    def test_normalise_complex(self, lhs, rhs, expected_lhs, expected_rhs):
+        assert normalise_complex(lhs, rhs) == (expected_lhs, expected_rhs)
 
     def test_feedback_follows_criteria_order(self):
         # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs

@@ -53,11 +53,17 @@ def create_expressions_for_comparison(
     lhs_expr = parse_expression(lhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
     rhs_expr = parse_expression(rhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
     if parsing_params.params.complex_numbers:
+        lhs_expr, rhs_expr = normalise_complex(lhs_expr, rhs_expr)
+    return lhs_expr, rhs_expr
+
+
+def normalise_complex(lhs_expr: Basic, rhs_expr: Basic) -> tuple[Basic, Basic]:
+    """Both sides written as `re + I*im` when either side has an imaginary part, otherwise unchanged."""
+    if (im(lhs_expr) != 0) or (im(rhs_expr) != 0):
         simplified_lhs_expr = lhs_expr.cancel().simplify()
         simplified_rhs_expr = rhs_expr.cancel().simplify()
-        if (im(lhs_expr) != 0) or (im(lhs_expr) != 0):
-            lhs_expr = real_part(simplified_lhs_expr) + I * im(simplified_lhs_expr)
-            rhs_expr = real_part(simplified_rhs_expr) + I * im(simplified_rhs_expr)
+        lhs_expr = real_part(simplified_lhs_expr) + I * im(simplified_lhs_expr)
+        rhs_expr = real_part(simplified_rhs_expr) + I * im(simplified_rhs_expr)
     return lhs_expr, rhs_expr
 
 
