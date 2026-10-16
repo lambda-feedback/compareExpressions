@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 
 from sympy import Basic, Equality, im, I
 from sympy import re as real_part
@@ -116,32 +116,28 @@ def check_equality(
         result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
     else:
         result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+    if result is not False:
+        return result
 
     # There are some types of expression, e.g. those containing hyperbolic trigonometric functions, that can behave
     # unpredictably when simplification is applied. For that reason we check several different combinations of
     # simplifications here in order to reduce the likelihood of false negatives.
-    # Each side is simplified at most once, and only if a retry needs it
-    simplified: dict[str, Basic] = {}
+    # Each side is simplified only once a retry needs it.
+    simplified_rhs_expr = rhs_expr.simplify()
+    result = do_comparison(criterion.content, lhs_expr-simplified_rhs_expr)
+    if result is not False:
+        return result
 
-    def simplified_side(side: str, expr: Basic) -> Basic:
-        if side not in simplified:
-            simplified[side] = expr.simplify()
-        return simplified[side]
+    simplified_lhs_expr = lhs_expr.simplify()
+    result = do_comparison(criterion.content, simplified_lhs_expr-rhs_expr)
+    if result is not False:
+        return result
 
-    differences_to_retry: tuple[Callable[[], Basic], ...] = (
-        lambda: lhs_expr-simplified_side("rhs", rhs_expr),
-        lambda: simplified_side("lhs", lhs_expr)-rhs_expr,
-        lambda: simplified_side("lhs", lhs_expr)-simplified_side("rhs", rhs_expr),
-    )
-    for difference in differences_to_retry:
-        if result is not False:
-            break
-        result = do_comparison(criterion.content, difference())
+    result = do_comparison(criterion.content, simplified_lhs_expr-simplified_rhs_expr)
+    if result is not False:
+        return result
 
-    if result is False:
-        result = compare_numerically(lhs_expr, rhs_expr, parameters_dict)
-
-    return result
+    return compare_numerically(lhs_expr, rhs_expr, parameters_dict)
 
 
 def check_order(criterion: ExprNode, parameters_dict: Parameters) -> bool | None:
