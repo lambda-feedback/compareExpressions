@@ -1,7 +1,7 @@
 import pytest
 
-from .preview import preview_function
-from .evaluation import evaluation_function
+from app.evaluation import evaluation_function
+from app.preview import preview_function
 
 
 class TestEvaluationFunction():
@@ -243,3 +243,36 @@ class TestEvaluationFunction():
 
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] == is_correct
+
+    @pytest.mark.parametrize(
+        "params, message", [
+            (
+                {"symbols": {"where": {"aliases": []}}},
+                "`where` is a reserved keyword and cannot be used as an input symbol code."
+            ),
+            (
+                {"input_symbols": [["written as", []]]},
+                "`written as` is a reserved keyword and cannot be used as an input symbol code."
+            ),
+            (
+                {"symbols": {"x": {"aliases": ["response"]}}},
+                "`response` is a reserved keyword and cannot be used as an input symbol alternative."
+            ),
+            (
+                {"input_symbols": [["x", ["plus_minus"]]]},
+                "`plus_minus` is a reserved keyword and cannot be used as an input symbol alternative."
+            ),
+            (
+                {"symbols": {"where": {"aliases": []}, "contains": {"aliases": []}}},
+                "`contains`, `where` are reserved keywords and cannot be used as input symbol codes."
+            ),
+            (
+                {"symbols": {"x": {"aliases": ["response", "answer"]}}},
+                "`answer`, `response` are reserved keywords and cannot be used as input symbol alternatives."
+            ),
+        ]
+    )
+    def test_reserved_keyword_as_input_symbol(self, params, message):
+        with pytest.raises(Exception) as error:
+            evaluation_function("x", "x", params)
+        assert str(error.value) == message

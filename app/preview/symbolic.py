@@ -8,9 +8,7 @@ are app-layer concerns.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, NotRequired, TypedDict
-
-from sympy import Basic
+from typing import Any
 
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
@@ -27,36 +25,16 @@ from lambdafeedback.expression_parsing import (
     sympy_to_latex,
 )
 
-from .feedback.tags import FeedbackTag, FeedbackTagName
-
-
-class ExpressionSyntaxError(ExpressionParsingError):
-    """A response could not be parsed; ``feedback`` is the tag to show the learner."""
-
-    def __init__(self, feedback: FeedbackTag) -> None:
-        super().__init__(f"{feedback.tag}: {dict(feedback.inputs)}")
-        self.feedback = feedback
-
-
-class Preview(TypedDict):
-    """Structurally compatible with ``lf_toolkit.preview.Preview`` (whose ``feedback`` is required)."""
-
-    latex: str
-    sympy: str
-    feedback: NotRequired[str]
-
-
-class Result(TypedDict):
-    """Structurally compatible with ``lf_toolkit.preview.Result``."""
-
-    preview: Preview
+from app.feedback.tags import FeedbackTag, FeedbackTagName
+from app.preview.common import ExpressionSyntaxError, Preview, Result
+from app.types import Expression
 
 
 def _as_params(params: ExpressionParams | Mapping[str, Any]) -> ExpressionParams:
     return params if isinstance(params, ExpressionParams) else ExpressionParams.from_dict(params)
 
 
-def parse_symbolic(response: str, params: ExpressionParams) -> tuple[list[Basic | set[Basic]], list[FeedbackTag]]:
+def parse_symbolic(response: str, params: ExpressionParams) -> tuple[list[Expression], list[FeedbackTag]]:
     """Parse a (preprocessed) response into SymPy expressions, one per expression it stands for.
 
     Also returns the feedback raised while converting ``|...|`` notation.

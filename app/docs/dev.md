@@ -48,7 +48,7 @@ The overall flow of the evaluation procedure can be described as follows:
 ### Context
 
 The context is a data structure that contains at least the following seven pieces of information:
-- `default_parameters` A dictionary where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts use the default parameters found in `context\symbolic.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context\physical_quantity.py`.
+- `default_parameters` A dictionary where the keys are parameter names and the values are the default values that the evaluation function will use unless another value is provided together with the response. The required fields are context-dependent, currently all contexts start from the default parameters found in `context/defaults.py` and the `physical_quantity` context adds a few extra fields, see the default parameters defined in `context/physical_quantity/__init__.py`.
 - `expression_parse` function that parses expressions (i.e. the `response` and `answer` inputs) into the form used by the feedback generation procedure.
 - `expression_preprocess` function that performs string manipulations that makes ensures that correctly written input expressions follows the conventions expected by `expression_parse`.
 - `expression_preview` is a function that generates a string that can be turned into a human-readable representation of how the evaluation function interpreted the response.
@@ -61,8 +61,10 @@ The context can also contain other fields if necessary.
 **Remark:** The current implementation uses a dictionary rather than a dedicated class for ease of iteration during the initial development phase.
 
 There are currently two different contexts:
-- `symbolic`: Handles comparisons of various symbolic expressions. Defined in `context\symbolic.py`.
-- `physical_quantity`: Handles comparisons of expressions involving units. Defined in `context\physical_quantity.py`.
+- `symbolic`: Handles comparisons of various symbolic expressions. Defined in the `context/symbolic/` package.
+- `physical_quantity`: Handles comparisons of expressions involving units. Defined in the `context/physical_quantity/` package.
+
+Each context package exposes its `context` dictionary from its `__init__.py`.
 
 **Remark:** Handwritten expressions are sent as latex, which requires extra preprocessing before the right context can be determined in some cases. It should be considered whether a new context, perhaps called `handwritten`, should be created for this purpose.
 
@@ -206,9 +208,9 @@ The function returns result dictionary with the following fields:
 
 # Preview function
 
-When the evaluation function preview is called the code in `preview.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions are `symbolic_preview.py` (symbolic expressions) and `context/physical_quantity_preview.py` (physical quantities), built on the parsing from the `lambdafeedback-expression-parsing` and `lambdafeedback-units` packages, see [Packages](#packages).
+When the evaluation function preview is called the code in `preview/__init__.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions are `preview/symbolic.py` (symbolic expressions) and `preview/physical_quantity.py` (physical quantities), with the shared `Preview` and `Result` types in `preview/common.py`, built on the parsing from the `lambdafeedback-expression-parsing` and `lambdafeedback-units` packages, see [Packages](#packages).
 
-**Remark**: Since it is likely that there will be significant overlap between the response preview and the response evaluation (e.g. code for parsing and interpreting the response), it is good practice if they can share as much code as possible to ensure consistency. For this reason it might be better to move the preview functions fully inside the context (either by making a `preview` subfolder in the `context` folder, or by moving the implementation of the preview function inside the context files themselves). In this case the `preview.py` and `evaluation.py` could also share the same code for determining the right context to use.
+**Remark**: Since it is likely that there will be significant overlap between the response preview and the response evaluation (e.g. code for parsing and interpreting the response), it is good practice if they can share as much code as possible to ensure consistency. For this reason it might be better to move the preview functions fully inside the context (e.g. by moving the preview implementation into the context packages `context/symbolic/` and `context/physical_quantity/`). In this case `preview/__init__.py` and `evaluation.py` could also share the same code for determining the right context to use.
 
 When `is_latex` is enabled, `e` and `E` are read as plain symbols by the LaTeX parser (latex2sympy2_extended); Euler's number comes from `elementary_functions` when the result is parsed, as for text input. See the PR for the earlier latex2sympy2 workaround: https://github.com/lambda-feedback/compareExpressions/pull/235
 
@@ -234,6 +236,12 @@ grep -v lambdafeedback app/requirements.txt | pip install -r /dev/stdin
 ```
 
 # Tests
-There are two main groups of tests, evaluation tests (`evaluation_test.py` and `tests/*_evaluation_test.py`) and preview tests (`preview_test.py` and `tests/*_preview_test.py`). Run them all with `pytest` from the repository root.
+The tests are in `tests/` and fall into two main groups: evaluation tests (`evaluation_test.py` and `*_evaluation_test.py`) and preview tests (`*_preview_test.py`). Run them all with `pytest` from the repository root. The base image ships its own tests in the same `tests/` directory (e.g. `commands_test.py`, `parse_test.py`), so don't reuse those file names.
 
 The deployed function's `healthcheck` command loads `unittest` classes from `evaluation_tests.py` and `preview_tests.py`; `evaluation_tests.py` runs the same pytest suite inside the image, so new tests only need to be written for pytest. Tests marked `@pytest.mark.slow` are left out of the healthcheck to keep it within the request timeout; mark any test function whose cases take more than about 0.5s in total.
+
+# Imports
+Modules import each other with absolute imports rooted at the `app` package (e.g. `from app.types import Parameters`), including the tests; relative imports are not used. This works both locally (run `pytest` and `mypy` from the repository root) and in the deployed image, which sets `PYTHONPATH=/app` and imports the function as `app.handler`.
+
+# Type checking
+All code in `app/` except the tests is type annotated and checked with mypy, using the configuration in `mypy.ini`. Run `mypy` from the repository root; the tools used for testing, linting and type checking (including the pinned mypy version) are listed in `requirements-dev.txt`, which CI also installs. Shared type aliases, such as `Parameters` and `GraphTemplate`, are in `types.py`. Each `# type: ignore` comment says why it is there; most mark a place where an honest type exposes a known bug.

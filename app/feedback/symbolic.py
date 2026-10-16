@@ -1,17 +1,11 @@
-# Format for feedback string entry: criteria["eval_tag"]("criteria_tag", inputs) = "formatted string" | None
-criteria_equivalences = {
-    **{
-        eq: "response=answer" for eq in [
-            "answer=response",
-            "answer-response=0",
-            "-answer+response=0",
-            "answer/response=1",
-            "response/answer-1=0"
-        ]
-    }
-}
-feedback_generators = dict()
-feedback_generators["EQUIVALENCES"] = criteria_equivalences
+from __future__ import annotations
+
+
+from app.feedback.tags import FeedbackTag
+from app.types import FeedbackGenerators
+
+# Format for feedback string entry: criteria["eval_tag"]("criteria_tag")(inputs) = "formatted string" | None
+feedback_generators: FeedbackGenerators = dict()
 feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "ABSOLUTE_VALUE_NOTATION_AMBIGUITY": f"Notation in {inputs.get('name', '')} might be ambiguous, use `Abs(.)` instead of `|.|`",
     "BRACKET_NOTATION_MISMATCH": f"Brackets in `{inputs.get('x', '')}` do not match. Every `(`, `[` or `{{` must be closed with the corresponding `)`, `]` or `}}` — different bracket types cannot be mixed to close the same group.",
@@ -51,7 +45,6 @@ feedback_generators["IDENTIFY_REASON"] = lambda tag: lambda inputs: {
     "ONE_EXPONENT_FLIP": f"{inputs['criterion'].children[0].content_string()} is true if one exponent has its sign changed.",
     "ONE_SWAP_ADDITION_AND_MULTIPLICATION": f"{inputs['criterion'].children[0].content_string()} is true if one addition is replaced with a multiplication or vice versa.",
 }[tag]
-feedback_generators["GET_CANDIDATES"] = lambda tag: lambda inputs: None
 feedback_generators["WRITTEN_AS"] = lambda tag: lambda inputs: {
     "NUMBER": None,
     "CARTESIAN": None,
@@ -67,18 +60,8 @@ feedback_generators["SAME_SYMBOLS"] = lambda tag: lambda inputs: {
     "TRUE": None,
     "FALSE": "The response can be simplified further.",
 }[tag]
-feedback_generators["SAME_FORM"] = lambda tag: lambda inputs: {
-    "CARTESIAN": "Response and answer are both written on Cartesian form.",  # None,
-    "EXPONENTIAL": "Response and answer are both written on exponential form.",  # None,
-    "UNKNOWN": "The response is not written on the expected form.",
-}[tag]
-feedback_generators["PROPORTIONAL_TO"] = lambda tag: lambda inputs: {
-    "TRUE": None,
-    "FALSE": None,
-    "UNKNOWN": None,
-}[tag]
 
 
-def internal_feedback(feedback_tag):
+def internal_feedback(feedback_tag: FeedbackTag) -> str | None:
     """Text for a `FeedbackTag` raised by the lambdafeedback packages (e.g. `BRACKET_NOTATION_MISMATCH`)."""
     return feedback_generators["INTERNAL"](str(feedback_tag.tag))(feedback_tag.inputs)

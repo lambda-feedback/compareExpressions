@@ -22,7 +22,7 @@ from lambdafeedback.units import (
     preprocess_quantity,
 )
 
-from ..symbolic_preview import Preview, Result
+from app.preview.common import Preview, Result
 
 
 def fix_exponents(response: str) -> str:
