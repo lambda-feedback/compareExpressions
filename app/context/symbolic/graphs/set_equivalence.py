@@ -1,11 +1,19 @@
-from sympy import Equality
+from __future__ import annotations
+
+from typing import Any
+
+from sympy import Basic, Equality
+
+from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria
+from lambdafeedback.slr_parsing import ExprNode
 
 from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ...graph_helpers import attach_terminal_criterion
+from ...types import Expression, Parameters
 from ..comparison import check_equality
 
 
-def as_sets(response, answer):
+def as_sets(response: Expression, answer: Expression) -> tuple[bool, Expression, Expression]:
     """
     Returns whether `response` and `answer` should be compared as sets, together with
     `response` and `answer` wrapped in a set if only the other one is a set.
@@ -19,16 +27,20 @@ def as_sets(response, answer):
     return False, response, answer
 
 
-def add_set_equivalence_nodes(graph, END, criterion, parameters_dict, label, lhs, rhs, response_list, answer_list):
+def add_set_equivalence_nodes(
+    graph: CriteriaGraph, END: OutputNode, criterion: ExprNode, parameters_dict: Parameters, label: str, lhs: str, rhs: str,
+    response_list: set[Basic], answer_list: set[Basic],
+) -> None:
     """
     Adds the nodes that check if each element of `response_list` is equal to an element of
     `answer_list` (and vice versa, depending on `multiple_answers_criteria`) to `graph`.
     """
-    def set_equivalence(_response):
+    def set_equivalence(_response: Any) -> ReachedCriteria:
         matches = {"responses": [False]*len(response_list), "answers": [False]*len(answer_list)}
         for i, response in enumerate(response_list):
             for j, answer in enumerate(answer_list):
                 current_pair = [("response", response), ("answer", answer)]
+                result: bool | None
                 if isinstance(response, Equality) != isinstance(answer, Equality):
                     result = False
                 else:

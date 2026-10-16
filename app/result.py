@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from lambdafeedback.criteria import CriteriaGraph
 
 
@@ -9,26 +13,26 @@ class EvaluationResult:
         Satisfies `lambdafeedback.criteria.ResultLike`, so
         `CriteriaGraph.export_feedback` can add to it.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self.is_correct = False
-        self.latex = ""
-        self.simplified = ""
-        self.criteria_graphs = {}  # name -> CriteriaGraph, included in test data
-        self._feedback = []  # (tag, text) pairs in the order they were added
+        self.latex: str | None = ""
+        self.simplified: str | list[str] | None = ""
+        self.criteria_graphs: dict[str, CriteriaGraph] = {}  # included in test data
+        self._feedback: list[tuple[str, str]] = []  # (tag, text) pairs in the order they were added
 
     @property
-    def tags(self):
+    def tags(self) -> list[str]:
         return list(dict.fromkeys(tag for (tag, _) in self._feedback))
 
-    def add_feedback(self, tag, feedback):
+    def add_feedback(self, tag: str, feedback: str | None) -> None:
         """Record `feedback` under `tag`. Blank feedback records the tag without adding any text."""
         self._feedback.append((tag, feedback or ""))
 
-    def _serialise_feedback(self):
+    def _serialise_feedback(self) -> str:
         return "<br>".join(text.strip() for (_, text) in self._feedback if len(text.strip()) > 0)
 
-    def serialise(self, include_test_data=False) -> dict:
-        out = dict(is_correct=self.is_correct, feedback=self._serialise_feedback(), tags=self.tags)
+    def serialise(self, include_test_data: bool = False) -> dict[str, Any]:
+        out: dict[str, Any] = dict(is_correct=self.is_correct, feedback=self._serialise_feedback(), tags=self.tags)
         if include_test_data is True:
             out.update(CriteriaGraph.test_data(self.criteria_graphs))
         if self.latex is not None:

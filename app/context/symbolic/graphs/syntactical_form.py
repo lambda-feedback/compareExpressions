@@ -1,13 +1,19 @@
-from lambdafeedback.criteria import CriteriaGraph
+from __future__ import annotations
+
+from typing import Any
+
+from lambdafeedback.criteria import CriteriaGraph, Evaluate, ReachedCriteria
 from lambdafeedback.expression_parsing import generate_arbitrary_number_pattern_matcher
+from lambdafeedback.slr_parsing import ExprNode
 
 from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ....feedback.syntactical_forms import PATTERNS as syntactical_forms
 from ...graph_helpers import outcome_tag
+from ...types import Parameters
 
 
-def written_as_known_form(string, name):
-    def find_form(_response):
+def written_as_known_form(string: str, name: str) -> Evaluate:
+    def find_form(_response: Any) -> ReachedCriteria:
         forms = set()
         for form_label in syntactical_forms.keys():
             if syntactical_forms[form_label].matcher(string) is True:
@@ -19,20 +25,20 @@ def written_as_known_form(string, name):
     return find_form
 
 
-def compare_to_form(string, form_label, label):
-    def inner(_response):
+def compare_to_form(string: str, form_label: str, label: str) -> Evaluate:
+    def inner(_response: Any) -> ReachedCriteria:
         return outcome_tag(label, syntactical_forms[form_label].matcher(string) is True)
     return inner
 
 
-def response_written_as_answer(response, answer, label):
-    def inner(_response):
+def response_written_as_answer(response: str, answer: str, label: str) -> Evaluate:
+    def inner(_response: Any) -> ReachedCriteria:
         matcher = generate_arbitrary_number_pattern_matcher(answer)
         return outcome_tag(label, bool(matcher(response)))
     return inner
 
 
-def _add_known_form_nodes(graph, label, lhs, rhs, response):
+def _add_known_form_nodes(graph: CriteriaGraph, label: str, lhs: str, rhs: str, response: str) -> None:
     """For each known form, adds nodes that check if `lhs` is written in that form when `rhs` is."""
     for form_label in syntactical_forms.keys():
         graph.attach_new_criterion(
@@ -54,7 +60,7 @@ def _add_known_form_nodes(graph, label, lhs, rhs, response):
         graph.attach(str(lhs)+"_COMPARE_FORM_TO_"+form_label, label+"_FALSE")
 
 
-def criterion_written_as_node(criterion, parameters_dict, label=None):
+def criterion_written_as_node(criterion: ExprNode, parameters_dict: Parameters, label: str | None = None) -> CriteriaGraph:
     if label is None:
         label = criterion.content_string()
 

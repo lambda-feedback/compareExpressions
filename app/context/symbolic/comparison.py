@@ -1,13 +1,20 @@
-from sympy import Equality, im, I
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any
+
+from sympy import Basic, Equality, im, I
 from sympy import re as real_part
 
-from lambdafeedback.expression_parsing import parse_expression
+from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expression
+from lambdafeedback.slr_parsing import ExprNode
 
 from ..operators import COMPARISON_OPERATORS
+from ..types import Parameters, Substitutions
 from .numerical import compare_numerically
 
 
-def unsimplified_with_unsplittable(parsing_params, symbols):
+def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: Iterable[str]) -> SympyParsingConfig:
     """`parsing_params` without simplification, with `symbols` also read as single symbols."""
     return parsing_params.replace(
         simplify=False,
@@ -15,16 +22,16 @@ def unsimplified_with_unsplittable(parsing_params, symbols):
     )
 
 
-def where_substitution_nodes(subs_node):
+def where_substitution_nodes(subs_node: ExprNode) -> list[ExprNode]:
     """The individual substitutions in the substitution part of a WHERE criterion."""
     if subs_node.label == "EQUALITY":
         return [subs_node]
     elif subs_node.label == "SEPARATOR":
         return subs_node.children
-    return subs_node
+    return subs_node  # type: ignore[return-value]  # Bug 6 in the bug report: should be a list or raise
 
 
-def parse_where_substitutions(subs_node, parsing_params):
+def parse_where_substitutions(subs_node: ExprNode, parsing_params: SympyParsingConfig) -> Substitutions:
     """`[(name, expression), ...]` for each substitution in the substitution part of a WHERE criterion."""
     local_subs = []
     for sub in where_substitution_nodes(subs_node):
@@ -34,7 +41,7 @@ def parse_where_substitutions(subs_node, parsing_params):
     return local_subs
 
 
-def check_criterion(criterion, parameters_dict):
+def check_criterion(criterion: ExprNode, parameters_dict: Parameters) -> bool | None:
     label = criterion.label.strip()
     if label in {"EQUALITY", "WRITTEN_AS"}:
         result = check_equality(criterion, parameters_dict)
@@ -49,7 +56,9 @@ def check_criterion(criterion, parameters_dict):
     return result
 
 
-def create_expressions_for_comparison(criterion, parameters_dict, local_substitutions=()):
+def create_expressions_for_comparison(
+    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Sequence[tuple[str, Any]] = ()
+) -> tuple[Basic, Basic]:
     reserved_expressions = list(parameters_dict["reserved_expressions"].items())
     parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
     lhs = criterion.children[0].content_string()
@@ -65,7 +74,7 @@ def create_expressions_for_comparison(criterion, parameters_dict, local_substitu
     return lhs_expr, rhs_expr
 
 
-def do_comparison_infinite(comparison_symbol, lhs_expr, rhs_expr):
+def do_comparison_infinite(comparison_symbol: str, lhs_expr: Basic, rhs_expr: Basic) -> bool | None:
     # When either side is infinite, subtracting (e.g. oo - oo) yields nan, making
     # the subtraction-based do_comparison unreliable. Compare the sides directly instead.
     direct_comparisons = {
@@ -81,8 +90,9 @@ def do_comparison_infinite(comparison_symbol, lhs_expr, rhs_expr):
         return None
 
 
-def do_comparison(comparison_symbol, expression):
+def do_comparison(comparison_symbol: str, expression: Basic) -> bool | None:
     comparison = COMPARISON_OPERATORS[comparison_symbol.strip()]
+    result: bool | None
     try:
         result = bool(comparison(expression.cancel().simplify().simplify(), 0))
     except Exception:
@@ -90,7 +100,9 @@ def do_comparison(comparison_symbol, expression):
     return result
 
 
-def check_equality(criterion, parameters_dict, local_substitutions=()):
+def check_equality(
+    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Sequence[tuple[str, Any]] = ()
+) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         return False
@@ -110,14 +122,14 @@ def check_equality(criterion, parameters_dict, local_substitutions=()):
     # unpredictably when simplification is applied. For that reason we check several different combinations of
     # simplifications here in order to reduce the likelihood of false negatives.
     # Each side is simplified at most once, and only if a retry needs it
-    simplified = {}
+    simplified: dict[str, Basic] = {}
 
-    def simplified_side(side, expr):
+    def simplified_side(side: str, expr: Basic) -> Basic:
         if side not in simplified:
             simplified[side] = expr.simplify()
         return simplified[side]
 
-    differences_to_retry = (
+    differences_to_retry: tuple[Callable[[], Basic], ...] = (
         lambda: lhs_expr-simplified_side("rhs", rhs_expr),
         lambda: simplified_side("lhs", lhs_expr)-rhs_expr,
         lambda: simplified_side("lhs", lhs_expr)-simplified_side("rhs", rhs_expr),
@@ -133,13 +145,13 @@ def check_equality(criterion, parameters_dict, local_substitutions=()):
     return result
 
 
-def check_order(criterion, parameters_dict):
+def check_order(criterion: ExprNode, parameters_dict: Parameters) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = do_comparison(criterion.content, lhs_expr-rhs_expr)
     return result
 
 
-def check_proportionality(criterion, parameters_dict):
+def check_proportionality(criterion: ExprNode, parameters_dict: Parameters) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = None
     if lhs_expr.cancel().simplify().simplify() != 0:
@@ -153,7 +165,7 @@ def check_proportionality(criterion, parameters_dict):
     return result
 
 
-def check_contains_symbol(criterion, parameters_dict):
+def check_contains_symbol(criterion: ExprNode, parameters_dict: Parameters) -> bool:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = rhs_expr in lhs_expr.atoms()
     return result

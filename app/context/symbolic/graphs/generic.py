@@ -1,15 +1,21 @@
-from lambdafeedback.criteria import CriteriaGraph
+from __future__ import annotations
+
+from typing import Any
+
+from lambdafeedback.criteria import CriteriaGraph, ReachedCriteria
+from lambdafeedback.slr_parsing import ExprNode
 
 from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ...graph_helpers import attach_terminal_criterion, outcome_tag
+from ...types import Parameters
 from ..comparison import check_criterion
 
 
-def criterion_eval_node(criterion, parameters_dict):
+def criterion_eval_node(criterion: ExprNode, parameters_dict: Parameters) -> CriteriaGraph:
     feedback_string_generator_inputs = {'criterion': criterion}
     label = criterion.content_string()
 
-    def evaluation_node_internal(_response):
+    def evaluation_node_internal(_response: Any) -> ReachedCriteria:
         result = check_criterion(criterion, parameters_dict)
         return outcome_tag(label, result, feedback_string_generator_inputs)
 

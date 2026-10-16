@@ -1,6 +1,11 @@
+from __future__ import annotations
+
+from collections.abc import Collection, Iterable, Mapping
 from copy import deepcopy
+from typing import Any
 
 from lambdafeedback.criteria import CriteriaGraph
+from lambdafeedback.slr_parsing import SLRParser
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
@@ -21,14 +26,14 @@ messages = {
 }
 
 
-def notation_error_feedback(error, original_text):
+def notation_error_feedback(error: BracketNotationError | AbsoluteValueNotationError, original_text: str) -> FeedbackTag:
     """`FeedbackTag` for a `BracketNotationError`/`AbsoluteValueNotationError` raised while preprocessing."""
     if isinstance(error, BracketNotationError):
         return FeedbackTag(FeedbackTagName.BRACKET_NOTATION_MISMATCH, {"x": original_text})
     return FeedbackTag(FeedbackTagName.ABSOLUTE_VALUE_NOTATION_AMBIGUITY, {"name": error.name})
 
 
-def _input_symbol_codes_and_aliases(parameters):
+def _input_symbol_codes_and_aliases(parameters: Mapping[str, Any]) -> tuple[list[str], list[str]]:
     """The codes and (non-empty) aliases of the input symbols, from both `symbols` and the legacy `input_symbols`."""
     codes = list(parameters.get("symbols", dict()))
     aliases = []
@@ -45,7 +50,7 @@ def _input_symbol_codes_and_aliases(parameters):
     return codes, aliases
 
 
-def _raise_on_collisions(keywords, symbols, kind):
+def _raise_on_collisions(keywords: Iterable[str], symbols: Collection[str], kind: str) -> None:
     """Raises if any of `keywords` is used as an input symbol `kind` (e.g. "code" or "alternative")."""
     collisions = sorted(keyword for keyword in keywords if keyword in symbols)
     if len(collisions) == 1:
@@ -54,7 +59,7 @@ def _raise_on_collisions(keywords, symbols, kind):
         raise Exception("`"+"`, `".join(collisions)+f"` are reserved keywords and cannot be used as input symbol {kind}s.")
 
 
-def determine_context(parameters):
+def determine_context(parameters: Mapping[str, Any]) -> dict[str, Any]:
     if parameters.get("physical_quantity", False) is True:
         context = deepcopy(quantity_context)
     else:
@@ -74,7 +79,9 @@ def determine_context(parameters):
     return context
 
 
-def parse_reserved_expressions(reserved_expressions, parameters, result):
+def parse_reserved_expressions(
+    reserved_expressions: dict[str, dict[str, str]], parameters: Mapping[str, Any], result: EvaluationResult
+) -> tuple[bool, FrozenValuesDictionary]:
     """
     Input:
     reserved_expressions: dictionary with the following format
@@ -140,7 +147,7 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
     return success, reserved_expressions_dict
 
 
-def get_criteria_string(parameters):
+def get_criteria_string(parameters: Mapping[str, Any]) -> str:
     criteria = parameters.get("criteria", None)
     if criteria is None:
         criteria = ",".join(parameters["context"]["default_criteria"])
@@ -149,7 +156,7 @@ def get_criteria_string(parameters):
     return criteria
 
 
-def split_criteria(criteria_string):
+def split_criteria(criteria_string: str) -> list[str]:
     """Splits `criteria_string` on the commas that are not inside brackets, and strips each criterion."""
     criteria_string_list = []
     delims = [
@@ -173,7 +180,7 @@ def split_criteria(criteria_string):
     return criteria_string_list
 
 
-def create_criteria_dict(criteria_parser, parameters):
+def create_criteria_dict(criteria_parser: SLRParser, parameters: Mapping[str, Any]) -> FrozenValuesDictionary:
     preprocess = parameters["context"]["expression_preprocess"]
     original_criteria_string = get_criteria_string(parameters)
     try:
@@ -192,14 +199,14 @@ def create_criteria_dict(criteria_parser, parameters):
     return criteria_parsed
 
 
-def _disable_evaluation_nodes(graph, disabled_evaluation_nodes):
+def _disable_evaluation_nodes(graph: CriteriaGraph, disabled_evaluation_nodes: Collection[str]) -> None:
     """Makes each evaluation in `disabled_evaluation_nodes` skip straight to the end of `graph`."""
     for evaluation in graph.evaluations.values():
         if evaluation.label in disabled_evaluation_nodes:
             evaluation.replacement = CriteriaGraph.END_LABEL
 
 
-def generate_feedback(criteria_graphs, evaluation_parameters):
+def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_parameters: Mapping[str, Any]) -> None:
     # Generate feedback from criteria graphs
     evaluation_result = evaluation_parameters["evaluation_result"]
     response = evaluation_parameters["reserved_expressions"]["response"]
@@ -224,7 +231,7 @@ def generate_feedback(criteria_graphs, evaluation_parameters):
     return
 
 
-def _apply_tolerance_aliases(params):
+def _apply_tolerance_aliases(params: dict[str, Any]) -> None:
     """Copies `relative_tolerance`/`absolute_tolerance` to `rtol`/`atol` in `params`."""
     if "relative_tolerance" in params:
         params["rtol"] = params["relative_tolerance"]
@@ -233,7 +240,7 @@ def _apply_tolerance_aliases(params):
         params["atol"] = params["absolute_tolerance"]
 
 
-def _build_parameters(params, response, answer):
+def _build_parameters(params: dict[str, Any], response: str, answer: str) -> dict[str, Any]:
     """
     A copy of `params` completed with the context's defaults, the reserved expressions
     (with `response` read as LaTeX if `is_latex` is set), the context and the parsing parameters.
@@ -283,7 +290,7 @@ def _build_parameters(params, response, answer):
     return parameters
 
 
-def notation_warnings(response, strict_syntax):
+def notation_warnings(response: str, strict_syntax: bool) -> list[str]:
     """The tags of the notation warnings for `response`."""
     # FIXME: Move these notation warnings into lambdafeedback.expression_parsing
     tags = []
@@ -297,13 +304,15 @@ def notation_warnings(response, strict_syntax):
     return tags
 
 
-def _add_notation_warnings(evaluation_result, response, params):
+def _add_notation_warnings(evaluation_result: EvaluationResult, response: str, params: Mapping[str, Any]) -> None:
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
     for tag in notation_warnings(response, params.get("strict_syntax", False)):
         evaluation_result.add_feedback(tag, symbolic_comparison_internal_messages(tag)(dict()))
 
 
-def _set_preview_fields(evaluation_result, response, parameters, reserved_expressions):
+def _set_preview_fields(
+    evaluation_result: EvaluationResult, response: str, parameters: Mapping[str, Any], reserved_expressions: Mapping[str, Mapping[str, Any]]
+) -> None:
     """Sets the `latex` and `simplified` forms of the response on `evaluation_result`."""
     try:
         preview = parameters["context"]["expression_preview"](response, deepcopy(parameters))["preview"]
@@ -322,7 +331,9 @@ def _set_preview_fields(evaluation_result, response, parameters, reserved_expres
                 evaluation_result.simplified = response
 
 
-def _build_evaluation_parameters(parameters, reserved_expressions, criteria, evaluation_result):
+def _build_evaluation_parameters(
+    parameters: Mapping[str, Any], reserved_expressions: Mapping[str, Mapping[str, Any]], criteria: Mapping[str, Any], evaluation_result: EvaluationResult
+) -> FrozenValuesDictionary:
     return FrozenValuesDictionary(
         {
             "reserved_expressions_strings": parameters["reserved_expressions_strings"],
@@ -340,7 +351,7 @@ def _build_evaluation_parameters(parameters, reserved_expressions, criteria, eva
     )
 
 
-def evaluation_function(response, answer, params, include_test_data=False) -> dict:
+def evaluation_function(response: str, answer: str, params: dict[str, Any], include_test_data: bool = False) -> dict[str, Any]:
     """
     Function that allows for various types of comparison of various kinds of expressions.
     Supported input parameters:

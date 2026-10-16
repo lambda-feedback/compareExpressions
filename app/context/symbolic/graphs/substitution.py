@@ -1,13 +1,21 @@
-from lambdafeedback.criteria import CriteriaGraph
+from __future__ import annotations
+
+from typing import Any, TypedDict
+
+from sympy import Basic
+
+from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria
 from lambdafeedback.expression_parsing import parse_expression
+from lambdafeedback.slr_parsing import ExprNode
 
 from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ...graph_helpers import attach_terminal_criterion, outcome_tag
+from ...types import Parameters, Substitutions
 from ..comparison import check_equality, parse_where_substitutions, where_substitution_nodes
 from ..variations import one_addition_to_subtraction, one_exponent_flip, one_swap_addition_and_multiplication
 
 
-def _expression_to_vary(expression):
+def _expression_to_vary(expression: ExprNode) -> ExprNode | None:
     """The side of `expression` opposite `response`, or None if neither side is exactly `response`."""
     expression_to_vary = None
     if expression.children[0].content_string().strip() == "response":
@@ -19,7 +27,12 @@ def _expression_to_vary(expression):
     return expression_to_vary
 
 
-def _variation_groups(criterion, expression_to_vary):
+class VariationGroup(TypedDict):
+    variations: list[Basic]
+    summary: str
+
+
+def _variation_groups(criterion: ExprNode, expression_to_vary: Basic) -> dict[str, VariationGroup]:
     expression_string = criterion.children[0].content_string()
     return {
         "ONE_ADDITION_TO_SUBTRACTION": {
@@ -37,11 +50,13 @@ def _variation_groups(criterion, expression_to_vary):
     }
 
 
-def _variation_details(variations):
+def _variation_details(variations: list[Basic]) -> str:
     return "The following expressions are checked: "+", ".join([str(e) for e in variations])
 
 
-def _group_values(expression_to_vary, variation_groups, local_subs):
+def _group_values(
+    expression_to_vary: Basic, variation_groups: dict[str, VariationGroup], local_subs: Substitutions
+) -> tuple[dict[str, set[Basic]], dict[str, set[str]]]:
     """
     Groups `expression_to_vary` and its variations by their value after `local_subs` are applied.
     Returns the expressions for each value, and the variation groups that produce each value.
@@ -60,10 +75,11 @@ def _group_values(expression_to_vary, variation_groups, local_subs):
     return values_and_expressions, values_and_variations_group
 
 
-def _add_identify_reason_nodes(graph, END, label, criterion, expression, variation_groups,
-                               values_and_expressions, values_and_variations_group, response_value):
+def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str, criterion: ExprNode, expression: ExprNode,
+                               variation_groups: dict[str, VariationGroup], values_and_expressions: dict[str, set[Basic]],
+                               values_and_variations_group: dict[str, set[str]], response_value: Basic) -> None:
     """Adds the nodes that try to identify which variation of the expression the response matches."""
-    def identify_reason(_response):
+    def identify_reason(_response: Any) -> ReachedCriteria:
         reasons = {
             label+"_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group.get(str(response_value), {"UNKNOWN"})
         }
@@ -85,7 +101,7 @@ def _add_identify_reason_nodes(graph, END, label, criterion, expression, variati
         feedback_string_generator=symbolic_feedback_string_generators["IDENTIFY_REASON"]("UNKNOWN")
     )
 
-    def get_candidates(_response):
+    def get_candidates(_response: Any) -> ReachedCriteria:
         candidates = {
             label+"_RESPONSE_CANDIDATES_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group[str(response_value)]
         }
@@ -123,7 +139,7 @@ def _add_identify_reason_nodes(graph, END, label, criterion, expression, variati
                     )
 
 
-def criterion_where_node(criterion, parameters_dict, label=None):
+def criterion_where_node(criterion: ExprNode, parameters_dict: Parameters, label: str | None = None) -> CriteriaGraph:
     parsing_params = parameters_dict["parsing_parameters"]
     expression = criterion.children[0]
     subs = where_substitution_nodes(criterion.children[1])
@@ -131,7 +147,7 @@ def criterion_where_node(criterion, parameters_dict, label=None):
     if label is None:
         label = criterion.content_string()
 
-    def expression_check(_response):
+    def expression_check(_response: Any) -> ReachedCriteria:
         result = check_equality(expression, parameters_dict, local_substitutions=local_subs)
         return outcome_tag(label, result is True)
 

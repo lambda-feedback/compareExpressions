@@ -1,16 +1,22 @@
+from __future__ import annotations
+
+from typing import Any
+
 from sympy import Equality
 
-from lambdafeedback.criteria import CriteriaGraph
+from lambdafeedback.criteria import CriteriaGraph, Evaluate, OutputNode, ReachedCriteria
 from lambdafeedback.expression_parsing import parse_expression
+from lambdafeedback.slr_parsing import ExprNode
 
 from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 from ...graph_helpers import attach_terminal_criterion, outcome_tag
+from ...types import Parameters
 from ..comparison import check_equality, unsimplified_with_unsplittable
 from .set_equivalence import add_set_equivalence_nodes, as_sets
 
 
-def _equality_equivalence(label, parameters_dict):
-    def equality_equivalence(_response):
+def _equality_equivalence(label: str, parameters_dict: Parameters) -> Evaluate:
+    def equality_equivalence(_response: Any) -> ReachedCriteria:
         result = False
         res = parameters_dict["reserved_expressions"]["response"]
         ans = parameters_dict["reserved_expressions"]["answer"]
@@ -39,8 +45,8 @@ def _equality_equivalence(label, parameters_dict):
     return equality_equivalence
 
 
-def _same_symbols(label, lhs, rhs, parameters_dict):
-    def same_symbols(_response):
+def _same_symbols(label: str, lhs: str, rhs: str, parameters_dict: Parameters) -> Evaluate:
+    def same_symbols(_response: Any) -> ReachedCriteria:
         local_substitutions = list(parameters_dict["reserved_expressions"].items())
         parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
         lsym = parse_expression(lhs, parsing_params).subs(local_substitutions)
@@ -50,7 +56,9 @@ def _same_symbols(label, lhs, rhs, parameters_dict):
     return same_symbols
 
 
-def add_equality_equivalence_nodes(graph, END, parameters_dict, label, lhs, rhs):
+def add_equality_equivalence_nodes(
+    graph: CriteriaGraph, END: OutputNode, parameters_dict: Parameters, label: str, lhs: str, rhs: str
+) -> None:
     """Adds the nodes that check if the equalities `lhs` and `rhs` are equivalent to `graph`."""
     graph.add_evaluation_node(
         label,
@@ -105,12 +113,14 @@ def add_equality_equivalence_nodes(graph, END, parameters_dict, label, lhs, rhs)
     )
 
 
-def add_mathematical_equivalence_nodes(graph, END, criterion, parameters_dict, label, lhs, rhs):
+def add_mathematical_equivalence_nodes(
+    graph: CriteriaGraph, END: OutputNode, criterion: ExprNode, parameters_dict: Parameters, label: str, lhs: str, rhs: str
+) -> None:
     """
     Adds the nodes that check if `lhs` and `rhs` are mathematically equal to `graph`,
     and if they are, whether they have the same symbols.
     """
-    def mathematical_equivalence(_response):
+    def mathematical_equivalence(_response: Any) -> ReachedCriteria:
         return outcome_tag(label, check_equality(criterion, parameters_dict))
 
     graph.add_evaluation_node(
@@ -171,7 +181,7 @@ def add_mathematical_equivalence_nodes(graph, END, criterion, parameters_dict, l
     )
 
 
-def criterion_equality_node(criterion, parameters_dict, label=None):
+def criterion_equality_node(criterion: ExprNode, parameters_dict: Parameters, label: str | None = None) -> CriteriaGraph:
     if label is None:
         label = criterion.content_string()
 
