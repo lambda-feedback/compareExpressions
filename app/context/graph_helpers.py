@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from lambdafeedback.criteria import CriteriaGraph, FeedbackStringGenerator, OutputNode, ReachedCriteria
+from lambdafeedback.criteria import CriteriaGraph, Evaluate, FeedbackStringGenerator, OutputNode, ReachedCriteria
 
 
 def outcome_tag(label: str, result: bool | None, inputs: Mapping[str, Any] | None = None) -> ReachedCriteria:
@@ -16,6 +16,14 @@ def outcome_tag(label: str, result: bool | None, inputs: Mapping[str, Any] | Non
         return {label+"_FALSE": inputs}
     else:
         return {label+"_UNKNOWN": inputs}
+
+
+def outcome_graph(label: str, summary: str, details: str, evaluate: Evaluate) -> tuple[CriteriaGraph, OutputNode]:
+    """A new graph `label` with an end node and a single evaluation node `label`, ready for its outcomes to be attached."""
+    graph = CriteriaGraph(label)
+    end = graph.add_end_node()
+    graph.add_evaluation_node(label, summary=summary, details=details, evaluate=evaluate)
+    return graph, end
 
 
 def attach_terminal_criterion(

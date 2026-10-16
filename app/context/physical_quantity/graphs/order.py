@@ -5,7 +5,7 @@ from typing import Any
 from lambdafeedback.criteria import CriteriaGraph, ReachedCriteria
 from lambdafeedback.slr_parsing import ExprNode
 
-from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
+from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
 from app.context.physical_quantity.comparison import comparison_function, parse_criterion_sides
 from app.types import Parameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
@@ -14,8 +14,6 @@ from app.feedback.physical_quantity import feedback_string_generators as physica
 def comparison_base_graph(
     criterion: ExprNode, parameters: Parameters, comparison_operator: str, label: str | None = None
 ) -> CriteriaGraph:
-    graph = CriteriaGraph(label)  # type: ignore[arg-type]  # Bug 8 in the bug report: label is None here
-    END = graph.add_end_node()
     reserved_expressions = parameters["reserved_expressions"].items()
 
     if label is None:
@@ -30,7 +28,7 @@ def comparison_base_graph(
     def compare_evaluate(_response: Any) -> ReachedCriteria:
         return outcome_tag(label, compare(lhs, rhs, stardard_forms) is True)
 
-    graph.add_evaluation_node(
+    graph, END = outcome_graph(
         label,
         summary=f"Is {inputs[0]} {comparison_operator} {inputs[1]}?",
         details=f"checks if {inputs[0]} {comparison_operator} {inputs[1]}.",
