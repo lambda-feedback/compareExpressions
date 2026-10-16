@@ -60,7 +60,7 @@ def _add_known_form_nodes(graph: CriteriaGraph, label: str, lhs: str, rhs: str, 
         graph.attach(str(lhs)+"_COMPARE_FORM_TO_"+form_label, label+"_FALSE")
 
 
-def criterion_written_as_node(criterion: ExprNode, parameters_dict: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
+def criterion_written_as_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     if label is None:
         label = criterion.content_string()
 
@@ -74,8 +74,8 @@ def criterion_written_as_node(criterion: ExprNode, parameters_dict: EvaluationPa
         return graph
 
     # TODO: Make a version that can compare the forms of any two reserved expressions
-    answer = parameters_dict.reserved_expressions_strings["task"]["answer"]
-    response = parameters_dict.reserved_expressions_strings["learner"]["response"]
+    answer = parameters.reserved_expressions_strings["task"]["answer"]
+    response = parameters.reserved_expressions_strings["learner"]["response"]
 
     graph.add_evaluation_node(
         str(rhs)+"_WRITTEN_AS_KNOWN_FORM",
