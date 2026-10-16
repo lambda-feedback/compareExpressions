@@ -1,6 +1,8 @@
 import pytest
+from sympy import Integer, Symbol
 
 # Import necessary data and reference cases for tests
+from app.context.physical_quantity.comparison import is_proportional
 from app.evaluation import evaluation_function
 from app.tests.physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from lambdafeedback.physical_quantities import (
@@ -619,6 +621,23 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(res, "1 m", params)
         assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "lhs_value,rhs_value,expected",
+        [
+            (Integer(2000), Integer(2), (True, 1000.0)),
+            (Integer(2), Integer(2000), (True, 0.001)),
+            # Used to divide by zero (bug 2 in the bug report)
+            (Integer(2), Integer(0), (False, None)),
+            (Integer(0), Integer(2), (False, None)),
+            (Integer(0), Integer(0), (False, None)),
+            (Symbol("z"), Integer(2), (False, None)),
+        ]
+    )
+    def test_is_proportional(self, lhs_value, rhs_value, expected):
+        # Units and dimensions are never zero, so `evaluation_function` cannot reach these cases
+        x, y = Symbol("x"), Symbol("y")
+        assert is_proportional(x, y, [("x", lhs_value), ("y", rhs_value)]) == expected
 
     @pytest.mark.parametrize(
         "ans,res",
