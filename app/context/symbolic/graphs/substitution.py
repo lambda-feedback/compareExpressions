@@ -8,7 +8,7 @@ from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria
 from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
-from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
+from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
 from app.context.symbolic.comparison import check_equality, parse_where_substitutions, where_substitution_nodes
 from app.context.symbolic.variations import one_addition_to_subtraction, one_exponent_flip, one_swap_addition_and_multiplication
 from app.types import Parameters, Substitutions
@@ -152,9 +152,7 @@ def criterion_where_node(criterion: ExprNode, parameters_dict: Parameters, label
         return outcome_tag(label, result is True)
 
     subs_string = ", ".join([s.content_string() for s in subs])
-    graph = CriteriaGraph(label)
-    END = graph.add_end_node()
-    graph.add_evaluation_node(
+    graph, END = outcome_graph(
         label,
         summary=label,
         details="Checks if "+expression.content_string()+" where "+subs_string+".",
