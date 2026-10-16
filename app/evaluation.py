@@ -85,6 +85,21 @@ def _reserved_keywords(parameters: Parameters) -> list[str]:
     return list(reserved_keywords_codes)
 
 
+def _report(
+    key: str, result: EvaluationResult, tag: str, message: str | None, error: Exception, cause: Exception | None = None
+) -> None:
+    """
+    Reports a problem with a reserved expression: for a learner expression it is added to `result` as feedback,
+    for a task expression it is an error in the task, so `error` is raised (from `cause`).
+    """
+    if key == "learner":
+        result.add_feedback(tag, message)
+    elif cause is None:
+        raise error
+    else:
+        raise error from cause
+
+
 def parse_reserved_expressions(
     context: Context, reserved_expressions: dict[str, dict[str, str]], parameters: Parameters, result: EvaluationResult
 ) -> tuple[bool, dict[str, dict[str, Any]]]:
@@ -120,22 +135,17 @@ def parse_reserved_expressions(
             except (BracketNotationError, AbsoluteValueNotationError) as e:
                 feedback = notation_error_feedback(e, original_expr)
                 expr = e.expression
-                if key == "learner":
-                    # Preprocess can only create warnings for responses in this case
-                    result.add_feedback(str(feedback.tag), internal_feedback(feedback))
-                else:
-                    raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
+                # Preprocess can only create warnings for responses in this case
+                tag = str(feedback.tag)
+                message = internal_feedback(feedback)
+                _report(key, result, tag, message, Exception(message, tag), cause=e)
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
                 raise Exception(f"Reserved expression {label} must be given as a string.")
             if len(expr.strip()) == 0:
-                if key == "learner":
-                    result.add_feedback(
-                        f"RESERVED_EXPRESSION_MISSING_{label}",
-                        messages["RESERVED_EXPRESSION_MISSING"](label)
-                    )
-                else:
-                    raise Exception(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
+                tag = f"RESERVED_EXPRESSION_MISSING_{label}"
+                message = messages["RESERVED_EXPRESSION_MISSING"](label)
+                _report(key, result, tag, message, Exception(message, tag))
                 success = False
             else:
                 try:
@@ -143,13 +153,9 @@ def parse_reserved_expressions(
                 except Exception as e:
                     result.is_correct = False
                     success = False
-                    if key == "learner":
-                        result.add_feedback(
-                            f"PARSE_ERROR_{label}",
-                            symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
-                        )
-                    else:
-                        raise Exception(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
+                    message = symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
+                    # The error for a task expression has no tag
+                    _report(key, result, f"PARSE_ERROR_{label}", message, Exception(message), cause=e)
             reserved_expressions_dict[key].update({label: expr_parsed})
     return success, reserved_expressions_dict
 
