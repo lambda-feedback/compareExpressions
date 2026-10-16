@@ -13,10 +13,6 @@ from sympy import Basic
 # CONSIDER: Replace with a dataclass so that the available parameters are explicit.
 Parameters: TypeAlias = Mapping[str, Any]
 
-# A parsed physical quantity, as returned by `physical_quantity.parsing.parse_quantity`.
-# CONSIDER: Replace with a dataclass.
-QuantityDict: TypeAlias = dict[str, Any]
-
 # A parsed response or answer: one expression, or a set of them for a list of answers.
 Expression: TypeAlias = Basic | set[Basic]
 
