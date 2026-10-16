@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from lambdafeedback.criteria import FeedbackStringGenerator
 
-from .tags import FeedbackTag
+from app.feedback.tags import FeedbackTag
 
 # Format for feedback string entry: criteria["eval_tag"]("criteria_tag")(inputs) = "formatted string" | None
 feedback_generators: dict[str, Callable[[str], FeedbackStringGenerator]] = dict()

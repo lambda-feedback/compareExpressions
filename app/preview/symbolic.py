@@ -27,8 +27,8 @@ from lambdafeedback.expression_parsing import (
     sympy_to_latex,
 )
 
-from ..feedback.tags import FeedbackTag, FeedbackTagName
-from .common import ExpressionSyntaxError, Preview, Result
+from app.feedback.tags import FeedbackTag, FeedbackTagName
+from app.preview.common import ExpressionSyntaxError, Preview, Result
 
 
 def _as_params(params: ExpressionParams | Mapping[str, Any]) -> ExpressionParams:

@@ -1,6 +1,6 @@
 import pytest
 
-from ..evaluation import evaluation_function
+from app.evaluation import evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
 

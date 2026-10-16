@@ -7,10 +7,10 @@ from sympy import Basic, Equality
 from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria
 from lambdafeedback.slr_parsing import ExprNode
 
-from ....feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-from ...graph_helpers import attach_terminal_criterion
-from ...types import Expression, Parameters
-from ..comparison import check_equality
+from app.context.graph_helpers import attach_terminal_criterion
+from app.context.symbolic.comparison import check_equality
+from app.context.types import Expression, Parameters
+from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
 def as_sets(response: Expression, answer: Expression) -> tuple[bool, Expression, Expression]:

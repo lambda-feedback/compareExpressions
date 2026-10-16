@@ -1,9 +1,9 @@
 from collections.abc import Mapping
 from typing import Any
 
-from .common import Result
-from .symbolic import preview_function as symbolic_preview
-from .physical_quantity import preview_function as physical_quantity_preview
+from app.preview.common import Result
+from app.preview.physical_quantity import preview_function as physical_quantity_preview
+from app.preview.symbolic import preview_function as symbolic_preview
 
 
 def preview_function(response: str, params: Mapping[str, Any]) -> Result:

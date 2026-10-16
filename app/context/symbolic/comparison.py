@@ -9,9 +9,9 @@ from sympy import re as real_part
 from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
-from ..operators import COMPARISON_OPERATORS
-from ..types import Parameters, Substitutions
-from .numerical import compare_numerically
+from app.context.operators import COMPARISON_OPERATORS
+from app.context.symbolic.numerical import compare_numerically
+from app.context.types import Parameters, Substitutions
 
 
 def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: Iterable[str]) -> SympyParsingConfig:

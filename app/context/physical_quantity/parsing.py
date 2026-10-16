@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.units import parse_quantity as parse_physical_quantity
 
-from ...feedback.physical_quantity import reverted_unit_feedback
-from ..types import Parameters, QuantityDict
+from app.context.types import Parameters, QuantityDict
+from app.feedback.physical_quantity import reverted_unit_feedback
 
 if TYPE_CHECKING:
-    from ...result import EvaluationResult
+    from app.result import EvaluationResult
 
 
 def parse_quantity(name: str, expr: str, parameters: Parameters, evaluation_result: EvaluationResult) -> QuantityDict:
