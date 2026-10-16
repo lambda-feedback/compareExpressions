@@ -2137,6 +2137,17 @@ class TestEvaluationFunction():
         # The end-to-end test above only reaches this function in some runs, so check it directly
         assert do_comparison_infinite(comparison_symbol, lhs, rhs) is expected
 
+    def test_feedback_follows_criteria_order(self):
+        # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': 'response < answer, response contains y',
+        }
+        for _ in range(10):
+            result = evaluation_function("x+2", "x+1", params)
+            assert result["feedback"] == "response < answer is false.<br>response contains y is false."
+
     def test_equality_expression_mismatch_with_custom_criteria(self):
         response = "x-0.883x^2=0.251X^3"
         answer = "0.4842x-0.1163x^3"
