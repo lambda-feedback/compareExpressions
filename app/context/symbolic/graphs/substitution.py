@@ -8,10 +8,11 @@ from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria
 from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
-from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
+from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
 from app.context.symbolic.comparison import check_equality, parse_where_substitutions, where_substitution_nodes
 from app.context.symbolic.variations import one_addition_to_subtraction, one_exponent_flip, one_swap_addition_and_multiplication
-from app.types import Parameters, Substitutions
+from app.evaluation_parameters import EvaluationParameters
+from app.types import Substitutions
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
@@ -139,8 +140,8 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
                     )
 
 
-def criterion_where_node(criterion: ExprNode, parameters_dict: Parameters, label: str | None = None) -> CriteriaGraph:
-    parsing_params = parameters_dict["parsing_parameters"]
+def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
+    parsing_params = parameters.parsing_parameters
     expression = criterion.children[0]
     subs = where_substitution_nodes(criterion.children[1])
     local_subs = parse_where_substitutions(criterion.children[1], parsing_params)
@@ -148,13 +149,11 @@ def criterion_where_node(criterion: ExprNode, parameters_dict: Parameters, label
         label = criterion.content_string()
 
     def expression_check(_response: Any) -> ReachedCriteria:
-        result = check_equality(expression, parameters_dict, local_substitutions=local_subs)
+        result = check_equality(expression, parameters, local_substitutions=local_subs)
         return outcome_tag(label, result is True)
 
     subs_string = ", ".join([s.content_string() for s in subs])
-    graph = CriteriaGraph(label)
-    END = graph.add_end_node()
-    graph.add_evaluation_node(
+    graph, END = outcome_graph(
         label,
         summary=label,
         details="Checks if "+expression.content_string()+" where "+subs_string+".",
@@ -181,8 +180,8 @@ def criterion_where_node(criterion: ExprNode, parameters_dict: Parameters, label
     if expression_to_vary is None:
         return graph
 
-    reserved_expressions = list(parameters_dict["reserved_expressions"].items())
-    response_value = parameters_dict["reserved_expressions"]["response"].subs(local_subs)
+    reserved_expressions = list(parameters.reserved_expressions.items())
+    response_value = parameters.reserved_expressions["response"].subs(local_subs)
     expression_to_vary = parse_expression(expression_to_vary.content_string(), parsing_params).subs(reserved_expressions)
     variation_groups = _variation_groups(criterion, expression_to_vary)
     values_and_expressions, values_and_variations_group = _group_values(expression_to_vary, variation_groups, local_subs)

@@ -2,19 +2,18 @@ from __future__ import annotations
 
 from sympy import Basic, pi, N
 
-from app.types import Parameters
+from app.evaluation_parameters import EvaluationParameters
 
-
-def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters_dict: Parameters) -> bool:
+def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters: EvaluationParameters) -> bool:
     """
     Compares `lhs_expr` and `rhs_expr` numerically using the `atol` and `rtol` parameters.
 
     Returns False if numerical comparison is not enabled (`numerical` is not set and neither
     `atol` nor `rtol` is positive), otherwise whether the difference is within both tolerances.
     """
-    if not (parameters_dict.get("numerical", False)
-            or float(parameters_dict.get("rtol", 0)) > 0
-            or float(parameters_dict.get("atol", 0)) > 0):
+    if not (parameters.numerical
+            or float(parameters.rtol) > 0
+            or float(parameters.atol) > 0):
         return False
 
     # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
@@ -30,18 +29,18 @@ def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters_dict: Param
     # Separates LHS and RHS, parses and evaluates them
     res = N(replace_pi(lhs_expr))
     ans = N(replace_pi(rhs_expr))
-    if float(parameters_dict.get("atol", 0)) > 0:
+    if float(parameters.atol) > 0:
         try:
             absolute_error = abs(float(ans-res))
-            error_below_atol = bool(absolute_error < float(parameters_dict["atol"]))
+            error_below_atol = bool(absolute_error < float(parameters.atol))
         except TypeError:
             error_below_atol = None
     else:
         error_below_atol = True
-    if float(parameters_dict.get("rtol", 0)) > 0:
+    if float(parameters.rtol) > 0:
         try:
             relative_error = abs(float((ans-res)/ans))
-            error_below_rtol = bool(relative_error < float(parameters_dict["rtol"]))
+            error_below_rtol = bool(relative_error < float(parameters.rtol))
         except TypeError:
             error_below_rtol = None
     else:

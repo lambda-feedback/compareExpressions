@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Any
 
 from lambdafeedback.criteria import CriteriaGraph
-from lambdafeedback.slr_parsing import SLRParser
+from lambdafeedback.slr_parsing import ExprNode, SLRParser
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
@@ -13,11 +13,12 @@ from lambdafeedback.expression_parsing import (
     parse_latex,
 )
 
+from app.context.base import Context
 from app.context.physical_quantity import context as quantity_context
 from app.context.symbolic import context as symbolic_context
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators, internal_feedback
 from app.feedback.tags import FeedbackTag, FeedbackTagName
-from app.frozen_dict import FrozenValuesDictionary
+from app.evaluation_parameters import EvaluationParameters
 from app.result import EvaluationResult
 from app.types import Parameters
 
@@ -59,12 +60,18 @@ def _raise_on_collisions(keywords: Iterable[str], symbols: Collection[str], kind
         raise Exception("`"+"`, `".join(collisions)+f"` are reserved keywords and cannot be used as input symbol {kind}s.")
 
 
-def determine_context(parameters: Parameters) -> dict[str, Any]:
+def select_context(parameters: Parameters) -> Context:
+    """The physical quantity context if `physical_quantity` is set, otherwise the symbolic context."""
     if parameters.get("physical_quantity", False) is True:
-        context = deepcopy(quantity_context)
-    else:
-        context = deepcopy(symbolic_context)
+        return quantity_context
+    return symbolic_context
 
+
+def _reserved_keywords(parameters: Parameters) -> list[str]:
+    """
+    The keywords reserved by the criteria grammar.
+    Raises if a reserved keyword or reserved expression name is used as an input symbol.
+    """
     input_symbols_reserved_codes, input_symbols_reserved_aliases = _input_symbol_codes_and_aliases(parameters)
 
     reserved_keywords_codes = {"where", "written as", "contains", "proportional to"}
@@ -75,15 +82,30 @@ def determine_context(parameters: Parameters) -> dict[str, Any]:
     _raise_on_collisions(reserved_keywords_codes, input_symbols_reserved_codes, "code")
     _raise_on_collisions(reserved_keywords_aliases, input_symbols_reserved_aliases, "alternative")
 
-    context.update({"reserved_keywords": list(reserved_keywords_codes)})
-    return context
+    return list(reserved_keywords_codes)
+
+
+def _report(
+    key: str, result: EvaluationResult, tag: str, message: str | None, error: Exception, cause: Exception | None = None
+) -> None:
+    """
+    Reports a problem with a reserved expression: for a learner expression it is added to `result` as feedback,
+    for a task expression it is an error in the task, so `error` is raised (from `cause`).
+    """
+    if key == "learner":
+        result.add_feedback(tag, message)
+    elif cause is None:
+        raise error
+    else:
+        raise error from cause
 
 
 def parse_reserved_expressions(
-    reserved_expressions: dict[str, dict[str, str]], parameters: Parameters, result: EvaluationResult
-) -> tuple[bool, FrozenValuesDictionary]:
+    context: Context, reserved_expressions: dict[str, dict[str, str]], parameters: Parameters, result: EvaluationResult
+) -> tuple[bool, dict[str, dict[str, Any]]]:
     """
     Input:
+    context: the context used to preprocess and parse the expressions
     reserved_expressions: dictionary with the following format
         {
             "learner":
@@ -97,14 +119,14 @@ def parse_reserved_expressions(
     parameters: dict that contains evaluation function configuration parameters
     result: the EvaluationResult object that will hold feedback responses
     """
-    parse = parameters["context"]["expression_parse"]
-    preprocess = parameters["context"]["expression_preprocess"]
+    parse = context.expression_parse
+    preprocess = context.expression_preprocess
     parsing_parameters = deepcopy(parameters["parsing_parameters"])
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
-    reserved_expressions_dict = FrozenValuesDictionary()
+    reserved_expressions_dict: dict[str, dict[str, Any]] = {}
     success = True
     for key in reserved_expressions.keys():
-        reserved_expressions_dict.update({key: FrozenValuesDictionary()})
+        reserved_expressions_dict.update({key: {}})
         for (label, expr) in reserved_expressions[key].items():
             expr_parsed = None
             original_expr = expr
@@ -113,22 +135,17 @@ def parse_reserved_expressions(
             except (BracketNotationError, AbsoluteValueNotationError) as e:
                 feedback = notation_error_feedback(e, original_expr)
                 expr = e.expression
-                if key == "learner":
-                    # Preprocess can only create warnings for responses in this case
-                    result.add_feedback(str(feedback.tag), internal_feedback(feedback))
-                else:
-                    raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
+                # Preprocess can only create warnings for responses in this case
+                tag = str(feedback.tag)
+                message = internal_feedback(feedback)
+                _report(key, result, tag, message, Exception(message, tag), cause=e)
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
                 raise Exception(f"Reserved expression {label} must be given as a string.")
             if len(expr.strip()) == 0:
-                if key == "learner":
-                    result.add_feedback(
-                        f"RESERVED_EXPRESSION_MISSING_{label}",
-                        messages["RESERVED_EXPRESSION_MISSING"](label)
-                    )
-                else:
-                    raise Exception(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
+                tag = f"RESERVED_EXPRESSION_MISSING_{label}"
+                message = messages["RESERVED_EXPRESSION_MISSING"](label)
+                _report(key, result, tag, message, Exception(message, tag))
                 success = False
             else:
                 try:
@@ -136,21 +153,17 @@ def parse_reserved_expressions(
                 except Exception as e:
                     result.is_correct = False
                     success = False
-                    if key == "learner":
-                        result.add_feedback(
-                            f"PARSE_ERROR_{label}",
-                            symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
-                        )
-                    else:
-                        raise Exception(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
+                    message = symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
+                    # The error for a task expression has no tag
+                    _report(key, result, f"PARSE_ERROR_{label}", message, Exception(message), cause=e)
             reserved_expressions_dict[key].update({label: expr_parsed})
     return success, reserved_expressions_dict
 
 
-def get_criteria_string(parameters: Parameters) -> str:
+def get_criteria_string(context: Context, parameters: Parameters) -> str:
     criteria = parameters.get("criteria", None)
     if criteria is None:
-        criteria = ",".join(parameters["context"]["default_criteria"])
+        criteria = ",".join(context.default_criteria)
     if (parameters.get("syntactical_comparison", False) is True) and ("responsewrittenasanswer" not in "".join(criteria.split())):
         criteria = criteria+", response written as answer"
     return criteria
@@ -180,19 +193,22 @@ def split_criteria(criteria_string: str) -> list[str]:
     return criteria_string_list
 
 
-def create_criteria_dict(criteria_parser: SLRParser, parameters: Parameters) -> FrozenValuesDictionary:
-    preprocess = parameters["context"]["expression_preprocess"]
-    original_criteria_string = get_criteria_string(parameters)
+def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameters: Parameters) -> dict[str, ExprNode]:
+    preprocess = context.expression_preprocess
+    original_criteria_string = get_criteria_string(context, parameters)
     try:
         criteria_string = preprocess("criteria", original_criteria_string, parameters)
     except (BracketNotationError, AbsoluteValueNotationError) as e:
         feedback = notation_error_feedback(e, original_criteria_string)
         raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
-    criteria_parsed = FrozenValuesDictionary()
+    criteria_parsed: dict[str, ExprNode] = {}
     for criterion in split_criteria(criteria_string):
         try:
             criterion_tokens = criteria_parser.scan(criterion)
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
+            # A criterion that is given twice cannot be parsed
+            if criterion_parsed.content_string() in criteria_parsed:
+                raise TypeError(f"criterion {criterion_parsed.content_string()!r} is given more than once")
             criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
             raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
@@ -206,12 +222,12 @@ def _disable_evaluation_nodes(graph: CriteriaGraph, disabled_evaluation_nodes: C
             evaluation.replacement = CriteriaGraph.END_LABEL
 
 
-def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_parameters: Parameters) -> None:
+def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_parameters: EvaluationParameters) -> None:
     # Generate feedback from criteria graphs
-    evaluation_result = evaluation_parameters["evaluation_result"]
-    response = evaluation_parameters["reserved_expressions"]["response"]
+    evaluation_result = evaluation_parameters.evaluation_result
+    response = evaluation_parameters.reserved_expressions["response"]
     is_correct = True
-    custom_feedback = evaluation_parameters.get("custom_feedback", {})
+    custom_feedback = evaluation_parameters.custom_feedback
     for (criterion_identifier, graph) in criteria_graphs.items():
         # TODO: Find better way to identify main criteria for criteria graph
         main_criteria = criterion_identifier+"_TRUE"
@@ -240,10 +256,10 @@ def _apply_tolerance_aliases(params: dict[str, Any]) -> None:
         params["atol"] = params["absolute_tolerance"]
 
 
-def _build_parameters(params: dict[str, Any], response: str, answer: str) -> dict[str, Any]:
+def _build_parameters(context: Context, params: dict[str, Any], response: str, answer: str) -> dict[str, Any]:
     """
     A copy of `params` completed with the context's defaults, the reserved expressions
-    (with `response` read as LaTeX if `is_latex` is set), the context and the parsing parameters.
+    (with `response` read as LaTeX if `is_latex` is set), the reserved keywords and the parsing parameters.
     """
     parameters = deepcopy(params)
 
@@ -256,22 +272,20 @@ def _build_parameters(params: dict[str, Any], response: str, answer: str) -> dic
         }
     }
     parameters.update({"reserved_expressions_strings": reserved_expressions_strings})
-    context = determine_context(parameters)
-    default_parameters = context["default_parameters"]
-    for (key, value) in default_parameters.items():
+    reserved_keywords = _reserved_keywords(parameters)
+    for (key, value) in context.default_parameters.items():
         if key not in parameters.keys():
             parameters.update({key: value})
     if "criteria" not in parameters.keys():
-        parameters.update({"criteria": ",".join(context["default_criteria"])})
+        parameters.update({"criteria": ",".join(context.default_criteria)})
 
     reserved_expressions_keys = list(reserved_expressions_strings["learner"].keys())+list(reserved_expressions_strings["task"].keys())
     parameters.update(
         {
-            "context": context,
-            "reserved_keywords": context["reserved_keywords"]+reserved_expressions_keys,
+            "reserved_keywords": reserved_keywords+reserved_expressions_keys,
         }
     )
-    parsing_parameters = context["parsing_parameters_generator"](parameters, unsplittable_symbols=reserved_expressions_keys)
+    parsing_parameters = context.parsing_parameters_generator(parameters, unsplittable_symbols=reserved_expressions_keys)
     parameters.update(
         {
             "parsing_parameters": parsing_parameters,
@@ -279,7 +293,7 @@ def _build_parameters(params: dict[str, Any], response: str, answer: str) -> dic
     )
 
     # CONSIDER: Can this be moved into the preprocessing procedures in a consistent way?
-    # Can it be turned into its own context? Or moved into the determine_context procedure?
+    # Can it be turned into its own context? Or moved into the select_context procedure?
     # What solution will be most consistently reusable?
     if parameters.get("is_latex", False):
         parameters["reserved_expressions_strings"]["learner"].update(
@@ -311,11 +325,12 @@ def _add_notation_warnings(evaluation_result: EvaluationResult, response: str, p
 
 
 def _set_preview_fields(
-    evaluation_result: EvaluationResult, response: str, parameters: Parameters, reserved_expressions: Mapping[str, Mapping[str, Any]]
+    context: Context, evaluation_result: EvaluationResult, response: str, parameters: Parameters,
+    reserved_expressions: Mapping[str, Mapping[str, Any]]
 ) -> None:
     """Sets the `latex` and `simplified` forms of the response on `evaluation_result`."""
     try:
-        preview = parameters["context"]["expression_preview"](response, deepcopy(parameters))["preview"]
+        preview = context.expression_preview(response, deepcopy(parameters))["preview"]
     except Exception:
         evaluation_result.latex = response
         evaluation_result.simplified = response
@@ -332,22 +347,21 @@ def _set_preview_fields(
 
 
 def _build_evaluation_parameters(
-    parameters: Parameters, reserved_expressions: Mapping[str, Mapping[str, Any]], criteria: Mapping[str, Any], evaluation_result: EvaluationResult
-) -> FrozenValuesDictionary:
-    return FrozenValuesDictionary(
-        {
-            "reserved_expressions_strings": parameters["reserved_expressions_strings"],
-            "reserved_expressions": {**reserved_expressions["learner"], **reserved_expressions["task"]},
-            "criteria": criteria,
-            "disabled_evaluation_nodes": parameters.get("disabled_evaluation_nodes", set()),
-            "parsing_parameters": parameters["parsing_parameters"],
-            "evaluation_result": evaluation_result,
-            "multiple_answers_criteria": parameters.get("multiple_answers_criteria", "all"),
-            "numerical": parameters.get("numerical", False),
-            "atol": parameters.get("atol", 0),
-            "rtol": parameters.get("rtol", 0),
-            "custom_feedback": parameters.get("custom_feedback", {}),
-        }
+    parameters: Parameters, reserved_expressions: Mapping[str, Mapping[str, Any]], criteria: Mapping[str, ExprNode],
+    evaluation_result: EvaluationResult
+) -> EvaluationParameters:
+    return EvaluationParameters(
+        reserved_expressions_strings=parameters["reserved_expressions_strings"],
+        reserved_expressions={**reserved_expressions["learner"], **reserved_expressions["task"]},
+        criteria=criteria,
+        disabled_evaluation_nodes=parameters.get("disabled_evaluation_nodes", set()),
+        parsing_parameters=parameters["parsing_parameters"],
+        evaluation_result=evaluation_result,
+        multiple_answers_criteria=parameters.get("multiple_answers_criteria", "all"),
+        numerical=parameters.get("numerical", False),
+        atol=parameters.get("atol", 0),
+        rtol=parameters.get("rtol", 0),
+        custom_feedback=parameters.get("custom_feedback", {}),
     )
 
 
@@ -363,28 +377,28 @@ def evaluation_function(response: str, answer: str, params: dict[str, Any], incl
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
-    parameters = _build_parameters(params, response, answer)
-    context = parameters["context"]
+    context = select_context(params)
+    parameters = _build_parameters(context, params, response, answer)
 
     _add_notation_warnings(evaluation_result, response, params)
 
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(
-        parameters["reserved_expressions_strings"], parameters, evaluation_result
+        context, parameters["reserved_expressions_strings"], parameters, evaluation_result
     )
     if reserved_expressions_success is False:
         return evaluation_result.serialise(include_test_data)
 
-    _set_preview_fields(evaluation_result, response, parameters, reserved_expressions)
+    _set_preview_fields(context, evaluation_result, response, parameters, reserved_expressions)
 
-    criteria_parser = context["generate_criteria_parser"](reserved_expressions)
-    criteria = create_criteria_dict(criteria_parser, parameters)
+    criteria_parser = context.generate_criteria_parser(reserved_expressions)
+    criteria = create_criteria_dict(context, criteria_parser, parameters)
 
     evaluation_parameters = _build_evaluation_parameters(parameters, reserved_expressions, criteria, evaluation_result)
 
     # Performs evaluation of response
-    feedback_procedures = context["feedback_procedure_generator"](evaluation_parameters)
+    feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
     for graph in feedback_procedures.values():
-        _disable_evaluation_nodes(graph, evaluation_parameters["disabled_evaluation_nodes"])
+        _disable_evaluation_nodes(graph, evaluation_parameters.disabled_evaluation_nodes)
     generate_feedback(feedback_procedures, evaluation_parameters)
 
     result = evaluation_result.serialise(include_test_data)
