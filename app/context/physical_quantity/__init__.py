@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from copy import deepcopy
+from types import MappingProxyType
 from typing import Any
 
 from lambdafeedback.criteria import CriteriaGraph
 from lambdafeedback.expression_parsing import ExpressionParams, SympyParsingConfig
 from lambdafeedback.units import QuantityParams, preprocess_quantity
 
+from app.context.base import Context
 from app.context.defaults import base_default_parameters
 from app.context.physical_quantity.criteria_parser import generate_criteria_parser
 from app.context.physical_quantity.graphs.match import criterion_match_node
@@ -75,16 +77,16 @@ default_parameters.update(
 )
 
 
-default_criteria = ["response matches answer"]
+default_criteria = ("response matches answer",)
 
 
-context: dict[str, Any] = {
-    "expression_preview": preview_function,
-    "generate_criteria_parser": generate_criteria_parser,
-    "expression_preprocess": expression_preprocess,
-    "expression_parse": parse_quantity,
-    "default_parameters": default_parameters,
-    "default_criteria": default_criteria,
-    "feedback_procedure_generator": feedback_procedure_generator,
-    "parsing_parameters_generator": parsing_parameters_generator,
-}
+context = Context(
+    expression_preview=preview_function,
+    generate_criteria_parser=generate_criteria_parser,
+    expression_preprocess=expression_preprocess,
+    expression_parse=parse_quantity,
+    default_parameters=MappingProxyType(default_parameters),
+    default_criteria=default_criteria,
+    feedback_procedure_generator=feedback_procedure_generator,
+    parsing_parameters_generator=parsing_parameters_generator,
+)
