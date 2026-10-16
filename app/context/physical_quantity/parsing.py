@@ -36,6 +36,11 @@ def parse_quantity(name: str, expr: str, parameters: Parameters, evaluation_resu
     quantity = parse_physical_quantity(expr, parameters["quantity"], name)
     for index, reverted in enumerate(quantity.reverted_units):
         evaluation_result.add_feedback(f"{name}_REVERTED_UNIT_{index}", reverted_unit_feedback(reverted))
+    return parsed_quantity(quantity)
+
+
+def parsed_quantity(quantity: PhysicalQuantity) -> ParsedQuantity:
+    """`quantity` with the forms of its value and unit used by the criteria."""
     standard_value: Expression | None
     if quantity.standard_values is None:
         standard_value = None
