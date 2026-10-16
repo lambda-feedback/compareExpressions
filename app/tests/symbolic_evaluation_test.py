@@ -1,5 +1,8 @@
 import pytest
 
+from sympy import Integer, Symbol, oo, zoo
+
+from app.context.symbolic.comparison import do_comparison_infinite
 from app.evaluation import evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2103,6 +2106,36 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
+
+    @pytest.mark.parametrize(
+        "response,answer,is_correct",
+        [
+            ("1/0", "x", False),
+            ("zoo", "1", False),
+            ("oo", "oo", True),
+        ]
+    )
+    def test_complex_infinity(self, response, answer, is_correct):
+        # Used to raise TypeError: Invalid comparison of non-real zoo (bug 10 in the bug report)
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "comparison_symbol,lhs,rhs,expected",
+        [
+            ("=", zoo, Symbol("x"), False),
+            ("=", zoo, Integer(1), False),
+            ("=", oo, oo, True),
+            (">", zoo, Integer(1), None),
+        ]
+    )
+    def test_do_comparison_infinite_only_evaluates_requested_comparison(self, comparison_symbol, lhs, rhs, expected):
+        # The end-to-end test above only reaches this function in some runs, so check it directly
+        assert do_comparison_infinite(comparison_symbol, lhs, rhs) is expected
 
     def test_equality_expression_mismatch_with_custom_criteria(self):
         response = "x-0.883x^2=0.251X^3"
