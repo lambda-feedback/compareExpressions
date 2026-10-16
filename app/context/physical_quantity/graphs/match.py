@@ -11,31 +11,31 @@ from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.physical_quantity.comparison import comparison_function, is_proportional, parse_criterion_sides
-from app.types import Parameters
+from app.evaluation_parameters import EvaluationParameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
 is_equal = comparison_function("=")
 
 
-def _tolerances(parameters: Parameters) -> tuple[float, float]:
+def _tolerances(parameters: EvaluationParameters) -> tuple[float, float]:
     """`(rtol, atol)`, with `rtol` taken from the significant figures of the answer if no tolerance is given."""
-    rtol = parameters["parsing_parameters"]["rtol"]
-    atol = parameters["parsing_parameters"]["atol"]
-    if parameters.get('atol', 0) == 0 and parameters.get('rtol', 0) == 0:
-        ans = parameters["reserved_expressions"]["answer"].quantity.value
+    rtol = parameters.parsing_parameters["rtol"]
+    atol = parameters.parsing_parameters["atol"]
+    if parameters.atol == 0 and parameters.rtol == 0:
+        ans = parameters.reserved_expressions["answer"].quantity.value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
     return rtol, atol
 
 
-def _missing_or_unexpected(parameters: Parameters, label: str, lhs_string: str, rhs_string: str) -> ReachedCriteria | None:
+def _missing_or_unexpected(parameters: EvaluationParameters, label: str, lhs_string: str, rhs_string: str) -> ReachedCriteria | None:
     """Tag for a response missing a value or unit that the answer has (or vice versa), otherwise None."""
     # TODO: Better system for identifying if we expect the response to have value/unit or not
     if ('answer' in lhs_string and 'response' in rhs_string) or ('response' in lhs_string and 'answer' in rhs_string):
-        res_value = parameters["reserved_expressions"]["response"].original_value
-        ans_value = parameters["reserved_expressions"]["answer"].original_value
-        res_unit = parameters["reserved_expressions"]["response"].original_unit
-        ans_unit = parameters["reserved_expressions"]["answer"].original_unit
+        res_value = parameters.reserved_expressions["response"].original_value
+        ans_value = parameters.reserved_expressions["answer"].original_value
+        res_unit = parameters.reserved_expressions["response"].original_unit
+        ans_unit = parameters.reserved_expressions["answer"].original_unit
         if res_value is None and ans_value is not None:
             return {label+"_MISSING_VALUE": {"lhs": lhs_string, "rhs": rhs_string}}
         if res_value is not None and ans_value is None:
@@ -47,28 +47,28 @@ def _missing_or_unexpected(parameters: Parameters, label: str, lhs_string: str, 
     return None
 
 
-def _within_tolerance(parameters: Parameters, lhs_string: str, rhs_string: str, rtol: float, atol: float) -> bool:
+def _within_tolerance(parameters: EvaluationParameters, lhs_string: str, rhs_string: str, rtol: float, atol: float) -> bool:
     """Whether the standard values of the response and answer are within the numerical tolerances."""
     value_match = False
     # TODO: better analysis of where `answer` is found in the criteria so that
     #       numerical tolerances can be applied appropriately
     if rtol > 0 or atol > 0:
         if (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer'):
-            ans = parameters["reserved_expressions"]["answer"].standard_value.simplify()
-            res = parameters["reserved_expressions"]["response"].standard_value.simplify()
+            ans = parameters.reserved_expressions["answer"].standard_value.simplify()
+            res = parameters.reserved_expressions["response"].standard_value.simplify()
         if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
             if rtol > 0 and (ans != 0):
                 value_match = bool(abs(float((ans-res)/ans)) < rtol)
             elif atol > 0 or (ans == 0):
-                answer_unit_factor = float(parameters["reserved_expressions"]["answer"].quantity.unit_factor)
+                answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
                 value_match = bool(abs(float(ans-res)) < atol*answer_unit_factor)
     return value_match
 
 
 def _quantity_match(
-    parameters: Parameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str, rtol: float, atol: float
+    parameters: EvaluationParameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str, rtol: float, atol: float
 ) -> Evaluate:
-    reserved_expressions = parameters["reserved_expressions"].items()
+    reserved_expressions = parameters.reserved_expressions.items()
 
     def quantity_match(_response: Any) -> ReachedCriteria:
         missing_or_unexpected = _missing_or_unexpected(parameters, label, lhs_string, rhs_string)
@@ -87,8 +87,8 @@ def _quantity_match(
     return quantity_match
 
 
-def _dimension_match(parameters: Parameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str) -> Evaluate:
-    reserved_expressions = parameters["reserved_expressions"].items()
+def _dimension_match(parameters: EvaluationParameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str) -> Evaluate:
+    reserved_expressions = parameters.reserved_expressions.items()
 
     def dimension_match(_response: Any) -> ReachedCriteria:
         substitutions = [(key, expr.dimension) for (key, expr) in reserved_expressions]
@@ -97,8 +97,8 @@ def _dimension_match(parameters: Parameters, label: str, lhs: Basic, rhs: Basic,
     return dimension_match
 
 
-def _unit_comparison(parameters: Parameters, label: str, lhs: Basic, rhs: Basic) -> Evaluate:
-    reserved_expressions = parameters["reserved_expressions"].items()
+def _unit_comparison(parameters: EvaluationParameters, label: str, lhs: Basic, rhs: Basic) -> Evaluate:
+    reserved_expressions = parameters.reserved_expressions.items()
 
     def unit_comparison(_response: Any) -> ReachedCriteria:
         substitutions = [(key, expr.original_unit) for (key, expr) in reserved_expressions]
@@ -254,7 +254,7 @@ def _add_match_nodes(
     )
 
 
-def criterion_match_node(criterion: ExprNode, parameters: Parameters, label: str | None = None) -> CriteriaGraph:
+def criterion_match_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     graph = CriteriaGraph(label)  # type: ignore[arg-type]  # Bug 8 in the bug report: label is None here
     END = graph.add_end_node()
     rtol, atol = _tolerances(parameters)

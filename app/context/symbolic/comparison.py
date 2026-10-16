@@ -10,7 +10,8 @@ from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.operators import COMPARISON_OPERATORS
 from app.context.symbolic.numerical import compare_numerically
-from app.types import Parameters, SubstitutionList, Substitutions
+from app.evaluation_parameters import EvaluationParameters
+from app.types import SubstitutionList, Substitutions
 
 
 def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: Iterable[str]) -> SympyParsingConfig:
@@ -40,7 +41,7 @@ def parse_where_substitutions(subs_node: ExprNode, parsing_params: SympyParsingC
     return local_subs
 
 
-def check_criterion(criterion: ExprNode, parameters_dict: Parameters) -> bool | None:
+def check_criterion(criterion: ExprNode, parameters_dict: EvaluationParameters) -> bool | None:
     label = criterion.label.strip()
     if label in {"EQUALITY", "WRITTEN_AS"}:
         result = check_equality(criterion, parameters_dict)
@@ -56,10 +57,10 @@ def check_criterion(criterion: ExprNode, parameters_dict: Parameters) -> bool | 
 
 
 def create_expressions_for_comparison(
-    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Substitutions = ()
+    criterion: ExprNode, parameters_dict: EvaluationParameters, local_substitutions: Substitutions = ()
 ) -> tuple[Basic, Basic]:
-    reserved_expressions = list(parameters_dict["reserved_expressions"].items())
-    parsing_params = unsimplified_with_unsplittable(parameters_dict["parsing_parameters"], parameters_dict["reserved_expressions"].keys())
+    reserved_expressions = list(parameters_dict.reserved_expressions.items())
+    parsing_params = unsimplified_with_unsplittable(parameters_dict.parsing_parameters, parameters_dict.reserved_expressions.keys())
     lhs = criterion.children[0].content_string()
     rhs = criterion.children[1].content_string()
     lhs_expr = parse_expression(lhs, parsing_params).subs(local_substitutions).subs(reserved_expressions).subs(local_substitutions)
@@ -100,7 +101,7 @@ def do_comparison(comparison_symbol: str, expression: Basic) -> bool | None:
 
 
 def check_equality(
-    criterion: ExprNode, parameters_dict: Parameters, local_substitutions: Substitutions = ()
+    criterion: ExprNode, parameters_dict: EvaluationParameters, local_substitutions: Substitutions = ()
 ) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
@@ -140,13 +141,13 @@ def check_equality(
     return compare_numerically(lhs_expr, rhs_expr, parameters_dict)
 
 
-def check_order(criterion: ExprNode, parameters_dict: Parameters) -> bool | None:
+def check_order(criterion: ExprNode, parameters_dict: EvaluationParameters) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = do_comparison(criterion.content, lhs_expr-rhs_expr)
     return result
 
 
-def check_proportionality(criterion: ExprNode, parameters_dict: Parameters) -> bool | None:
+def check_proportionality(criterion: ExprNode, parameters_dict: EvaluationParameters) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = None
     if lhs_expr.cancel().simplify().simplify() != 0:
@@ -160,7 +161,7 @@ def check_proportionality(criterion: ExprNode, parameters_dict: Parameters) -> b
     return result
 
 
-def check_contains_symbol(criterion: ExprNode, parameters_dict: Parameters) -> bool:
+def check_contains_symbol(criterion: ExprNode, parameters_dict: EvaluationParameters) -> bool:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict)
     result = rhs_expr in lhs_expr.atoms()
     return result

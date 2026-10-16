@@ -8,14 +8,15 @@ from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.operators import COMPARISON_OPERATORS
-from app.types import Parameters, Substitutions
+from app.evaluation_parameters import EvaluationParameters
+from app.types import Substitutions
 
 NONE_PLACEHOLDER = Symbol('NONE_PLACEHOLDER')
 
 
-def parse_criterion_sides(criterion: ExprNode, parameters: Parameters) -> tuple[str, str, Basic, Basic]:
+def parse_criterion_sides(criterion: ExprNode, parameters: EvaluationParameters) -> tuple[str, str, Basic, Basic]:
     """The left- and right-hand sides of `criterion` as strings, and parsed without simplification."""
-    parsing_params = parameters["parsing_parameters"]["sympy"].replace(simplify=False)
+    parsing_params = parameters.parsing_parameters["sympy"].replace(simplify=False)
     lhs_string = criterion.children[0].content_string()
     rhs_string = criterion.children[1].content_string()
     return lhs_string, rhs_string, parse_expression(lhs_string, parsing_params), parse_expression(rhs_string, parsing_params)

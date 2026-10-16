@@ -7,11 +7,11 @@ from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
 from app.context.symbolic.comparison import check_criterion
-from app.types import Parameters
+from app.evaluation_parameters import EvaluationParameters
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
-def criterion_eval_node(criterion: ExprNode, parameters_dict: Parameters) -> CriteriaGraph:
+def criterion_eval_node(criterion: ExprNode, parameters_dict: EvaluationParameters) -> CriteriaGraph:
     feedback_string_generator_inputs = {'criterion': criterion}
     label = criterion.content_string()
 

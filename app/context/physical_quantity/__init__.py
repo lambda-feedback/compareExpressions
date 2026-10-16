@@ -15,6 +15,7 @@ from app.context.physical_quantity.criteria_parser import generate_criteria_pars
 from app.context.physical_quantity.graphs.match import criterion_match_node
 from app.context.physical_quantity.graphs.order import greater_than_node, greater_than_or_equal_node, less_than_node, less_than_or_equal_node
 from app.context.physical_quantity.parsing import parse_quantity
+from app.evaluation_parameters import EvaluationParameters
 from app.types import GraphTemplate, Parameters
 from app.preview.physical_quantity import preview_function
 
@@ -32,9 +33,9 @@ graph_templates: dict[str, GraphTemplate] = {
 }
 
 
-def feedback_procedure_generator(parameters_dict: Parameters) -> dict[str, CriteriaGraph]:
+def feedback_procedure_generator(parameters_dict: EvaluationParameters) -> dict[str, CriteriaGraph]:
     graphs = dict()
-    for (label, criterion) in parameters_dict["criteria"].items():
+    for (label, criterion) in parameters_dict.criteria.items():
         graph_template = graph_templates.get(criterion.label.strip(), criterion_match_node)
         graphs.update({label: graph_template(criterion, parameters_dict)})
     return graphs
