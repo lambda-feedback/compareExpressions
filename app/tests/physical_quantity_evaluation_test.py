@@ -576,6 +576,27 @@ class TestEvaluationFunction():
             assert result["is_correct"] is is_correct
 
     @pytest.mark.parametrize(
+        "criteria,is_correct",
+        [
+            # Only check that these no longer raise: the units in the criterion aren't parsed yet
+            ("response > 1.5 m", None),
+            ("response > 1.5 metre", None),
+            ("response > answer", True),
+        ]
+    )
+    def test_order_criteria_against_written_out_quantity(self, criteria, is_correct):
+        # Used to raise TypeError: cannot determine truth value of Relational (bug 14 in the bug report)
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        result = evaluation_function("2.1 m", "1 m", params)
+        if is_correct is not None:
+            assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
         "ans,res",
         [
             ("10 ohm", "10 Ω"),
