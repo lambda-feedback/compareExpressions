@@ -239,3 +239,6 @@ grep -v lambdafeedback app/requirements.txt | pip install -r /dev/stdin
 The tests are in `tests/` and fall into two main groups: evaluation tests (`evaluation_test.py` and `*_evaluation_test.py`) and preview tests (`*_preview_test.py`). Run them all with `pytest` from the repository root. The base image ships its own tests in the same `tests/` directory (e.g. `commands_test.py`, `parse_test.py`), so don't reuse those file names.
 
 The deployed function's `healthcheck` command loads `unittest` classes from `evaluation_tests.py` and `preview_tests.py`; `evaluation_tests.py` runs the same pytest suite inside the image, so new tests only need to be written for pytest. Tests marked `@pytest.mark.slow` are left out of the healthcheck to keep it within the request timeout; mark any test function whose cases take more than about 0.5s in total.
+
+# Type checking
+All code in `app/` except the tests is type annotated and checked with mypy, using the configuration in `mypy.ini`. Run `mypy` from the repository root (CI installs `mypy==1.15.0`). Type aliases shared by the contexts, such as `Parameters` and `GraphTemplate`, are in `context/types.py`. Each `# type: ignore` comment says why it is there; most mark a place where an honest type exposes a known bug.

@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
 from lambdafeedback.slr_parsing import CatchAll, Lexeme, SLRParser, TokenPattern, create_node, infix, operate
 
 
-def generate_criteria_parser(reserved_expressions):
+def generate_criteria_parser(reserved_expressions: Mapping[str, Any]) -> SLRParser:
     start_symbol = "START"
     end_symbol = "END"
     null_symbol = "NULL"
@@ -16,7 +21,7 @@ def generate_criteria_parser(reserved_expressions):
         ">",
     }
 
-    token_list = [
+    token_list: list[TokenPattern | CatchAll] = [
         TokenPattern(start_symbol, start_symbol),
         TokenPattern(end_symbol, end_symbol),
         TokenPattern(null_symbol, null_symbol),

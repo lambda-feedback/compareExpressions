@@ -1,21 +1,27 @@
-from copy import deepcopy
+from __future__ import annotations
 
+from collections.abc import Iterable
+from copy import deepcopy
+from typing import Any
+
+from lambdafeedback.criteria import CriteriaGraph
 from lambdafeedback.expression_parsing import ExpressionParams, SympyParsingConfig
 from lambdafeedback.units import QuantityParams, preprocess_quantity
 
 from ...preview.physical_quantity import preview_function
 from ..defaults import base_default_parameters
+from ..types import GraphTemplate, Parameters
 from .criteria_parser import generate_criteria_parser
 from .graphs.match import criterion_match_node
 from .graphs.order import greater_than_node, greater_than_or_equal_node, less_than_node, less_than_or_equal_node
 from .parsing import parse_quantity
 
 
-def expression_preprocess(name, expr, parameters):
+def expression_preprocess(name: str, expr: str, parameters: Parameters) -> str:
     return preprocess_quantity(expr, QuantityParams.from_dict(parameters), name=name)
 
 
-graph_templates = {
+graph_templates: dict[str, GraphTemplate] = {
     "matches": criterion_match_node,
     ">": greater_than_node,
     ">=": greater_than_or_equal_node,
@@ -24,7 +30,7 @@ graph_templates = {
 }
 
 
-def feedback_procedure_generator(parameters_dict):
+def feedback_procedure_generator(parameters_dict: Parameters) -> dict[str, CriteriaGraph]:
     graphs = dict()
     for (label, criterion) in parameters_dict["criteria"].items():
         graph_template = graph_templates.get(criterion.label.strip(), criterion_match_node)
@@ -47,7 +53,9 @@ QUANTITY_PARSING_PARAMETERS = (
 )
 
 
-def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
+def parsing_parameters_generator(
+    params: Parameters, unsplittable_symbols: Iterable[str] = (), symbol_assumptions: Iterable[tuple[str, str]] = ()
+) -> dict[str, Any]:
     return {
         "sympy": SympyParsingConfig.from_params(ExpressionParams.from_dict(params)),
         "quantity": QuantityParams.from_dict({key: params[key] for key in QUANTITY_PARSING_PARAMETERS if key in params}),
@@ -70,7 +78,7 @@ default_parameters.update(
 default_criteria = ["response matches answer"]
 
 
-context = {
+context: dict[str, Any] = {
     "expression_preview": preview_function,
     "generate_criteria_parser": generate_criteria_parser,
     "expression_preprocess": expression_preprocess,

@@ -1,10 +1,14 @@
 """Variations of an expression with one operation changed, used to identify how an incorrect response was computed."""
 
-from sympy import Add, Pow, Mul
+from __future__ import annotations
+
+from collections.abc import Callable
+
+from sympy import Add, Basic, Pow, Mul
 
 
-def find_coords_for_node_type(expression, node_type):
-    stack = [(expression, tuple())]
+def find_coords_for_node_type(expression: Basic, node_type: type[Basic]) -> list[tuple[int, ...]]:
+    stack: list[tuple[Basic, tuple[int, ...]]] = [(expression, tuple())]
     node_coords = []
     while len(stack) > 0:
         (expr, coord) = stack.pop()
@@ -15,7 +19,9 @@ def find_coords_for_node_type(expression, node_type):
     return node_coords
 
 
-def replace_node_variations(expression, type_of_node, replacement_function):
+def replace_node_variations(
+    expression: Basic, type_of_node: type[Basic], replacement_function: Callable[[Basic, int], Basic]
+) -> list[Basic]:
     variations = []
     list_of_coords = find_coords_for_node_type(expression, type_of_node)
     for coords in list_of_coords:
@@ -31,19 +37,19 @@ def replace_node_variations(expression, type_of_node, replacement_function):
     return variations
 
 
-def one_addition_to_subtraction(expression):
-    def addition_to_subtraction(node, k):
+def one_addition_to_subtraction(expression: Basic) -> list[Basic]:
+    def addition_to_subtraction(node: Basic, k: int) -> Basic:
         return node - 2*node.args[k]
     variations = replace_node_variations(expression, Add, addition_to_subtraction)
     return variations
 
 
-def one_swap_addition_and_multiplication(expression):
+def one_swap_addition_and_multiplication(expression: Basic) -> list[Basic]:
 
-    def addition_to_multiplication(node, k):
+    def addition_to_multiplication(node: Basic, k: int) -> Basic:
         return node - node.args[k-1] - node.args[k] + node.args[k-1] * node.args[k]
 
-    def multiplication_to_addition(node, k):
+    def multiplication_to_addition(node: Basic, k: int) -> Basic:
         return node - 2*node.args[k]
 
     variations = replace_node_variations(expression, Add, addition_to_multiplication)
@@ -52,8 +58,8 @@ def one_swap_addition_and_multiplication(expression):
     return variations
 
 
-def one_exponent_flip(expression):
-    def exponent_flip(node, k):
+def one_exponent_flip(expression: Basic) -> list[Basic]:
+    def exponent_flip(node: Basic, k: int) -> Basic:
         return node**(-1)
     variations = replace_node_variations(expression, Pow, exponent_flip)
     return variations

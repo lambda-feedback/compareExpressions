@@ -1,7 +1,11 @@
-from sympy import pi, N
+from __future__ import annotations
+
+from sympy import Basic, pi, N
+
+from ..types import Parameters
 
 
-def compare_numerically(lhs_expr, rhs_expr, parameters_dict):
+def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters_dict: Parameters) -> bool:
     """
     Compares `lhs_expr` and `rhs_expr` numerically using the `atol` and `rtol` parameters.
 
@@ -16,7 +20,7 @@ def compare_numerically(lhs_expr, rhs_expr, parameters_dict):
     # REMARK: 'pi' should be a reserved symbol but it is sometimes not treated as one, possibly because of input symbols.
     # The two lines below this comments fixes the issue but a more robust solution should be found for cases where there
     # are other reserved symbols.
-    def replace_pi(expr):
+    def replace_pi(expr: Basic) -> Basic:
         pi_symbol = pi
         for s in expr.free_symbols:
             if str(s) == 'pi':

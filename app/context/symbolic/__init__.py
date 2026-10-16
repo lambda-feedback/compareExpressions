@@ -1,5 +1,10 @@
-from copy import deepcopy
+from __future__ import annotations
 
+from collections.abc import Iterable
+from copy import deepcopy
+from typing import TYPE_CHECKING, Any
+
+from lambdafeedback.criteria import CriteriaGraph, build_criteria_parser
 from lambdafeedback.expression_parsing import (
     ExpressionParams,
     SympyParsingConfig,
@@ -9,22 +14,24 @@ from lambdafeedback.expression_parsing import (
 
 from ...preview.symbolic import preview_function
 from ..defaults import base_default_parameters
+from ..types import Expression, GraphTemplate, Parameters
 from .graphs.equivalence import criterion_equality_node
 from .graphs.generic import criterion_eval_node
 from .graphs.substitution import criterion_where_node
 from .graphs.syntactical_form import criterion_written_as_node
 
-from lambdafeedback.criteria import build_criteria_parser
+if TYPE_CHECKING:
+    from ...result import EvaluationResult
 
 
 default_parameters = deepcopy(base_default_parameters)
 
 
-def expression_preprocess(name, expr, parameters):
+def expression_preprocess(name: str, expr: str, parameters: Parameters) -> str:
     return preprocess_expression(expr, ExpressionParams.from_dict(parameters), name=name)
 
 
-def expression_parse(name, expr, parameters, evaluation_result):
+def expression_parse(name: str, expr: str, parameters: SympyParsingConfig, evaluation_result: EvaluationResult) -> Expression:
     expressions = parse_expressions(expr, parameters)
     return expressions[0] if len(expressions) == 1 else set(expressions)
 
@@ -32,14 +39,14 @@ def expression_parse(name, expr, parameters, evaluation_result):
 default_criteria = ["response = answer"]
 
 
-graph_templates = {
+graph_templates: dict[str, GraphTemplate] = {
     "EQUALITY": criterion_equality_node,
     "WHERE": criterion_where_node,
     "WRITTEN_AS": criterion_written_as_node,
 }
 
 
-def feedback_procedure_generator(parameters_dict):
+def feedback_procedure_generator(parameters_dict: Parameters) -> dict[str, CriteriaGraph]:
     graphs = dict()
     criteria = set(parameters_dict["criteria"].items())
     for (label, criterion) in criteria:
@@ -48,11 +55,13 @@ def feedback_procedure_generator(parameters_dict):
     return graphs
 
 
-def parsing_parameters_generator(params, unsplittable_symbols=tuple(), symbol_assumptions=tuple()):
+def parsing_parameters_generator(
+    params: Parameters, unsplittable_symbols: Iterable[str] = (), symbol_assumptions: Iterable[tuple[str, str]] = ()
+) -> SympyParsingConfig:
     return SympyParsingConfig.from_params(ExpressionParams.from_dict(params), unsplittable_symbols, symbol_assumptions)
 
 
-context = {
+context: dict[str, Any] = {
     "expression_preview": preview_function,
     "generate_criteria_parser": build_criteria_parser,
     "expression_preprocess": expression_preprocess,

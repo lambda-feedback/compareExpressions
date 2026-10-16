@@ -1,14 +1,23 @@
-from lambdafeedback.criteria import CriteriaGraph
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Any
+
+from sympy import Basic
+
+from lambdafeedback.criteria import CriteriaGraph, Evaluate, OutputNode, ReachedCriteria
 from lambdafeedback.expression_parsing import compute_relative_tolerance_from_significant_decimals
+from lambdafeedback.slr_parsing import ExprNode
 
 from ....feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 from ...graph_helpers import attach_terminal_criterion, outcome_tag
+from ...types import Parameters
 from ..comparison import comparison_function, is_proportional, parse_criterion_sides
 
 is_equal = comparison_function("=")
 
 
-def _tolerances(parameters):
+def _tolerances(parameters: Parameters) -> tuple[float, float]:
     """`(rtol, atol)`, with `rtol` taken from the significant figures of the answer if no tolerance is given."""
     rtol = parameters["parsing_parameters"]["rtol"]
     atol = parameters["parsing_parameters"]["atol"]
@@ -19,7 +28,7 @@ def _tolerances(parameters):
     return rtol, atol
 
 
-def _missing_or_unexpected(parameters, label, lhs_string, rhs_string):
+def _missing_or_unexpected(parameters: Parameters, label: str, lhs_string: str, rhs_string: str) -> ReachedCriteria | None:
     """Tag for a response missing a value or unit that the answer has (or vice versa), otherwise None."""
     # TODO: Better system for identifying if we expect the response to have value/unit or not
     if ('answer' in lhs_string and 'response' in rhs_string) or ('response' in lhs_string and 'answer' in rhs_string):
@@ -38,7 +47,7 @@ def _missing_or_unexpected(parameters, label, lhs_string, rhs_string):
     return None
 
 
-def _within_tolerance(parameters, lhs_string, rhs_string, rtol, atol):
+def _within_tolerance(parameters: Parameters, lhs_string: str, rhs_string: str, rtol: float, atol: float) -> bool:
     """Whether the standard values of the response and answer are within the numerical tolerances."""
     value_match = False
     # TODO: better analysis of where `answer` is found in the criteria so that
@@ -56,10 +65,12 @@ def _within_tolerance(parameters, lhs_string, rhs_string, rtol, atol):
     return value_match
 
 
-def _quantity_match(parameters, label, lhs, rhs, lhs_string, rhs_string, rtol, atol):
+def _quantity_match(
+    parameters: Parameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str, rtol: float, atol: float
+) -> Evaluate:
     reserved_expressions = parameters["reserved_expressions"].items()
 
-    def quantity_match(_response):
+    def quantity_match(_response: Any) -> ReachedCriteria:
         missing_or_unexpected = _missing_or_unexpected(parameters, label, lhs_string, rhs_string)
         if missing_or_unexpected is not None:
             return missing_or_unexpected
@@ -76,20 +87,20 @@ def _quantity_match(parameters, label, lhs, rhs, lhs_string, rhs_string, rtol, a
     return quantity_match
 
 
-def _dimension_match(parameters, label, lhs, rhs, lhs_string, rhs_string):
+def _dimension_match(parameters: Parameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str) -> Evaluate:
     reserved_expressions = parameters["reserved_expressions"].items()
 
-    def dimension_match(_response):
+    def dimension_match(_response: Any) -> ReachedCriteria:
         substitutions = [(key, expr["dimension"]) for (key, expr) in reserved_expressions]
         dimension_match, _ = is_proportional(lhs, rhs, substitutions)
         return outcome_tag(label+"_DIMENSION_MATCH", dimension_match is True, {"lhs": lhs_string, "rhs": rhs_string})
     return dimension_match
 
 
-def _unit_comparison(parameters, label, lhs, rhs):
+def _unit_comparison(parameters: Parameters, label: str, lhs: Basic, rhs: Basic) -> Evaluate:
     reserved_expressions = parameters["reserved_expressions"].items()
 
-    def unit_comparison(_response):
+    def unit_comparison(_response: Any) -> ReachedCriteria:
         substitutions = [(key, expr["original"]["unit"]) for (key, expr) in reserved_expressions]
 
         if is_equal(lhs, rhs, substitutions) is True:
@@ -99,11 +110,12 @@ def _unit_comparison(parameters, label, lhs, rhs):
         else:
             local_substitutions = [(key, expr["quantity"].expanded_unit) for (key, expr) in reserved_expressions]
             result, ratio = is_proportional(lhs, rhs, local_substitutions)
-            if result is True and ratio >= 1000:
+            # `is_proportional` returns a ratio whenever the result is True
+            if result is True and ratio is not None and ratio >= 1000:
                 output_tags = {
                     label+"_UNIT_COMPARISON"+"_PREFIX_IS_LARGE": None
                 }
-            elif result is True and ratio <= 1/1000:
+            elif result is True and ratio is not None and ratio <= 1/1000:
                 output_tags = {
                     label+"_UNIT_COMPARISON"+"_PREFIX_IS_SMALL": None
                 }
@@ -116,7 +128,10 @@ def _unit_comparison(parameters, label, lhs, rhs):
     return unit_comparison
 
 
-def _add_match_nodes(graph, END, label, inputs, quantity_match, dimension_match, unit_comparison):
+def _add_match_nodes(
+    graph: CriteriaGraph, END: OutputNode, label: str, inputs: Sequence[ExprNode],
+    quantity_match: Evaluate, dimension_match: Evaluate, unit_comparison: Evaluate,
+) -> None:
     graph.add_evaluation_node(
         label,
         summary=f"Do the quantities {inputs[0]} and {inputs[1]} match?",
@@ -239,8 +254,8 @@ def _add_match_nodes(graph, END, label, inputs, quantity_match, dimension_match,
     )
 
 
-def criterion_match_node(criterion, parameters, label=None):
-    graph = CriteriaGraph(label)
+def criterion_match_node(criterion: ExprNode, parameters: Parameters, label: str | None = None) -> CriteriaGraph:
+    graph = CriteriaGraph(label)  # type: ignore[arg-type]  # Bug 8 in the bug report: label is None here
     END = graph.add_end_node()
     rtol, atol = _tolerances(parameters)
 

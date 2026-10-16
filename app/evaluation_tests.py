@@ -15,7 +15,7 @@ import pytest
 
 class TestEvaluationFunction(unittest.TestCase):
 
-    def test_pytest_suite(self):
+    def test_pytest_suite(self) -> None:
         # The Lambda filesystem is read-only, so pytest's cache is disabled
         exit_code = pytest.main([os.path.dirname(os.path.abspath(__file__)), "-q", "-m", "not slow", "-p", "no:cacheprovider"])
         self.assertEqual(exit_code, pytest.ExitCode.OK)
