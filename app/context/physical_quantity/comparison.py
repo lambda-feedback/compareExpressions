@@ -28,12 +28,16 @@ def _substitute(lhs: Basic, rhs: Basic, substitutions: Substitutions) -> tuple[B
     return lhs.subs(local_substitutions), rhs.subs(local_substitutions)
 
 
-def comparison_function(comparison_operator: str) -> Callable[[Basic, Basic, Substitutions], bool]:
+def comparison_function(comparison_operator: str) -> Callable[[Basic, Basic, Substitutions], bool | None]:
     comparison = COMPARISON_OPERATORS[comparison_operator]
 
-    def comparison_function_inner(lhs: Basic, rhs: Basic, substitutions: Substitutions) -> bool:
+    def comparison_function_inner(lhs: Basic, rhs: Basic, substitutions: Substitutions) -> bool | None:
         expr0, expr1 = _substitute(lhs, rhs, substitutions)
-        return bool(comparison((expr0 - expr1).cancel().simplify().simplify(), 0))
+        try:
+            return bool(comparison((expr0 - expr1).cancel().simplify().simplify(), 0))
+        except TypeError:
+            # The difference still contains symbols, so sympy cannot determine the truth value
+            return None
     return comparison_function_inner
 
 
