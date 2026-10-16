@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
-from lambdafeedback.criteria import FeedbackStringGenerator
 
 from app.feedback.tags import FeedbackTag
+from app.types import FeedbackGenerators
 
 # Format for feedback string entry: criteria["eval_tag"]("criteria_tag")(inputs) = "formatted string" | None
-feedback_generators: dict[str, Callable[[str], FeedbackStringGenerator]] = dict()
+feedback_generators: FeedbackGenerators = dict()
 feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "ABSOLUTE_VALUE_NOTATION_AMBIGUITY": f"Notation in {inputs.get('name', '')} might be ambiguous, use `Abs(.)` instead of `|.|`",
     "BRACKET_NOTATION_MISMATCH": f"Brackets in `{inputs.get('x', '')}` do not match. Every `(`, `[` or `{{` must be closed with the corresponding `)`, `]` or `}}` — different bracket types cannot be mixed to close the same group.",

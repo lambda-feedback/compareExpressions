@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from lambdafeedback.criteria import CriteriaGraph, FeedbackStringGenerator, OutputNode
+from lambdafeedback.criteria import CriteriaGraph, FeedbackStringGenerator, OutputNode, ReachedCriteria
 
 
-def outcome_tag(label: str, result: bool | None, inputs: Mapping[str, Any] | None = None) -> dict[str, Mapping[str, Any] | None]:
+def outcome_tag(label: str, result: bool | None, inputs: Mapping[str, Any] | None = None) -> ReachedCriteria:
     """`{label+"_TRUE": inputs}` if `result` is True, `label+"_FALSE"` if it is False, otherwise `label+"_UNKNOWN"`."""
     if result is True:
         return {label+"_TRUE": inputs}

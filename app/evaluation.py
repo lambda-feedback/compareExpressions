@@ -15,11 +15,11 @@ from lambdafeedback.expression_parsing import (
 
 from app.context.physical_quantity import context as quantity_context
 from app.context.symbolic import context as symbolic_context
-from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
-from app.feedback.symbolic import internal_feedback
+from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators, internal_feedback
 from app.feedback.tags import FeedbackTag, FeedbackTagName
 from app.frozen_dict import FrozenValuesDictionary
 from app.result import EvaluationResult
+from app.types import Parameters
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
@@ -33,7 +33,7 @@ def notation_error_feedback(error: BracketNotationError | AbsoluteValueNotationE
     return FeedbackTag(FeedbackTagName.ABSOLUTE_VALUE_NOTATION_AMBIGUITY, {"name": error.name})
 
 
-def _input_symbol_codes_and_aliases(parameters: Mapping[str, Any]) -> tuple[list[str], list[str]]:
+def _input_symbol_codes_and_aliases(parameters: Parameters) -> tuple[list[str], list[str]]:
     """The codes and (non-empty) aliases of the input symbols, from both `symbols` and the legacy `input_symbols`."""
     codes = list(parameters.get("symbols", dict()))
     aliases = []
@@ -59,7 +59,7 @@ def _raise_on_collisions(keywords: Iterable[str], symbols: Collection[str], kind
         raise Exception("`"+"`, `".join(collisions)+f"` are reserved keywords and cannot be used as input symbol {kind}s.")
 
 
-def determine_context(parameters: Mapping[str, Any]) -> dict[str, Any]:
+def determine_context(parameters: Parameters) -> dict[str, Any]:
     if parameters.get("physical_quantity", False) is True:
         context = deepcopy(quantity_context)
     else:
@@ -80,7 +80,7 @@ def determine_context(parameters: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def parse_reserved_expressions(
-    reserved_expressions: dict[str, dict[str, str]], parameters: Mapping[str, Any], result: EvaluationResult
+    reserved_expressions: dict[str, dict[str, str]], parameters: Parameters, result: EvaluationResult
 ) -> tuple[bool, FrozenValuesDictionary]:
     """
     Input:
@@ -147,7 +147,7 @@ def parse_reserved_expressions(
     return success, reserved_expressions_dict
 
 
-def get_criteria_string(parameters: Mapping[str, Any]) -> str:
+def get_criteria_string(parameters: Parameters) -> str:
     criteria = parameters.get("criteria", None)
     if criteria is None:
         criteria = ",".join(parameters["context"]["default_criteria"])
@@ -180,7 +180,7 @@ def split_criteria(criteria_string: str) -> list[str]:
     return criteria_string_list
 
 
-def create_criteria_dict(criteria_parser: SLRParser, parameters: Mapping[str, Any]) -> FrozenValuesDictionary:
+def create_criteria_dict(criteria_parser: SLRParser, parameters: Parameters) -> FrozenValuesDictionary:
     preprocess = parameters["context"]["expression_preprocess"]
     original_criteria_string = get_criteria_string(parameters)
     try:
@@ -206,7 +206,7 @@ def _disable_evaluation_nodes(graph: CriteriaGraph, disabled_evaluation_nodes: C
             evaluation.replacement = CriteriaGraph.END_LABEL
 
 
-def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_parameters: Mapping[str, Any]) -> None:
+def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_parameters: Parameters) -> None:
     # Generate feedback from criteria graphs
     evaluation_result = evaluation_parameters["evaluation_result"]
     response = evaluation_parameters["reserved_expressions"]["response"]
@@ -304,14 +304,14 @@ def notation_warnings(response: str, strict_syntax: bool) -> list[str]:
     return tags
 
 
-def _add_notation_warnings(evaluation_result: EvaluationResult, response: str, params: Mapping[str, Any]) -> None:
+def _add_notation_warnings(evaluation_result: EvaluationResult, response: str, params: Parameters) -> None:
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
     for tag in notation_warnings(response, params.get("strict_syntax", False)):
         evaluation_result.add_feedback(tag, symbolic_comparison_internal_messages(tag)(dict()))
 
 
 def _set_preview_fields(
-    evaluation_result: EvaluationResult, response: str, parameters: Mapping[str, Any], reserved_expressions: Mapping[str, Mapping[str, Any]]
+    evaluation_result: EvaluationResult, response: str, parameters: Parameters, reserved_expressions: Mapping[str, Mapping[str, Any]]
 ) -> None:
     """Sets the `latex` and `simplified` forms of the response on `evaluation_result`."""
     try:
@@ -332,7 +332,7 @@ def _set_preview_fields(
 
 
 def _build_evaluation_parameters(
-    parameters: Mapping[str, Any], reserved_expressions: Mapping[str, Mapping[str, Any]], criteria: Mapping[str, Any], evaluation_result: EvaluationResult
+    parameters: Parameters, reserved_expressions: Mapping[str, Mapping[str, Any]], criteria: Mapping[str, Any], evaluation_result: EvaluationResult
 ) -> FrozenValuesDictionary:
     return FrozenValuesDictionary(
         {

@@ -13,7 +13,7 @@ from app.context.physical_quantity.criteria_parser import generate_criteria_pars
 from app.context.physical_quantity.graphs.match import criterion_match_node
 from app.context.physical_quantity.graphs.order import greater_than_node, greater_than_or_equal_node, less_than_node, less_than_or_equal_node
 from app.context.physical_quantity.parsing import parse_quantity
-from app.context.types import GraphTemplate, Parameters
+from app.types import GraphTemplate, Parameters
 from app.preview.physical_quantity import preview_function
 
 

@@ -10,8 +10,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from sympy import Basic
-
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
@@ -29,13 +27,14 @@ from lambdafeedback.expression_parsing import (
 
 from app.feedback.tags import FeedbackTag, FeedbackTagName
 from app.preview.common import ExpressionSyntaxError, Preview, Result
+from app.types import Expression
 
 
 def _as_params(params: ExpressionParams | Mapping[str, Any]) -> ExpressionParams:
     return params if isinstance(params, ExpressionParams) else ExpressionParams.from_dict(params)
 
 
-def parse_symbolic(response: str, params: ExpressionParams) -> tuple[list[Basic | set[Basic]], list[FeedbackTag]]:
+def parse_symbolic(response: str, params: ExpressionParams) -> tuple[list[Expression], list[FeedbackTag]]:
     """Parse a (preprocessed) response into SymPy expressions, one per expression it stands for.
 
     Also returns the feedback raised while converting ``|...|`` notation.

@@ -11,7 +11,7 @@ from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.physical_quantity.comparison import comparison_function, is_proportional, parse_criterion_sides
-from app.context.types import Parameters
+from app.types import Parameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
 is_equal = comparison_function("=")
