@@ -44,8 +44,8 @@ def _add_known_form_nodes(graph: CriteriaGraph, label: str, lhs: str, rhs: str, 
         graph.attach_new_criterion(
             str(rhs) + "_WRITTEN_AS_KNOWN_FORM",
             str(rhs) + "_WRITTEN_AS_" + form_label,
-            summary=str(rhs) + " in written in " + syntactical_forms[form_label].name + " form.",
-            details=str(rhs) + " in written in " + syntactical_forms[form_label].name + " form.",
+            summary=str(rhs) + " is written in " + syntactical_forms[form_label].name + " form.",
+            details=str(rhs) + " is written in " + syntactical_forms[form_label].name + " form.",
             feedback_string_generator=symbolic_feedback_string_generators["WRITTEN_AS"](form_label),
         )
         graph.attach_new_evaluation(
@@ -101,15 +101,15 @@ def criterion_written_as_node(criterion: ExprNode, parameters: EvaluationParamet
     graph.attach_new_criterion(
         label,
         label + "_TRUE",
-        summary=str(rhs) + " written in the same form as " + str(rhs) + ".",
-        details=str(rhs) + " written in the same form as " + str(rhs) + ".",
+        summary=str(lhs) + " is written in the same form as " + str(rhs) + ".",
+        details=str(lhs) + " is written in the same form as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("TRUE")
     )
     graph.attach_new_criterion(
         label,
         label + "_FALSE",
-        summary=str(rhs) + " written in the same form as " + str(rhs) + ".",
-        details=str(rhs) + " written in the same form as " + str(rhs) + ".",
+        summary=str(lhs) + " is not written in the same form as " + str(rhs) + ".",
+        details=str(lhs) + " is not written in the same form as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
     )
     _add_known_form_nodes(graph, label, lhs, rhs, response)

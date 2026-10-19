@@ -34,7 +34,7 @@ def criterion_eval_node(criterion: ExprNode, parameters: EvaluationParameters) -
         label,
         label + "_FALSE",
         END,
-        summary="True",
+        summary="False",
         details=label + " is false.",
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
     )
@@ -43,8 +43,8 @@ def criterion_eval_node(criterion: ExprNode, parameters: EvaluationParameters) -
         label,
         label + "_UNKNOWN",
         END,
-        summary="True",
-        details=label + " is false.",
-        feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
+        summary="Unknown",
+        details="Cannot determine if " + label + " is true or false.",
+        feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("UNKNOWN")
     )
     return graph

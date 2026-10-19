@@ -152,7 +152,7 @@ def _add_match_nodes(
     graph.add_evaluation_node(
         label,
         summary=f"Do the quantities {inputs[0]} and {inputs[1]} match?",
-        details=f"Converts {inputs[0]} and {inputs[1]} match to a common set of base units and compares their values.",
+        details=f"Converts {inputs[0]} and {inputs[1]} to a common set of base units and compares their values.",
         evaluate=quantity_match
     )
     graph.attach_new_criterion(
@@ -165,8 +165,8 @@ def _add_match_nodes(
     graph.attach_new_criterion(
         label,
         label + "_FALSE",
-        summary=f"The quantities {inputs[0]} and {inputs[1]} does not match.",
-        details=f"The quantities {inputs[0]} and {inputs[1]} does not match.",
+        summary=f"The quantities {inputs[0]} and {inputs[1]} do not match.",
+        details=f"The quantities {inputs[0]} and {inputs[1]} do not match.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("QUANTITY_MISMATCH")
     )
     attach_terminal_criterion(
@@ -183,8 +183,8 @@ def _add_match_nodes(
         label,
         label + "_UNEXPECTED_VALUE",
         END,
-        summary="The response is expected only have unit(s), no value.",
-        details="The response is expected only have unit(s), no value.",
+        summary="The response is expected to only have unit(s), no value.",
+        details="The response is expected to only have unit(s), no value.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNEXPECTED_VALUE")
     )
     attach_terminal_criterion(
