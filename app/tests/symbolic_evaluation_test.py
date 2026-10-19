@@ -1,10 +1,10 @@
 import pytest
 
-from sympy import I, Integer, Symbol, cos, oo, sin, zoo
+from sympy import I, Integer, Symbol, cos, oo, parse_expr, sin, zoo
 
 from app.context.symbolic.comparison import do_comparison_infinite, normalise_complex
 from app.context.symbolic.graphs.substitution import _group_values
-from app.context.symbolic.variations import one_addition_to_subtraction
+from app.context.symbolic.variations import one_addition_to_subtraction, one_swap_addition_and_multiplication
 from app.evaluation import evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2195,6 +2195,29 @@ class TestEvaluationFunction():
         assert values_and_variations_group["1"] == {"UNKNOWN"}
         assert values_and_variations_group["cos(2*x)"] == {"ONE_ADDITION_TO_SUBTRACTION"}
         assert values_and_variations_group["-cos(2*x)"] == {"ONE_ADDITION_TO_SUBTRACTION"}
+
+    @pytest.mark.parametrize(
+        "expression,expected",
+        [
+            # Used to give 2*a*b - a - b twice (bug 4 in the bug report)
+            ("a*b", ["a + b"]),
+            ("a*b + c", ["a*b*c", "a + b + c"]),
+            ("2*a", ["a + 2"]),
+        ]
+    )
+    def test_one_swap_addition_and_multiplication(self, expression, expected):
+        variations = one_swap_addition_and_multiplication(parse_expr(expression))
+        assert sorted(str(v) for v in variations) == sorted(expected)
+
+    def test_identify_reason_swap_multiplication_to_addition(self):
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': 'response = answer where a = 2; b = 3',
+        }
+        result = evaluation_function("a+b", "a*b", params)
+        assert result["is_correct"] is False
+        assert "response = answer where a = 2; b = 3_ONE_SWAP_ADDITION_AND_MULTIPLICATION" in result["tags"]
 
     def test_feedback_follows_criteria_order(self):
         # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs
