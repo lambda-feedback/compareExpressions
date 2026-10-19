@@ -266,12 +266,12 @@ def _add_match_nodes(
 
 
 def criterion_match_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
-    graph = CriteriaGraph(label)  # type: ignore[arg-type]  # Bug 8 in the bug report: label is None here
-    END = graph.add_end_node()
-    rtol, atol = _tolerances(parameters)
-
     if label is None:
         label = criterion.content_string()
+
+    graph = CriteriaGraph(label)
+    END = graph.add_end_node()
+    rtol, atol = _tolerances(parameters)
 
     inputs = criterion.children
     sides = parse_criterion_sides(criterion, parameters)
