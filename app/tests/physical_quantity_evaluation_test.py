@@ -2,6 +2,7 @@ import pytest
 from sympy import Integer, Symbol
 
 # Import necessary data and reference cases for tests
+from app import evaluation
 from app.context.physical_quantity.comparison import is_proportional
 from app.evaluation import evaluation_function
 from app.tests.physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
@@ -638,6 +639,21 @@ class TestEvaluationFunction():
         # Units and dimensions are never zero, so `evaluation_function` cannot reach these cases
         x, y = Symbol("x"), Symbol("y")
         assert is_proportional(x, y, [("x", lhs_value), ("y", rhs_value)]) == expected
+
+    @pytest.mark.parametrize("criteria", ["response matches answer", "response > answer"])
+    def test_criteria_graph_identifier(self, criteria, monkeypatch):
+        # The identifier is not in the serialised test data, so capture the graphs before feedback is generated
+        criteria_graphs = {}
+        generate_feedback = evaluation.generate_feedback
+
+        def capture_graphs(graphs, evaluation_parameters):
+            criteria_graphs.update(graphs)
+            generate_feedback(graphs, evaluation_parameters)
+
+        monkeypatch.setattr(evaluation, "generate_feedback", capture_graphs)
+        evaluation_function("2.1 m", "1 m", {"physical_quantity": True, "criteria": criteria})
+        # The matches graph used to have identifier None (bug 8 in the bug report)
+        assert criteria_graphs[criteria].identifier == criteria
 
     @pytest.mark.parametrize(
         "ans,res",
