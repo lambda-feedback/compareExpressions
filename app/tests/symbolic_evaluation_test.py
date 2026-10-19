@@ -2149,6 +2149,34 @@ class TestEvaluationFunction():
     def test_normalise_complex(self, lhs, rhs, expected_lhs, expected_rhs):
         assert normalise_complex(lhs, rhs) == (expected_lhs, expected_rhs)
 
+    @pytest.mark.parametrize(
+        "criteria",
+        [
+            # Used to raise TypeError: 'ExprNode' object is not iterable (bug 6 in the bug report)
+            "response = answer where x > 1",
+            # Used to substitute x = 1
+            "response = answer where x > 1; y = 2",
+            "response = answer where y = 2; x > 1",
+        ]
+    )
+    def test_where_criteria_with_substitution_that_is_not_an_equality(self, criteria):
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        with pytest.raises(Exception, match="Cannot parse criteria: `x > 1`"):
+            evaluation_function("x+y", "x+y", params)
+
+    def test_where_criteria_with_several_substitutions(self):
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': 'response = answer where x = 1; y = 2; z = 3',
+        }
+        result = evaluation_function("x+y+z", "6", params)
+        assert result["is_correct"] is True
+
     def test_feedback_follows_criteria_order(self):
         # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs
         params = {
