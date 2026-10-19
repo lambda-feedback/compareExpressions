@@ -4,7 +4,11 @@ from sympy import I, Integer, Symbol, cos, oo, parse_expr, sin, zoo
 
 from app.context.symbolic.comparison import do_comparison_infinite, normalise_complex
 from app.context.symbolic.graphs.substitution import _group_values
-from app.context.symbolic.variations import one_addition_to_subtraction, one_swap_addition_and_multiplication
+from app.context.symbolic.variations import (
+    one_addition_to_subtraction,
+    one_exponent_flip,
+    one_swap_addition_and_multiplication,
+)
 from app.evaluation import TaskConfigurationError, evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2207,6 +2211,18 @@ class TestEvaluationFunction():
     )
     def test_one_swap_addition_and_multiplication(self, expression, expected):
         variations = one_swap_addition_and_multiplication(parse_expr(expression))
+        assert sorted(str(v) for v in variations) == sorted(expected)
+
+    @pytest.mark.parametrize(
+        "expression,expected",
+        [
+            # Used to give every variation twice (found while fixing bug 4 in the bug report)
+            ("x**2", ["x**(-2)"]),
+            ("x**2 + y**3", ["y**3 + x**(-2)", "x**2 + y**(-3)"]),
+        ]
+    )
+    def test_one_exponent_flip(self, expression, expected):
+        variations = one_exponent_flip(parse_expr(expression))
         assert sorted(str(v) for v in variations) == sorted(expected)
 
     def test_identify_reason_swap_multiplication_to_addition(self):
