@@ -53,7 +53,7 @@ The context is a frozen `Context` dataclass, defined in `context/base.py`, with 
 - `expression_preprocess` function that performs string manipulations that makes ensures that correctly written input expressions follows the conventions expected by `expression_parse`.
 - `expression_preview` is a function that generates a string that can be turned into a human-readable representation of how the evaluation function interpreted the response.
 - `feedback_procedure_generator` function that generates a function for each criteria that can be used to evaluate if the criteria is satisfied or not. The output from this function should be a list of tags that the feedback string generator can use to produce human readable feedback.
-- `generate_criteria_parser` function that generates a parser that can be used to turn the criteria (given in string form) into a form that the feedback generation procedure can use to determine if they are correct or not.
+- `generate_criteria_parser` function that generates a parser that can be used to turn the criteria (given in string form) into a form that the feedback generation procedure can use to determine if they are correct or not. Both contexts use parsers from `lambdafeedback.criteria`: `build_criteria_parser` (symbolic) and `build_quantity_criteria_parser` (physical quantity). The criteria string is split into individual criteria with `lambdafeedback.criteria.split_criteria` before parsing.
 - `default_criteria` the criteria used when none are given in `params`.
 - `parsing_parameters_generator` function that builds the parsing parameters passed to `expression_parse` from the evaluation parameters.
 
@@ -215,7 +215,7 @@ When `is_latex` is enabled, `e` and `E` are read as plain symbols by the LaTeX p
 
 # Packages
 
-The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.2` release candidate. Each package's `CHANGELOG.md` lists the API changes:
+The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.3` release candidate. Each package's `CHANGELOG.md` lists the API changes:
 
 | Package | Import | Used for |
 |---|---|---|

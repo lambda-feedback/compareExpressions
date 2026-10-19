@@ -4,12 +4,13 @@ from collections.abc import Collection, Iterable, Mapping
 from copy import deepcopy
 from typing import Any
 
-from lambdafeedback.criteria import CriteriaGraph
+from lambdafeedback.criteria import CriteriaGraph, CriteriaSyntaxError, split_criteria
 from lambdafeedback.slr_parsing import ExprNode, SLRParser
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
     ExpressionParams,
+    notation_warnings,
     parse_latex,
 )
 
@@ -169,30 +170,6 @@ def get_criteria_string(context: Context, parameters: Parameters) -> str:
     return criteria
 
 
-def split_criteria(criteria_string: str) -> list[str]:
-    """Splits `criteria_string` on the commas that are not inside brackets, and strips each criterion."""
-    criteria_string_list = []
-    delims = [
-        ("(", ")"),
-        ("[", "]"),
-        ("{", "}"),
-    ]
-    depth = {delim: 0 for delim in delims}
-    delim_key = {delim[0]: delim for delim in delims}
-    delim_key.update({delim[1]: delim for delim in delims})
-    criterion_start = 0
-    for n, c in enumerate(criteria_string):
-        if c in [delim[0] for delim in delims]:
-            depth[delim_key[c]] += 1
-        if c in [delim[1] for delim in delims]:
-            depth[delim_key[c]] -= 1
-        if c == "," and all([d == 0 for d in depth.values()]):
-            criteria_string_list.append(criteria_string[criterion_start:n].strip())
-            criterion_start = n+1
-    criteria_string_list.append(criteria_string[criterion_start:].strip())
-    return criteria_string_list
-
-
 def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameters: Parameters) -> dict[str, ExprNode]:
     preprocess = context.expression_preprocess
     original_criteria_string = get_criteria_string(context, parameters)
@@ -201,8 +178,12 @@ def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameter
     except (BracketNotationError, AbsoluteValueNotationError) as e:
         feedback = notation_error_feedback(e, original_criteria_string)
         raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
+    try:
+        criteria_string_list = split_criteria(criteria_string)
+    except CriteriaSyntaxError as e:
+        raise Exception("Cannot parse criteria: `"+criteria_string+"`.") from e
     criteria_parsed: dict[str, ExprNode] = {}
-    for criterion in split_criteria(criteria_string):
+    for criterion in criteria_string_list:
         try:
             criterion_tokens = criteria_parser.scan(criterion)
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
@@ -304,24 +285,11 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
     return parameters
 
 
-def notation_warnings(response: str, strict_syntax: bool) -> list[str]:
-    """The tags of the notation warnings for `response`."""
-    # FIXME: Move these notation warnings into lambdafeedback.expression_parsing
-    tags = []
-    if strict_syntax:
-        if "^" in response:
-            tags.append("NOTATION_WARNING_EXPONENT")
-        if "!" in response:
-            tags.append("NOTATION_WARNING_FACTORIAL")
-    if "!!!" in response:
-        tags.append("NOTATION_WARNING_TRIPLE_FACTORIAL")
-    return tags
-
 
 def _add_notation_warnings(evaluation_result: EvaluationResult, response: str, params: Parameters) -> None:
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
-    for tag in notation_warnings(response, params.get("strict_syntax", False)):
-        evaluation_result.add_feedback(tag, symbolic_comparison_internal_messages(tag)(dict()))
+    for warning in notation_warnings(response, bool(params.get("strict_syntax", False))):
+        evaluation_result.add_feedback(str(warning), symbolic_comparison_internal_messages(str(warning))(dict()))
 
 
 def _set_preview_fields(

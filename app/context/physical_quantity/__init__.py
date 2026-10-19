@@ -5,13 +5,12 @@ from copy import deepcopy
 from types import MappingProxyType
 from typing import Any
 
-from lambdafeedback.criteria import CriteriaGraph
+from lambdafeedback.criteria import CriteriaGraph, build_quantity_criteria_parser
 from lambdafeedback.expression_parsing import ExpressionParams, SympyParsingConfig
 from lambdafeedback.units import QuantityParams, preprocess_quantity
 
 from app.context.base import Context
 from app.context.defaults import base_default_parameters
-from app.context.physical_quantity.criteria_parser import generate_criteria_parser
 from app.context.physical_quantity.graphs.match import criterion_match_node
 from app.context.physical_quantity.graphs.order import greater_than_node, greater_than_or_equal_node, less_than_node, less_than_or_equal_node
 from app.context.physical_quantity.parsing import parse_quantity
@@ -83,7 +82,7 @@ default_criteria = ("response matches answer",)
 
 context = Context(
     expression_preview=preview_function,
-    generate_criteria_parser=generate_criteria_parser,
+    generate_criteria_parser=build_quantity_criteria_parser,
     expression_preprocess=expression_preprocess,
     expression_parse=parse_quantity,
     default_parameters=MappingProxyType(default_parameters),

@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from sympy import Basic, Equality, im, I
 from sympy import re as real_part
 
+from lambdafeedback.criteria import where_substitutions
 from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
@@ -22,23 +23,9 @@ def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: 
     )
 
 
-def where_substitution_nodes(subs_node: ExprNode) -> list[ExprNode]:
-    """The individual substitutions in the substitution part of a WHERE criterion."""
-    if subs_node.label == "EQUALITY":
-        return [subs_node]
-    elif subs_node.label == "SEPARATOR":
-        return subs_node.children
-    return subs_node  # type: ignore[return-value]  # Bug 6 in the bug report: should be a list or raise
-
-
 def parse_where_substitutions(subs_node: ExprNode, parsing_params: SympyParsingConfig) -> SubstitutionList:
     """`[(name, expression), ...]` for each substitution in the substitution part of a WHERE criterion."""
-    local_subs = []
-    for sub in where_substitution_nodes(subs_node):
-        name = sub.children[0].content_string()
-        expr = parse_expression(sub.children[1].content_string(), parsing_params)
-        local_subs.append((name, expr))
-    return local_subs
+    return [(name, parse_expression(expr, parsing_params)) for name, expr in where_substitutions(subs_node)]
 
 
 def check_criterion(criterion: ExprNode, parameters: EvaluationParameters) -> bool | None:

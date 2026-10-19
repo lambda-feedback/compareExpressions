@@ -4,12 +4,12 @@ from typing import Any, TypedDict
 
 from sympy import Basic
 
-from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria
+from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria, where_substitutions
 from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
-from app.context.symbolic.comparison import check_equality, parse_where_substitutions, where_substitution_nodes
+from app.context.symbolic.comparison import check_equality, parse_where_substitutions
 from app.context.symbolic.variations import one_addition_to_subtraction, one_exponent_flip, one_swap_addition_and_multiplication
 from app.evaluation_parameters import EvaluationParameters
 from app.types import Substitutions
@@ -143,7 +143,7 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
 def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     parsing_params = parameters.parsing_parameters
     expression = criterion.children[0]
-    subs = where_substitution_nodes(criterion.children[1])
+    subs = where_substitutions(criterion.children[1])
     local_subs = parse_where_substitutions(criterion.children[1], parsing_params)
     if label is None:
         label = criterion.content_string()
@@ -152,7 +152,7 @@ def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, 
         result = check_equality(expression, parameters, local_substitutions=local_subs)
         return outcome_tag(label, result is True)
 
-    subs_string = ", ".join([s.content_string() for s in subs])
+    subs_string = ", ".join(name+" = "+expr for name, expr in subs)
     graph, END = outcome_graph(
         label,
         summary=label,

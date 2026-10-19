@@ -2118,6 +2118,23 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
+    @pytest.mark.parametrize(
+        "criteria",
+        [
+            "response=answer,",
+            "response=answer,, response-answer=0",
+        ]
+    )
+    def test_malformed_criteria_list_cannot_be_parsed(self, criteria):
+        params = {
+            "criteria": criteria,
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        with pytest.raises(Exception) as e:
+            evaluation_function("x+1", "1+x", params)
+        assert "Cannot parse criteria" in str(e.value)
+
     def test_input_symbols_takes_priority_when_containing_elementary_function_names_as_substring(self):
         response = "Vmax - Vmaxe^-(t/tau)"
         answer = "Vmax*(1-exp(-t/tau))"
