@@ -557,8 +557,7 @@ class TestEvaluationFunction():
             ("response matches 2 m", False),
             ("response matches 2", False),
             ("2 m matches response", False),
-            # Only checks that it no longer raises: the value match ignores `dimension(...)`
-            ("dimension(response) matches dimension(answer)", None),
+            ("dimension(response) matches dimension(answer)", True),
             ("answer matches answer", True),
         ]
     )
@@ -571,8 +570,30 @@ class TestEvaluationFunction():
             'criteria': criteria,
         }
         result = evaluation_function("2.1 m", "1.0 m", params)
-        if is_correct is not None:
-            assert result["is_correct"] is is_correct
+        assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "res,criteria,is_correct",
+        [
+            ("1.0 m", "dimension(response) matches dimension(answer)", True),
+            # Used to be false because the values were compared (bug 15 in the bug report)
+            ("2 m", "dimension(response) matches dimension(answer)", True),
+            ("2 km", "dimension(response) matches dimension(answer)", True),
+            ("2 s", "dimension(response) matches dimension(answer)", False),
+            ("2", "dimension(response) matches dimension(answer)", False),
+            ("2 m", "dimension(response) matches dimension(3 ft)", True),
+            ("2 m", "dimension(response) matches dimension(2 s)", False),
+        ]
+    )
+    def test_dimension_matches_compares_only_dimensions(self, res, criteria, is_correct):
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        result = evaluation_function(res, "1.0 m", params)
+        assert result["is_correct"] is is_correct
 
     @pytest.mark.parametrize(
         "res,ans,criteria,is_correct",
