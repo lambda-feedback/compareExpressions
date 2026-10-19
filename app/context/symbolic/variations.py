@@ -63,4 +63,6 @@ def one_exponent_flip(expression: Basic) -> list[Basic]:
     def exponent_flip(node: Basic, k: int) -> Basic:
         return node**(-1)
     variations = replace_node_variations(expression, Pow, exponent_flip)
-    return variations
+
+    # The flip does not depend on k, so each power would be flipped once per argument
+    return list(dict.fromkeys(variations))
