@@ -286,6 +286,8 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
     the reserved keywords and the parsing parameters.
     """
     parameters = deepcopy(params)
+    # Applied to the copy, so the caller's `params` keep only what they set
+    _apply_tolerance_aliases(parameters)
 
     reserved_expressions_strings = {
         "learner": {
@@ -461,8 +463,6 @@ def _evaluate(
     def enter_stage(name: str) -> None:
         stage["name"] = name
         log_event("stage_start", stage["eval_id"], stage=name, elapsed_ms=elapsed_ms(stage["start_time"]))
-
-    _apply_tolerance_aliases(params)
 
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
