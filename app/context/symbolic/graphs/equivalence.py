@@ -158,7 +158,7 @@ def add_mathematical_equivalence_nodes(
         label + "_SAME_SYMBOLS" + "_FALSE",
         END,
         summary=str(lhs) + " does not have the same symbols as " + str(rhs),
-        details=str(lhs) + " does note have the same (free) symbols as " + str(rhs) + ".",
+        details=str(lhs) + " does not have the same (free) symbols as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SAME_SYMBOLS"]("FALSE")
     )
     attach_terminal_criterion(
@@ -167,7 +167,7 @@ def add_mathematical_equivalence_nodes(
         label + "_FALSE",
         END,
         summary=str(lhs) + "=\\=" + str(rhs),
-        details=str(lhs) + " is not equal to" + str(rhs) + ".",
+        details=str(lhs) + " is not equal to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("FALSE")
     )
     attach_terminal_criterion(
@@ -175,8 +175,8 @@ def add_mathematical_equivalence_nodes(
         label,
         label + "_UNKNOWN",
         END,
-        summary="Cannot detrmine if " + str(lhs) + "=" + str(rhs),
-        details="Cannot detrmine if " + str(lhs) + " is equal to " + str(rhs) + ".",
+        summary="Cannot determine if " + str(lhs) + "=" + str(rhs),
+        details="Cannot determine if " + str(lhs) + " is equal to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("UNKNOWN")
     )
 

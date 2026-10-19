@@ -2262,6 +2262,17 @@ class TestEvaluationFunction():
             result = evaluation_function("x+2", "x+1", params)
             assert result["feedback"] == "response < answer is false.<br>response contains y is false."
 
+    def test_generic_criterion_unknown_feedback(self):
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': 'response > y',
+        }
+        result = evaluation_function("x", "x+1", params)
+        assert result["tags"] == ["response > y_UNKNOWN"]
+        # Used to give the FALSE feedback "response > y is false." (feedback strings in the bug report)
+        assert result["feedback"] == "Cannot determine if response > y is true or false."
+
     def test_equality_expression_mismatch_with_custom_criteria(self):
         response = "x-0.883x^2=0.251X^3"
         answer = "0.4842x-0.1163x^3"
