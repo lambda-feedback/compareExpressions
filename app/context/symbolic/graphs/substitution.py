@@ -62,8 +62,9 @@ def _group_values(
     Groups `expression_to_vary` and its variations by their value after `local_subs` are applied.
     Returns the expressions for each value, and the variation groups that produce each value.
     """
-    unvaried_value = expression_to_vary.subs(local_subs)
-    value_key = str(unvaried_value.simplify())
+    # Simplify here too, because the variations are simplified before they are compared with it
+    unvaried_value = expression_to_vary.subs(local_subs).simplify()
+    value_key = str(unvaried_value)
     values_and_expressions = {value_key: set([expression_to_vary])}
     values_and_variations_group = {value_key: set(["UNKNOWN"])}
     for (group_label, info) in variation_groups.items():

@@ -1,8 +1,10 @@
 import pytest
 
-from sympy import I, Integer, Symbol, oo, zoo
+from sympy import I, Integer, Symbol, cos, oo, sin, zoo
 
 from app.context.symbolic.comparison import do_comparison_infinite, normalise_complex
+from app.context.symbolic.graphs.substitution import _group_values
+from app.context.symbolic.variations import one_addition_to_subtraction
 from app.evaluation import TaskConfigurationError, evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2176,6 +2178,23 @@ class TestEvaluationFunction():
         }
         result = evaluation_function("x+y+z", "6", params)
         assert result["is_correct"] is True
+
+    def test_group_values_does_not_blame_variation_with_correct_value(self):
+        # A correct response takes the TRUE branch, so `evaluation_function` cannot show this; call it directly
+        x, y, z = Symbol("x"), Symbol("y"), Symbol("z")
+        expression = sin(x)**2 + cos(x)**2 + y * z
+        variation_groups = {
+            "ONE_ADDITION_TO_SUBTRACTION": {
+                "variations": one_addition_to_subtraction(expression),
+                "summary": "",
+            }
+        }
+        _, values_and_variations_group = _group_values(expression, variation_groups, [(z, 0)])
+        # sin(x)**2+cos(x)**2-y*z only equals the correct value after simplification,
+        # and used to be tagged ONE_ADDITION_TO_SUBTRACTION (bug 11 in the bug report)
+        assert values_and_variations_group["1"] == {"UNKNOWN"}
+        assert values_and_variations_group["cos(2*x)"] == {"ONE_ADDITION_TO_SUBTRACTION"}
+        assert values_and_variations_group["-cos(2*x)"] == {"ONE_ADDITION_TO_SUBTRACTION"}
 
     def test_feedback_follows_criteria_order(self):
         # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs
