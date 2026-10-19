@@ -17,6 +17,7 @@ from app.context.physical_quantity.comparison import (
     is_proportional,
     parse_criterion_sides,
 )
+from app.context.tolerance import values_within_tolerance
 from app.evaluation_parameters import EvaluationParameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
@@ -73,15 +74,12 @@ def _within_tolerance(parameters: EvaluationParameters, lhs_string: str, rhs_str
     ans = ans_value.simplify()
     res = res_value.simplify()
 
-    value_match = False
+    if not (ans.is_constant() and res.is_constant()):
+        return False
 
-    if ans.is_constant() and res.is_constant():
-        if rtol > 0 and (ans != 0):
-            value_match = bool(abs(float((ans - res) / ans)) < rtol)
-        elif atol > 0 or (ans == 0):
-            answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
-            value_match = bool(abs(float(ans - res)) < atol * answer_unit_factor)
-    return value_match
+    # The standard values are in SI base units, while atol is given in the units of the answer
+    answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
+    return values_within_tolerance(res, ans, rtol, atol * answer_unit_factor)
 
 
 def _quantity_match(parameters: EvaluationParameters, label: str, sides: CriterionSides, rtol: float, atol: float) -> Evaluate:
