@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from sympy import Basic, Equality, im, I
 from sympy import re as real_part
 
-from lambdafeedback.criteria import where_substitutions
+from lambdafeedback.criteria import CriteriaSyntaxError, where_substitutions
 from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
@@ -23,9 +23,17 @@ def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: 
     )
 
 
+def where_substitution_strings(subs_node: ExprNode) -> list[tuple[str, str]]:
+    """`[(name, expression), ...]`, unparsed, for each substitution in the substitution part of a WHERE criterion."""
+    try:
+        return where_substitutions(subs_node)
+    except CriteriaSyntaxError as e:
+        raise Exception("Cannot parse criteria: " + str(e)) from e
+
+
 def parse_where_substitutions(subs_node: ExprNode, parsing_params: SympyParsingConfig) -> SubstitutionList:
     """`[(name, expression), ...]` for each substitution in the substitution part of a WHERE criterion."""
-    return [(name, parse_expression(expr, parsing_params)) for name, expr in where_substitutions(subs_node)]
+    return [(name, parse_expression(expr, parsing_params)) for name, expr in where_substitution_strings(subs_node)]
 
 
 def check_criterion(criterion: ExprNode, parameters: EvaluationParameters) -> bool | None:
