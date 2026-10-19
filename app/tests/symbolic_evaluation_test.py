@@ -2219,6 +2219,22 @@ class TestEvaluationFunction():
         assert result["is_correct"] is False
         assert "response = answer where a = 2; b = 3_ONE_SWAP_ADDITION_AND_MULTIPLICATION" in result["tags"]
 
+    @pytest.mark.parametrize(
+        "alias,tolerance",
+        [
+            ("relative_tolerance", 0.1),
+            ("absolute_tolerance", 0.1),
+        ]
+    )
+    def test_tolerance_aliases_do_not_change_params(self, alias, tolerance):
+        params = {alias: tolerance}
+        assert evaluation_function("1.05", "1", params)["is_correct"] is True
+        # Used to add rtol/atol to the caller's params (bug 7 in the bug report)
+        assert params == {alias: tolerance}
+        # so a reused dict still applied the tolerance after the alias was removed
+        del params[alias]
+        assert evaluation_function("1.05", "1", params)["is_correct"] is False
+
     def test_feedback_follows_criteria_order(self):
         # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs
         params = {
