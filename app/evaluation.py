@@ -1,3 +1,9 @@
+import hashlib
+import json
+import logging
+import os
+import time
+import uuid
 from copy import deepcopy
 
 from .utility.evaluation_result_utilities import EvaluationResult
@@ -7,6 +13,9 @@ from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 from collections.abc import Mapping
+
+logger = logging.getLogger(__name__)
+logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
@@ -75,7 +84,7 @@ def determine_context(parameters):
     reserved_keywords_aliases_collisions = []
     for keyword in reserved_keywords_aliases:
         if keyword in input_symbols_reserved_aliases:
-            print("Collision found")
+            logger.debug(f"Reserved keyword collision with input symbol alias: {keyword}")
             reserved_keywords_aliases_collisions.append(keyword)
     if len(reserved_keywords_aliases_collisions) > 0:
         if len(reserved_keywords_aliases_collisions) == 1:
@@ -225,13 +234,71 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
     return
 
 
+def log_event(event, eval_id, level=logging.INFO, exc_info=False, **fields):
+    """
+    Writes a single JSON line so that logs can be filtered with CloudWatch Logs Insights.
+    """
+    logger.log(level, json.dumps({"event": event, "eval_id": eval_id, **fields}, default=str), exc_info=exc_info)
+
+
+def elapsed_ms(start_time):
+    return round((time.perf_counter() - start_time) * 1000, 1)
+
+
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
     Function that allows for various types of comparison of various kinds of expressions.
     Supported input parameters:
     strict_SI_syntax:
         - if set to True, use basic dimensional analysis functionality.
+
+    Logs the start, each stage and the end (or error) of the evaluation.
+    The response is not logged, only its length and a short hash.
     """
+    eval_id = uuid.uuid4().hex[:8]
+    start_time = time.perf_counter()
+    stage = {"name": "setup", "eval_id": eval_id, "start_time": start_time, "early_return": False}
+
+    response_string = str(response)
+    log_event(
+        "evaluation_start",
+        eval_id,
+        params=params,
+        answer=answer,
+        response_length=len(response_string),
+        response_sha256=hashlib.sha256(response_string.encode("utf-8")).hexdigest()[:12],
+        include_test_data=include_test_data,
+    )
+
+    try:
+        result = _evaluate(response, answer, params, include_test_data, stage)
+    except Exception as e:
+        log_event(
+            "evaluation_error",
+            eval_id,
+            level=logging.ERROR,
+            exc_info=True,
+            stage=stage["name"],
+            duration_ms=elapsed_ms(start_time),
+            error_type=type(e).__name__,
+            error_message=str(e),
+        )
+        raise
+
+    log_event(
+        "evaluation_end",
+        eval_id,
+        is_correct=result.get("is_correct"),
+        duration_ms=elapsed_ms(start_time),
+        early_return=stage["early_return"],
+    )
+    return result
+
+
+def _evaluate(response, answer, params, include_test_data, stage) -> dict:
+    def enter_stage(name):
+        stage["name"] = name
+        log_event("stage_start", stage["eval_id"], stage=name, elapsed_ms=elapsed_ms(stage["start_time"]))
 
     if "relative_tolerance" in params:
         params["rtol"] = params["relative_tolerance"]
@@ -255,6 +322,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         }
     }
     parameters.update({"reserved_expressions_strings": reserved_expressions_strings})
+    enter_stage("determine_context")
     context = determine_context(parameters)
     default_parameters = context["default_parameters"]
     for (key, value) in default_parameters.items():
@@ -270,6 +338,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "reserved_keywords": context["reserved_keywords"]+reserved_expressions_keys,
         }
     )
+    enter_stage("parsing_parameters")
     parsing_parameters = context["parsing_parameters_generator"](parameters, unsplittable_symbols=reserved_expressions_keys) 
     parameters.update(
         {
@@ -281,6 +350,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     # Can it be turned into its own context? Or moved into the determine_context procedure?
     # What solution will be most consistently reusable?
     if parameters.get("is_latex", False):
+        enter_stage("parse_latex")
         parameters["reserved_expressions_strings"]["learner"].update(
             {
                 "response": parse_latex(response, parameters.get("symbols", {}), False, parameters=parameters),
@@ -298,11 +368,14 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         evaluation_result.add_feedback(
             ("NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict())))
 
+    enter_stage("parse_reserved_expressions")
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:
+        stage["early_return"] = True
         return evaluation_result.serialise(include_test_data)
     reserved_expressions_parsed = {**reserved_expressions["learner"], **reserved_expressions["task"]}
 
+    enter_stage("preview")
     try:
         preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
     except Exception:
@@ -319,6 +392,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             except Exception:
                 evaluation_result.simplified = response
 
+    enter_stage("parse_criteria")
     criteria_parser = context["generate_criteria_parser"](reserved_expressions)
     criteria = create_criteria_dict(criteria_parser, parameters)
 
@@ -340,9 +414,12 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     )
 
     # Performs evaluation of response
+    enter_stage("generate_feedback_procedures")
     feedback_procedures = parameters["context"]["feedback_procedure_generator"](evaluation_parameters)
+    enter_stage("generate_feedback")
     generate_feedback(criteria, feedback_procedures, evaluation_parameters)
 
+    enter_stage("serialise")
     result = evaluation_result.serialise(include_test_data)
 
     if parameters.get("feedback_for_incorrect_response", None) is not None:
