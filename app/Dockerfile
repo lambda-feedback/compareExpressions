@@ -32,6 +32,7 @@ COPY preview_implementations/physical_quantity_preview.py ./app/preview_implemen
 COPY preview_implementations/symbolic_preview.py ./app/preview_implementations/
 
 # Copy tests
+COPY tests/evaluation_logging_test.py ./app/tests/
 COPY tests/example_test.py ./app/tests/
 COPY tests/physical_quantity_evaluation_test.py ./app/tests/
 COPY tests/physical_quantity_preview_test.py ./app/tests/

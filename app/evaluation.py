@@ -1,3 +1,9 @@
+import json
+import logging
+import os
+import time
+import traceback
+import uuid
 from copy import deepcopy
 
 from .utility.evaluation_result_utilities import EvaluationResult
@@ -7,6 +13,24 @@ from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 from collections.abc import Mapping
+
+logger = logging.getLogger(__name__)
+logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+
+class TaskConfigurationError(Exception):
+    """
+    Raised for problems with the task setup (params, answer, criteria) or the shape of the request.
+    These are passed on unchanged by `evaluation_function`.
+    NOTE: The message must never contain the response.
+    """
+
+
+class EvaluationError(Exception):
+    """
+    Generic error raised by `evaluation_function` in place of any unexpected
+    exception, since their messages can contain the response.
+    """
+
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
@@ -69,19 +93,19 @@ def determine_context(parameters):
             reserved_keywords_codes_collisions.append(keyword)
     if len(reserved_keywords_codes_collisions) > 0:
         if len(reserved_keywords_codes_collisions) == 1:
-            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` is a reserved keyword and cannot be used as an input symbol code.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_codes_collisions)+"` is a reserved keyword and cannot be used as an input symbol code.")
         else:
-            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` are reserved keywords and cannot be used as input symbol codes.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_codes_collisions)+"` are reserved keywords and cannot be used as input symbol codes.")
     reserved_keywords_aliases_collisions = []
     for keyword in reserved_keywords_aliases:
         if keyword in input_symbols_reserved_aliases:
-            print("Collision found")
+            logger.debug(f"Reserved keyword collision with input symbol alias: {keyword}")
             reserved_keywords_aliases_collisions.append(keyword)
     if len(reserved_keywords_aliases_collisions) > 0:
         if len(reserved_keywords_aliases_collisions) == 1:
-            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` is a reserved keyword and cannot be used as an input symbol alternative.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` is a reserved keyword and cannot be used as an input symbol alternative.")
         else:
-            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
 
     reserved_keywords = reserved_keywords_codes
     context.update({"reserved_keywords": list(reserved_keywords)})
@@ -120,10 +144,10 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                     result.add_feedback(preprocess_feedback)
                     preprocess_success = True  # Preprocess can only create warnings for responses in this case
                 else:
-                    raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+                    raise TaskConfigurationError(preprocess_feedback[1], preprocess_feedback[0])
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
-                raise Exception(f"Reserved expression {label} must be given as a string.")
+                raise TaskConfigurationError(f"Reserved expression {label} must be given as a string.")
             if len(expr.strip()) == 0:
                 if key == "learner":
                     result.add_feedback(
@@ -133,7 +157,7 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                         )
                     )
                 else:
-                    raise Exception(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
+                    raise TaskConfigurationError(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
                 success = False
             else:
                 try:
@@ -149,7 +173,7 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                             )
                         )
                     else:
-                        raise Exception(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
+                        raise TaskConfigurationError(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
             reserved_expressions_dict[key].update({label: expr_parsed})
     return success, reserved_expressions_dict
 
@@ -168,7 +192,7 @@ def create_criteria_dict(criteria_parser, parsing_params):
     criteria_string = get_criteria_string(parsing_params)
     preprocess_success, criteria_string, preprocess_feedback = preprocess("criteria", criteria_string, parsing_params)
     if preprocess_success is False:
-        raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+        raise TaskConfigurationError(preprocess_feedback[1], preprocess_feedback[0])
     criteria_string_list = []
     delims = [
         ("(", ")"),
@@ -195,7 +219,7 @@ def create_criteria_dict(criteria_parser, parsing_params):
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
             criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
-            raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
+            raise TaskConfigurationError("Cannot parse criteria: `"+criterion+"`.") from e
     return criteria_parsed
 
 
@@ -225,13 +249,83 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
     return
 
 
+def log_event(event, eval_id, level=logging.INFO, **fields):
+    """
+    Writes a single JSON line so that logs can be filtered with CloudWatch Logs Insights.
+    NOTE: Never pass user data (e.g. the response) or anything derived from it.
+    """
+    logger.log(level, json.dumps({"event": event, "eval_id": eval_id, **fields}, default=str))
+
+
+def elapsed_ms(start_time):
+    return round((time.perf_counter() - start_time) * 1000, 1)
+
+
+def traceback_frames(exception):
+    """
+    Returns the location of each frame in the traceback without the exception messages,
+    since these can contain the response.
+    """
+    return [f"{os.path.basename(frame.filename)}:{frame.lineno} in {frame.name}" for frame in traceback.extract_tb(exception.__traceback__)]
+
+
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
     """
     Function that allows for various types of comparison of various kinds of expressions.
     Supported input parameters:
     strict_SI_syntax:
         - if set to True, use basic dimensional analysis functionality.
+
+    Logs the start, each stage and the end (or error) of the evaluation.
+    No user data is logged: the response, and exception messages and
+    tracebacks (which can contain the response), are left out.
+    For the same reason, any exception other than a TaskConfigurationError
+    is replaced by a generic EvaluationError.
     """
+    eval_id = uuid.uuid4().hex[:8]
+    start_time = time.perf_counter()
+    stage = {"name": "setup", "eval_id": eval_id, "start_time": start_time, "early_return": False}
+
+    log_event(
+        "evaluation_start",
+        eval_id,
+        params=params,
+        answer=answer,
+        include_test_data=include_test_data,
+    )
+
+    try:
+        result = _evaluate(response, answer, params, include_test_data, stage)
+    except Exception as e:
+        log_event(
+            "evaluation_error",
+            eval_id,
+            level=logging.ERROR,
+            stage=stage["name"],
+            duration_ms=elapsed_ms(start_time),
+            error_type=type(e).__name__,
+            cause_type=type(e.__cause__).__name__ if e.__cause__ is not None else None,
+            traceback=traceback_frames(e),
+        )
+        if isinstance(e, TaskConfigurationError):
+            raise
+        # `from None` stops the original exception, and its message, being chained onto this one
+        raise EvaluationError(f"Evaluation failed during stage `{stage['name']}` ({type(e).__name__}). Reference: {eval_id}") from None
+
+    log_event(
+        "evaluation_end",
+        eval_id,
+        is_correct=result.get("is_correct"),
+        duration_ms=elapsed_ms(start_time),
+        early_return=stage["early_return"],
+    )
+    return result
+
+
+def _evaluate(response, answer, params, include_test_data, stage) -> dict:
+    def enter_stage(name):
+        stage["name"] = name
+        log_event("stage_start", stage["eval_id"], stage=name, elapsed_ms=elapsed_ms(stage["start_time"]))
 
     if "relative_tolerance" in params:
         params["rtol"] = params["relative_tolerance"]
@@ -255,6 +349,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         }
     }
     parameters.update({"reserved_expressions_strings": reserved_expressions_strings})
+    enter_stage("determine_context")
     context = determine_context(parameters)
     default_parameters = context["default_parameters"]
     for (key, value) in default_parameters.items():
@@ -270,6 +365,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "reserved_keywords": context["reserved_keywords"]+reserved_expressions_keys,
         }
     )
+    enter_stage("parsing_parameters")
     parsing_parameters = context["parsing_parameters_generator"](parameters, unsplittable_symbols=reserved_expressions_keys) 
     parameters.update(
         {
@@ -281,6 +377,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     # Can it be turned into its own context? Or moved into the determine_context procedure?
     # What solution will be most consistently reusable?
     if parameters.get("is_latex", False):
+        enter_stage("parse_latex")
         parameters["reserved_expressions_strings"]["learner"].update(
             {
                 "response": parse_latex(response, parameters.get("symbols", {}), False, parameters=parameters),
@@ -298,11 +395,14 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         evaluation_result.add_feedback(
             ("NOTATION_WARNING_TRIPLE_FACTORIAL", symbolic_comparison_internal_messages("NOTATION_WARNING_TRIPLE_FACTORIAL")(dict())))
 
+    enter_stage("parse_reserved_expressions")
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(reserved_expressions_strings, parameters, evaluation_result)
     if reserved_expressions_success is False:
+        stage["early_return"] = True
         return evaluation_result.serialise(include_test_data)
     reserved_expressions_parsed = {**reserved_expressions["learner"], **reserved_expressions["task"]}
 
+    enter_stage("preview")
     try:
         preview = context["expression_preview"](response, deepcopy(parameters))["preview"]
     except Exception:
@@ -319,6 +419,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             except Exception:
                 evaluation_result.simplified = response
 
+    enter_stage("parse_criteria")
     criteria_parser = context["generate_criteria_parser"](reserved_expressions)
     criteria = create_criteria_dict(criteria_parser, parameters)
 
@@ -340,9 +441,12 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
     )
 
     # Performs evaluation of response
+    enter_stage("generate_feedback_procedures")
     feedback_procedures = parameters["context"]["feedback_procedure_generator"](evaluation_parameters)
+    enter_stage("generate_feedback")
     generate_feedback(criteria, feedback_procedures, evaluation_parameters)
 
+    enter_stage("serialise")
     result = evaluation_result.serialise(include_test_data)
 
     if parameters.get("feedback_for_incorrect_response", None) is not None:
