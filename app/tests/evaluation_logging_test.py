@@ -3,13 +3,17 @@ import logging
 
 import pytest
 
-from app.evaluation import EvaluationError, TaskConfigurationError, evaluation_function
+from .. import evaluation
+from ..evaluation import EvaluationError, TaskConfigurationError, evaluation_function
+
+# The module name depends on how pytest is run, so take it from the logger itself
+LOGGER_NAME = evaluation.logger.name
 
 
 def logged_events(caplog):
     events = []
     for record in caplog.records:
-        if record.name == "app.evaluation":
+        if record.name == LOGGER_NAME:
             try:
                 events.append(json.loads(record.getMessage()))
             except json.JSONDecodeError:
@@ -20,7 +24,7 @@ def logged_events(caplog):
 class TestEvaluationLogging():
 
     def test_successful_evaluation_logs_start_stages_and_end(self, caplog):
-        caplog.set_level(logging.INFO, logger="app.evaluation")
+        caplog.set_level(logging.INFO, logger=LOGGER_NAME)
         evaluation_function("x+1", "1+x", {})
         events = logged_events(caplog)
         names = [event["event"] for event in events]
@@ -31,7 +35,7 @@ class TestEvaluationLogging():
         assert len({event["eval_id"] for event in events}) == 1
 
     def test_response_is_not_logged(self, caplog):
-        caplog.set_level(logging.DEBUG, logger="app.evaluation")
+        caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
         response = "zzq_unique_7"
         evaluation_function(response, "y", {})
         start = logged_events(caplog)[0]
@@ -39,7 +43,7 @@ class TestEvaluationLogging():
         assert response not in caplog.text
 
     def test_exception_is_logged_with_stage_and_reraised(self, caplog):
-        caplog.set_level(logging.INFO, logger="app.evaluation")
+        caplog.set_level(logging.INFO, logger=LOGGER_NAME)
         params = {"symbols": {"where": {"latex": "where", "aliases": []}}}
         with pytest.raises(Exception, match="reserved keyword"):
             evaluation_function("x", "x", params)
@@ -50,13 +54,13 @@ class TestEvaluationLogging():
         assert any("determine_context" in frame for frame in error["traceback"])
 
     def test_exception_message_containing_response_is_not_logged(self, caplog, monkeypatch):
-        caplog.set_level(logging.DEBUG, logger="app.evaluation")
+        caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
         response = "zzq_unique_8"
 
         def raise_with_response(*args, **kwargs):
             raise ValueError(f"Failed to parse: {response}")
 
-        monkeypatch.setattr("app.evaluation.create_criteria_dict", raise_with_response)
+        monkeypatch.setattr(evaluation, "create_criteria_dict", raise_with_response)
         with pytest.raises(EvaluationError) as e:
             evaluation_function(response, "y", {})
         error = logged_events(caplog)[-1]
