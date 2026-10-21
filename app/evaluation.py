@@ -1,8 +1,8 @@
-import hashlib
 import json
 import logging
 import os
 import time
+import traceback
 import uuid
 from copy import deepcopy
 
@@ -16,6 +16,21 @@ from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+
+class TaskConfigurationError(Exception):
+    """
+    Raised for problems with the task setup (params, answer, criteria) or the shape of the request.
+    These are passed on unchanged by `evaluation_function`.
+    NOTE: The message must never contain the response.
+    """
+
+
+class EvaluationError(Exception):
+    """
+    Generic error raised by `evaluation_function` in place of any unexpected
+    exception, since their messages can contain the response.
+    """
+
 
 messages = {
     "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
@@ -78,9 +93,9 @@ def determine_context(parameters):
             reserved_keywords_codes_collisions.append(keyword)
     if len(reserved_keywords_codes_collisions) > 0:
         if len(reserved_keywords_codes_collisions) == 1:
-            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` is a reserved keyword and cannot be used as an input symbol code.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_codes_collisions)+"` is a reserved keyword and cannot be used as an input symbol code.")
         else:
-            raise Exception("`"+"`, `".join(reserved_keywords_codes_collisions)+"` are reserved keywords and cannot be used as input symbol codes.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_codes_collisions)+"` are reserved keywords and cannot be used as input symbol codes.")
     reserved_keywords_aliases_collisions = []
     for keyword in reserved_keywords_aliases:
         if keyword in input_symbols_reserved_aliases:
@@ -88,9 +103,9 @@ def determine_context(parameters):
             reserved_keywords_aliases_collisions.append(keyword)
     if len(reserved_keywords_aliases_collisions) > 0:
         if len(reserved_keywords_aliases_collisions) == 1:
-            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` is a reserved keyword and cannot be used as an input symbol alternative.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` is a reserved keyword and cannot be used as an input symbol alternative.")
         else:
-            raise Exception("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
+            raise TaskConfigurationError("`"+"`, `".join(reserved_keywords_aliases_collisions)+"` are reserved keywords and cannot be used as input symbol alternatives.")
 
     reserved_keywords = reserved_keywords_codes
     context.update({"reserved_keywords": list(reserved_keywords)})
@@ -129,10 +144,10 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                     result.add_feedback(preprocess_feedback)
                     preprocess_success = True  # Preprocess can only create warnings for responses in this case
                 else:
-                    raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+                    raise TaskConfigurationError(preprocess_feedback[1], preprocess_feedback[0])
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
-                raise Exception(f"Reserved expression {label} must be given as a string.")
+                raise TaskConfigurationError(f"Reserved expression {label} must be given as a string.")
             if len(expr.strip()) == 0:
                 if key == "learner":
                     result.add_feedback(
@@ -142,7 +157,7 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                         )
                     )
                 else:
-                    raise Exception(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
+                    raise TaskConfigurationError(messages["RESERVED_EXPRESSION_MISSING"](label), f"RESERVED_EXPRESSION_MISSING_{label}")
                 success = False
             else:
                 try:
@@ -158,7 +173,7 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                             )
                         )
                     else:
-                        raise Exception(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
+                        raise TaskConfigurationError(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
             reserved_expressions_dict[key].update({label: expr_parsed})
     return success, reserved_expressions_dict
 
@@ -177,7 +192,7 @@ def create_criteria_dict(criteria_parser, parsing_params):
     criteria_string = get_criteria_string(parsing_params)
     preprocess_success, criteria_string, preprocess_feedback = preprocess("criteria", criteria_string, parsing_params)
     if preprocess_success is False:
-        raise Exception(preprocess_feedback[1], preprocess_feedback[0])
+        raise TaskConfigurationError(preprocess_feedback[1], preprocess_feedback[0])
     criteria_string_list = []
     delims = [
         ("(", ")"),
@@ -204,7 +219,7 @@ def create_criteria_dict(criteria_parser, parsing_params):
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
             criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
-            raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
+            raise TaskConfigurationError("Cannot parse criteria: `"+criterion+"`.") from e
     return criteria_parsed
 
 
@@ -234,15 +249,24 @@ def generate_feedback(main_criteria, criteria_graphs, evaluation_parameters):
     return
 
 
-def log_event(event, eval_id, level=logging.INFO, exc_info=False, **fields):
+def log_event(event, eval_id, level=logging.INFO, **fields):
     """
     Writes a single JSON line so that logs can be filtered with CloudWatch Logs Insights.
+    NOTE: Never pass user data (e.g. the response) or anything derived from it.
     """
-    logger.log(level, json.dumps({"event": event, "eval_id": eval_id, **fields}, default=str), exc_info=exc_info)
+    logger.log(level, json.dumps({"event": event, "eval_id": eval_id, **fields}, default=str))
 
 
 def elapsed_ms(start_time):
     return round((time.perf_counter() - start_time) * 1000, 1)
+
+
+def traceback_frames(exception):
+    """
+    Returns the location of each frame in the traceback without the exception messages,
+    since these can contain the response.
+    """
+    return [f"{os.path.basename(frame.filename)}:{frame.lineno} in {frame.name}" for frame in traceback.extract_tb(exception.__traceback__)]
 
 
 def evaluation_function(response, answer, params, include_test_data=False) -> dict:
@@ -253,20 +277,20 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
         - if set to True, use basic dimensional analysis functionality.
 
     Logs the start, each stage and the end (or error) of the evaluation.
-    The response is not logged, only its length and a short hash.
+    No user data is logged: the response, and exception messages and
+    tracebacks (which can contain the response), are left out.
+    For the same reason, any exception other than a TaskConfigurationError
+    is replaced by a generic EvaluationError.
     """
     eval_id = uuid.uuid4().hex[:8]
     start_time = time.perf_counter()
     stage = {"name": "setup", "eval_id": eval_id, "start_time": start_time, "early_return": False}
 
-    response_string = str(response)
     log_event(
         "evaluation_start",
         eval_id,
         params=params,
         answer=answer,
-        response_length=len(response_string),
-        response_sha256=hashlib.sha256(response_string.encode("utf-8")).hexdigest()[:12],
         include_test_data=include_test_data,
     )
 
@@ -277,13 +301,16 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             "evaluation_error",
             eval_id,
             level=logging.ERROR,
-            exc_info=True,
             stage=stage["name"],
             duration_ms=elapsed_ms(start_time),
             error_type=type(e).__name__,
-            error_message=str(e),
+            cause_type=type(e.__cause__).__name__ if e.__cause__ is not None else None,
+            traceback=traceback_frames(e),
         )
-        raise
+        if isinstance(e, TaskConfigurationError):
+            raise
+        # `from None` stops the original exception, and its message, being chained onto this one
+        raise EvaluationError(f"Evaluation failed during stage `{stage['name']}` ({type(e).__name__}). Reference: {eval_id}") from None
 
     log_event(
         "evaluation_end",

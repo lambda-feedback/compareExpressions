@@ -3,7 +3,7 @@ import logging
 
 import pytest
 
-from app.evaluation import evaluation_function
+from app.evaluation import EvaluationError, TaskConfigurationError, evaluation_function
 
 
 def logged_events(caplog):
@@ -35,10 +35,8 @@ class TestEvaluationLogging():
         response = "zzq_unique_7"
         evaluation_function(response, "y", {})
         start = logged_events(caplog)[0]
-        assert start["response_length"] == len(response)
-        assert "response" not in start
-        logged_text = "\n".join(record.getMessage() for record in caplog.records)
-        assert response not in logged_text
+        assert not any(key.startswith("response") for key in start)
+        assert response not in caplog.text
 
     def test_exception_is_logged_with_stage_and_reraised(self, caplog):
         caplog.set_level(logging.INFO, logger="app.evaluation")
@@ -48,7 +46,34 @@ class TestEvaluationLogging():
         error = logged_events(caplog)[-1]
         assert error["event"] == "evaluation_error"
         assert error["stage"] == "determine_context"
-        assert "reserved keyword" in error["error_message"]
+        assert error["error_type"] == "TaskConfigurationError"
+        assert any("determine_context" in frame for frame in error["traceback"])
+
+    def test_exception_message_containing_response_is_not_logged(self, caplog, monkeypatch):
+        caplog.set_level(logging.DEBUG, logger="app.evaluation")
+        response = "zzq_unique_8"
+
+        def raise_with_response(*args, **kwargs):
+            raise ValueError(f"Failed to parse: {response}")
+
+        monkeypatch.setattr("app.evaluation.create_criteria_dict", raise_with_response)
+        with pytest.raises(EvaluationError) as e:
+            evaluation_function(response, "y", {})
+        error = logged_events(caplog)[-1]
+        assert error["stage"] == "parse_criteria"
+        assert error["error_type"] == "ValueError"
+        assert response not in caplog.text
+        assert response not in str(e.value)
+        assert "parse_criteria" in str(e.value)
+        assert error["eval_id"] in str(e.value)
+        assert e.value.__cause__ is None
+        assert e.value.__suppress_context__ is True
+
+    def test_task_configuration_error_is_passed_on_unchanged(self):
+        params = {"symbols": {"where": {"latex": "where", "aliases": []}}}
+        with pytest.raises(TaskConfigurationError) as e:
+            evaluation_function("x", "x", params)
+        assert str(e.value) == "`where` is a reserved keyword and cannot be used as an input symbol code."
 
     def test_params_not_mutated(self):
         params = {"strict_syntax": False, "symbols": {}}
