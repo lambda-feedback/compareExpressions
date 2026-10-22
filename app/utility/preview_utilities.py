@@ -201,6 +201,8 @@ def parse_latex(response: str, symbols: SymbolDict, simplify: bool, parameters=N
     for expression in response_set:
         try:
             expression_postprocess = latex2sympy(expression, substitutions)
+            if isinstance(expression_postprocess, list):
+                expression_postprocess = expression_postprocess.pop()
         except Exception:
             try:
                 expression_preprocessed, replacements = preprocess_E(expression)

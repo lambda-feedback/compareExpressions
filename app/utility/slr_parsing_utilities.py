@@ -10,6 +10,13 @@
 import re
 
 
+class ParsingError(ValueError):
+    """
+    Raised when the input does not match the grammar of the parser.
+    Subclasses ValueError so that the base layer returns it as an unprocessable submission (HTTP 422).
+    """
+
+
 def catch_undefined(label, content, original, start, end):
     return Token(label, content, original, start, end)
 
@@ -434,7 +441,7 @@ class SLR_Parser:
 
     def default_error_action(parser, stack, a, input_tokens, tokens, output):
         m = 70
-        raise Exception(
+        raise ParsingError(
             f"\n{'-'*m}\n" +
             f"ERROR:\n{'-'*m}\n" +
             f"accepted: {input_tokens[:-len(tokens)]}\n" +
@@ -689,7 +696,7 @@ class SLR_Parser:
                 if token_catch_undefined is not None:
                     tokens.append(token_catch_undefined[2](token_catch_undefined[1], string, expr, index-len(string), index-1))
                 else:
-                    raise Exception(f"Undefined input: {string}")
+                    raise ParsingError(f"Undefined input: {string}")
                 string = ""
             if end_token is not None:
                 tokens.append(end_token)
@@ -840,6 +847,6 @@ class SLR_Parser:
                     print("next input: "+str(a))
             else:
                 m = 70
-                raise Exception(f"{'-'*m}\nINVALID ENTRY:\n{'-'*m}\naccepted: {input_tokens[:-len(tokens)]}\ncurrent: {a}\nremaining: {tokens}\nstack: {stack}\noutput: {output}\n{'-'*m}")
+                raise ParsingError(f"{'-'*m}\nINVALID ENTRY:\n{'-'*m}\naccepted: {input_tokens[:-len(tokens)]}\ncurrent: {a}\nremaining: {tokens}\nstack: {stack}\noutput: {output}\n{'-'*m}")
                 break
         return output

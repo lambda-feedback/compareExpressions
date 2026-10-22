@@ -7,6 +7,7 @@ from .expression_utilities import (
 )
 from .slr_parsing_utilities import (
     SLR_Parser,
+    ParsingError,
     relabel,
     catch_undefined,
     infix,
@@ -466,7 +467,7 @@ def SLR_quantity_parser(parameters):
             return False
 
     def error_action_incomplete_expression(p, s, a, i, t, o):
-        raise Exception("Input ended before expression was completed.")
+        raise ParsingError("Input ended before expression was completed.")
 
     def error_condition_infix_missing_argument(items_token, next_symbol):
         if next_symbol.label in ["PRODUCT", "SOLIDUS", "POWER"]:
@@ -475,7 +476,7 @@ def SLR_quantity_parser(parameters):
             return False
 
     def error_action_infix_missing_argument(p, s, a, i, t, o):
-        raise Exception("Infix operator requires an argument on either side.")
+        raise ParsingError("Infix operator requires an argument on either side.")
 
     error_handler = [
         (lambda items_token, next_symbol: next_symbol.label == "NULL", error_action_null),

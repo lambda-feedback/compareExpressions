@@ -4,7 +4,7 @@ import logging
 import pytest
 
 from .. import evaluation
-from ..evaluation import EvaluationError, TaskConfigurationError, evaluation_function
+from ..evaluation import EvaluationError, ResponseParsingError, TaskConfigurationError, evaluation_function
 
 # The module name depends on how pytest is run, so take it from the logger itself
 LOGGER_NAME = evaluation.logger.name
@@ -78,6 +78,24 @@ class TestEvaluationLogging():
         with pytest.raises(TaskConfigurationError) as e:
             evaluation_function("x", "x", params)
         assert str(e.value) == "`where` is a reserved keyword and cannot be used as an input symbol code."
+
+    @pytest.mark.parametrize(
+        "response, params", [
+            (r"\frac{zzq_unique_9}{", {"is_latex": True}),
+            (r"\frac{zzq_unique_9}{1}~\mathrm{m}/", {"is_latex": True, "physical_quantity": True}),
+        ]
+    )
+    def test_unparsable_latex_response_raises_value_error(self, caplog, response, params):
+        # The base layer returns ValueError as an unprocessable submission (HTTP 422) instead of an internal error (HTTP 500)
+        caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
+        with pytest.raises(ResponseParsingError) as e:
+            evaluation_function(response, "x", params)
+        assert isinstance(e.value, ValueError)
+        assert logged_events(caplog)[-1]["stage"] == "parse_latex"
+        assert "zzq_unique_9" not in caplog.text
+        assert "zzq_unique_9" not in str(e.value)
+        assert e.value.__cause__ is None
+        assert e.value.__suppress_context__ is True
 
     def test_params_not_mutated(self):
         params = {"strict_syntax": False, "symbols": {}}
