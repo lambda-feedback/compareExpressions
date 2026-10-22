@@ -25,6 +25,15 @@ class TaskConfigurationError(Exception):
     """
 
 
+class ResponseParsingError(ValueError):
+    """
+    Raised when the response cannot be parsed.
+    Subclasses ValueError so that the base layer returns it as an unprocessable submission (HTTP 422).
+    These are passed on unchanged by `evaluation_function`.
+    NOTE: The message must never contain the response.
+    """
+
+
 class EvaluationError(Exception):
     """
     Generic error raised by `evaluation_function` in place of any unexpected
@@ -307,7 +316,7 @@ def evaluation_function(response, answer, params, include_test_data=False) -> di
             cause_type=type(e.__cause__).__name__ if e.__cause__ is not None else None,
             traceback=traceback_frames(e),
         )
-        if isinstance(e, TaskConfigurationError):
+        if isinstance(e, (TaskConfigurationError, ResponseParsingError)):
             raise
         # `from None` stops the original exception, and its message, being chained onto this one
         raise EvaluationError(f"Evaluation failed during stage `{stage['name']}` ({type(e).__name__}). Reference: {eval_id}") from None
@@ -378,9 +387,14 @@ def _evaluate(response, answer, params, include_test_data, stage) -> dict:
     # What solution will be most consistently reusable?
     if parameters.get("is_latex", False):
         enter_stage("parse_latex")
+        try:
+            response_parsed = parse_latex(response, parameters.get("symbols", {}), False, parameters=parameters)
+        except ValueError:
+            # `from None` stops the original exception, and its message (which can contain the response), being chained onto this one
+            raise ResponseParsingError("Failed to parse LaTeX expression") from None
         parameters["reserved_expressions_strings"]["learner"].update(
             {
-                "response": parse_latex(response, parameters.get("symbols", {}), False, parameters=parameters),
+                "response": response_parsed,
             }
         )
 
