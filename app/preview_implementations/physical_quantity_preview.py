@@ -19,6 +19,7 @@ from ..utility.preview_utilities import (
 from ..utility.expression_utilities import default_parameters as symbolic_default_parameters
 from ..utility.physical_quantity_utilities import SLR_quantity_parser as quantity_parser, expression_preprocess
 from ..utility.physical_quantity_utilities import SLR_quantity_parsing as quantity_parsing
+from ..utility.slr_parsing_utilities import ParsingError
 
 # CONSIDER: Move these to separate file so that they can be shared with
 # the physical quantity context (or move preview implementation into context file)
@@ -120,9 +121,12 @@ def preview_function(response: str, params: Params) -> Result:
             latex_out = res_parsed.latex_string
             sympy_out = response
 
+    # These are all raised as ValueError so that the base layer returns them as unprocessable submissions (HTTP 422)
+    except ParsingError:
+        raise
     except (SyntaxError, tokenize.TokenError) as e:
-        raise Exception("Failed to parse Sympy expression") from e
+        raise ValueError("Failed to parse Sympy expression") from e
     except ValueError as e:
-        raise Exception("Failed to parse LaTeX expression") from e
+        raise ValueError("Failed to parse LaTeX expression") from e
 
     return Result(preview=Preview(latex=latex_out, sympy=sympy_out))
