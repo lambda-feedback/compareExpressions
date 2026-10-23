@@ -243,6 +243,8 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
     (with `response` read as LaTeX if `is_latex` is set), the reserved keywords and the parsing parameters.
     """
     parameters = deepcopy(params)
+    # Applied to the copy, so the caller's `params` keep only what they set
+    _apply_tolerance_aliases(parameters)
 
     reserved_expressions_strings = {
         "learner": {
@@ -340,8 +342,6 @@ def evaluation_function(response: str, answer: str, params: dict[str, Any], incl
     strict_SI_syntax:
         - if set to True, use basic dimensional analysis functionality.
     """
-    _apply_tolerance_aliases(params)
-
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 

@@ -29,12 +29,21 @@ class CriterionSides:
     quantities: Mapping[str, ParsedQuantity]
 
 
+def is_dimension(node: ExprNode) -> bool:
+    """Whether `node` is a `dimension(...)` side of a criterion."""
+    return node.label.strip() == "dimension"
+
+
 def parse_criterion_sides(criterion: ExprNode, parameters: EvaluationParameters) -> CriterionSides:
-    """The sides of `criterion`, where a side written out as a quantity is parsed with its units."""
+    """
+    The sides of `criterion`, where a side written out as a quantity is parsed with its units,
+    and a side written as `dimension(...)` is the quantity inside it.
+    """
     parsing_params = parameters.parsing_parameters["sympy"].replace(simplify=False)
     quantities = dict(parameters.reserved_expressions)
+    nodes = [node.children[0] if is_dimension(node) else node for node in criterion.children]
     sides = []
-    for (name, node) in zip(("criterion_lhs", "criterion_rhs"), criterion.children):
+    for (name, node) in zip(("criterion_lhs", "criterion_rhs"), nodes):
         if node.label == "INPUT":
             quantity = parse_physical_quantity(node.content_string(), parameters.parsing_parameters["quantity"], name)
             quantities[name] = parsed_quantity(quantity)
@@ -42,8 +51,8 @@ def parse_criterion_sides(criterion: ExprNode, parameters: EvaluationParameters)
         else:
             sides.append(parse_expression(node.content_string(), parsing_params))
     return CriterionSides(
-        lhs_string=criterion.children[0].content_string(),
-        rhs_string=criterion.children[1].content_string(),
+        lhs_string=nodes[0].content_string(),
+        rhs_string=nodes[1].content_string(),
         lhs=sides[0],
         rhs=sides[1],
         quantities=quantities,
@@ -70,17 +79,14 @@ def comparison_function(comparison_operator: str) -> Callable[[Basic, Basic, Sub
 
 
 def is_proportional(lhs: Basic, rhs: Basic, substitutions: Substitutions) -> tuple[bool | None, float | None]:
+    """Whether `lhs` is a constant multiple of `rhs`, and the ratio lhs/rhs when it is."""
     expr0, expr1 = _substitute(lhs, rhs, substitutions)
-    if expr0.cancel().simplify().simplify() != 0:
-        ratio = (expr0 / expr1).cancel().simplify()
-        result = ratio.is_constant()
-    elif expr0.cancel().simplify().simplify() != 0:
-        ratio = (expr1 / expr0).cancel().simplify()
-        result = ratio.is_constant()
-    else:
-        result = False
-    if result is True:
-        ratio = float(ratio)
-    else:
-        ratio = None
-    return result, ratio
+    # A zero side is not proportional to anything, and dividing by it would give zoo, which counts as constant
+    if expr0.cancel().simplify().simplify() == 0 or expr1.cancel().simplify().simplify() == 0:
+        return False, None
+    # Keep the ratio as lhs/rhs, because the prefix feedback relies on its direction
+    ratio = (expr0 / expr1).cancel().simplify()
+    result = ratio.is_constant()
+    if result:
+        return result, float(ratio)
+    return result, None

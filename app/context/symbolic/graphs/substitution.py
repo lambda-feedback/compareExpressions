@@ -4,12 +4,12 @@ from typing import Any, TypedDict
 
 from sympy import Basic
 
-from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria, where_substitutions
+from lambdafeedback.criteria import CriteriaGraph, OutputNode, ReachedCriteria
 from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
-from app.context.symbolic.comparison import check_equality, parse_where_substitutions
+from app.context.symbolic.comparison import check_equality, parse_where_substitutions, where_substitution_strings
 from app.context.symbolic.variations import one_addition_to_subtraction, one_exponent_flip, one_swap_addition_and_multiplication
 from app.evaluation_parameters import EvaluationParameters
 from app.types import Substitutions
@@ -62,8 +62,9 @@ def _group_values(
     Groups `expression_to_vary` and its variations by their value after `local_subs` are applied.
     Returns the expressions for each value, and the variation groups that produce each value.
     """
-    unvaried_value = expression_to_vary.subs(local_subs)
-    value_key = str(unvaried_value.simplify())
+    # Simplify here too, because the variations are simplified before they are compared with it
+    unvaried_value = expression_to_vary.subs(local_subs).simplify()
+    value_key = str(unvaried_value)
     values_and_expressions = {value_key: set([expression_to_vary])}
     values_and_variations_group = {value_key: set(["UNKNOWN"])}
     for (group_label, info) in variation_groups.items():
@@ -143,7 +144,7 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
 def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     parsing_params = parameters.parsing_parameters
     expression = criterion.children[0]
-    subs = where_substitutions(criterion.children[1])
+    subs = where_substitution_strings(criterion.children[1])
     local_subs = parse_where_substitutions(criterion.children[1], parsing_params)
     if label is None:
         label = criterion.content_string()
