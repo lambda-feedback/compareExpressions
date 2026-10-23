@@ -12,6 +12,7 @@ from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.symbolic.comparison import check_equality, unsimplified_with_unsplittable
 from app.context.symbolic.graphs.set_equivalence import add_set_equivalence_nodes, as_sets
 from app.evaluation_parameters import EvaluationParameters
+from app.time_budget import comparison_budget
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
 
@@ -33,14 +34,15 @@ def _equality_equivalence(label: str, parameters: EvaluationParameters) -> Evalu
 
         # TODO: Remove when criteria for checking proportionality is implemented
         if isinstance(res, Equality) and isinstance(ans, Equality):
-            res_difference = (res.args[0] - res.args[1]).simplify()
-            if res_difference == 0:
-                symbols_in_equality_ratio = (ans.args[0] - ans.args[1]).simplify().free_symbols
-            elif (ans.args[0] - ans.args[1]).simplify() == 0:
-                symbols_in_equality_ratio = res_difference.free_symbols
-            else:
-                symbols_in_equality_ratio = ((res.args[0] - res.args[1]) / (ans.args[0] - ans.args[1])).simplify().free_symbols
-            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters.parsing_parameters.constants)
+            with comparison_budget():
+                res_difference = (res.args[0] - res.args[1]).simplify()
+                if res_difference == 0:
+                    symbols_in_equality_ratio = (ans.args[0] - ans.args[1]).simplify().free_symbols
+                elif (ans.args[0] - ans.args[1]).simplify() == 0:
+                    symbols_in_equality_ratio = res_difference.free_symbols
+                else:
+                    symbols_in_equality_ratio = ((res.args[0] - res.args[1]) / (ans.args[0] - ans.args[1])).simplify().free_symbols
+                result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters.parsing_parameters.constants)
         return outcome_tag(label, result is True)
     return equality_equivalence
 
