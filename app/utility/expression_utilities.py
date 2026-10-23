@@ -880,10 +880,25 @@ def parse_expression(expr_string, parsing_params):
                 relations.append(relational_classes[operator](lhs, rhs, evaluate=False))
             parsed_expr = relations[0] if len(relations) == 1 else And(*relations, evaluate=False)
         elif "=" in expr:
+            # A chained equality (`x = y = z`) asserts that every operand equals
+            # the others, so it is parsed as a conjunction of the equalities
+            # between adjacent operands, mirroring the chained order inequalities
+            # handled above. A single equality is left as a bare `Equality`.
             expr_parts = expr.split("=")
-            lhs = parse_expr(expr_parts[0], transformations=transformations, local_dict=symbol_dict)
-            rhs = parse_expr(expr_parts[1], transformations=transformations, local_dict=symbol_dict)
-            parsed_expr = Equality(lhs, rhs, evaluate=False)
+            if any(part.strip() == "" for part in expr_parts):
+                raise ValueError(
+                    f"Failed to parse Sympy expression `{expr}`: every `=` must "
+                    "have an expression on both sides."
+                )
+            operands = [
+                parse_expr(part, transformations=transformations, local_dict=symbol_dict)
+                for part in expr_parts
+            ]
+            equalities = [
+                Equality(lhs, rhs, evaluate=False)
+                for lhs, rhs in zip(operands[:-1], operands[1:])
+            ]
+            parsed_expr = equalities[0] if len(equalities) == 1 else And(*equalities, evaluate=False)
         elif parsing_params.get("simplify", False):
             parsed_expr = parse_expr(expr, transformations=transformations, local_dict=symbol_dict)
             if not isinstance(parsed_expr, Equality):

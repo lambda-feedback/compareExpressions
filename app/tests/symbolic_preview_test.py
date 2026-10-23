@@ -77,6 +77,14 @@ class TestPreviewFunction():
         preview = result["preview"]
         assert preview.get("latex") == "\\frac{x^{2} + x + x}{x} = 1"
 
+    def test_preview_with_chained_equality(self):
+        response = "x = y = z"
+        params = Params(is_latex=False, simplify=False)
+        result = preview_function(response, params)
+        preview = result["preview"]
+        assert preview.get("sympy") == "x=y=z"
+        assert preview.get("latex") == "x=y=z"
+
     def test_latex_with_plus_minus(self):
         response = r"\pm \frac{3}{\sqrt{5}} i"
         params = Params(

@@ -1,7 +1,9 @@
 from copy import deepcopy
+from itertools import permutations
 from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo, simplify
 from sympy import re as real_part
 from sympy import StrictLessThan, LessThan, StrictGreaterThan, GreaterThan, Ne, And
+from sympy import linear_eq_to_matrix
 
 # Order relations (chainable as `1 < x < 5`).
 INEQUALITY_TYPES = (StrictLessThan, LessThan, StrictGreaterThan, GreaterThan)
@@ -17,6 +19,20 @@ def inequality_bounds(expr):
         return [expr]
     if isinstance(expr, And) and expr.args and all(
         isinstance(arg, INEQUALITY_TYPES) for arg in expr.args
+    ):
+        return list(expr.args)
+    return None
+
+
+def equality_parts(expr):
+    """The list of equality parts if `expr` is a single equality (`x = y`) or a
+    chained equality (`x = y = z`, parsed as a conjunction of the equalities
+    between adjacent operands), otherwise None. Disjoint from
+    `inequality_bounds`, which never matches a conjunction of equalities."""
+    if isinstance(expr, Equality):
+        return [expr]
+    if isinstance(expr, And) and expr.args and all(
+        isinstance(arg, Equality) for arg in expr.args
     ):
         return list(expr.args)
     return None
@@ -138,11 +154,20 @@ def check_equality(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     lhs_is_inequality = inequality_bounds(lhs_expr) is not None
     rhs_is_inequality = inequality_bounds(rhs_expr) is not None
+    lhs_is_equality_chain = isinstance(lhs_expr, And) and equality_parts(lhs_expr) is not None
+    rhs_is_equality_chain = isinstance(rhs_expr, And) and equality_parts(rhs_expr) is not None
     if lhs_is_inequality or rhs_is_inequality:
         # Subtracting relational / And objects raises, so these cases must be
         # intercepted before the generic `lhs_expr - rhs_expr` comparison below.
         if lhs_is_inequality and rhs_is_inequality:
             result = check_inequality_equivalence(lhs_expr, rhs_expr, parameters_dict) is True
+        else:
+            result = False
+    elif lhs_is_equality_chain or rhs_is_equality_chain:
+        # Chained equalities are `And` objects for the same reason, so they must
+        # be intercepted here too.
+        if lhs_is_equality_chain and rhs_is_equality_chain:
+            result = check_equality_equivalence(lhs_expr, rhs_expr, parameters_dict) is True
         else:
             result = False
     elif isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
@@ -363,6 +388,146 @@ def check_inequality_equivalence(res, ans, parameters_dict):
     return _compare_chained_inequalities(res_bounds, ans_bounds, constants)
 
 
+# Chains longer than this are not searched exhaustively; see
+# `_compare_chained_equalities`.
+MAX_CHAINED_EQUALITY_PARTS = 8
+
+
+def _compare_single_equality(res_eq, ans_eq, constants):
+    """
+    Check whether two equalities describe the same relation, i.e. whether their
+    residuals (`lhs - rhs`) differ only by a constant factor. Where one residual
+    simplifies to zero the other is examined on its own, since the ratio would be
+    a division by zero.
+    """
+    res_difference = res_eq.args[0] - res_eq.args[1]
+    ans_difference = ans_eq.args[0] - ans_eq.args[1]
+    if res_difference.simplify() == 0:
+        symbols_in_equality_ratio = ans_difference.simplify().free_symbols
+    elif ans_difference.simplify() == 0:
+        symbols_in_equality_ratio = res_difference.simplify().free_symbols
+    else:
+        symbols_in_equality_ratio = (res_difference/ans_difference).simplify().free_symbols
+    return {str(s) for s in symbols_in_equality_ratio}.issubset(constants)
+
+
+def _chain_residuals(parts):
+    return [part.args[0] - part.args[1] for part in parts]
+
+
+def _augmented_matrix(residuals, symbols):
+    """
+    The coefficient matrix of `residuals` in `symbols` augmented with the
+    constant terms, or None if any residual is not affine in `symbols` or if the
+    coefficients are not purely numeric.
+    """
+    try:
+        coefficients, constant_terms = linear_eq_to_matrix(residuals, list(symbols))
+    except Exception:
+        return None
+    matrix = coefficients.row_join(constant_terms)
+    if matrix.free_symbols:
+        return None
+    return matrix
+
+
+def _compare_chained_equalities_by_solution_set(res_parts, ans_parts):
+    """
+    Compare two chained equalities by the solution set of the system their parts
+    describe. A chain asserts that all of its operands are equal to one another,
+    so the order in which the parts are written carries no meaning and the
+    adjacent differences of a permuted chain are different expressions that
+    nonetheless constrain exactly the same values: `y = x = z` gives `y - x` and
+    `x - z` where `x = y = z` gives `x - y` and `y - z`, and each pair spans the
+    other. Two affine systems have the same solution set exactly when their
+    augmented matrices have equal rank and stacking them adds no rank.
+
+    Returns None when the residuals are not affine with numeric coefficients, in
+    which case the caller falls back to comparing the parts pairwise.
+    """
+    res_residuals = _chain_residuals(res_parts)
+    ans_residuals = _chain_residuals(ans_parts)
+    symbols = sorted(
+        set().union(*[residual.free_symbols for residual in res_residuals + ans_residuals]),
+        key=str
+    )
+    res_matrix = _augmented_matrix(res_residuals, symbols)
+    ans_matrix = _augmented_matrix(ans_residuals, symbols)
+    if res_matrix is None or ans_matrix is None:
+        return None
+    res_rank = res_matrix.rank()
+    ans_rank = ans_matrix.rank()
+    return res_rank == ans_rank == res_matrix.col_join(ans_matrix).rank()
+
+
+def _compare_chained_equalities(res_parts, ans_parts, constants):
+    """
+    Compare two chained equalities (`x = y = z`). Affine chains are compared by
+    solution set; anything else (for instance a chain scaled by a symbolic
+    constant, whose coefficients are not numeric) falls back to matching the
+    parts one-to-one with the same constant-ratio test used for a single
+    equality. Returns None for non-affine chains too long to search
+    exhaustively.
+    """
+    result = _compare_chained_equalities_by_solution_set(res_parts, ans_parts)
+    if result is not None:
+        return result
+    if len(res_parts) != len(ans_parts):
+        return False
+    if len(res_parts) > MAX_CHAINED_EQUALITY_PARTS:
+        return None
+    for permuted_ans_parts in permutations(ans_parts):
+        if all(
+            _compare_single_equality(res_part, ans_part, constants)
+            for res_part, ans_part in zip(res_parts, permuted_ans_parts)
+        ):
+            return True
+    return False
+
+
+def check_equality_equivalence(res, ans, parameters_dict):
+    """
+    Check whether the response equality `res` is equivalent to the answer
+    equality `ans`. Both may be a single `sympy` equality (`x = y`) or a chained
+    equality (`x = y = z`, parsed as an `And` of the equalities between adjacent
+    operands); a chain is compared to another chain part by part, and a chain is
+    never equivalent to a single equality.
+
+    Returns one of:
+      True                        - equivalent
+      False                       - not equivalent
+      "EXPRESSION_NOT_EQUALITY"   - the response is not an equality, the answer is
+      "EQUALITY_NOT_EXPRESSION"   - the response is an equality, the answer is not
+      "CHAIN_NOT_EQUALITY"        - the response is a chained equality, the answer
+                                    is a single equality
+      "EQUALITY_NOT_CHAIN"        - the response is a single equality, the answer
+                                    is a chained equality
+      None                        - undecidable (chain too long to search)
+    """
+    res_parts = equality_parts(res)
+    ans_parts = equality_parts(ans)
+    if res_parts is None and ans_parts is not None:
+        return "EXPRESSION_NOT_EQUALITY"
+    if res_parts is not None and ans_parts is None:
+        return "EQUALITY_NOT_EXPRESSION"
+    if res_parts is None and ans_parts is None:
+        return False
+
+    constants = set(parameters_dict["parsing_parameters"].get("constants", set()))
+
+    if len(res_parts) == 1 and len(ans_parts) == 1:
+        return _compare_single_equality(res_parts[0], ans_parts[0], constants)
+
+    # A chain is compared by solution set, which already accounts for a differing
+    # number of parts, so the counts only choose the feedback tag. A degenerate
+    # chain that states no more than a single equality (`x = y = y`) therefore
+    # still matches that equality.
+    result = _compare_chained_equalities(res_parts, ans_parts, constants)
+    if result is False and len(res_parts) != len(ans_parts):
+        return "CHAIN_NOT_EQUALITY" if len(res_parts) > len(ans_parts) else "EQUALITY_NOT_CHAIN"
+    return result
+
+
 def check_proportionality(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     result = None
@@ -498,37 +663,20 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
         }
 
     def equality_equivalence(unused_input):
-        result = False
+        # TODO: Remove when criteria for checking proportionality is implemented
         res = parameters_dict["reserved_expressions"]["response"]
         ans = parameters_dict["reserved_expressions"]["answer"]
-
-        if (not isinstance(res, Equality)) and isinstance(ans, Equality):
-            return {
-                label+"_EXPRESSION_NOT_EQUALITY": None
-            }
-
-        if isinstance(res, Equality) and (not isinstance(ans, Equality)):
-            return {
-                label+"_EQUALITY_NOT_EXPRESSION": None
-            }
-
-        # TODO: Remove when criteria for checking proportionality is implemented
-        if isinstance(res, Equality) and isinstance(ans, Equality):
-            if (res.args[0]-res.args[1]).simplify() == 0:
-                symbols_in_equality_ratio = (ans.args[0]-ans.args[1]).simplify().free_symbols
-            elif (ans.args[0]-ans.args[1]).simplify() == 0:
-                symbols_in_equality_ratio = (res.args[0]-res.args[1]).simplify().free_symbols
-            else:
-                symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
-            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters_dict["parsing_parameters"]["constants"])
-        if result is True:
-            return {
-                label+"_TRUE": None
-            }
-        else:
-            return {
-                label+"_FALSE": None
-            }
+        result = check_equality_equivalence(res, ans, parameters_dict)
+        result_to_tag = {
+            True: label+"_TRUE",
+            False: label+"_FALSE",
+            "EXPRESSION_NOT_EQUALITY": label+"_EXPRESSION_NOT_EQUALITY",
+            "EQUALITY_NOT_EXPRESSION": label+"_EQUALITY_NOT_EXPRESSION",
+            "CHAIN_NOT_EQUALITY": label+"_CHAIN_NOT_EQUALITY",
+            "EQUALITY_NOT_CHAIN": label+"_EQUALITY_NOT_CHAIN",
+            None: label+"_UNKNOWN",
+        }
+        return {result_to_tag[result]: None}
 
     def inequality_equivalence(unused_input):
         res = parameters_dict["reserved_expressions"]["response"]
@@ -586,7 +734,7 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
     res = parameters_dict["reserved_expressions"]["response"]
     ans = parameters_dict["reserved_expressions"]["answer"]
     use_inequality_equivalence = inequality_bounds(res) is not None or inequality_bounds(ans) is not None
-    use_equality_equivalence = (isinstance(res, Equality) or isinstance(ans, Equality)) and not use_inequality_equivalence
+    use_equality_equivalence = (equality_parts(res) is not None or equality_parts(ans) is not None) and not use_inequality_equivalence
 
     # TODO: Make checking set equivalence its own context that calls symbolic comparisons instead
     if use_set_equivalence is True:
@@ -674,6 +822,22 @@ def criterion_equality_node(criterion, parameters_dict, label=None):
             feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_EXPRESSION")
         )
         graph.attach(label+"_EQUALITY_NOT_EXPRESSION", END.label)
+        graph.attach(
+            label,
+            label+"_CHAIN_NOT_EQUALITY",
+            summary=str(lhs)+" is a chained equality, not a single equality.",
+            details=str(lhs)+" is a chained equality, but a single equality was expected.",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("CHAIN_NOT_EQUALITY")
+        )
+        graph.attach(label+"_CHAIN_NOT_EQUALITY", END.label)
+        graph.attach(
+            label,
+            label+"_EQUALITY_NOT_CHAIN",
+            summary=str(lhs)+" is a single equality, not a chained equality.",
+            details=str(lhs)+" is a single equality, but a chained equality was expected.",
+            feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_CHAIN")
+        )
+        graph.attach(label+"_EQUALITY_NOT_CHAIN", END.label)
     elif use_inequality_equivalence:
         graph.add_evaluation_node(
             label,
