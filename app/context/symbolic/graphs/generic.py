@@ -19,32 +19,32 @@ def criterion_eval_node(criterion: ExprNode, parameters: EvaluationParameters) -
         result = check_criterion(criterion, parameters)
         return outcome_tag(label, result, feedback_string_generator_inputs)
 
-    graph, END = outcome_graph(label, summary=label, details="Checks if "+label+" is true.", evaluate=evaluation_node_internal)
+    graph, END = outcome_graph(label, summary=label, details="Checks if " + label + " is true.", evaluate=evaluation_node_internal)
     attach_terminal_criterion(
         graph,
         label,
-        label+"_TRUE",
+        label + "_TRUE",
         END,
         summary="True",
-        details=label+" is true.",
+        details =label + " is true.",
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("TRUE")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_FALSE",
+        label + "_FALSE",
         END,
         summary="True",
-        details=label+" is false.",
+        details =label + " is false.",
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_UNKNOWN",
+        label + "_UNKNOWN",
         END,
         summary="True",
-        details=label+" is false.",
+        details =label + " is false.",
         feedback_string_generator=symbolic_feedback_string_generators["GENERIC"]("FALSE")
     )
     return graph

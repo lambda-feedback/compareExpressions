@@ -15,7 +15,7 @@ def find_coords_for_node_type(expression: Basic, node_type: type[Basic]) -> list
         if isinstance(expr, node_type):
             node_coords.append(coord)
         for (k, arg) in enumerate(expr.args):
-            stack.append((arg, coord+(k,)))
+            stack.append((arg, coord + (k,)))
     return node_coords
 
 
@@ -31,7 +31,7 @@ def replace_node_variations(
         for k in range(0, len(nodes[-1].args)):
             variation = replacement_function(nodes[-1], k)
             for (node, coord) in reversed(list(zip(nodes, coords))):
-                new_args = node.args[0:coord]+(variation,)+node.args[coord+1:]
+                new_args = node.args[0:coord] + (variation,) + node.args[coord + 1:]
                 variation = type(node)(*new_args)
             variations.append(variation)
     return variations
@@ -39,7 +39,7 @@ def replace_node_variations(
 
 def one_addition_to_subtraction(expression: Basic) -> list[Basic]:
     def addition_to_subtraction(node: Basic, k: int) -> Basic:
-        return node - 2*node.args[k]
+        return node - 2 * node.args[k]
     variations = replace_node_variations(expression, Add, addition_to_subtraction)
     return variations
 
@@ -47,10 +47,10 @@ def one_addition_to_subtraction(expression: Basic) -> list[Basic]:
 def one_swap_addition_and_multiplication(expression: Basic) -> list[Basic]:
 
     def addition_to_multiplication(node: Basic, k: int) -> Basic:
-        return node - node.args[k-1] - node.args[k] + node.args[k-1] * node.args[k]
+        return node - node.args[k - 1] - node.args[k] + node.args[k - 1] * node.args[k]
 
     def multiplication_to_addition(node: Basic, k: int) -> Basic:
-        return node - 2*node.args[k]
+        return node - 2 * node.args[k]
 
     variations = replace_node_variations(expression, Add, addition_to_multiplication)
     variations += replace_node_variations(expression, Mul, addition_to_multiplication)

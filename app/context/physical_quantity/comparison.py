@@ -33,17 +33,17 @@ def comparison_function(comparison_operator: str) -> Callable[[Basic, Basic, Sub
 
     def comparison_function_inner(lhs: Basic, rhs: Basic, substitutions: Substitutions) -> bool:
         expr0, expr1 = _substitute(lhs, rhs, substitutions)
-        return bool(comparison((expr0-expr1).cancel().simplify().simplify(), 0))
+        return bool(comparison((expr0 - expr1).cancel().simplify().simplify(), 0))
     return comparison_function_inner
 
 
 def is_proportional(lhs: Basic, rhs: Basic, substitutions: Substitutions) -> tuple[bool | None, float | None]:
     expr0, expr1 = _substitute(lhs, rhs, substitutions)
     if expr0.cancel().simplify().simplify() != 0:
-        ratio = (expr0/expr1).cancel().simplify()
+        ratio = (expr0 / expr1).cancel().simplify()
         result = ratio.is_constant()
     elif expr0.cancel().simplify().simplify() != 0:
-        ratio = (expr1/expr0).cancel().simplify()
+        ratio = (expr1 / expr0).cancel().simplify()
         result = ratio.is_constant()
     else:
         result = False

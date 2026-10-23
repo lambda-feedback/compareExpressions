@@ -19,7 +19,7 @@ def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: 
     """`parsing_params` without simplification, with `symbols` also read as single symbols."""
     return parsing_params.replace(
         simplify=False,
-        extra_unsplittable_symbols=parsing_params.extra_unsplittable_symbols+tuple(symbols),
+        extra_unsplittable_symbols =parsing_params.extra_unsplittable_symbols + tuple(symbols),
     )
 
 
@@ -56,8 +56,8 @@ def create_expressions_for_comparison(
         simplified_lhs_expr = lhs_expr.cancel().simplify()
         simplified_rhs_expr = rhs_expr.cancel().simplify()
         if (im(lhs_expr) != 0) or (im(lhs_expr) != 0):
-            lhs_expr = real_part(simplified_lhs_expr) + I*im(simplified_lhs_expr)
-            rhs_expr = real_part(simplified_rhs_expr) + I*im(simplified_rhs_expr)
+            lhs_expr = real_part(simplified_lhs_expr) + I * im(simplified_lhs_expr)
+            rhs_expr = real_part(simplified_rhs_expr) + I * im(simplified_rhs_expr)
     return lhs_expr, rhs_expr
 
 
@@ -103,7 +103,7 @@ def check_equality(
     if either_is_infinite:
         result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
     else:
-        result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+        result = do_comparison(criterion.content, lhs_expr - rhs_expr)
     if result is not False:
         return result
 
@@ -112,16 +112,16 @@ def check_equality(
     # simplifications here in order to reduce the likelihood of false negatives.
     # Each side is simplified only once a retry needs it.
     simplified_rhs_expr = rhs_expr.simplify()
-    result = do_comparison(criterion.content, lhs_expr-simplified_rhs_expr)
+    result = do_comparison(criterion.content, lhs_expr - simplified_rhs_expr)
     if result is not False:
         return result
 
     simplified_lhs_expr = lhs_expr.simplify()
-    result = do_comparison(criterion.content, simplified_lhs_expr-rhs_expr)
+    result = do_comparison(criterion.content, simplified_lhs_expr - rhs_expr)
     if result is not False:
         return result
 
-    result = do_comparison(criterion.content, simplified_lhs_expr-simplified_rhs_expr)
+    result = do_comparison(criterion.content, simplified_lhs_expr - simplified_rhs_expr)
     if result is not False:
         return result
 
@@ -130,7 +130,7 @@ def check_equality(
 
 def check_order(criterion: ExprNode, parameters: EvaluationParameters) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters)
-    result = do_comparison(criterion.content, lhs_expr-rhs_expr)
+    result = do_comparison(criterion.content, lhs_expr - rhs_expr)
     return result
 
 
@@ -138,9 +138,9 @@ def check_proportionality(criterion: ExprNode, parameters: EvaluationParameters)
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters)
     result = None
     if lhs_expr.cancel().simplify().simplify() != 0:
-        result = (rhs_expr/lhs_expr).cancel().simplify()
+        result = (rhs_expr / lhs_expr).cancel().simplify()
     elif rhs_expr.cancel().simplify().simplify() != 0:
-        result = (lhs_expr/rhs_expr).cancel().simplify()
+        result = (lhs_expr / rhs_expr).cancel().simplify()
     if result == 0 or result is None:
         result = False
     else:

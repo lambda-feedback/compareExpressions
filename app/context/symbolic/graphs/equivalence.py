@@ -23,23 +23,23 @@ def _equality_equivalence(label: str, parameters: EvaluationParameters) -> Evalu
 
         if (not isinstance(res, Equality)) and isinstance(ans, Equality):
             return {
-                label+"_EXPRESSION_NOT_EQUALITY": None
+                label + "_EXPRESSION_NOT_EQUALITY": None
             }
 
         if isinstance(res, Equality) and (not isinstance(ans, Equality)):
             return {
-                label+"_EQUALITY_NOT_EXPRESSION": None
+                label + "_EQUALITY_NOT_EXPRESSION": None
             }
 
         # TODO: Remove when criteria for checking proportionality is implemented
         if isinstance(res, Equality) and isinstance(ans, Equality):
-            res_difference = (res.args[0]-res.args[1]).simplify()
+            res_difference = (res.args[0] - res.args[1]).simplify()
             if res_difference == 0:
-                symbols_in_equality_ratio = (ans.args[0]-ans.args[1]).simplify().free_symbols
-            elif (ans.args[0]-ans.args[1]).simplify() == 0:
+                symbols_in_equality_ratio = (ans.args[0] - ans.args[1]).simplify().free_symbols
+            elif (ans.args[0] - ans.args[1]).simplify() == 0:
                 symbols_in_equality_ratio = res_difference.free_symbols
             else:
-                symbols_in_equality_ratio = ((res.args[0]-res.args[1])/(ans.args[0]-ans.args[1])).simplify().free_symbols
+                symbols_in_equality_ratio = ((res.args[0] - res.args[1]) / (ans.args[0] - ans.args[1])).simplify().free_symbols
             result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters.parsing_parameters.constants)
         return outcome_tag(label, result is True)
     return equality_equivalence
@@ -52,7 +52,7 @@ def _same_symbols(label: str, lhs: str, rhs: str, parameters: EvaluationParamete
         lsym = parse_expression(lhs, parsing_params).subs(local_substitutions)
         rsym = parse_expression(rhs, parsing_params).subs(local_substitutions)
         result = lsym.free_symbols == rsym.free_symbols
-        return outcome_tag(label+"_SAME_SYMBOLS", result is True)
+        return outcome_tag(label + "_SAME_SYMBOLS", result is True)
     return same_symbols
 
 
@@ -63,52 +63,52 @@ def add_equality_equivalence_nodes(
     graph.add_evaluation_node(
         label,
         summary=label,
-        details="Checks if "+str(lhs)+" is equivalent to "+str(rhs)+".",
+        details ="Checks if " + str(lhs) + " is equivalent to " + str(rhs) + ".",
         evaluate=_equality_equivalence(label, parameters)
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_UNKNOWN",
+        label + "_UNKNOWN",
         END,
-        summary="Cannot determine if "+str(lhs)+" is equivalent to "+str(rhs),
-        details="Cannot determine if "+str(lhs)+" is equivalent to "+str(rhs)+".",
+        summary ="Cannot determine if " + str(lhs) + " is equivalent to " + str(rhs),
+        details ="Cannot determine if " + str(lhs) + " is equivalent to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_EQUIVALENCE_UNKNOWN")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_TRUE",
+        label + "_TRUE",
         END,
-        summary=str(lhs)+" is equivalent to "+str(rhs),
-        details=str(lhs)+" is equivalent to "+str(rhs)+".",
+        summary =str(lhs) + " is equivalent to " + str(rhs),
+        details =str(lhs) + " is equivalent to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITIES_EQUIVALENT")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_FALSE",
+        label + "_FALSE",
         END,
-        summary=str(lhs)+" is not equivalent to "+str(rhs),
-        details=str(lhs)+" is not equivalent to "+str(rhs)+".",
+        summary =str(lhs) + " is not equivalent to " + str(rhs),
+        details =str(lhs) + " is not equivalent to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITIES_NOT_EQUIVALENT")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_EXPRESSION_NOT_EQUALITY",
+        label + "_EXPRESSION_NOT_EQUALITY",
         END,
-        summary=str(lhs)+" is an expression, not an equality.",
-        details=str(lhs)+" is an expression, not an equality.",
+        summary =str(lhs) + " is an expression, not an equality.",
+        details =str(lhs) + " is an expression, not an equality.",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EXPRESSION_NOT_EQUALITY")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_EQUALITY_NOT_EXPRESSION",
+        label + "_EQUALITY_NOT_EXPRESSION",
         END,
-        summary=str(lhs)+" is an equality, not an expression.",
-        details=str(lhs)+" is an equality, not an expression.",
+        summary =str(lhs) + " is an equality, not an expression.",
+        details =str(lhs) + " is an equality, not an expression.",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_EXPRESSION")
     )
 
@@ -126,57 +126,57 @@ def add_mathematical_equivalence_nodes(
     graph.add_evaluation_node(
         label,
         summary=label,
-        details="Checks if "+str(lhs)+"="+str(rhs)+".",
+        details ="Checks if " + str(lhs) + "=" + str(rhs) + ".",
         evaluate=mathematical_equivalence
     )
     graph.attach_new_criterion(
         label,
-        label+"_TRUE",
-        summary=str(lhs)+"="+str(rhs),
-        details=str(lhs)+" is equal to "+str(rhs)+".",
+        label + "_TRUE",
+        summary =str(lhs) + "=" + str(rhs),
+        details =str(lhs) + " is equal to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("TRUE")
     )
     graph.attach_new_evaluation(
-        label+"_TRUE",
-        label+"_SAME_SYMBOLS",
-        summary=str(lhs)+" has the same symbols as "+str(rhs),
-        details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
+        label + "_TRUE",
+        label + "_SAME_SYMBOLS",
+        summary =str(lhs) + " has the same symbols as " + str(rhs),
+        details =str(lhs) + " has the same (free) symbols as " + str(rhs) + ".",
         evaluate=_same_symbols(label, lhs, rhs, parameters)
     )
     attach_terminal_criterion(
         graph,
-        label+"_SAME_SYMBOLS",
-        label+"_SAME_SYMBOLS"+"_TRUE",
+        label + "_SAME_SYMBOLS",
+        label + "_SAME_SYMBOLS" + "_TRUE",
         END,
-        summary=str(lhs)+" has the same symbols as "+str(rhs),
-        details=str(lhs)+" has the same (free) symbols as "+str(rhs)+".",
+        summary =str(lhs) + " has the same symbols as " + str(rhs),
+        details =str(lhs) + " has the same (free) symbols as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SAME_SYMBOLS"]("TRUE")
     )
     attach_terminal_criterion(
         graph,
-        label+"_SAME_SYMBOLS",
-        label+"_SAME_SYMBOLS"+"_FALSE",
+        label + "_SAME_SYMBOLS",
+        label + "_SAME_SYMBOLS" + "_FALSE",
         END,
-        summary=str(lhs)+" does not have the same symbols as "+str(rhs),
-        details=str(lhs)+" does note have the same (free) symbols as "+str(rhs)+".",
+        summary =str(lhs) + " does not have the same symbols as " + str(rhs),
+        details =str(lhs) + " does note have the same (free) symbols as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SAME_SYMBOLS"]("FALSE")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_FALSE",
+        label + "_FALSE",
         END,
-        summary=str(lhs)+"=\\="+str(rhs),
-        details=str(lhs)+" is not equal to"+str(rhs)+".",
+        summary =str(lhs) + "=\\=" + str(rhs),
+        details =str(lhs) + " is not equal to" + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("FALSE")
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_UNKNOWN",
+        label + "_UNKNOWN",
         END,
-        summary="Cannot detrmine if "+str(lhs)+"="+str(rhs),
-        details="Cannot detrmine if "+str(lhs)+" is equal to "+str(rhs)+".",
+        summary ="Cannot detrmine if " + str(lhs) + "=" + str(rhs),
+        details ="Cannot detrmine if " + str(lhs) + " is equal to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("UNKNOWN")
     )
 

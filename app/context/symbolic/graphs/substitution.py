@@ -38,21 +38,21 @@ def _variation_groups(criterion: ExprNode, expression_to_vary: Basic) -> dict[st
     return {
         "ONE_ADDITION_TO_SUBTRACTION": {
             "variations": one_addition_to_subtraction(expression_to_vary),
-            "summary": expression_string+" if one addition is changed to a subtraction or vice versa.",
+            "summary": expression_string + " if one addition is changed to a subtraction or vice versa.",
         },
         "ONE_EXPONENT_FLIP": {
             "variations": one_exponent_flip(expression_to_vary),
-            "summary": expression_string+" is true if one exponent has its sign changed.",
+            "summary": expression_string + " is true if one exponent has its sign changed.",
         },
         "ONE_SWAP_ADDITION_AND_MULTIPLICATION": {
             "variations": one_swap_addition_and_multiplication(expression_to_vary),
-            "summary": expression_string+" is true if one addition is replaced with a multiplication or vice versa.",
+            "summary": expression_string + " is true if one addition is replaced with a multiplication or vice versa.",
         }
     }
 
 
 def _variation_details(variations: list[Basic]) -> str:
-    return "The following expressions are checked: "+", ".join([str(e) for e in variations])
+    return "The following expressions are checked: " + ", ".join([str(e) for e in variations])
 
 
 def _group_values(
@@ -82,20 +82,20 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
     """Adds the nodes that try to identify which variation of the expression the response matches."""
     def identify_reason(_response: Any) -> ReachedCriteria:
         reasons = {
-            label+"_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group.get(str(response_value), {"UNKNOWN"})
+            label + "_" + group_label: {'criterion': criterion} for group_label in values_and_variations_group.get(str(response_value), {"UNKNOWN"})
         }
         return reasons
     graph.attach_new_evaluation(
-        label+"_FALSE",
-        label+"_IDENTIFY_REASON",
+        label + "_FALSE",
+        label + "_IDENTIFY_REASON",
         summary="Identify reason.",
         details="Attempt to identify why the response is incorrect.",
         evaluate=identify_reason
     )
     attach_terminal_criterion(
         graph,
-        label+"_IDENTIFY_REASON",
-        label+"_UNKNOWN",
+        label + "_IDENTIFY_REASON",
+        label + "_UNKNOWN",
         END,
         summary="Unknown reason",
         details="No candidates for how the response was computed were found.",
@@ -104,23 +104,23 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
 
     def get_candidates(_response: Any) -> ReachedCriteria:
         candidates = {
-            label+"_RESPONSE_CANDIDATES_"+group_label: {'criterion': criterion} for group_label in values_and_variations_group[str(response_value)]
+            label + "_RESPONSE_CANDIDATES_" + group_label: {'criterion': criterion} for group_label in values_and_variations_group[str(response_value)]
         }
         return candidates
 
     for (group_label, group_info) in variation_groups.items():
         graph.attach_new_criterion(
-            label+"_IDENTIFY_REASON",
-            label+"_"+group_label,
+            label + "_IDENTIFY_REASON",
+            label + "_" + group_label,
             summary=group_info["summary"],
             details=_variation_details(group_info["variations"]),
             feedback_string_generator=symbolic_feedback_string_generators["IDENTIFY_REASON"]("UNKNOWN")
         )
         graph.attach_new_evaluation(
-            label+"_"+group_label,
-            label+"_GET_CANDIDATES_"+group_label,
-            summary="Get candidate responses that satisfy "+expression.content_string(),
-            details="Get candidate responses that satisfy "+expression.content_string(),
+            label + "_" + group_label,
+            label + "_GET_CANDIDATES_" + group_label,
+            summary ="Get candidate responses that satisfy " + expression.content_string(),
+            details ="Get candidate responses that satisfy " + expression.content_string(),
             evaluate=get_candidates
         )
 
@@ -128,15 +128,15 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
         expressions_string = ", ".join([str(e) for e in expressions])
         for group_label in values_and_variations_group[value]:
             if group_label != "UNKNOWN":
-                group_candidates_eval = graph.evaluations[label+"_GET_CANDIDATES_"+group_label]
-                if label+"_RESPONSE_CANDIDATES_"+group_label not in [edge.target.label for edge in group_candidates_eval.outgoing]:
+                group_candidates_eval = graph.evaluations[label + "_GET_CANDIDATES_" + group_label]
+                if label + "_RESPONSE_CANDIDATES_" + group_label not in [edge.target.label for edge in group_candidates_eval.outgoing]:
                     attach_terminal_criterion(
                         graph,
-                        label+"_GET_CANDIDATES_"+group_label,
-                        label+"_RESPONSE_CANDIDATES_"+group_label,
+                        label + "_GET_CANDIDATES_" + group_label,
+                        label + "_RESPONSE_CANDIDATES_" + group_label,
                         END,
-                        summary="response = "+str(value),
-                        details="Response candidates: "+expressions_string
+                        summary ="response = " + str(value),
+                        details ="Response candidates: " + expressions_string
                     )
 
 
@@ -152,27 +152,27 @@ def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, 
         result = check_equality(expression, parameters, local_substitutions=local_subs)
         return outcome_tag(label, result is True)
 
-    subs_string = ", ".join(name+" = "+expr for name, expr in subs)
+    subs_string = ", ".join(name + " = " + expr for name, expr in subs)
     graph, END = outcome_graph(
         label,
         summary=label,
-        details="Checks if "+expression.content_string()+" where "+subs_string+".",
+        details ="Checks if " + expression.content_string() + " where " + subs_string + ".",
         evaluate=expression_check
     )
     attach_terminal_criterion(
         graph,
         label,
-        label+"_TRUE",
+        label + "_TRUE",
         END,
-        summary=expression.content_string()+" where "+subs_string,
-        details=expression.content_string()+" where "+subs_string+"is true.",
+        summary =expression.content_string() + " where " + subs_string,
+        details =expression.content_string() + " where " + subs_string + "is true.",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer_where"]("TRUE")
     )
     graph.attach_new_criterion(
         label,
-        label+"_FALSE",
-        summary="not "+expression.content_string(),
-        details=expression.content_string()+" is not true when "+subs_string+".",
+        label + "_FALSE",
+        summary ="not " + expression.content_string(),
+        details =expression.content_string() + " is not true when " + subs_string + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer_where"]("FALSE")
     )
 

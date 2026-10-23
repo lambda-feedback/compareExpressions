@@ -11,11 +11,11 @@ from lambdafeedback.criteria import CriteriaGraph, Evaluate, FeedbackStringGener
 def outcome_tag(label: str, result: bool | None, inputs: Mapping[str, Any] | None = None) -> ReachedCriteria:
     """`{label+"_TRUE": inputs}` if `result` is True, `label+"_FALSE"` if it is False, otherwise `label+"_UNKNOWN"`."""
     if result is True:
-        return {label+"_TRUE": inputs}
+        return {label + "_TRUE": inputs}
     elif result is False:
-        return {label+"_FALSE": inputs}
+        return {label + "_FALSE": inputs}
     else:
-        return {label+"_UNKNOWN": inputs}
+        return {label + "_UNKNOWN": inputs}
 
 
 def outcome_graph(label: str, summary: str, details: str, evaluate: Evaluate) -> tuple[CriteriaGraph, OutputNode]:
