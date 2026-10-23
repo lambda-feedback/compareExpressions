@@ -119,8 +119,8 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
         graph.attach_new_evaluation(
             label + "_" + group_label,
             label + "_GET_CANDIDATES_" + group_label,
-            summary ="Get candidate responses that satisfy " + expression.content_string(),
-            details ="Get candidate responses that satisfy " + expression.content_string(),
+            summary="Get candidate responses that satisfy " + expression.content_string(),
+            details="Get candidate responses that satisfy " + expression.content_string(),
             evaluate=get_candidates
         )
 
@@ -135,8 +135,8 @@ def _add_identify_reason_nodes(graph: CriteriaGraph, END: OutputNode, label: str
                         label + "_GET_CANDIDATES_" + group_label,
                         label + "_RESPONSE_CANDIDATES_" + group_label,
                         END,
-                        summary ="response = " + str(value),
-                        details ="Response candidates: " + expressions_string
+                        summary="response = " + str(value),
+                        details="Response candidates: " + expressions_string
                     )
 
 
@@ -156,7 +156,7 @@ def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, 
     graph, END = outcome_graph(
         label,
         summary=label,
-        details ="Checks if " + expression.content_string() + " where " + subs_string + ".",
+        details="Checks if " + expression.content_string() + " where " + subs_string + ".",
         evaluate=expression_check
     )
     attach_terminal_criterion(
@@ -164,15 +164,15 @@ def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, 
         label,
         label + "_TRUE",
         END,
-        summary =expression.content_string() + " where " + subs_string,
-        details =expression.content_string() + " where " + subs_string + "is true.",
+        summary=expression.content_string() + " where " + subs_string,
+        details=expression.content_string() + " where " + subs_string + "is true.",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer_where"]("TRUE")
     )
     graph.attach_new_criterion(
         label,
         label + "_FALSE",
-        summary ="not " + expression.content_string(),
-        details =expression.content_string() + " is not true when " + subs_string + ".",
+        summary="not " + expression.content_string(),
+        details=expression.content_string() + " is not true when " + subs_string + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer_where"]("FALSE")
     )
 

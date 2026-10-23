@@ -76,14 +76,14 @@ def add_set_equivalence_nodes(
     graph.add_evaluation_node(
         label,
         summary=label,
-        details ="Checks if " + str(lhs) + "=" + str(rhs) + ".",
+        details="Checks if " + str(lhs) + "=" + str(rhs) + ".",
         evaluate=set_equivalence
     )
     graph.attach_new_criterion(
         label,
         label + "_TRUE",
-        summary =str(lhs) + "=" + str(rhs),
-        details =str(lhs) + " is equal to " + str(rhs) + ".",
+        summary=str(lhs) + "=" + str(rhs),
+        details=str(lhs) + " is equal to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("TRUE")
     )
     attach_terminal_criterion(
@@ -91,7 +91,7 @@ def add_set_equivalence_nodes(
         label,
         label + "_MULTIPLE_ANSWER_FAIL_ALL",
         END,
-        summary =str(lhs) + " is not equal to " + str(rhs),
+        summary=str(lhs) + " is not equal to " + str(rhs),
         details="At least one answer or response was incorrect.",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("MULTIPLE_ANSWER_FAIL_ALL")
     )

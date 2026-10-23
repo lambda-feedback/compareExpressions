@@ -63,7 +63,7 @@ def add_equality_equivalence_nodes(
     graph.add_evaluation_node(
         label,
         summary=label,
-        details ="Checks if " + str(lhs) + " is equivalent to " + str(rhs) + ".",
+        details="Checks if " + str(lhs) + " is equivalent to " + str(rhs) + ".",
         evaluate=_equality_equivalence(label, parameters)
     )
     attach_terminal_criterion(
@@ -71,8 +71,8 @@ def add_equality_equivalence_nodes(
         label,
         label + "_UNKNOWN",
         END,
-        summary ="Cannot determine if " + str(lhs) + " is equivalent to " + str(rhs),
-        details ="Cannot determine if " + str(lhs) + " is equivalent to " + str(rhs) + ".",
+        summary="Cannot determine if " + str(lhs) + " is equivalent to " + str(rhs),
+        details="Cannot determine if " + str(lhs) + " is equivalent to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_EQUIVALENCE_UNKNOWN")
     )
     attach_terminal_criterion(
@@ -80,8 +80,8 @@ def add_equality_equivalence_nodes(
         label,
         label + "_TRUE",
         END,
-        summary =str(lhs) + " is equivalent to " + str(rhs),
-        details =str(lhs) + " is equivalent to " + str(rhs) + ".",
+        summary=str(lhs) + " is equivalent to " + str(rhs),
+        details=str(lhs) + " is equivalent to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITIES_EQUIVALENT")
     )
     attach_terminal_criterion(
@@ -89,8 +89,8 @@ def add_equality_equivalence_nodes(
         label,
         label + "_FALSE",
         END,
-        summary =str(lhs) + " is not equivalent to " + str(rhs),
-        details =str(lhs) + " is not equivalent to " + str(rhs) + ".",
+        summary=str(lhs) + " is not equivalent to " + str(rhs),
+        details=str(lhs) + " is not equivalent to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITIES_NOT_EQUIVALENT")
     )
     attach_terminal_criterion(
@@ -98,8 +98,8 @@ def add_equality_equivalence_nodes(
         label,
         label + "_EXPRESSION_NOT_EQUALITY",
         END,
-        summary =str(lhs) + " is an expression, not an equality.",
-        details =str(lhs) + " is an expression, not an equality.",
+        summary=str(lhs) + " is an expression, not an equality.",
+        details=str(lhs) + " is an expression, not an equality.",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EXPRESSION_NOT_EQUALITY")
     )
     attach_terminal_criterion(
@@ -107,8 +107,8 @@ def add_equality_equivalence_nodes(
         label,
         label + "_EQUALITY_NOT_EXPRESSION",
         END,
-        summary =str(lhs) + " is an equality, not an expression.",
-        details =str(lhs) + " is an equality, not an expression.",
+        summary=str(lhs) + " is an equality, not an expression.",
+        details=str(lhs) + " is an equality, not an expression.",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_EXPRESSION")
     )
 
@@ -126,21 +126,21 @@ def add_mathematical_equivalence_nodes(
     graph.add_evaluation_node(
         label,
         summary=label,
-        details ="Checks if " + str(lhs) + "=" + str(rhs) + ".",
+        details="Checks if " + str(lhs) + "=" + str(rhs) + ".",
         evaluate=mathematical_equivalence
     )
     graph.attach_new_criterion(
         label,
         label + "_TRUE",
-        summary =str(lhs) + "=" + str(rhs),
-        details =str(lhs) + " is equal to " + str(rhs) + ".",
+        summary=str(lhs) + "=" + str(rhs),
+        details=str(lhs) + " is equal to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("TRUE")
     )
     graph.attach_new_evaluation(
         label + "_TRUE",
         label + "_SAME_SYMBOLS",
-        summary =str(lhs) + " has the same symbols as " + str(rhs),
-        details =str(lhs) + " has the same (free) symbols as " + str(rhs) + ".",
+        summary=str(lhs) + " has the same symbols as " + str(rhs),
+        details=str(lhs) + " has the same (free) symbols as " + str(rhs) + ".",
         evaluate=_same_symbols(label, lhs, rhs, parameters)
     )
     attach_terminal_criterion(
@@ -148,8 +148,8 @@ def add_mathematical_equivalence_nodes(
         label + "_SAME_SYMBOLS",
         label + "_SAME_SYMBOLS" + "_TRUE",
         END,
-        summary =str(lhs) + " has the same symbols as " + str(rhs),
-        details =str(lhs) + " has the same (free) symbols as " + str(rhs) + ".",
+        summary=str(lhs) + " has the same symbols as " + str(rhs),
+        details=str(lhs) + " has the same (free) symbols as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SAME_SYMBOLS"]("TRUE")
     )
     attach_terminal_criterion(
@@ -157,8 +157,8 @@ def add_mathematical_equivalence_nodes(
         label + "_SAME_SYMBOLS",
         label + "_SAME_SYMBOLS" + "_FALSE",
         END,
-        summary =str(lhs) + " does not have the same symbols as " + str(rhs),
-        details =str(lhs) + " does note have the same (free) symbols as " + str(rhs) + ".",
+        summary=str(lhs) + " does not have the same symbols as " + str(rhs),
+        details=str(lhs) + " does note have the same (free) symbols as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SAME_SYMBOLS"]("FALSE")
     )
     attach_terminal_criterion(
@@ -166,8 +166,8 @@ def add_mathematical_equivalence_nodes(
         label,
         label + "_FALSE",
         END,
-        summary =str(lhs) + "=\\=" + str(rhs),
-        details =str(lhs) + " is not equal to" + str(rhs) + ".",
+        summary=str(lhs) + "=\\=" + str(rhs),
+        details=str(lhs) + " is not equal to" + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("FALSE")
     )
     attach_terminal_criterion(
@@ -175,8 +175,8 @@ def add_mathematical_equivalence_nodes(
         label,
         label + "_UNKNOWN",
         END,
-        summary ="Cannot detrmine if " + str(lhs) + "=" + str(rhs),
-        details ="Cannot detrmine if " + str(lhs) + " is equal to " + str(rhs) + ".",
+        summary="Cannot detrmine if " + str(lhs) + "=" + str(rhs),
+        details="Cannot detrmine if " + str(lhs) + " is equal to " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer"]("UNKNOWN")
     )
 

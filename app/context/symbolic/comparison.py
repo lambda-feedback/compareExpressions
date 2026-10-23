@@ -19,7 +19,7 @@ def unsimplified_with_unsplittable(parsing_params: SympyParsingConfig, symbols: 
     """`parsing_params` without simplification, with `symbols` also read as single symbols."""
     return parsing_params.replace(
         simplify=False,
-        extra_unsplittable_symbols =parsing_params.extra_unsplittable_symbols + tuple(symbols),
+        extra_unsplittable_symbols=parsing_params.extra_unsplittable_symbols + tuple(symbols),
     )
 
 

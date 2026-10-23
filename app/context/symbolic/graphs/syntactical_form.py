@@ -44,17 +44,17 @@ def _add_known_form_nodes(graph: CriteriaGraph, label: str, lhs: str, rhs: str, 
         graph.attach_new_criterion(
             str(rhs) + "_WRITTEN_AS_KNOWN_FORM",
             str(rhs) + "_WRITTEN_AS_" + form_label,
-            summary =str(rhs) + " in written in " + syntactical_forms[form_label].name + " form.",
-            details =str(rhs) + " in written in " + syntactical_forms[form_label].name + " form.",
+            summary=str(rhs) + " in written in " + syntactical_forms[form_label].name + " form.",
+            details=str(rhs) + " in written in " + syntactical_forms[form_label].name + " form.",
             feedback_string_generator=symbolic_feedback_string_generators["WRITTEN_AS"](form_label),
         )
         graph.attach_new_evaluation(
             str(rhs) + "_WRITTEN_AS_" + form_label,
             str(lhs) + "_COMPARE_FORM_TO_" + form_label,
-            summary ="Is " + str(lhs) + " written in " + syntactical_forms[form_label].name + " form.",
-            details ="Checks if " + str(lhs) + " is written in " + syntactical_forms[form_label].name + " form.",
+            summary="Is " + str(lhs) + " written in " + syntactical_forms[form_label].name + " form.",
+            details="Checks if " + str(lhs) + " is written in " + syntactical_forms[form_label].name + " form.",
             evaluate=compare_to_form(response, form_label, label),
-            sufficiencies ={str(rhs) + "_WRITTEN_AS_" + form_label}
+            sufficiencies={str(rhs) + "_WRITTEN_AS_" + form_label}
         )
         graph.attach(str(lhs) + "_COMPARE_FORM_TO_" + form_label, label + "_TRUE")
         graph.attach(str(lhs) + "_COMPARE_FORM_TO_" + form_label, label + "_FALSE")
@@ -86,30 +86,30 @@ def criterion_written_as_node(criterion: ExprNode, parameters: EvaluationParamet
     graph.attach_new_criterion(
         str(rhs) + "_WRITTEN_AS_KNOWN_FORM",
         str(rhs) + "_WRITTEN_AS_UNKNOWN",
-        summary =str(rhs) + " is not written in a known form.",
-        details =str(rhs) + " is not written in a known form.",
+        summary=str(rhs) + " is not written in a known form.",
+        details=str(rhs) + " is not written in a known form.",
         feedback_string_generator=symbolic_feedback_string_generators["WRITTEN_AS"]("UNKNOWN")
     )
     graph.attach_new_evaluation(
         str(rhs) + "_WRITTEN_AS_UNKNOWN",
         label,
-        summary ="Is " + str(lhs) + " written in the same form as " + str(rhs) + ".",
-        details ="Checks if " + str(lhs) + " is written in the same form as " + str(rhs) + ".",
+        summary="Is " + str(lhs) + " written in the same form as " + str(rhs) + ".",
+        details="Checks if " + str(lhs) + " is written in the same form as " + str(rhs) + ".",
         evaluate=response_written_as_answer(response, answer, label),
-        sufficiencies ={str(rhs) + "_WRITTEN_AS_UNKNOWN"}
+        sufficiencies={str(rhs) + "_WRITTEN_AS_UNKNOWN"}
     )
     graph.attach_new_criterion(
         label,
         label + "_TRUE",
-        summary =str(rhs) + " written in the same form as " + str(rhs) + ".",
-        details =str(rhs) + " written in the same form as " + str(rhs) + ".",
+        summary=str(rhs) + " written in the same form as " + str(rhs) + ".",
+        details=str(rhs) + " written in the same form as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("TRUE")
     )
     graph.attach_new_criterion(
         label,
         label + "_FALSE",
-        summary =str(rhs) + " written in the same form as " + str(rhs) + ".",
-        details =str(rhs) + " written in the same form as " + str(rhs) + ".",
+        summary=str(rhs) + " written in the same form as " + str(rhs) + ".",
+        details=str(rhs) + " written in the same form as " + str(rhs) + ".",
         feedback_string_generator=symbolic_feedback_string_generators["SYNTACTICAL_EQUIVALENCE"]("FALSE")
     )
     _add_known_form_nodes(graph, label, lhs, rhs, response)
