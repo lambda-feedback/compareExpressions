@@ -1,6 +1,6 @@
 import pytest
 
-from ..evaluation import evaluation_function
+from app.evaluation import evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
 
@@ -79,7 +79,7 @@ def generate_input_variations_from_elementary_function_aliases(response, answer,
         for alternative in substitution[1]:
             current_substitutions = [(c, a[0]) for (c, a) in alias_substitutions[0:k]]
             current_substitutions.append((substitution[0], alternative))
-            current_substitutions += [(c, a[0]) for (c, a) in alias_substitutions[(k+1):]]
+            current_substitutions += [(c, a[0]) for (c, a) in alias_substitutions[(k + 1):]]
             subs_answer = substitute(answer, current_substitutions)
             subs_response = substitute(response, current_substitutions)
             input_variations += [(subs_response, subs_answer)]
@@ -1026,7 +1026,7 @@ class TestEvaluationFunction():
                 "6*cos(5*x+1)-90*x*sin(5*x+1)-225*x**2*cos(5*x+1)+125*x**3*sin(5*x+1)",
                 "6cos(5x+1)-90x*sin(5x+1)-225x^2cos(5x+1)+125x^3sin(5x+1)",
             ]
-        ]+[
+        ] + [
             (
                 res,
                 False
@@ -1049,7 +1049,7 @@ class TestEvaluationFunction():
         sum(
             [
                 [
-                    (case[0],)+var
+                    (case[0],) + var
                     for var in generate_input_variations_from_elementary_function_aliases(
                         case[1],
                         case[2],
@@ -1092,7 +1092,7 @@ class TestEvaluationFunction():
                 {
                     keyword: {
                         "aliases": [],
-                        "latex": r"\mathrm{"+keyword+r"}"
+                        "latex": r"\mathrm{" + keyword + r"}"
                     }
                 }
             )
@@ -1102,7 +1102,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     def test_no_reserved_keywords_in_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
@@ -1118,7 +1118,7 @@ class TestEvaluationFunction():
                 {
                     labels[label_index]: {
                         "aliases": [keyword],
-                        "latex": r"\mathrm{"+keyword+r"}"
+                        "latex": r"\mathrm{" + keyword + r"}"
                     }
                 }
             )
@@ -1129,7 +1129,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
         reserved_keywords = ["where", "written as"]
@@ -1146,7 +1146,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
@@ -1166,7 +1166,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
@@ -2117,6 +2117,23 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
+
+    @pytest.mark.parametrize(
+        "criteria",
+        [
+            "response=answer,",
+            "response=answer,, response-answer=0",
+        ]
+    )
+    def test_malformed_criteria_list_cannot_be_parsed(self, criteria):
+        params = {
+            "criteria": criteria,
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        with pytest.raises(Exception) as e:
+            evaluation_function("x+1", "1+x", params)
+        assert "Cannot parse criteria" in str(e.value)
 
     def test_input_symbols_takes_priority_when_containing_elementary_function_names_as_substring(self):
         response = "Vmax - Vmaxe^-(t/tau)"

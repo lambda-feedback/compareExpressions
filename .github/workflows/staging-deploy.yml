@@ -31,18 +31,23 @@ jobs:
       - name: Install dependencies
         run: |
           python -m venv .venv
-          .venv/bin/pip install pytest
+          .venv/bin/pip install -r requirements-dev.txt
           .venv/bin/pip install -r app/requirements.txt
 
 
       - name: Lint with flake8
         run: |
           source .venv/bin/activate
-          .venv/bin/pip install flake8
           # stop the build if there are Python syntax errors or undefined names
           flake8 ./app --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 ./app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Type check with mypy
+        run: |
+          source .venv/bin/activate
+          # configuration (checked files, strictness, untyped dependencies) is in mypy.ini
+          mypy
 
       - name: Run tests
         if: always()
