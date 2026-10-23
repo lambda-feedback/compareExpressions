@@ -118,11 +118,9 @@ class TestPreviewFunction:
         [
             ("m^{-2}", "m**(-2)"),
             ("x^{23}", "x**(23)"),
-            # With '**' the notation used to be skipped twice, eating the exponent's first character.
             ("m**{-2}", "m**(-2)"),
             ("x**{23}", "x**(23)"),
             ("x^2", "x**2"),
-            # An unbraced exponent used to borrow the next brace anywhere in the string.
             ("x^2y^{3}", "x**2y**(3)"),
         ],
     )
@@ -137,8 +135,6 @@ class TestPreviewFunction:
         assert preview_function(r"\mathrm{kg}", {"is_latex": True})["preview"]["sympy"] == "kilogram"
 
     def test_preview_does_not_mutate_params(self):
-        # Fixed while porting units to the typed expression_parsing API
-        # (the LaTeX branch set params["is_latex"] = False on the caller's dict).
         params = {"is_latex": True, "symbols": {"F": {"latex": "F", "aliases": []}}}
         before = deepcopy(params)
         preview_function(r"3 \mathrm{kg}", params)
