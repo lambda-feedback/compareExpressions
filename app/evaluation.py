@@ -9,6 +9,7 @@ from copy import deepcopy
 from .utility.evaluation_result_utilities import EvaluationResult
 from .utility.preview_utilities import parse_latex
 from .context.symbolic import context as symbolic_context
+from .context.symbolic import is_inequality_or_boolean
 from .context.physical_quantity import context as quantity_context
 from .feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
@@ -42,7 +43,10 @@ class EvaluationError(Exception):
 
 
 messages = {
-    "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
+    "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined.",
+    "RESERVED_EXPRESSION_INEQUALITY": lambda label: (
+        f"Reserved expression `{label}` is an inequality or evaluates to true/false, which is not supported."
+    )
 }
 
 
@@ -183,6 +187,11 @@ def parse_reserved_expressions(reserved_expressions, parameters, result):
                         )
                     else:
                         raise TaskConfigurationError(symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})) from e
+                if key == "task" and is_inequality_or_boolean(expr_parsed):
+                    raise TaskConfigurationError(
+                        messages["RESERVED_EXPRESSION_INEQUALITY"](label),
+                        f"RESERVED_EXPRESSION_INEQUALITY_{label}"
+                    )
             reserved_expressions_dict[key].update({label: expr_parsed})
     return success, reserved_expressions_dict
 

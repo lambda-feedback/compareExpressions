@@ -1,6 +1,8 @@
 from copy import deepcopy
 from sympy import Add, Pow, Mul, Equality, pi, im, I, N, oo
 from sympy import re as real_part
+from sympy.core.relational import Relational
+from sympy.logic.boolalg import BooleanAtom
 
 from ..utility.expression_utilities import (
     default_parameters,
@@ -115,11 +117,20 @@ def do_comparison(comparison_symbol, expression):
     return result
 
 
+def is_inequality_or_boolean(expr):
+    # Inequalities (e.g. 8 < 9) and booleans (e.g. 5 < 1.43 evaluated to False) are not supported
+    # and cannot be subtracted, so they cannot be compared like other expressions.
+    # NOTE: Not checking for Boolean, since Symbol is a subclass of Boolean.
+    return isinstance(expr, (Relational, BooleanAtom)) and not isinstance(expr, Equality)
+
+
 def check_equality(criterion, parameters_dict, local_substitutions=[]):
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters_dict, local_substitutions)
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         result = False
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):
+        result = False
+    elif is_inequality_or_boolean(lhs_expr) or is_inequality_or_boolean(rhs_expr):
         result = False
     else:
         try:
