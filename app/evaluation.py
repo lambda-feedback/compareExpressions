@@ -4,12 +4,13 @@ from collections.abc import Collection, Iterable, Mapping
 from copy import deepcopy
 from typing import Any
 
-from lambdafeedback.criteria import CriteriaGraph
+from lambdafeedback.criteria import CriteriaGraph, CriteriaSyntaxError, split_criteria
 from lambdafeedback.slr_parsing import ExprNode, SLRParser
 from lambdafeedback.expression_parsing import (
     AbsoluteValueNotationError,
     BracketNotationError,
     ExpressionParams,
+    notation_warnings,
     parse_latex,
 )
 
@@ -55,9 +56,9 @@ def _raise_on_collisions(keywords: Iterable[str], symbols: Collection[str], kind
     """Raises if any of `keywords` is used as an input symbol `kind` (e.g. "code" or "alternative")."""
     collisions = sorted(keyword for keyword in keywords if keyword in symbols)
     if len(collisions) == 1:
-        raise Exception("`"+"`, `".join(collisions)+f"` is a reserved keyword and cannot be used as an input symbol {kind}.")
+        raise Exception("`" + "`, `".join(collisions) + f"` is a reserved keyword and cannot be used as an input symbol {kind}.")
     elif len(collisions) > 1:
-        raise Exception("`"+"`, `".join(collisions)+f"` are reserved keywords and cannot be used as input symbol {kind}s.")
+        raise Exception("`" + "`, `".join(collisions) + f"` are reserved keywords and cannot be used as input symbol {kind}s.")
 
 
 def select_context(parameters: Parameters) -> Context:
@@ -165,32 +166,8 @@ def get_criteria_string(context: Context, parameters: Parameters) -> str:
     if criteria is None:
         criteria = ",".join(context.default_criteria)
     if (parameters.get("syntactical_comparison", False) is True) and ("responsewrittenasanswer" not in "".join(criteria.split())):
-        criteria = criteria+", response written as answer"
+        criteria = criteria + ", response written as answer"
     return criteria
-
-
-def split_criteria(criteria_string: str) -> list[str]:
-    """Splits `criteria_string` on the commas that are not inside brackets, and strips each criterion."""
-    criteria_string_list = []
-    delims = [
-        ("(", ")"),
-        ("[", "]"),
-        ("{", "}"),
-    ]
-    depth = {delim: 0 for delim in delims}
-    delim_key = {delim[0]: delim for delim in delims}
-    delim_key.update({delim[1]: delim for delim in delims})
-    criterion_start = 0
-    for n, c in enumerate(criteria_string):
-        if c in [delim[0] for delim in delims]:
-            depth[delim_key[c]] += 1
-        if c in [delim[1] for delim in delims]:
-            depth[delim_key[c]] -= 1
-        if c == "," and all([d == 0 for d in depth.values()]):
-            criteria_string_list.append(criteria_string[criterion_start:n].strip())
-            criterion_start = n+1
-    criteria_string_list.append(criteria_string[criterion_start:].strip())
-    return criteria_string_list
 
 
 def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameters: Parameters) -> dict[str, ExprNode]:
@@ -201,8 +178,12 @@ def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameter
     except (BracketNotationError, AbsoluteValueNotationError) as e:
         feedback = notation_error_feedback(e, original_criteria_string)
         raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
+    try:
+        criteria_string_list = split_criteria(criteria_string)
+    except CriteriaSyntaxError as e:
+        raise Exception("Cannot parse criteria: `" + criteria_string + "`.") from e
     criteria_parsed: dict[str, ExprNode] = {}
-    for criterion in split_criteria(criteria_string):
+    for criterion in criteria_string_list:
         try:
             criterion_tokens = criteria_parser.scan(criterion)
             criterion_parsed = criteria_parser.parse(criterion_tokens)[0]
@@ -211,7 +192,7 @@ def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameter
                 raise TypeError(f"criterion {criterion_parsed.content_string()!r} is given more than once")
             criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
-            raise Exception("Cannot parse criteria: `"+criterion+"`.") from e
+            raise Exception("Cannot parse criteria: `" + criterion + "`.") from e
     return criteria_parsed
 
 
@@ -230,7 +211,7 @@ def generate_feedback(criteria_graphs: Mapping[str, CriteriaGraph], evaluation_p
     custom_feedback = evaluation_parameters.custom_feedback
     for (criterion_identifier, graph) in criteria_graphs.items():
         # TODO: Find better way to identify main criteria for criteria graph
-        main_criteria = criterion_identifier+"_TRUE"
+        main_criteria = criterion_identifier + "_TRUE"
         criteria_feedback = graph.generate_feedback(response, main_criteria)
 
         # TODO: Implement way to define completeness of task other than "all main criteria satisfied"
@@ -279,10 +260,10 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
     if "criteria" not in parameters.keys():
         parameters.update({"criteria": ",".join(context.default_criteria)})
 
-    reserved_expressions_keys = list(reserved_expressions_strings["learner"].keys())+list(reserved_expressions_strings["task"].keys())
+    reserved_expressions_keys = list(reserved_expressions_strings["learner"].keys()) + list(reserved_expressions_strings["task"].keys())
     parameters.update(
         {
-            "reserved_keywords": reserved_keywords+reserved_expressions_keys,
+            "reserved_keywords": reserved_keywords + reserved_expressions_keys,
         }
     )
     parsing_parameters = context.parsing_parameters_generator(parameters, unsplittable_symbols=reserved_expressions_keys)
@@ -304,24 +285,11 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
     return parameters
 
 
-def notation_warnings(response: str, strict_syntax: bool) -> list[str]:
-    """The tags of the notation warnings for `response`."""
-    # FIXME: Move these notation warnings into lambdafeedback.expression_parsing
-    tags = []
-    if strict_syntax:
-        if "^" in response:
-            tags.append("NOTATION_WARNING_EXPONENT")
-        if "!" in response:
-            tags.append("NOTATION_WARNING_FACTORIAL")
-    if "!!!" in response:
-        tags.append("NOTATION_WARNING_TRIPLE_FACTORIAL")
-    return tags
-
 
 def _add_notation_warnings(evaluation_result: EvaluationResult, response: str, params: Parameters) -> None:
     symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
-    for tag in notation_warnings(response, params.get("strict_syntax", False)):
-        evaluation_result.add_feedback(tag, symbolic_comparison_internal_messages(tag)(dict()))
+    for warning in notation_warnings(response, bool(params.get("strict_syntax", False))):
+        evaluation_result.add_feedback(str(warning), symbolic_comparison_internal_messages(str(warning))(dict()))
 
 
 def _set_preview_fields(

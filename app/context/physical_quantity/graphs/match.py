@@ -37,13 +37,13 @@ def _missing_or_unexpected(parameters: EvaluationParameters, label: str, lhs_str
         res_unit = parameters.reserved_expressions["response"].original_unit
         ans_unit = parameters.reserved_expressions["answer"].original_unit
         if res_value is None and ans_value is not None:
-            return {label+"_MISSING_VALUE": {"lhs": lhs_string, "rhs": rhs_string}}
+            return {label + "_MISSING_VALUE": {"lhs": lhs_string, "rhs": rhs_string}}
         if res_value is not None and ans_value is None:
-            return {label+"_UNEXPECTED_VALUE": {"lhs": lhs_string, "rhs": rhs_string}}
+            return {label + "_UNEXPECTED_VALUE": {"lhs": lhs_string, "rhs": rhs_string}}
         if res_unit is None and ans_unit is not None:
-            return {label+"_MISSING_UNIT": {"lhs": lhs_string, "rhs": rhs_string}}
+            return {label + "_MISSING_UNIT": {"lhs": lhs_string, "rhs": rhs_string}}
         if res_unit is not None and ans_unit is None:
-            return {label+"_UNEXPECTED_UNIT": {"lhs": lhs_string, "rhs": rhs_string}}
+            return {label + "_UNEXPECTED_UNIT": {"lhs": lhs_string, "rhs": rhs_string}}
     return None
 
 
@@ -58,10 +58,10 @@ def _within_tolerance(parameters: EvaluationParameters, lhs_string: str, rhs_str
             res = parameters.reserved_expressions["response"].standard_value.simplify()
         if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
             if rtol > 0 and (ans != 0):
-                value_match = bool(abs(float((ans-res)/ans)) < rtol)
+                value_match = bool(abs(float((ans - res) / ans)) < rtol)
             elif atol > 0 or (ans == 0):
                 answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
-                value_match = bool(abs(float(ans-res)) < atol*answer_unit_factor)
+                value_match = bool(abs(float(ans - res)) < atol * answer_unit_factor)
     return value_match
 
 
@@ -93,7 +93,7 @@ def _dimension_match(parameters: EvaluationParameters, label: str, lhs: Basic, r
     def dimension_match(_response: Any) -> ReachedCriteria:
         substitutions = [(key, expr.dimension) for (key, expr) in reserved_expressions]
         dimension_match, _ = is_proportional(lhs, rhs, substitutions)
-        return outcome_tag(label+"_DIMENSION_MATCH", dimension_match is True, {"lhs": lhs_string, "rhs": rhs_string})
+        return outcome_tag(label + "_DIMENSION_MATCH", dimension_match is True, {"lhs": lhs_string, "rhs": rhs_string})
     return dimension_match
 
 
@@ -105,7 +105,7 @@ def _unit_comparison(parameters: EvaluationParameters, label: str, lhs: Basic, r
 
         if is_equal(lhs, rhs, substitutions) is True:
             output_tags = {
-                label+"_UNIT_COMPARISON"+"_IDENTICAL": None
+                label + "_UNIT_COMPARISON" + "_IDENTICAL": None
             }
         else:
             local_substitutions = [(key, expr.quantity.expanded_unit) for (key, expr) in reserved_expressions]
@@ -113,15 +113,15 @@ def _unit_comparison(parameters: EvaluationParameters, label: str, lhs: Basic, r
             # `is_proportional` returns a ratio whenever the result is True
             if result is True and ratio is not None and ratio >= 1000:
                 output_tags = {
-                    label+"_UNIT_COMPARISON"+"_PREFIX_IS_LARGE": None
+                    label + "_UNIT_COMPARISON" + "_PREFIX_IS_LARGE": None
                 }
-            elif result is True and ratio is not None and ratio <= 1/1000:
+            elif result is True and ratio is not None and ratio <= 1 / 1000:
                 output_tags = {
-                    label+"_UNIT_COMPARISON"+"_PREFIX_IS_SMALL": None
+                    label + "_UNIT_COMPARISON" + "_PREFIX_IS_SMALL": None
                 }
             else:
                 output_tags = {
-                    label+"_UNIT_COMPARISON"+"_SIMILAR": None
+                    label + "_UNIT_COMPARISON" + "_SIMILAR": None
                 }
 
         return output_tags
@@ -140,14 +140,14 @@ def _add_match_nodes(
     )
     graph.attach_new_criterion(
         label,
-        label+"_TRUE",
+        label + "_TRUE",
         summary=f"The quantities {inputs[0]} and {inputs[1]} match.",
         details=f"The quantities {inputs[0]} and {inputs[1]} match.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("QUANTITY_MATCH")
     )
     graph.attach_new_criterion(
         label,
-        label+"_FALSE",
+        label + "_FALSE",
         summary=f"The quantities {inputs[0]} and {inputs[1]} does not match.",
         details=f"The quantities {inputs[0]} and {inputs[1]} does not match.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("QUANTITY_MISMATCH")
@@ -155,7 +155,7 @@ def _add_match_nodes(
     attach_terminal_criterion(
         graph,
         label,
-        label+"_MISSING_VALUE",
+        label + "_MISSING_VALUE",
         END,
         summary="The response is missing a value.",
         details="The response is missing a value.",
@@ -164,7 +164,7 @@ def _add_match_nodes(
     attach_terminal_criterion(
         graph,
         label,
-        label+"_UNEXPECTED_VALUE",
+        label + "_UNEXPECTED_VALUE",
         END,
         summary="The response is expected only have unit(s), no value.",
         details="The response is expected only have unit(s), no value.",
@@ -173,7 +173,7 @@ def _add_match_nodes(
     attach_terminal_criterion(
         graph,
         label,
-        label+"_MISSING_UNIT",
+        label + "_MISSING_UNIT",
         END,
         summary="The response is missing unit(s).",
         details="The response is missing unit(s).",
@@ -182,23 +182,23 @@ def _add_match_nodes(
     attach_terminal_criterion(
         graph,
         label,
-        label+"_UNEXPECTED_UNIT",
+        label + "_UNEXPECTED_UNIT",
         END,
         summary="The response is expected to be a value without unit(s).",
         details="The response is expected to be a value without unit(s).",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNEXPECTED_UNIT")
     )
     graph.attach_new_evaluation(
-        label+"_FALSE",
-        label+"_DIMENSION_MATCH",
+        label + "_FALSE",
+        label + "_DIMENSION_MATCH",
         summary=f"Do the dimensions of {inputs[0]} and {inputs[1]} match?",
         details=f"Do the dimensions of {inputs[0]} and {inputs[1]} match?",
         evaluate=dimension_match
     )
     attach_terminal_criterion(
         graph,
-        label+"_DIMENSION_MATCH",
-        label+"_DIMENSION_MATCH"+"_TRUE",
+        label + "_DIMENSION_MATCH",
+        label + "_DIMENSION_MATCH" + "_TRUE",
         END,
         summary=f"The quantities {inputs[0]} and {inputs[1]} have the same dimensions.",
         details=f"The quantities {inputs[0]} and {inputs[1]} have the same dimensions.",
@@ -206,38 +206,38 @@ def _add_match_nodes(
     )
     attach_terminal_criterion(
         graph,
-        label+"_DIMENSION_MATCH",
-        label+"_DIMENSION_MATCH"+"_FALSE",
+        label + "_DIMENSION_MATCH",
+        label + "_DIMENSION_MATCH" + "_FALSE",
         END,
         summary=f"The quantities {inputs[0]} and {inputs[1]} have different dimensions.",
         details=f"The quantities {inputs[0]} and {inputs[1]} have different dimensions.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("DIMENSION_MISMATCH")
     )
     graph.attach_new_evaluation(
-        label+"_TRUE",
-        label+"_UNIT_COMPARISON",
+        label + "_TRUE",
+        label + "_UNIT_COMPARISON",
         summary=f"Compares how similar the units of {inputs[0]} and {inputs[1]} are.",
         details=f"Compares how similar the units of {inputs[0]} and {inputs[1]} are.",
         evaluate=unit_comparison
     )
     graph.attach_new_criterion(
-        label+"_UNIT_COMPARISON",
-        label+"_UNIT_COMPARISON"+"_IDENTICAL",
+        label + "_UNIT_COMPARISON",
+        label + "_UNIT_COMPARISON" + "_IDENTICAL",
         summary=f"The units of quantities {inputs[0]} and {inputs[1]} are identical.",
         details=f"The units of quantities {inputs[0]} and {inputs[1]} are identical.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNIT_COMPARISON_IDENTICAL")
     )
     graph.attach_new_criterion(
-        label+"_UNIT_COMPARISON",
-        label+"_UNIT_COMPARISON"+"_SIMILAR",
+        label + "_UNIT_COMPARISON",
+        label + "_UNIT_COMPARISON" + "_SIMILAR",
         summary=f"The units of quantities {inputs[0]} and {inputs[1]} are similar.",
         details=f"The units of quantities {inputs[0]} and {inputs[1]} are similar.",
         feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("UNIT_COMPARISON_SIMILAR")
     )
     attach_terminal_criterion(
         graph,
-        label+"_UNIT_COMPARISON",
-        label+"_UNIT_COMPARISON"+"_PREFIX_IS_LARGE",
+        label + "_UNIT_COMPARISON",
+        label + "_UNIT_COMPARISON" + "_PREFIX_IS_LARGE",
         END,
         summary=f"The units of {inputs[0]} are much greater than the units of {inputs[1]}.",
         details=f"The units of {inputs[0]} are at least 1000 times greater than the units of {inputs[1]}.",
@@ -245,8 +245,8 @@ def _add_match_nodes(
     )
     attach_terminal_criterion(
         graph,
-        label+"_UNIT_COMPARISON",
-        label+"_UNIT_COMPARISON"+"_PREFIX_IS_SMALL",
+        label + "_UNIT_COMPARISON",
+        label + "_UNIT_COMPARISON" + "_PREFIX_IS_SMALL",
         END,
         summary=f"The units of {inputs[0]} are much smaller than the units of {inputs[1]}.",
         details=f"The units of {inputs[0]} are at least 1000 times smaller than the units of {inputs[1]}.",

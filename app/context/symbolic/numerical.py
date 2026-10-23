@@ -31,7 +31,7 @@ def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters: Evaluation
     ans = N(replace_pi(rhs_expr))
     if float(parameters.atol) > 0:
         try:
-            absolute_error = abs(float(ans-res))
+            absolute_error = abs(float(ans - res))
             error_below_atol = bool(absolute_error < float(parameters.atol))
         except TypeError:
             error_below_atol = None
@@ -39,7 +39,7 @@ def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters: Evaluation
         error_below_atol = True
     if float(parameters.rtol) > 0:
         try:
-            relative_error = abs(float((ans-res)/ans))
+            relative_error = abs(float((ans - res) / ans))
             error_below_rtol = bool(relative_error < float(parameters.rtol))
         except TypeError:
             error_below_rtol = None
