@@ -596,6 +596,24 @@ class TestEvaluationFunction():
         assert result["is_correct"] is is_correct
 
     @pytest.mark.parametrize(
+        "res,ans,tolerances,is_correct",
+        [
+            # Only rtol used to be checked when both were set (bug 9 in the bug report),
+            # now they combine as in numpy.isclose: |answer - response| <= atol + rtol*|answer|
+            ("1.55 m", "1 m", {"rtol": 0.1, "atol": 0.5}, True),
+            ("1.65 m", "1 m", {"rtol": 0.1, "atol": 0.5}, False),
+            # A difference equal to the tolerance used to be rejected
+            ("1.5 m", "1 m", {"atol": 0.5}, True),
+            # atol is in the units of the answer
+            ("1.004 km", "1 km", {"atol": 0.005}, True),
+            ("1.006 km", "1 km", {"atol": 0.005}, False),
+        ]
+    )
+    def test_numerical_tolerances(self, res, ans, tolerances, is_correct):
+        params = {'strict_syntax': False, 'physical_quantity': True, 'elementary_functions': True, **tolerances}
+        assert evaluation_function(res, ans, params)["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
         "res,ans,criteria,is_correct",
         [
             # Used to raise TypeError: cannot determine truth value of Relational (bug 14 in the bug report)
