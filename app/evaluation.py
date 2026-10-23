@@ -21,6 +21,7 @@ from app.feedback.symbolic import feedback_generators as symbolic_feedback_strin
 from app.feedback.tags import FeedbackTag, FeedbackTagName
 from app.evaluation_parameters import EvaluationParameters
 from app.result import EvaluationResult
+from app.time_budget import comparison_budget, request_budget
 from app.types import Parameters
 
 messages = {
@@ -305,13 +306,16 @@ def _set_preview_fields(
     else:
         evaluation_result.latex = preview["latex"]
         parsed_response = reserved_expressions["learner"]["response"]
-        if isinstance(parsed_response, list) or isinstance(parsed_response, set):
-            evaluation_result.simplified = ", ".join([str(ex.simplify()) for ex in parsed_response])
-        else:
-            try:
-                evaluation_result.simplified = str(parsed_response.simplify())
-            except Exception:
-                evaluation_result.simplified = response
+        with comparison_budget() as simplification:
+            if isinstance(parsed_response, list) or isinstance(parsed_response, set):
+                evaluation_result.simplified = ", ".join([str(ex.simplify()) for ex in parsed_response])
+            else:
+                try:
+                    evaluation_result.simplified = str(parsed_response.simplify())
+                except Exception:
+                    evaluation_result.simplified = response
+        if simplification.exceeded:
+            evaluation_result.simplified = response
 
 
 def _build_evaluation_parameters(
@@ -350,24 +354,31 @@ def evaluation_function(response: str, answer: str, params: dict[str, Any], incl
 
     _add_notation_warnings(evaluation_result, response, params)
 
-    reserved_expressions_success, reserved_expressions = parse_reserved_expressions(
-        context, parameters["reserved_expressions_strings"], parameters, evaluation_result
-    )
-    if reserved_expressions_success is False:
-        return evaluation_result.serialise(include_test_data)
+    # Simplifying can take practically forever (see `time_budget`), so the request
+    # ends with a grade rather than running into the Lambda timeout.
+    with request_budget() as budget:
+        reserved_expressions_success, reserved_expressions = parse_reserved_expressions(
+            context, parameters["reserved_expressions_strings"], parameters, evaluation_result
+        )
+        if reserved_expressions_success is False:
+            return evaluation_result.serialise(include_test_data)
 
-    _set_preview_fields(context, evaluation_result, response, parameters, reserved_expressions)
+        _set_preview_fields(context, evaluation_result, response, parameters, reserved_expressions)
 
-    criteria_parser = context.generate_criteria_parser(reserved_expressions)
-    criteria = create_criteria_dict(context, criteria_parser, parameters)
+        criteria_parser = context.generate_criteria_parser(reserved_expressions)
+        criteria = create_criteria_dict(context, criteria_parser, parameters)
 
-    evaluation_parameters = _build_evaluation_parameters(parameters, reserved_expressions, criteria, evaluation_result)
+        evaluation_parameters = _build_evaluation_parameters(parameters, reserved_expressions, criteria, evaluation_result)
 
-    # Performs evaluation of response
-    feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
-    for graph in feedback_procedures.values():
-        _disable_evaluation_nodes(graph, evaluation_parameters.disabled_evaluation_nodes)
-    generate_feedback(feedback_procedures, evaluation_parameters)
+        # Performs evaluation of response
+        feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
+        for graph in feedback_procedures.values():
+            _disable_evaluation_nodes(graph, evaluation_parameters.disabled_evaluation_nodes)
+        generate_feedback(feedback_procedures, evaluation_parameters)
+    if budget.exceeded:
+        symbolic_comparison_internal_messages = symbolic_feedback_string_generators["INTERNAL"]
+        evaluation_result.is_correct = False
+        evaluation_result.add_feedback("TIME_LIMIT_EXCEEDED", symbolic_comparison_internal_messages("TIME_LIMIT_EXCEEDED")(dict()))
 
     result = evaluation_result.serialise(include_test_data)
 
