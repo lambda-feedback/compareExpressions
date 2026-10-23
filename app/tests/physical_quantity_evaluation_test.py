@@ -74,11 +74,11 @@ class TestEvaluationFunction():
             for u1 in units:
                 for u2 in units:
                     if u1 is not u2:
-                        answer = prefix[0]+u1[0]+" "+u2[0]
-                        for u1_alt in (u1[0],)+u1[3]:
-                            for u2_alt in (u2[0],)+u2[3]+u2[4]:
+                        answer = prefix[0] + u1[0] + " " + u2[0]
+                        for u1_alt in (u1[0],) + u1[3]:
+                            for u2_alt in (u2[0],) + u2[3] + u2[4]:
                                 n += 1
-                                response = prefix[0]+u1_alt+u2_alt
+                                response = prefix[0] + u1_alt + u2_alt
                                 try:
                                     result = evaluation_function(response, answer, params)
                                 except Exception:
@@ -86,8 +86,8 @@ class TestEvaluationFunction():
                                     continue
                                 if result["is_correct"] is False:
                                     incorrect.append((answer, response, result["response_latex"]))
-        m = len(errors)+len(incorrect)
-        details = "Total: "+str(m)+"/"+str(n)+"\nIncorrect:\n"+"".join([str(x)+"\n" for x in incorrect])+"\nErrors:\n"+"".join([str(x)+"\n" for x in errors])
+        m = len(errors) + len(incorrect)
+        details = "Total: " + str(m) + "/" + str(n) + "\nIncorrect:\n" + "".join([str(x) + "\n" for x in incorrect]) + "\nErrors:\n" + "".join([str(x) + "\n" for x in errors])
         # Current number of collisions caused by concatenating two units, e.g. "barnewton" has "barn" as substring, "aremole" has "rem" as substring etc.
         assert m <= 144, details
 
@@ -101,9 +101,9 @@ class TestEvaluationFunction():
         for prefix in SI_PREFIXES:
             for u1 in units:
                 for u2 in units:
-                    if u1 is not u2 and (prefix[1]+u1[1] not in [u[1] for u in units]):
-                        answer = prefix[0]+u1[0]+" "+u2[0]
-                        response = prefix[1]+u1[1]+u2[1]
+                    if u1 is not u2 and (prefix[1] + u1[1] not in [u[1] for u in units]):
+                        answer = prefix[0] + u1[0] + " " + u2[0]
+                        response = prefix[1] + u1[1] + u2[1]
                         n += 1
                         try:
                             result = evaluation_function(response, answer, params)
@@ -113,8 +113,8 @@ class TestEvaluationFunction():
                             continue
                         if result["is_correct"] is False:
                             incorrect.append((answer, response, result["response_latex"]))
-        m = len(errors)+len(incorrect)
-        details = "Total: "+str(m)+"/"+str(n)+"\nIncorrect:\n"+"".join([str(x)+"\n" for x in incorrect])+"\nErrors:\n"+"".join([str(x)+"\n" for x in errors])
+        m = len(errors) + len(incorrect)
+        details = "Total: " + str(m) + "/" + str(n) + "\nIncorrect:\n" + "".join([str(x) + "\n" for x in incorrect]) + "\nErrors:\n" + "".join([str(x) + "\n" for x in errors])
         # Current number of collisions caused by concatenating short forms for units, e.g. 'femtometre inch' and 'femtominute' both have short form 'fmin'
         assert m <= 551, details
 
@@ -126,16 +126,16 @@ class TestEvaluationFunction():
             ("0.105",      "kg m/s^2", 0.0004,  0.0006),
             ("0.0010",     "kg m/s^2", 0.00004, 0.00006),
             ("100",        "kg m/s^2", 0.4,     0.6),
-            ("100*10**10", "kg m/s^2", 4*10**9, 6*10**9)
+            ("100*10**10", "kg m/s^2", 4 * 10**9, 6 * 10**9)
         ]
     )
     @pytest.mark.slow
     def test_compute_relative_tolerance_from_significant_digits(self, value, unit, small_diff, large_diff):
-        ans = value+" "+unit
-        res_correct_under = str(eval(value)-small_diff)+" "+unit
-        res_correct_over = str(eval(value)+small_diff)+" "+unit
-        res_incorrect_under = str(eval(value)-large_diff)+" "+unit
-        res_incorrect_over = str(eval(value)+large_diff)+" "+unit
+        ans = value + " " + unit
+        res_correct_under = str(eval(value) - small_diff) + " " + unit
+        res_correct_over = str(eval(value) + small_diff) + " " + unit
+        res_incorrect_under = str(eval(value) - large_diff) + " " + unit
+        res_incorrect_over = str(eval(value) + large_diff) + " " + unit
         params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
         assert evaluation_function(res_correct_under, ans, params)["is_correct"] is True
         assert evaluation_function(res_correct_over, ans, params)["is_correct"] is True
@@ -271,7 +271,7 @@ class TestEvaluationFunction():
             "strict_syntax": False,
             "physical_quantity": True,
             "elementary functions": True,
-            "criteria": "response "+order_operator+" answer"
+            "criteria": "response " + order_operator + " answer"
         }
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is value
