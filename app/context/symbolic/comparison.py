@@ -10,7 +10,7 @@ from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expressi
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.operators import COMPARISON_OPERATORS
-from app.context.symbolic.numerical import compare_numerically
+from app.context.symbolic.numerical import compare_numerically, matches_written_precision
 from app.evaluation_parameters import EvaluationParameters
 from app.types import SubstitutionList, Substitutions
 
@@ -96,10 +96,33 @@ def do_comparison(comparison_symbol: str, expression: Basic) -> bool | None:
     return result
 
 
+def uses_written_precision(criterion: ExprNode, parameters: EvaluationParameters) -> bool:
+    """Whether `sig_figs`/`dp` is set and `criterion` compares the response and the answer directly."""
+    if parameters.sig_figs is None and parameters.dp is None:
+        return False
+    lhs_string = criterion.children[0].content_string().strip()
+    rhs_string = criterion.children[1].content_string().strip()
+    return {lhs_string, rhs_string} == {"response", "answer"}
+
+
+def check_written_precision(criterion: ExprNode, lhs_expr: Basic, rhs_expr: Basic, parameters: EvaluationParameters) -> bool:
+    """Whether the response, as written, is the answer to `sig_figs`/`dp`, for a response/answer `criterion`."""
+    response_string = parameters.reserved_expressions_strings["learner"]["response"]
+    if criterion.children[0].content_string().strip() == "response":
+        return matches_written_precision(lhs_expr, rhs_expr, response_string, parameters)
+    return matches_written_precision(rhs_expr, lhs_expr, response_string, parameters)
+
+
 def check_equality(
     criterion: ExprNode, parameters: EvaluationParameters, local_substitutions: Substitutions = ()
 ) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters, local_substitutions)
+
+    # sig_figs/dp replace the comparison rather than being a fallback,
+    # since a response equal to the answer but written to the wrong precision is incorrect
+    if uses_written_precision(criterion, parameters):
+        return check_written_precision(criterion, lhs_expr, rhs_expr, parameters)
+
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         return False
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):

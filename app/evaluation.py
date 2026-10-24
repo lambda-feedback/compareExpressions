@@ -17,6 +17,7 @@ from lambdafeedback.expression_parsing import (
 from app.context.base import Context
 from app.context.physical_quantity import context as quantity_context
 from app.context.symbolic import context as symbolic_context
+from app.context.tolerance import absolute_tolerance_from_decimal_places, relative_tolerance_from_sig_figs
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators, internal_feedback
 from app.feedback.tags import FeedbackTag, FeedbackTagName
 from app.evaluation_parameters import EvaluationParameters
@@ -237,6 +238,83 @@ def _apply_tolerance_aliases(params: dict[str, Any]) -> None:
         params["atol"] = params["absolute_tolerance"]
 
 
+def _raise_unless_count(params: dict[str, Any], key: str, names: str, minimum: int) -> None:
+    """
+    Raises a TypeError if `params[key]` is not an integer (a bool is not one),
+    or a ValueError if it is less than `minimum`, which is 0 or 1.
+    """
+    if minimum == 1:
+        message = f"{names} must be a positive integer."
+    else:
+        message = f"{names} must be a non-negative integer."
+
+    value = params[key]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TypeError(message)
+    if value < minimum:
+        raise ValueError(message)
+
+
+def _apply_precision_aliases(params: dict[str, Any]) -> None:
+    """
+    Copies `significant_figures`, `significant_figures_tolerance`, `decimal_places` and `decimal_places_tolerance`
+    to `sig_figs`, `sig_figs_tol`, `dp` and `dp_tol` in `params`.
+    """
+    if "significant_figures" in params:
+        params["sig_figs"] = params["significant_figures"]
+
+    if "significant_figures_tolerance" in params:
+        params["sig_figs_tol"] = params["significant_figures_tolerance"]
+
+    if "decimal_places" in params:
+        params["dp"] = params["decimal_places"]
+
+    if "decimal_places_tolerance" in params:
+        params["dp_tol"] = params["decimal_places_tolerance"]
+
+
+def _apply_precision_parameters(params: dict[str, Any]) -> None:
+    """
+    Checks `sig_figs`, `sig_figs_tol`, `dp` and `dp_tol` in `params`: at most one of them, or of `atol`/`rtol`,
+    can be given. `sig_figs_tol` and `dp_tol` are applied by setting `rtol` and `atol`.
+    """
+    uses_tolerance = "rtol" in params or "atol" in params
+
+    if "sig_figs" in params:
+        if uses_tolerance or "sig_figs_tol" in params or "dp" in params or "dp_tol" in params:
+            raise ValueError(
+                "`sig_figs`/`significant_figures` cannot be used together with `atol`/`rtol`, "
+                "`significant_figures_tolerance` or `decimal_places`/`decimal_places_tolerance`."
+            )
+        _raise_unless_count(params, "sig_figs", "`sig_figs`/`significant_figures`", 1)
+
+    if "sig_figs_tol" in params:
+        if uses_tolerance or "dp" in params or "dp_tol" in params:
+            raise ValueError(
+                "`sig_figs_tol`/`significant_figures_tolerance` cannot be used together with `atol`/`rtol`, "
+                "`significant_figures` or `decimal_places`/`decimal_places_tolerance`."
+            )
+        _raise_unless_count(params, "sig_figs_tol", "`sig_figs_tol`/`significant_figures_tolerance`", 1)
+        params["rtol"] = relative_tolerance_from_sig_figs(params["sig_figs_tol"])
+
+    if "dp" in params:
+        if uses_tolerance or "dp_tol" in params:
+            raise ValueError(
+                "`dp`/`decimal_places` cannot be used together with `atol`/`rtol`, "
+                "`significant_figures`/`significant_figures_tolerance` or `decimal_places_tolerance`."
+            )
+        _raise_unless_count(params, "dp", "`dp`/`decimal_places`", 0)
+
+    if "dp_tol" in params:
+        if uses_tolerance:
+            raise ValueError(
+                "`dp_tol`/`decimal_places_tolerance` cannot be used together with `atol`/`rtol`, "
+                "`significant_figures`/`significant_figures_tolerance` or `decimal_places`."
+            )
+        _raise_unless_count(params, "dp_tol", "`dp_tol`/`decimal_places_tolerance`", 0)
+        params["atol"] = absolute_tolerance_from_decimal_places(params["dp_tol"])
+
+
 def _build_parameters(context: Context, params: dict[str, Any], response: str, answer: str) -> dict[str, Any]:
     """
     A copy of `params` completed with the context's defaults, the reserved expressions
@@ -245,6 +323,8 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
     parameters = deepcopy(params)
     # Applied to the copy, so the caller's `params` keep only what they set
     _apply_tolerance_aliases(parameters)
+    _apply_precision_aliases(parameters)
+    _apply_precision_parameters(parameters)
 
     reserved_expressions_strings = {
         "learner": {
@@ -331,6 +411,8 @@ def _build_evaluation_parameters(
         numerical=parameters.get("numerical", False),
         atol=parameters.get("atol", 0),
         rtol=parameters.get("rtol", 0),
+        sig_figs=parameters.get("sig_figs"),
+        dp=parameters.get("dp"),
         custom_feedback=parameters.get("custom_feedback", {}),
     )
 

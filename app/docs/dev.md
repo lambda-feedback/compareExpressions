@@ -190,6 +190,18 @@ along the the following base tokens:
 
 **TODO** Describe shared default parameters
 
+##### Significant figures and decimal places
+
+The `significant_figures`/`sig_figs`, `significant_figures_tolerance`/`sig_figs_tol`, `decimal_places`/`dp` and `decimal_places_tolerance`/`dp_tol` parameters (see the user docs) are read in `_build_parameters` (`app/evaluation.py`): `_apply_precision_aliases` copies the long names to the short ones and `_apply_precision_parameters` checks them. At most one of the four, or of `atol`/`rtol`, can be given: a conflict, or a count below the minimum (1 for `sig_figs`/`sig_figs_tol`, 0 for `dp`/`dp_tol`), raises a `ValueError`, and a count that isn't an `int` (a `bool` isn't one) raises a `TypeError`.
+
+The tolerance forms need no code in the contexts: `sig_figs_tol` sets `rtol` to `relative_tolerance_from_sig_figs(n)` (`5*10**(-n)`) and `dp_tol` sets `atol` to `absolute_tolerance_from_decimal_places(n)` (`0.5*10**(-n)`), both in `app/context/tolerance.py`, before the parsing parameters are made, so the usual `atol`/`rtol` handling applies. Unlike `compute_relative_tolerance_from_significant_decimals` there is no `DEFAULT_SIGNIFICANT_FIGURES` floor.
+
+`sig_figs` and `dp` are passed on as `EvaluationParameters.sig_figs`/`dp`. They check the precision the response is *written* to, so they need the response as a string: a parsed float loses trailing zeros (`92`, `92.0` and `92.00` are equal once parsed). `matches_written_precision` (`app/context/symbolic/numerical.py`) evaluates both sides numerically and calls `sig_figs_match` or `decimal_places_match`, which read the string with `read_written_number` from `expression_parsing`, compare the values rounded with `round_to_significant_figures`/`round_to_decimal_places` (within `math.ulp` of the rounded answer) and compare the written precision. `sig_figs_match` doesn't check the precision of a zero response, since the significant figures of zero aren't well defined; `decimal_places_match` does (`0` has 0 decimal places and `0.00` has 2).
+
+Both contexts only use them for a criterion that compares `response` and `answer` directly, and there they replace the comparison rather than being a fallback, since a response equal to the answer but written to the wrong precision is incorrect:
+- `symbolic`: at the top of `check_equality` (`app/context/symbolic/comparison.py`), with the preprocessed response string from `reserved_expressions_strings`.
+- `physical_quantity`: in place of the value comparison in `_quantity_match` (`app/context/physical_quantity/graphs/match.py`), with the value as written in the response and the SI standard values; the units are compared as usual. `_tolerances` skips the tolerance taken from the answer's significant figures when either is set.
+
 ## Feedback and tag generation
 
 - Generate feedback procedures from criteria, each procedure return a boolean that indicates whether the corresponding criterion is satisfied or not, a string intended to be shown to the student, and a list of tags indicating what was found when checking the criteria
