@@ -2,10 +2,12 @@ pydot
 mpmath==1.3.0
 sympy==1.14
 # Parsing, units and criteria packages extracted from this function
-# (https://github.com/lambda-feedback/lambda-feedback-packages), pinned to the
-# v0.3.0-rc.5 release candidate (0.3.0rc5). All four are listed: they depend on
-# each other by name and aren't published on PyPI.
-lambdafeedback-slr-parsing @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.5#subdirectory=slr_parsing
-lambdafeedback-criteria @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.5#subdirectory=criteria
-lambdafeedback-expression-parsing @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.5#subdirectory=expression_parsing
-lambdafeedback-physical-quantities @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@v0.3.0-rc.5#subdirectory=physical_quantities
+# (https://github.com/lambda-feedback/lambda-feedback-packages). All four are
+# listed: they depend on each other by name and aren't published on PyPI.
+# TEMPORARY: pinned to a commit of the rc5-preview branch (v0.3.0-rc.4 plus
+# lambda-feedback-packages#11, #12 and #13), to be replaced by the
+# v0.3.0-rc.5 tag before this is merged.
+lambdafeedback-slr-parsing @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@ed05cfe60fd9843ce34079c7d752b8a56bbe87a7#subdirectory=slr_parsing
+lambdafeedback-criteria @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@ed05cfe60fd9843ce34079c7d752b8a56bbe87a7#subdirectory=criteria
+lambdafeedback-expression-parsing @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@ed05cfe60fd9843ce34079c7d752b8a56bbe87a7#subdirectory=expression_parsing
+lambdafeedback-physical-quantities @ git+https://github.com/lambda-feedback/lambda-feedback-packages.git@ed05cfe60fd9843ce34079c7d752b8a56bbe87a7#subdirectory=physical_quantities
