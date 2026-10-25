@@ -236,6 +236,14 @@ class TestPreviewFunction():
         assert result["preview"]["latex"] == "x + y=x + y"
         assert result["preview"]["sympy"] == "x + y=y + x"
 
+    def test_preview_with_chained_equality(self):
+        response = "x = y = z"
+        params = dict(is_latex=False, simplify=False)
+        result = preview_function(response, params)
+        preview = result["preview"]
+        assert preview.get("sympy") == "x=y=z"
+        assert preview.get("latex") == "x=y=z"
+
     def test_multi_character_implicit_multi_variable(self):
         params = {
             "strict_syntax": False,

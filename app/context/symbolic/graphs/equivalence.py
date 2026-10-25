@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from sympy import Equality
-
 from lambdafeedback.criteria import CriteriaGraph, Evaluate, OutputNode, ReachedCriteria
 from lambdafeedback.expression_parsing import parse_expression
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.symbolic.comparison import check_equality, unsimplified_with_unsplittable
+from app.context.symbolic.equalities import check_equality_equivalence, equality_parts
 from app.context.symbolic.graphs.set_equivalence import add_set_equivalence_nodes, as_sets
 from app.context.symbolic.inequalities import check_inequality_equivalence, inequality_bounds
 from app.evaluation_parameters import EvaluationParameters
@@ -18,31 +17,11 @@ from app.feedback.symbolic import feedback_generators as symbolic_feedback_strin
 
 def _equality_equivalence(label: str, parameters: EvaluationParameters) -> Evaluate:
     def equality_equivalence(_response: Any) -> ReachedCriteria:
-        result = False
+        # TODO: Remove when criteria for checking proportionality is implemented
         res = parameters.reserved_expressions["response"]
         ans = parameters.reserved_expressions["answer"]
-
-        if (not isinstance(res, Equality)) and isinstance(ans, Equality):
-            return {
-                label + "_EXPRESSION_NOT_EQUALITY": None
-            }
-
-        if isinstance(res, Equality) and (not isinstance(ans, Equality)):
-            return {
-                label + "_EQUALITY_NOT_EXPRESSION": None
-            }
-
-        # TODO: Remove when criteria for checking proportionality is implemented
-        if isinstance(res, Equality) and isinstance(ans, Equality):
-            res_difference = (res.args[0] - res.args[1]).simplify()
-            if res_difference == 0:
-                symbols_in_equality_ratio = (ans.args[0] - ans.args[1]).simplify().free_symbols
-            elif (ans.args[0] - ans.args[1]).simplify() == 0:
-                symbols_in_equality_ratio = res_difference.free_symbols
-            else:
-                symbols_in_equality_ratio = ((res.args[0] - res.args[1]) / (ans.args[0] - ans.args[1])).simplify().free_symbols
-            result = {str(s) for s in symbols_in_equality_ratio}.issubset(parameters.parsing_parameters.constants)
-        return outcome_tag(label, result is True)
+        result = check_equality_equivalence(res, ans, parameters)
+        return {label + "_" + result.name: None}
     return equality_equivalence
 
 
@@ -111,6 +90,24 @@ def add_equality_equivalence_nodes(
         summary=str(lhs) + " is an equality, not an expression.",
         details=str(lhs) + " is an equality, not an expression.",
         feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_EXPRESSION")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_CHAIN_NOT_EQUALITY",
+        END,
+        summary=str(lhs) + " is a chained equality, not a single equality.",
+        details=str(lhs) + " is a chained equality, but a single equality was expected.",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("CHAIN_NOT_EQUALITY")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_EQUALITY_NOT_CHAIN",
+        END,
+        summary=str(lhs) + " is a single equality, not a chained equality.",
+        details=str(lhs) + " is a single equality, but a chained equality was expected.",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("EQUALITY_NOT_CHAIN")
     )
 
 
@@ -283,7 +280,7 @@ def criterion_equality_node(criterion: ExprNode, parameters: EvaluationParameter
         add_set_equivalence_nodes(graph, END, criterion, parameters, label, lhs, rhs, response_list, answer_list)
     elif inequality_bounds(res) is not None or inequality_bounds(ans) is not None:
         add_inequality_equivalence_nodes(graph, END, parameters, label, lhs, rhs)
-    elif isinstance(res, Equality) or isinstance(ans, Equality):
+    elif equality_parts(res) is not None or equality_parts(ans) is not None:
         add_equality_equivalence_nodes(graph, END, parameters, label, lhs, rhs)
     else:
         add_mathematical_equivalence_nodes(graph, END, criterion, parameters, label, lhs, rhs)
