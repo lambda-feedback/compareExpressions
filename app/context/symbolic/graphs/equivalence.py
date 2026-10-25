@@ -17,7 +17,6 @@ from app.feedback.symbolic import feedback_generators as symbolic_feedback_strin
 
 def _equality_equivalence(label: str, parameters: EvaluationParameters) -> Evaluate:
     def equality_equivalence(_response: Any) -> ReachedCriteria:
-        # TODO: Remove when criteria for checking proportionality is implemented
         res = parameters.reserved_expressions["response"]
         ans = parameters.reserved_expressions["answer"]
         result = check_equality_equivalence(res, ans, parameters)
