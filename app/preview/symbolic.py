@@ -7,6 +7,7 @@ are app-layer concerns.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -66,7 +67,8 @@ def preview_function(response: str, params: ExpressionParams | Mapping[str, Any]
     """Preview a learner's response as LaTeX and SymPy syntax.
 
     ``params`` may be :class:`ExpressionParams` or evaluation-function
-    parameters. Each side of an ``=`` is previewed separately; a response
+    parameters. Each side of a lone ``=`` is previewed separately (``<=``,
+    ``>=`` and ``!=`` are previewed as one relation); a response
     standing for several expressions (``{a, b}``, ``±``) previews as a set.
     Raises :class:`ExpressionParsingError` if the response can't be parsed.
     """
@@ -76,7 +78,8 @@ def preview_function(response: str, params: ExpressionParams | Mapping[str, Any]
 
     latex_parts = []
     sympy_parts = []
-    for part in response.split("="):
+    # Split on a lone "=" (equality) only, so the "=" in ">=", "<=", "==" and "!=" doesn't break up an inequality
+    for part in re.split(r"(?<![<>=!])=(?!=)", response):
         try:
             if params.is_latex:
                 latex_out = [part]
