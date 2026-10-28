@@ -66,15 +66,10 @@ def create_expressions_for_comparison(
 def do_comparison_infinite(comparison_symbol: str, lhs_expr: Basic, rhs_expr: Basic) -> bool | None:
     # When either side is infinite, subtracting (e.g. oo - oo) yields nan, making
     # the subtraction-based do_comparison unreliable. Compare the sides directly instead.
-    direct_comparisons = {
-        "=": lhs_expr == rhs_expr,
-        ">": lhs_expr > rhs_expr,
-        ">=": lhs_expr >= rhs_expr,
-        "<": lhs_expr < rhs_expr,
-        "<=": lhs_expr <= rhs_expr,
-    }
+    # Only the requested comparison is evaluated: ordering complex infinity (zoo) raises TypeError.
+    comparison = COMPARISON_OPERATORS[comparison_symbol.strip()]
     try:
-        return bool(direct_comparisons[comparison_symbol.strip()])
+        return bool(comparison(lhs_expr, rhs_expr))
     except Exception:
         return None
 
