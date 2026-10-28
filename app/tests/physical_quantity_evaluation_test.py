@@ -3,7 +3,7 @@ import pytest
 # Import necessary data and reference cases for tests
 from app.evaluation import evaluation_function
 from app.tests.physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
-from lambdafeedback.units import (
+from lambdafeedback.physical_quantities import (
     COMMON_UNITS,
     IMPERIAL_UNITS,
     SI_BASE_UNITS,

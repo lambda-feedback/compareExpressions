@@ -7,7 +7,7 @@ from typing import Any
 
 from lambdafeedback.criteria import CriteriaGraph, build_quantity_criteria_parser
 from lambdafeedback.expression_parsing import ExpressionParams, SympyParsingConfig
-from lambdafeedback.units import QuantityParams, preprocess_quantity
+from lambdafeedback.physical_quantities import QuantityParams, preprocess_quantity
 
 from app.context.base import Context
 from app.context.defaults import base_default_parameters

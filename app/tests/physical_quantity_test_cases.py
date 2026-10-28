@@ -1,6 +1,6 @@
 # Physical quantities with their expected value, unit and LaTeX forms, shared by
 # the physical quantity evaluation tests. The quantity parser itself is tested in
-# the lambdafeedback-units package.
+# the lambdafeedback-physical-quantities package.
 
 slr_strict_si_syntax_test_cases = [
     ("q",  # String that will be used as response / answer

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from sympy import Basic
 
 from lambdafeedback.expression_parsing import parse_expression
-from lambdafeedback.units import PhysicalQuantity, parse_quantity as parse_physical_quantity
+from lambdafeedback.physical_quantities import PhysicalQuantity, parse_quantity as parse_physical_quantity
 
 from app.types import Expression, Parameters
 from app.feedback.physical_quantity import reverted_unit_feedback

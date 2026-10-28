@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from lambdafeedback.units import RevertedUnit
+from lambdafeedback.physical_quantities import RevertedUnit
 
 from app.types import FeedbackGenerators
 

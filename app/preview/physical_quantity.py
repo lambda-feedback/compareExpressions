@@ -14,7 +14,7 @@ from lambdafeedback.expression_parsing import (
     sanitise_latex,
     sympy_to_latex,
 )
-from lambdafeedback.units import (
+from lambdafeedback.physical_quantities import (
     QuantityError,
     QuantityParams,
     QuantityParseError,

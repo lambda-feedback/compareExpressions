@@ -207,7 +207,7 @@ The function returns result dictionary with the following fields:
 
 # Preview function
 
-When the evaluation function preview is called the code in `preview/__init__.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions are `preview/symbolic.py` (symbolic expressions) and `preview/physical_quantity.py` (physical quantities), with the shared `Preview` and `Result` types in `preview/common.py`, built on the parsing from the `lambdafeedback-expression-parsing` and `lambdafeedback-units` packages, see [Packages](#packages).
+When the evaluation function preview is called the code in `preview/__init__.py` will be executed. Since different contexts interpret responses in different ways they also have their own preview functions. The context-specific preview functions are `preview/symbolic.py` (symbolic expressions) and `preview/physical_quantity.py` (physical quantities), with the shared `Preview` and `Result` types in `preview/common.py`, built on the parsing from the `lambdafeedback-expression-parsing` and `lambdafeedback-physical-quantities` packages, see [Packages](#packages).
 
 **Remark**: Since it is likely that there will be significant overlap between the response preview and the response evaluation (e.g. code for parsing and interpreting the response), it is good practice if they can share as much code as possible to ensure consistency. For this reason it might be better to move the preview functions fully inside the context (e.g. by moving the preview implementation into the context packages `context/symbolic/` and `context/physical_quantity/`). In this case `preview/__init__.py` and `evaluation.py` could also share the same code for determining the right context to use.
 
@@ -215,14 +215,14 @@ When `is_latex` is enabled, `e` and `E` are read as plain symbols by the LaTeX p
 
 # Packages
 
-The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.3` release candidate. Each package's `CHANGELOG.md` lists the API changes:
+The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.4` release candidate. Each package's `CHANGELOG.md` lists the API changes:
 
 | Package | Import | Used for |
 |---|---|---|
 | `lambdafeedback-slr-parsing` | `lambdafeedback.slr_parsing` | The SLR parser behind the criteria and quantity grammars |
 | `lambdafeedback-criteria` | `lambdafeedback.criteria` | Parsing criteria, criteria graphs, turning reached criteria into feedback |
 | `lambdafeedback-expression-parsing` | `lambdafeedback.expression_parsing` | Preprocessing and parsing expressions with SymPy and LaTeX |
-| `lambdafeedback-units` | `lambdafeedback.units` | Unit data, reading physical quantities, dimensional analysis |
+| `lambdafeedback-physical-quantities` | `lambdafeedback.physical_quantities` | Unit data, reading physical quantities, dimensional analysis |
 
 The packages don't contain feedback text. They raise typed exceptions (e.g. `BracketNotationError`) or return plain facts (e.g. `PhysicalQuantity.reverted_units`); the app maps these to a `FeedbackTag` (`feedback/tags.py`), and `feedback/symbolic.py` and `feedback/physical_quantity.py` turn them into text. The "written as" forms (`feedback/syntactical_forms.py`) live in the app for the same reason. `result.py` holds the `EvaluationResult` that collects feedback and serialises the response.
 
