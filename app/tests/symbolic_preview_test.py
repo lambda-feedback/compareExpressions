@@ -362,3 +362,45 @@ class TestPreviewFunction():
         result = preview_function("{1, 2}", params)
         assert result["preview"]["latex"] == "\\left\\{1,~2\\right\\}"
         assert result["preview"]["sympy"] == "{1, 2}"
+
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            # summation() with explicit bounds, rendered by SymPy
+            (
+                "summation((4/n**2)(-1)**n cos(nx), (n, 1, oo))",
+                r"\sum_{n=1}^{\infty} \frac{4 \cdot \left(-1\right)^{n} \cdot \cos{\left(n \cdot x \right)}}{n^{2}}",
+                "summation((4/n**2)(-1)**n cos(nx), (n, 1, oo))",
+            ),
+            # infsum is a task symbol written as a big operator: its argument goes inside the sum
+            (
+                "infsum((-1)^n / n^2)",
+                r"\sum_{n=1}^{\infty} \frac{\left(-1\right)^{n}}{n^{2}}",
+                "infsum((-1)^n / n^2)",
+            ),
+            (
+                "infsum((4/n^2)*(-1)^n*cos(nx))",
+                r"\sum_{n=1}^{\infty} \frac{4 \cdot \left(-1\right)^{n} \cdot \cos{\left(n \cdot x \right)}}{n^{2}}",
+                "infsum((4/n^2)*(-1)^n* cos(nx))",
+            ),
+            (
+                "((pi^2)/(3))+infsum((4/n^2)*(-1)^n*cos(nx))",
+                r"\frac{\pi^{2}}{3} + \sum_{n=1}^{\infty} \frac{4 \cdot \left(-1\right)^{n} \cdot \cos{\left(n \cdot x \right)}}{n^{2}}",
+                "(( pi^2)/(3))+infsum((4/n^2)*(-1)^n* cos(nx))",
+            ),
+        ]
+    )
+    def test_sum_preview(self, response, latex, sympy):
+        # From #261: infsum((-1)^n/n^2) was the product infsum*(...), so the sum was printed inside the fraction.
+        params = {
+            "is_latex": False,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "infsum": {"aliases": [], "latex": "\\sum_{n=1}^{\\infty}"},
+                "pi": {"aliases": [], "latex": "\\pi"},
+            },
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
