@@ -1,0 +1,12 @@
+# Build files
+Dockerfile
+.dockerignore
+
+# The base image provides the app package's __init__.py and handler
+__init__.py
+
+# Local and generated files
+**/__pycache__
+**/*.py[cod]
+**/.DS_Store
+**/.pytest_cache

@@ -1,20 +1,8 @@
-import os
 import pytest
 
-from ..evaluation import evaluation_function
-from ..preview import preview_function
+from app.evaluation import evaluation_function
+from app.preview import preview_function
 
-def create_diagram_for_documentation(filename, result):
-    for (index, graph) in enumerate(result["criteria_graphs_vis"].values()):
-        with open(filename+"_"+str(index)+".md", "w") as f:
-            #f.write(r'<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>'+'\n')
-            f.write("```mermaid\n")
-            for g in result["criteria_graphs_vis"].values():
-                print(g)
-                #f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
-                f.write(g+"\n")
-            #f.write('<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>')
-            f.write("```\n")
 
 class TestEvaluationFunction():
     """
@@ -67,6 +55,7 @@ class TestEvaluationFunction():
             ("+- x**2 + -+ y**2",  False, r"\left\{x^{2} - y^{2},~- x^{2} + y^{2}\right\}"),
         ]
     )
+    @pytest.mark.slow
     def test_using_plus_minus_symbols(self, response, is_latex, response_latex):
         answer = "plus_minus x**2 + minus_plus y**2"
         params = {
@@ -90,7 +79,6 @@ class TestEvaluationFunction():
             params.update({"is_latex": True})
         # Checking latex output disabled as the function return a few different
         # variants of the latex in an unpredictable way
-        # preview = preview_function(response, params)["preview"]
         # assert preview["latex"] == response_latex
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
@@ -131,7 +119,7 @@ class TestEvaluationFunction():
             ("109.12 foot/minute", "2.00 km/h", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, None, None, {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
             ("0.556 m/s", "0.556 metre/second", r"0.556~\frac{\mathrm{metre}}{\mathrm{second}}", True, "strict", "SI", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_IDENTICAL"}),
             ("5.56 dm/s", "0.556 metre/second", r"5.56~\frac{\mathrm{decimetre}}{\mathrm{second}}", True, "strict", "SI", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
-            ("55.6 centimetre second^(-1)", "0.556 metre/second", r"55.6~\mathrm{centimetre}~\mathrm{second}^{(-1)}", True, "strict", "SI", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
+            ("55.6 centimetre second^(-1)", "0.556 metre/second", r"55.6~\mathrm{centimetre}~\mathrm{second}^{-1}", True, "strict", "SI", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
             ("1.24 mile/hour", "1.24 mile/hour", r"1.24~\frac{\mathrm{mile}}{\mathrm{hour}}", True, "strict", "imperial common", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_IDENTICAL"}),
             ("2 km/h", "1.24 mile/hour", r"2~\frac{\mathrm{kilometre}}{\mathrm{hour}}", True, "strict", "imperial common", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),  # Ideally False but works with base SI units
             ("109.12 foot/minute", "1.24 mile/hour", r"109.12~\frac{\mathrm{foot}}{\mathrm{minute}}", True, "strict", "imperial common", {"response matches answer_TRUE", "response matches answer_UNIT_COMPARISON_SIMILAR"}),
@@ -154,7 +142,7 @@ class TestEvaluationFunction():
         assert tags == set(result["tags"])
         assert result["is_correct"] == value
 
-    def test_checking_the_value_of_a_physical_quantity_and_create_diagram_for_docs(self):
+    def test_checking_the_value_of_a_physical_quantity_long_and_short_unit_names(self):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
@@ -163,8 +151,7 @@ class TestEvaluationFunction():
         response = "2.00 kilometre/hour"
         answer = "2.00 km/h"
         result = evaluation_function(response, answer, params, include_test_data=True)
-        create_diagram_for_documentation("physical_quantity", result)
-        assert result["is_correct"] == True
+        assert result["is_correct"] is True
 
     @pytest.mark.parametrize(
         "res,ans,convention,value",
@@ -208,6 +195,7 @@ class TestEvaluationFunction():
             )
         ]
     )
+    @pytest.mark.slow
     def test_setting_absolute_or_relative_tolerances_for_numerical_comparison(self, answer, atol_response_true, atol_response_false, rtol_response_true, rtol_response_false):
         params = {
             "strict_syntax": False,
@@ -286,6 +274,7 @@ class TestEvaluationFunction():
             ("cos(x)+2", "sin(x)", r"\cos{\left(x \right)} + 2", "diff(response,x)=cos(x)", False, [], dict()),
         ]
     )
+    @pytest.mark.slow
     def test_customizing_comparison(self, response, answer, response_latex, criteria, value, feedback_tags, extra_params):
         params = {
             "strict_syntax": False,
@@ -330,6 +319,7 @@ class TestEvaluationFunction():
             ("Derivative(T(x,t),x,x) + Derivative(q(x,t),t)/k = 1/alpha*Derivative(T(x,t),t)", True),
         ]
     )
+    @pytest.mark.slow
     def test_MECH50001_2_24_a(self, response, value):
         params = {
             "strict_syntax": False,
@@ -596,13 +586,6 @@ class TestEvaluationFunction():
         }
         answer = "2*x^2"
         result = evaluation_function(response, answer, params, include_test_data=True)
-        create_diagram_for_documentation("custom_comparison_with_criteria_order", result)
-#        with open("diagrams.html", "w") as f:
-#            f.write(r'<!DOCTYPE html><html lang="en"><body><style>.mermaid {display: inline-flex;}</style>'+'\n')
-#            for g in result["criteria_graphs_vis"].values():
-#                print(g)
-#                f.write('<pre class="mermaid">\n'+g+'\n</pre>\n')
-#            f.write('<script type="module"> import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";</script></body></html>')
         assert result["is_correct"] is value
         assert set(tags) == set(result["tags"])
 
@@ -673,6 +656,3 @@ class TestEvaluationFunction():
         assert set(feedback_tags) == set(result["tags"])
         for string in custom_feedback.values():
             assert string in result["feedback"]
-
-if __name__ == "__main__":
-    pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])

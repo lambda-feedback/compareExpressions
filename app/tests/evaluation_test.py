@@ -1,0 +1,278 @@
+import pytest
+
+from app.evaluation import evaluation_function
+from app.preview import preview_function
+
+
+class TestEvaluationFunction():
+    """
+    TestCase Class used to test the algorithm.
+    ---
+    Tests are used here to check that the algorithm written
+    is working as it should.
+
+    These tests are organised in classes to ensure that the same
+    calling conventions can be used for tests using unittest and
+    tests using pytest.
+
+    Read the docs on how to use unittest and pytest here:
+    https://docs.python.org/3/library/unittest.html
+    https://docs.pytest.org/en/7.2.x/
+
+    Use evaluation_function() to call the evaluation function.
+    """
+
+    def test_eval_function_can_handle_latex_input(self):
+        response = r"\sin x + x^{7}"
+        answer = "sin(x)+x**7"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "is_latex": True
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_eval_function_preserves_order_in_latex_input(self):
+        response = r"c + a + b"
+        answer = "c + a + b"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "is_latex": True
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_AERO40007_1_6_instance_2024_25(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "rtol": 0.01,
+        }
+        response = "231*16.4/1000*14=4"
+        answer = "53"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+        assert "response = answer_EQUALITY_NOT_EXPRESSION" in result["tags"]
+
+    def test_CHEM40002_1_5_instance_2024_25(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "complexNumbers": True,
+            "symbols": {
+                "I": {"aliases": ["i"], "latex": r"I"},
+            },
+        }
+        response = "6 exp(5pi/6*I)"
+        answer = "6(cos(5pi/6)+isin(5pi/6))"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_physical_qualities_no_tolerance(self):
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary_functions": True,
+        }
+        response = "0.6 Nm"
+        answer = "0.5 Nm"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    def test_euler_preview_evaluate(self):
+        response = "ER_2"
+        params = dict(is_latex=True, elementary_functions=False, strict_syntax=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == "ER_2"
+        assert preview["sympy"] == "E*R_2"
+
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": False,
+            "elementary_functions": False,
+        }
+
+        response = preview["sympy"]
+        answer = "E*R_2"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_theta_character_implict_multi_variable(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+            "symbols": {
+                "a": {"aliases": ["a"]},
+                "bc": {"aliases": ["bc"]},
+                "d": {"aliases": ["d"]}
+            },
+        }
+        answer = "a/(theta*d)"
+        response_full = "a/(theta*d)"
+        response_implicit_bracket = "a/(thetad)"
+        response_implicit_no_bracket = "a/thetad"
+
+        result = evaluation_function(response_full, answer, params)
+        assert result["is_correct"] is True, "Response: a/(theta*d)"
+
+        result = evaluation_function(response_implicit_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/(thetad)"
+
+        result = evaluation_function(response_implicit_no_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/thetad"
+
+    def test_multi_character_implicit_multi_variable(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+            "symbols": {
+                "a": {"aliases": ["a"]},
+                "bc": {"aliases": ["bc"]},
+                "d": {"aliases": ["d"]}
+            },
+        }
+        answer = "a/(bc*d)"
+        response_full = "a/(bc*d)"
+        response_implicit_bracket = "a/(bcd)"
+        response_implicit_no_bracket = "a/bcd"
+
+        result = evaluation_function(response_full, answer, params)
+        assert result["is_correct"] is True, "Response: a/(bc*d)"
+
+        result = evaluation_function(response_implicit_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/(bcd)"
+
+        result = evaluation_function(response_implicit_no_bracket, answer, params)
+        assert result["is_correct"] is True, "Response: a/bcd"
+
+    @pytest.mark.parametrize(
+        "response, is_latex, is_correct", [
+            ("e**ea", False, True),
+            ("e**Ea", False, True),
+            ("e^{ea}", True, True),
+            ("e^{Ea}", True, True),
+        ]
+    )
+    def test_e_latex(self, response, is_latex, is_correct):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": {
+                "ea": {"aliases": ["ea", "Ea"], "latex": "ea"},
+            },
+        }
+        answer = "e**ea"
+
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] == is_correct
+
+    @pytest.mark.parametrize("params, is_correct", [
+        ({}, True),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": False, "physical_quantity": False, "elementary_functions": False}, True),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": False, "physical_quantity": False, "elementary_functions": True}, True),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": True,  "physical_quantity": False, "elementary_functions": False}, False),
+        ({"atol": 0.0, "rtol": 0.0, "strict_syntax": True,  "physical_quantity": False, "elementary_functions": True}, False),
+    ])
+    def test_strict_syntax_rejects_implicit_multiplication(self, params, is_correct):
+        response = "-2M0/3"
+        answer = "-2M0/3"
+        if is_correct:
+            result = evaluation_function(response, answer, params)
+            assert result["is_correct"] is True
+        else:
+            # strict_syntax=True prevents implicit multiplication, so -2M0/3 cannot be
+            # parsed. Answer parse failures are raised as exceptions (not returned as
+            # is_correct=False) because they indicate a task misconfiguration.
+            with pytest.raises(Exception):
+                evaluation_function(response, answer, params)
+
+    def test_mu_preview_evaluate(self):
+        response = "10 μA"
+        params = dict(is_latex=False, elementary_functions=False, strict_syntax=False, physical_quantity=True)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == "10~\\mathrm{microampere}"
+        assert preview["sympy"] == "10 μA"
+
+        params = {
+            "atol": 0.0,
+            "rtol": 0.0,
+            "strict_syntax": False,
+            "physical_quantity": True,
+            "elementary_functions": False,
+        }
+
+        response = preview["sympy"]
+        answer = "10 muA"
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize(
+        "response, is_latex, is_correct", [
+            ("A/s(e**(-a*s)-e**(-b*s))", False, True),
+            ("A/s(e**(-as)-e**(-bs))", False, True),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, True),
+            ("(A/s)( e^{-as}-e^{-bs})", True, True),
+            (r"\frac{A}{s} (e^{-a*s}-e^{-b*s})", True, True),
+            (r"\frac{A}{s} (e^{-a s}-e^{-b s})", True, True)
+        ]
+    )
+    def test_laplace_transforms(self, response, is_latex, is_correct):
+
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+        answer = "A/s(e**(-a*s)-e**(-b*s))"
+
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] == is_correct
+
+    @pytest.mark.parametrize(
+        "params, message", [
+            (
+                {"symbols": {"where": {"aliases": []}}},
+                "`where` is a reserved keyword and cannot be used as an input symbol code."
+            ),
+            (
+                {"input_symbols": [["written as", []]]},
+                "`written as` is a reserved keyword and cannot be used as an input symbol code."
+            ),
+            (
+                {"symbols": {"x": {"aliases": ["response"]}}},
+                "`response` is a reserved keyword and cannot be used as an input symbol alternative."
+            ),
+            (
+                {"input_symbols": [["x", ["plus_minus"]]]},
+                "`plus_minus` is a reserved keyword and cannot be used as an input symbol alternative."
+            ),
+            (
+                {"symbols": {"where": {"aliases": []}, "contains": {"aliases": []}}},
+                "`contains`, `where` are reserved keywords and cannot be used as input symbol codes."
+            ),
+            (
+                {"symbols": {"x": {"aliases": ["response", "answer"]}}},
+                "`answer`, `response` are reserved keywords and cannot be used as input symbol alternatives."
+            ),
+        ]
+    )
+    def test_reserved_keyword_as_input_symbol(self, params, message):
+        with pytest.raises(Exception) as error:
+            evaluation_function("x", "x", params)
+        assert str(error.value) == message

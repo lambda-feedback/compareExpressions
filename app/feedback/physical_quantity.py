@@ -1,4 +1,10 @@
-feedback_string_generators = dict()
+from __future__ import annotations
+
+from lambdafeedback.physical_quantities import RevertedUnit
+
+from app.types import FeedbackGenerators
+
+feedback_string_generators: FeedbackGenerators = dict()
 feedback_string_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "REVERTED_UNIT": f"Possible ambiguity: <strong>`{inputs.get('marked', '')}`</strong> was not interpreted as a unit in<br>`{inputs['before']}`<strong>`{inputs['marked']}`</strong>`{inputs['after']}`",
 }[tag]
@@ -20,3 +26,10 @@ feedback_string_generators["COMPARISON"] = lambda tag: lambda inputs: {
     "TRUE": "",  # TODO: Replace with more specialised messages for different comparisons
     "FALSE": "",  # TODO: Replace with more specialised messages for different comparisons
 }[tag]
+
+
+def reverted_unit_feedback(reverted_unit: RevertedUnit) -> str | None:
+    """Text for a `RevertedUnit` fact from the units package."""
+    return feedback_string_generators["INTERNAL"]("REVERTED_UNIT")(
+        {"before": reverted_unit.before, "marked": reverted_unit.marked, "after": reverted_unit.after}
+    )

@@ -1,8 +1,8 @@
 import pytest
-import os
 
-from ..evaluation import TaskConfigurationError, evaluation_function
-from ..utility.expression_utilities import elementary_functions_names, substitute
+from app.evaluation import TaskConfigurationError, evaluation_function
+from lambdafeedback.expression_parsing import substitute
+from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
 
 # REMARK: If a case is marked with an alternative output, this means that it is difficult in this case to prevent sympy from simplifying for that particular case
 elementary_function_test_cases = [
@@ -79,7 +79,7 @@ def generate_input_variations_from_elementary_function_aliases(response, answer,
         for alternative in substitution[1]:
             current_substitutions = [(c, a[0]) for (c, a) in alias_substitutions[0:k]]
             current_substitutions.append((substitution[0], alternative))
-            current_substitutions += [(c, a[0]) for (c, a) in alias_substitutions[(k+1):]]
+            current_substitutions += [(c, a[0]) for (c, a) in alias_substitutions[(k + 1):]]
             subs_answer = substitute(answer, current_substitutions)
             subs_response = substitute(response, current_substitutions)
             input_variations += [(subs_response, subs_answer)]
@@ -211,6 +211,7 @@ class TestEvaluationFunction():
     input_variations += generate_input_variations(response, answer)
 
     @pytest.mark.parametrize("response,answer", input_variations)
+    @pytest.mark.slow
     def test_simple_fractional_powers_correct(self, response, answer):
         params = {"strict_syntax": False, "symbol_assumptions": "('g','positive') ('v','positive')"}
         result = evaluation_function(response, answer, params)
@@ -452,6 +453,7 @@ class TestEvaluationFunction():
             answer="plus_minus x**2 + minus_plus y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_all_correct(self, response, answer):
         params = {
             "strict_syntax": False,
@@ -467,6 +469,7 @@ class TestEvaluationFunction():
             answer="+- x**2 + -+ y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_replace_symbols_all_correct(self, response, answer):
         params = {"plus_minus": "+-", "minus_plus": "-+", "strict_syntax": False}
         result = evaluation_function(response, answer, params)
@@ -479,6 +482,7 @@ class TestEvaluationFunction():
             answer="plus_minus x**2 + minus_plus y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_all_incorrect(self, response, answer):
         params = {"strict_syntax": False}
         result = evaluation_function(response, answer, params)
@@ -503,6 +507,7 @@ class TestEvaluationFunction():
             answer="plus_minus x**2 + minus_plus y**2"
         )
     )
+    @pytest.mark.slow
     def test_plus_minus_all_responses_incorrect(self, response, answer):
         params = {"multiple_answers_criteria": "all_responses", "strict_syntax": False}
         result = evaluation_function(response, answer, params)
@@ -1004,6 +1009,7 @@ class TestEvaluationFunction():
             ]
         ]
     )
+    @pytest.mark.slow
     def test_PHYS40002_2_2_b(self, response, outcome):
         params = {"strict_syntax": False}
         answer = "-(y*sin(x*y) + e^(y)) / (x*(e^(y) + sin(x*y)))"
@@ -1020,7 +1026,7 @@ class TestEvaluationFunction():
                 "6*cos(5*x+1)-90*x*sin(5*x+1)-225*x**2*cos(5*x+1)+125*x**3*sin(5*x+1)",
                 "6cos(5x+1)-90x*sin(5x+1)-225x^2cos(5x+1)+125x^3sin(5x+1)",
             ]
-        ]+[
+        ] + [
             (
                 res,
                 False
@@ -1031,6 +1037,7 @@ class TestEvaluationFunction():
             ]
         ]
     )
+    @pytest.mark.slow
     def test_PHYS40002_2_6_a(self, response, outcome):
         params = {"strict_syntax": False}
         answer = "6*cos(5*x+1)-90*x*sin(5*x+1)-225*x**2*cos(5*x+1)+125*x**3*sin(5*x+1)"
@@ -1042,7 +1049,7 @@ class TestEvaluationFunction():
         sum(
             [
                 [
-                    (case[0],)+var
+                    (case[0],) + var
                     for var in generate_input_variations_from_elementary_function_aliases(
                         case[1],
                         case[2],
@@ -1054,6 +1061,7 @@ class TestEvaluationFunction():
             []
         )
     )
+    @pytest.mark.slow
     def test_elementary_functions(self, description, response, answer):
         params = {"strict_syntax": False, "elementary_functions": True}
         result = evaluation_function(response, answer, params)
@@ -1084,7 +1092,7 @@ class TestEvaluationFunction():
                 {
                     keyword: {
                         "aliases": [],
-                        "latex": r"\mathrm{"+keyword+r"}"
+                        "latex": r"\mathrm{" + keyword + r"}"
                     }
                 }
             )
@@ -1094,7 +1102,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     def test_no_reserved_keywords_in_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
@@ -1110,7 +1118,7 @@ class TestEvaluationFunction():
                 {
                     labels[label_index]: {
                         "aliases": [keyword],
-                        "latex": r"\mathrm{"+keyword+r"}"
+                        "latex": r"\mathrm{" + keyword + r"}"
                     }
                 }
             )
@@ -1121,7 +1129,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_codes(self):
         reserved_keywords = ["where", "written as"]
@@ -1138,7 +1146,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     def test_no_reserved_keywords_in_old_format_input_symbol_alternatives(self):
         reserved_keywords = ["response", "answer"]
@@ -1158,7 +1166,7 @@ class TestEvaluationFunction():
         with pytest.raises(Exception) as e:
             evaluation_function(response, answer, params)
         for keyword in reserved_keywords:
-            assert "`"+keyword+"`" in str(e.value)
+            assert "`" + keyword + "`" in str(e.value)
 
     @pytest.mark.parametrize(
         "response, answer, criteria, value, feedback_tags, additional_params",
@@ -1272,6 +1280,7 @@ class TestEvaluationFunction():
             ("2*pi", "0", "tan(response) = 0", True, [], {}),
         ]
     )
+    @pytest.mark.slow
     def test_criteria_based_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
         params = {
             "strict_syntax": False,
@@ -1892,6 +1901,7 @@ class TestEvaluationFunction():
             ),
         ]
     )
+    @pytest.mark.slow
     def test_criteria_where_numerical_comparison(self, response, answer, criteria, value, feedback_tags, additional_params):
         params = {
             "strict_syntax": False,
@@ -2042,6 +2052,7 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
+    @pytest.mark.slow
     def test_elementary_function_symbol_with_implicit_multiplication_on_both_sides(self):
         response = "momega^3 l^2/2(exp(2omegat)-exp(-2omegat))"
         answer = "m*omega^3*l^2*sinh(2*omega*t)"
@@ -2053,7 +2064,7 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     def test_curly_braces_used_for_grouping_in_response(self):
-        response = "2 pi e^{-a |omega|}" # {} is accepted as another way of writing () for grouping
+        response = "2 pi e^{-a |omega|}"  # {} is accepted as another way of writing () for grouping
         answer = "2 pi e^(-a|omega|)"
         params = {
             'atol': 0,
@@ -2066,8 +2077,8 @@ class TestEvaluationFunction():
         assert result["is_correct"] is True
 
     def test_unexpected_equalities_in_response_that_generates_set(self):
-        response = "z= plus_minus 1 + 2*i" # plus_minus generates a set of two equalities
-        answer = "2i plus_minus 1" # plus_minus generates a set of two expressions
+        response = "z= plus_minus 1 + 2*i"  # plus_minus generates a set of two equalities
+        answer = "2i plus_minus 1"  # plus_minus generates a set of two expressions
         params = {
             'atol': 0,
             'rtol': 0,
@@ -2106,6 +2117,23 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
+
+    @pytest.mark.parametrize(
+        "criteria",
+        [
+            "response=answer,",
+            "response=answer,, response-answer=0",
+        ]
+    )
+    def test_malformed_criteria_list_cannot_be_parsed(self, criteria):
+        params = {
+            "criteria": criteria,
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        with pytest.raises(Exception) as e:
+            evaluation_function("x+1", "1+x", params)
+        assert "Cannot parse criteria" in str(e.value)
 
     def test_input_symbols_takes_priority_when_containing_elementary_function_names_as_substring(self):
         response = "Vmax - Vmaxe^-(t/tau)"
@@ -2269,7 +2297,3 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
-
-
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--tb=line", '--durations=10', os.path.abspath(__file__)])

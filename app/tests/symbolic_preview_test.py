@@ -1,9 +1,6 @@
-import os
 import pytest
 
-from ..utility.preview_utilities import Params, extract_latex
-from ..preview_implementations.symbolic_preview import preview_function
-from .symbolic_evaluation_test import elementary_function_test_cases
+from app.preview import preview_function
 
 
 class TestPreviewFunction():
@@ -23,236 +20,345 @@ class TestPreviewFunction():
 
     Use preview_function() to check your algorithm works
     as it should.
+
+    The symbolic preview itself is tested in the lambdafeedback-expression-parsing
+    package. The physical quantity preview is tested in physical_quantity_preview_test.py.
     """
 
-    def test_doesnt_simplify_latex_by_default(self):
-        response = "\\frac{x + x^2 + x}{x}"
-        params = Params(is_latex=True)
+    def test_empty_latex_expression(self):
+        response = ""
+        params = dict(is_latex=True)
         result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == ""
+
+    def test_empty_non_latex_expression(self):
+        response = ""
+        params = dict(is_latex=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["sympy"] == ""
+
+    def test_latex_and_sympy_are_returned(self):
+        response = "x+1"
+        params = dict(is_latex=True)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert "latex" in preview.keys()
+        assert "sympy" in preview.keys()
+
+        response = "x+1"
+        params = dict(is_latex=False)
+        result = preview_function(response, params)
+        assert "preview" in result
+
+        preview = result["preview"]
+        assert "latex" in preview
+        assert "sympy" in preview
+
+    def test_natural_logarithm_notation(self):
+        response = "ln(x)"
+        params = dict(is_latex=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == r"\ln{\left(x \right)}"
+
+    @pytest.mark.parametrize(
+        "response, is_latex, elementary_functions,  response_latex, response_sympy", [
+            ("e", False, True, "e", "E",),
+            ("oo", False, True, "\\infty", "oo"),
+            ("ex", False, True, "e \\cdot x", "Ex"),
+            ("e * x", False, True,  "e \\cdot x", "E * x"),
+            ("E", False, True, "e", "E", ),
+            ("e", False, False, "e", "e",),
+            ("ex", False, False, "e \\cdot x", "ex"),
+            ("e * x", False, False, "e \\cdot x", "e * x"),
+            ("E", False, False, "E", "E",),
+            ("E", True, True, "E", "E",),
+            ("e", True, False, "e", "e",),
+            ("ex", True, False, "ex", "e*x"),
+            ("e * x", True, False, "e * x", "e*x"),
+            ("E", True, False, "E", "E",),
+            ("ER_2", True, False, "ER_2", "E*R_2",),
+            ("exp(1)", False, True, "e^{1}", "exp(1)"),
+            ("e**1", False, True, "e^{1}", "E**1"),
+            ("e^{1}", True, True, "e^{1}", "e"),
+            ("exp(0)", False, True, "e^{0}", "exp(0)"),
+            ("e**0", False, True, "e^{0}", "E**0"),
+            ("e^{0}", True, True, "e^{0}", "1"),
+            ("exp(2)", False, True, "e^{2}", "exp(2)"),
+            ("e**2", False, True, "e^{2}", "E**2"),
+            ("e^{2}", True, True, "e^{2}", "e**2"),
+            ("exp(x)", False, True, "e^{x}", "exp(x)"),
+            ("e**x", False, True, "e^{x}", "E**x"),
+            ("e^{x}", True, True, "e^{x}", "e**x")
+        ]
+    )
+    def test_eulers_number_notation(self, response, is_latex, elementary_functions, response_latex, response_sympy):
+        params = dict(is_latex=is_latex, elementary_functions=elementary_functions, strict_syntax=False)
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
+
+        preview = result["preview"]
+        assert preview["latex"] == response_latex
+        assert preview["sympy"] == response_sympy
+
+    @pytest.mark.parametrize(
+        "response, is_latex, response_latex, response_sympy, symbols", [
+            ("e**ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e**Ea", False, "e^{ea}", "E**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e^{ea}", True, "e^{ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e^{Ea}", True, "e^{Ea}", "e**ea", {"ea": {"aliases": ["ea", "Ea"], "latex": "ea"}}),
+            ("e**aea", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e**aEa", False, "e^{aea}", "E**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e^{aea}", True, "e^{aea}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+            ("e^{aEa}", True, "e^{aEa}", "e**aea", {"aea": {"aliases": ["aea", "aEa"], "latex": "aea"}}),
+        ]
+    )
+    def test_e_latex(self, response, is_latex, response_latex, response_sympy, symbols):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": symbols,
+        }
+
+        result = preview_function(response, params)
+        assert "preview" in result.keys()
         preview = result["preview"]
 
-        assert preview.get("sympy") == "(x**2 + x + x)/x"
+        assert preview["latex"] == response_latex, "latex_error"
+        assert preview["sympy"] == response_sympy, "sympy_error"
 
-    def test_doesnt_simplify_sympy_by_default(self):
-        response = "(x + x**2 + x)/x"
-        params = Params(is_latex=False)
+    @pytest.mark.parametrize(
+        "response, is_latex, response_latex, response_sympy, symbols", [
+            ("ab", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("Ab", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("aB", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("AB", False, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("ab", True, "ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("Ab", True, "Ab", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("aB", True, "aB", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+            ("AB", True, "AB", "ab", {"ab": {"aliases": ["Ab", "AB", "aB"], "latex": "ab"}}),
+        ]
+    )
+    def test_alias(self, response, is_latex, response_latex, response_sympy, symbols):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "symbols": symbols,
+        }
+
         result = preview_function(response, params)
+        assert "preview" in result.keys()
         preview = result["preview"]
-        assert preview.get("latex") == "\\frac{x^{2} + x + x}{x}"
 
-    def test_simplifies_latex_on_param(self):
-        response = "\\frac{x + x^2 + x}{x}"
-        params = Params(is_latex=True, simplify=True)
-        result = preview_function(response, params)
-        preview = result["preview"]
+        assert preview["latex"] == response_latex, "latex error"
+        assert preview["sympy"] == response_sympy, "sympy error"
 
-        assert preview.get("sympy") == "x + 2"
-
-    def test_simplifies_sympy_on_param(self):
-        response = "(x + x**2 + x)/x"
-        params = Params(is_latex=False, simplify=True)
-        result = preview_function(response, params)
-        preview = result["preview"]
-
-        assert preview.get("latex") == "x + 2"
-
-    def test_sympy_handles_implicit_multiplication(self):
-        response = "sin(x) + cos(2x) - 3x**2"
-        params = Params(is_latex=False, strict_syntax=False)
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("latex") == r"- 3 \cdot x^{2} + \sin{\left(x \right)} + \cos{\left(2 \cdot x \right)}"
-
-    def test_latex_with_equality_symbol(self):
-        response = "\\frac{x + x^2 + x}{x} = y"
-        params = Params(is_latex=True, simplify=False)
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("sympy") == '(x**2 + x + x)/x=y'
-
-    def test_sympy_with_equality_symbol(self):
-        response = "Eq((x + x**2 + x)/x, 1)"
-        params = Params(is_latex=False, simplify=False)
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("latex") == "\\frac{x^{2} + x + x}{x} = 1"
-
-    def test_latex_with_plus_minus(self):
-        response = r"\pm \frac{3}{\sqrt{5}} i"
-        params = Params(
-            is_latex=True,
-            simplify=False,
-            complexNumbers=True,
-            symbols={
-                "I": {
-                    "latex": "$i$",
-                    "aliases": ["i"],
-                },
-                "plus_minus": {
-                    "latex": "$\\pm$",
-                    "aliases": ["pm", "+-"],
-                },
-            }
-        )
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("sympy") in {'{3*(sqrt(5)/5)*I, -3*sqrt(5)/5*I}', '{-3*sqrt(5)/5*I, 3*(sqrt(5)/5)*I}'}
-        assert preview.get("latex") == r'\pm \frac{3}{\sqrt{5}} i'
-        response = r"4 \pm \sqrt{6}}"
-        params = Params(
-            is_latex=True,
-            simplify=False,
-            complexNumbers=True,
-            symbols={
-                "plus_minus": {
-                    "latex": "$\\pm$",
-                    "aliases": ["pm", "+-"],
-                },
-            }
-        )
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("sympy") in {'{sqrt(6) + 4, 4 - sqrt(6)}', '{4 - sqrt(6), sqrt(6) + 4}'}
-        assert preview.get("latex") == r'4 \pm \sqrt{6}}'
-
-    def test_latex_conversion_preserves_default_symbols(self):
-        response = "\\mu + x + 1"
-        params = Params(is_latex=True, simplify=False)
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("sympy") in "mu + x + 1"
-
-    def test_sympy_conversion_preserves_default_symbols(self):
-        response = "mu + x + 1"
-        params = Params(is_latex=False, simplify=False)
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("latex") == "\\mu + x + 1"
-
-    def test_latex_conversion_preserves_optional_symbols(self):
-        response = "m_{ \\text{table} } + \\text{hello}_\\text{world} - x + 1"
-        params = Params(
-            is_latex=True,
-            simplify=False,
-            symbols={
-                "m_table": {
-                    "latex": r"hello \( m_{\text{table}} \) world",
-                    "aliases": [],
-                },
-                "test": {
-                    "latex": r"hello $ \text{hello}_\text{world} $ world.",
-                    "aliases": [],
-                },
-            },
-        )
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("sympy") == "m_table + test - x + 1"
-
-    def test_sympy_conversion_preserves_optional_symbols(self):
-        response = "m_table + test + x + 1"
-        params = Params(
-            is_latex=False,
-            simplify=False,
-            symbols={
-                "m_table": {"latex": "m_{\\text{table}}", "aliases": []},
-                "test": {
-                    "latex": "\\text{hello}_\\text{world}",
-                    "aliases": [],
-                },
-            },
-        )
-        result = preview_function(response, params)
-        preview = result["preview"]
-        assert preview.get("latex") == "m_{\\text{table}} + \\text{hello}_\\text{world} + x + 1"
-
-    def test_invalid_latex_returns_error(self):
-        response = "\frac{ m_{ \\text{table} } + x + 1 }{x"
-        params = Params(
-            is_latex=True,
-            simplify=False,
-            symbols={"m_table": {"latex": "m_{\\text{table}}", "aliases": []}},
-        )
-
-        with pytest.raises(ValueError):
-            preview_function(response, params)
-
-    def test_invalid_sympy_returns_error(self):
-        response = "x + x***2 - 3 / x 4"
-        params = Params(simplify=False, is_latex=False)
-
-        with pytest.raises(ValueError):
-            preview_function(response, params)
-
-    def test_extract_latex_in_delimiters(self):
-        parentheses = r"\( x + 1 \)"
-        dollars = r"$ x ** 2 + 1 $"
-        double_dollars = r"$$ \sin x + \tan x $$"
-
-        assert extract_latex(parentheses) == " x + 1 "
-        assert extract_latex(dollars) == " x ** 2 + 1 "
-        assert extract_latex(double_dollars) == r" \sin x + \tan x "
-
-    def test_extract_latex_in_delimiters_and_text(self):
-        parentheses = r"hello \( x + 1 \) world."
-        dollars = r"hello $ x ** 2 + 1 $ world."
-
-        assert extract_latex(parentheses) == " x + 1 "
-        assert extract_latex(dollars) == " x ** 2 + 1 "
-
-    def test_extract_latex_no_delimiters(self):
-        test = r"'\sin x + \left ( \text{hello world} \right ) + \cos x"
-        assert extract_latex(test) == test
-
-    def test_extract_latex_multiple_expressions(self):
-        parentheses = r"hello \( x + 1 \) world. \( \sin x + \cos x \) yes."
-        dollars = r"hello $ x ** 2 + 1 $ world. \( \sigma \times \alpha \) no."
-        mixture = r"hello $ x ** 2 - 1 $ world. $ \sigma \times \alpha $ !."
-
-        assert extract_latex(parentheses) == " x + 1 "
-        assert extract_latex(dollars) == " x ** 2 + 1 "
-        assert extract_latex(mixture) == " x ** 2 - 1 "
-
-    def test_elementary_functions_preview(self):
-        params = {"strict_syntax": False, "elementary_functions": True}
-        for case in elementary_function_test_cases:
-            response = case[1]
-            result = preview_function(response, params)
-            assert result["preview"]["latex"] == case[3]
-
-    def test_implicit_multiplication_convention_implicit_higher_precedence(self):
-        response = "1/ab"
-        latex = r"1 \cdot \frac{1}{a \cdot b}"  # REMARK: Here it would be preferable to not have the '1 \cdot ' at the start
-        params = {"strict_syntax": False, "convention": "implicit_higher_precedence"}
-        result = preview_function(response, params)
-        assert result["preview"]["latex"] == latex
-
-    def test_implicit_multiplication_convention_equal_precedence(self):
-        latex = r"1 \cdot \frac{1}{a} \cdot b"  # REMARK: Here it would be preferable to not have the '1 \cdot ' at the start
-        params = {"strict_syntax": False, "convention": "equal_precedence"}
-        response_a = "1/ab"
-        result_a = preview_function(response_a, params)
-        assert result_a["preview"]["latex"] == latex
-        response_b = "1/a*b"
-        result_b = preview_function(response_b, params)
-        assert result_b["preview"]["latex"] == latex
-
-    def test_MECH50001_2_24_a(self):
+    @pytest.mark.parametrize(
+        "response, is_latex, response_latex, response_sympy",
+        [
+            ("plus_minus x", False, '\\left\\{- x,~x\\right\\}', "plus_minus x"),
+            ("\\pm x", True, '\\pm x', '{-x, x}'),
+            (r"\pm x^{2}+\mp y^{2}", True, r"\pm x^{2}+\mp y^{2}", "{-x**2 + y**2, x**2 - y**2}"),
+            ("plus_minus x**2 + minus_plus y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
+            ("- minus_plus x^2 minus_plus y^2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 minus_plus y^2"),
+            ("- minus_plus x^2 - plus_minus y^2", False, r"\left\{- x^{2} - - y^{2},~x^{2} - y^{2}\right\}", "- minus_plus x^2 - plus_minus y^2"),
+            ("pm x**2 + mp y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
+            ("+- x**2 + -+ y**2", False, r"\left\{- x^{2} + y^{2},~x^{2} - y^{2}\right\}", "plus_minus x**2 + minus_plus y**2"),
+        ]
+    )
+    def test_using_plus_minus_symbols(self, response, is_latex, response_latex, response_sympy):
         params = {
             "strict_syntax": False,
             "elementary_functions": True,
-            'symbols': {
-                'alpha': {'aliases': [], 'latex': r'\alpha'},
-                'Derivative(q,t)': {'aliases': ['q_{dot}', 'q_dot'], 'latex': r'\dot{q}'},
-                'Derivative(T,t)': {'aliases': ['dT/dt'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}t}'},
-                'Derivative(T,x)': {'aliases': ['dT/dx'], 'latex': r'\frac{\mathrm{d}T}{\mathrm{d}x}'},
-                'Derivative(T,x,x)': {'aliases': ['(d^2 T)/(dx^2)', 'd^2 T/dx^2', 'd^2T/dx^2'], 'latex': r'\frac{\mathrm{d}^2 T}{\mathrm{d}x^2}'},
+            "is_latex": is_latex,
+            "symbols": {
+                "plus_minus": {
+                    "latex": r"\(\pm\)",
+                    "aliases": ["pm", "+-"],
+                },
+                "minus_plus": {
+                    "latex": r"\(\mp\)",
+                    "aliases": ["mp", "-+"],
+                },
             },
         }
-        response = "d^2T/dx^2 + q_dot/k = 1/alpha*(dT/dt)"
+        params = dict(**params)
         result = preview_function(response, params)
-        assert result["preview"]["latex"] == r'\frac{d^{2}}{d x^{2}} T + \frac{\frac{d}{d t} q}{k}=1 \cdot \frac{1}{\alpha} \cdot \frac{d}{d t} T'
+        assert result["preview"]["latex"] == response_latex
+        assert result["preview"]["sympy"] == response_sympy
 
+    def test_lh_rh_response(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "is_latex": False,
+            "symbols": {
+                "plus_minus": {
+                    "latex": r"\(\pm\)",
+                    "aliases": ["pm", "+-"],
+                },
+                "minus_plus": {
+                    "latex": r"\(\mp\)",
+                    "aliases": ["mp", "-+"],
+                },
+            },
+        }
+        params = dict(**params)
+        result = preview_function("x + y = y + x", params)
+        assert result["preview"]["latex"] == "x + y=x + y"
+        assert result["preview"]["sympy"] == "x + y=y + x"
 
-if __name__ == "__main__":
-    pytest.main(['-sk not slow', "--tb=line", os.path.abspath(__file__)])
+    def test_multi_character_implicit_multi_variable(self):
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+            "symbols": {
+                "a": {"aliases": ["a"], "latex": "a"},
+                "bc": {"aliases": ["bc"], "latex": "bc"},
+                "d": {"aliases": ["d"], "latex": "d"}
+            },
+        }
+
+        response_full = "a/(bc*d)"
+        response_implicit_bracket = "a/(bcd)"
+        response_implicit_no_bracket = "a/bcd"
+
+        result = preview_function(response_full, params)
+        assert result["preview"]["latex"] == '\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["sympy"] == "a/(bc*d)"
+
+        result = preview_function(response_implicit_bracket, params)
+        assert result["preview"]["latex"] == '\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["sympy"] == "a/(bcd)"
+
+        result = preview_function(response_implicit_no_bracket, params)
+        assert result["preview"]["latex"] == '\\frac{a}{bc \\cdot d}'
+        assert result["preview"]["sympy"] == "a/bcd"
+
+    @pytest.mark.parametrize(
+        "response, is_latex, latex, sympy", [
+            ("A/s(e**(-a*s)-e**(-b*s))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-a*s)- E**(-b*s))"),
+            ("A/s(e**(-as)-e**(-bs))", False, r"\frac{A \cdot \left(e^{- a \cdot s} - e^{- b \cdot s}\right)}{s}", "A/s( E**(-as)- E**(-bs))"),
+            ("(A/s)( e^{-a*s}-e^{-b*s})", True, r"(A/s)( e^{-a*s}-e^{-b*s})", "A*(-1/e**(b*s) + e**(-a*s))/s"),
+            ("(A/s)( e^{-as}-e^{-bs})", True, r"(A/s)( e^{-as}-e^{-bs})", "A*(-1/e**(b*s) + e**(-a*s))/s"),
+        ]
+    )
+    def test_laplace_transforms(self, response, is_latex, latex, sympy):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+    @pytest.mark.parametrize(
+        "response, is_latex, latex, sympy", [
+            ("(x+y)*(x+z)", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("(x+y)*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*(x+z)", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+            ("[x+y]*[x+z]", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("[x+y]*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*[x+z]", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+            ("{x+y}*{x+z}", False, "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("{x+y}*x+z", False, "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*{x+z}", False, "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+        ]
+    )
+    def test_brackets(self, response, is_latex, latex, sympy):
+        params = {
+            "is_latex": is_latex,
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+    @pytest.mark.parametrize(
+        "response, latex, sympy", [
+            ("(x+y)*(x+z)", "\\left(x + y\\right) \\cdot \\left(x + z\\right)", "(x+y)*(x+z)"),
+            ("(x+y)*x+z", "x \\cdot \\left(x + y\\right) + z", "(x+y)*x+z"),
+            ("x+y*(x+z)", "x + y \\cdot \\left(x + z\\right)", "x+y*(x+z)"),
+        ]
+    )
+    def test_brackets_strict_syntax_parentheses_still_work(self, response, latex, sympy):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
+
+    @pytest.mark.parametrize(
+        "response", [
+            "[x+y]*[x+z]",
+            "[x+y]*x+z",
+            "x+y*[x+z]",
+        ]
+    )
+    def test_brackets_rejected_with_strict_syntax(self, response):
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        with pytest.raises(ValueError):
+            preview_function(response, params)
+
+    @pytest.mark.parametrize(
+        "response", [
+            "{x+y}*{x+z}",
+            "{x+y}*x+z",
+            "x+y*{x+z}",
+        ]
+    )
+    def test_curly_braces_not_converted_with_strict_syntax(self, response):
+        # With strict syntax `{}` is a set literal, not a bracket, and arithmetic on
+        # sets is rejected (SymPy deprecates it, and evaluating it used to crash).
+        params = {
+            "is_latex": False,
+            "strict_syntax": True,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        with pytest.raises(ValueError):
+            preview_function(response, params)
+
+    @pytest.mark.parametrize("strict_syntax", [False, True])
+    def test_curly_brace_multiple_answers_still_works(self, strict_syntax):
+        params = {
+            "is_latex": False,
+            "strict_syntax": strict_syntax,
+            "elementary_functions": True,
+            "convention": "implicit_higher_precedence",
+        }
+
+        result = preview_function("{1, 2}", params)
+        assert result["preview"]["latex"] == "\\left\\{1,~2\\right\\}"
+        assert result["preview"]["sympy"] == "{1, 2}"

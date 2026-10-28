@@ -1,11 +1,12 @@
-import os
+from copy import deepcopy
+
 import pytest
 
-from ..preview_implementations.physical_quantity_preview import preview_function
-from .slr_quantity_test import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
+from app.preview.physical_quantity import fix_exponents, preview_function
+from app.tests.physical_quantity_test_cases import slr_natural_si_syntax_test_cases, slr_strict_si_syntax_test_cases
 
 
-class TestPreviewFunction():
+class TestPreviewFunction:
     """
     TestCase Class used to test the algorithm.
     ---
@@ -24,14 +25,17 @@ class TestPreviewFunction():
     as it should.
     """
 
-    @pytest.mark.parametrize("response,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases)
+    @pytest.mark.parametrize(
+        "response,value,unit,content,value_latex,unit_latex,criteria", slr_strict_si_syntax_test_cases
+    )
+    @pytest.mark.slow
     def test_strict_syntax_cases(self, response, value, unit, content, value_latex, unit_latex, criteria):
         params = {
             "strict_syntax": False,
             "physical_quantity": True,
             "units_string": "SI",
             "strictness": "strict",
-            "elementary_functions": True
+            "elementary_functions": True,
         }
         result = preview_function(response, params)["preview"]
         latex = ""
@@ -40,17 +44,19 @@ class TestPreviewFunction():
         elif value_latex is not None and unit_latex is None:
             latex = value_latex
         elif value_latex is not None and unit_latex is not None:
-            latex = value_latex+"~"+unit_latex
+            latex = value_latex + "~" + unit_latex
         assert result["latex"] == latex
 
-    @pytest.mark.parametrize("response,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases)
+    @pytest.mark.parametrize(
+        "response,value,unit,content,value_latex,unit_latex,criteria", slr_natural_si_syntax_test_cases
+    )
     def test_natural_syntax_cases(self, response, value, unit, content, value_latex, unit_latex, criteria):
         params = {
             "strict_syntax": False,
             "physical_quantity": True,
             "units_string": "SI",
             "strictness": "natural",
-            "elementary_functions": True
+            "elementary_functions": True,
         }
         result = preview_function(response, params)["preview"]
         latex = ""
@@ -59,7 +65,7 @@ class TestPreviewFunction():
         elif value_latex is not None and unit_latex is None:
             latex = value_latex
         elif value_latex is not None and unit_latex is not None:
-            latex = value_latex+"~"+unit_latex
+            latex = value_latex + "~" + unit_latex
         assert result["latex"] == latex
 
     @pytest.mark.parametrize(
@@ -67,7 +73,7 @@ class TestPreviewFunction():
         [
             ("sin(123)", r"\sin{\left(123 \right)}", "sin(123)"),
             ("sqrt(162)", r"\sqrt{162}", "sqrt(162)"),
-        ]
+        ],
     )
     def test_issue_with_function_name_that_can_be_compound_unit(self, response, preview_latex, preview_sympy):
         params = {
@@ -86,15 +92,16 @@ class TestPreviewFunction():
         }
         response = "162 \\mathrm{~N} / \\mathrm{m}^{2}"
         result = preview_function(response, params)["preview"]
-        assert result["latex"] == r'162~\frac{\mathrm{newton}}{\mathrm{metre}^{(2)}}'  # TODO: Fix so that unnecessary parenthesis are simplified away
+        assert result["latex"] == r"162~\frac{\mathrm{newton}}{\mathrm{metre}^{2}}"
         assert result["sympy"] == "162 newton/metre**(2)"
 
     @pytest.mark.parametrize(
-        "response, latex, sympy", [
+        "response, latex, sympy",
+        [
             (r"\frac{F}{p \cdot \mu}", r"\frac{F}{\mu p}", "F/((mu*p))"),
             (r"F \cdot p", "F p", "F*p"),
             (r"\frac{10}{2} \mathrm{~kg}", r"\frac{10}{2}~\mathrm{kilogram}", "10/2 kilogram"),
-        ]
+        ],
     )
     def test_latex_physical_quantity_preview(self, response, latex, sympy):
         params = {
@@ -105,6 +112,20 @@ class TestPreviewFunction():
         result = preview_function(response, params)["preview"]
         assert result["latex"] == latex
         assert result["sympy"] == sympy
+
+    @pytest.mark.parametrize(
+        ("latex", "expected"),
+        [
+            ("m^{-2}", "m**(-2)"),
+            ("x^{23}", "x**(23)"),
+            ("m**{-2}", "m**(-2)"),
+            ("x**{23}", "x**(23)"),
+            ("x^2", "x**2"),
+            ("x^2y^{3}", "x**2y**(3)"),
+        ],
+    )
+    def test_fix_exponents(self, latex, expected):
+        assert fix_exponents(latex) == expected
 
     @pytest.mark.parametrize(
         "response, is_latex", [
@@ -136,6 +157,15 @@ class TestPreviewFunction():
         result = preview_function(r"1,2~\mathrm{m}", params)["preview"]
         assert result["sympy"] == "2 metre"
 
+    def test_latex_preview_keeps_the_exponent_sign(self):
+        preview = preview_function(r"162 \mathrm{~N} \mathrm{~m}**{-2}", {"is_latex": True})["preview"]
+        assert preview["sympy"] == "162 newton metre**(-2)"
 
-if __name__ == "__main__":
-    pytest.main(['-xk not slow', "--tb=line", os.path.abspath(__file__)])
+    def test_latex_preview_of_a_unit_alone(self):
+        assert preview_function(r"\mathrm{kg}", {"is_latex": True})["preview"]["sympy"] == "kilogram"
+
+    def test_preview_does_not_mutate_params(self):
+        params = {"is_latex": True, "symbols": {"F": {"latex": "F", "aliases": []}}}
+        before = deepcopy(params)
+        preview_function(r"3 \mathrm{kg}", params)
+        assert params == before

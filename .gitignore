@@ -137,3 +137,18 @@ app/benchmark.py
 app/profiling_examples.py
 
 .idea/
+
+# Extracted packages live here as their own separate git repo
+/compareExpressions-packages/
+
+# OS / editor / local tool files
+.DS_Store
+.vscode/
+.junie/
+.mcp.json
+
+# Local virtual environments (e.g. .venv38)
+.venv*/
+
+# Test reports written by CI
+reports/

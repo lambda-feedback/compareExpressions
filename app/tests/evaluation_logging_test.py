@@ -3,8 +3,8 @@ import logging
 
 import pytest
 
-from .. import evaluation
-from ..evaluation import EvaluationError, ResponseParsingError, TaskConfigurationError, evaluation_function
+from app import evaluation
+from app.evaluation import EvaluationError, ResponseParsingError, TaskConfigurationError, evaluation_function
 
 # The module name depends on how pytest is run, so take it from the logger itself
 LOGGER_NAME = evaluation.logger.name
@@ -51,7 +51,7 @@ class TestEvaluationLogging():
         assert error["event"] == "evaluation_error"
         assert error["stage"] == "determine_context"
         assert error["error_type"] == "TaskConfigurationError"
-        assert any("determine_context" in frame for frame in error["traceback"])
+        assert any("_reserved_keywords" in frame for frame in error["traceback"])
 
     def test_exception_message_containing_response_is_not_logged(self, caplog, monkeypatch):
         caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
