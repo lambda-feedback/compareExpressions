@@ -23,7 +23,6 @@ from lambdafeedback.expression_parsing import (
 from app.context.base import Context
 from app.context.physical_quantity import context as quantity_context
 from app.context.symbolic import context as symbolic_context
-from app.context.symbolic.comparison import is_inequality_or_boolean
 from app.context.tolerance import absolute_tolerance_from_decimal_places, relative_tolerance_from_sig_figs
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators, internal_feedback
 from app.feedback.tags import FeedbackTag, FeedbackTagName
@@ -60,10 +59,7 @@ class EvaluationError(Exception):
 
 
 messages = {
-    "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined.",
-    "RESERVED_EXPRESSION_INEQUALITY": lambda label: (
-        f"Reserved expression `{label}` is an inequality or evaluates to true/false, which is not supported."
-    )
+    "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
 }
 
 
@@ -196,11 +192,6 @@ def parse_reserved_expressions(
                     message = symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
                     # The error for a task expression has no tag
                     _report(key, result, f"PARSE_ERROR_{label}", message, TaskConfigurationError(message), cause=e)
-                if key == "task" and is_inequality_or_boolean(expr_parsed):
-                    raise TaskConfigurationError(
-                        messages["RESERVED_EXPRESSION_INEQUALITY"](label),
-                        f"RESERVED_EXPRESSION_INEQUALITY_{label}"
-                    )
             reserved_expressions_dict[key].update({label: expr_parsed})
     return success, reserved_expressions_dict
 

@@ -2519,17 +2519,6 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
 
-    @pytest.mark.parametrize("answer", ["5<1.43", "x<8"])
-    def test_inequality_answer_is_task_configuration_error(self, answer):
-        response = "5<1.43"
-        params = {
-            "strict_syntax": False,
-            "elementary_functions": True,
-        }
-        with pytest.raises(TaskConfigurationError) as e:
-            evaluation_function(response, answer, params)
-        assert "`answer` is an inequality" in str(e.value)
-
     def test_integral(self):
         response = "6y"
         answer = "int(3*x*y, (x, 0, 2))"
