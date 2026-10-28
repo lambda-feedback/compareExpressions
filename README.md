@@ -38,7 +38,7 @@ The function is built on top of a custom base layer, [BaseEvaluationFunctionLaye
 
 ### Packages
 
-Expression parsing, unit handling and the criteria machinery come from the [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages) repository (currently the `v0.3.0-rc.4` release candidate), installed as git dependencies in `app/requirements.txt`. See the "Packages" section of `app/docs/dev.md` for what each package does and how to develop against a local checkout.
+Expression parsing, unit handling and the criteria machinery come from the [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages) repository (currently the `v0.3.0-rc.5` release candidate), installed as git dependencies in `app/requirements.txt`. See the "Packages" section of `app/docs/dev.md` for what each package does and how to develop against a local checkout.
 
 ### Docker & Amazon Web Services (AWS)
 

@@ -215,7 +215,7 @@ When `is_latex` is enabled, `e` and `E` are read as plain symbols by the LaTeX p
 
 # Packages
 
-The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.4` release candidate. Each package's `CHANGELOG.md` lists the API changes:
+The parsing, unit-handling and criteria code lives in four packages from [lambda-feedback-packages](https://github.com/lambda-feedback/lambda-feedback-packages), installed through `requirements.txt` at the `v0.3.0-rc.5` release candidate. Each package's `CHANGELOG.md` lists the API changes:
 
 | Package | Import | Used for |
 |---|---|---|

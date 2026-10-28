@@ -276,6 +276,10 @@ class TestEvaluationFunction():
         result = evaluation_function(response, answer, params, include_test_data=True)
         assert result["is_correct"] is value
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Needs the angle as a dimension in physical_quantities (lambda-feedback-packages #1, closed unmerged)",
+    )
     def test_radians_to_frequency(self):
         ans = "2*pi*f radian/second"
         res = "f Hz"
