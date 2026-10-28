@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sympy import Basic, pi, N
 
+from app.context.tolerance import values_within_tolerance
 from app.evaluation_parameters import EvaluationParameters
 
 def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters: EvaluationParameters) -> bool:
@@ -9,7 +10,7 @@ def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters: Evaluation
     Compares `lhs_expr` and `rhs_expr` numerically using the `atol` and `rtol` parameters.
 
     Returns False if numerical comparison is not enabled (`numerical` is not set and neither
-    `atol` nor `rtol` is positive), otherwise whether the difference is within both tolerances.
+    `atol` nor `rtol` is positive), otherwise whether the difference is within the tolerances.
     """
     if not (parameters.numerical
             or float(parameters.rtol) > 0
@@ -29,20 +30,4 @@ def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters: Evaluation
     # Separates LHS and RHS, parses and evaluates them
     res = N(replace_pi(lhs_expr))
     ans = N(replace_pi(rhs_expr))
-    if float(parameters.atol) > 0:
-        try:
-            absolute_error = abs(float(ans - res))
-            error_below_atol = bool(absolute_error < float(parameters.atol))
-        except TypeError:
-            error_below_atol = None
-    else:
-        error_below_atol = True
-    if float(parameters.rtol) > 0:
-        try:
-            relative_error = abs(float((ans - res) / ans))
-            error_below_rtol = bool(relative_error < float(parameters.rtol))
-        except TypeError:
-            error_below_rtol = None
-    else:
-        error_below_rtol = True
-    return error_below_atol is True and error_below_rtol is True
+    return values_within_tolerance(res, ans, float(parameters.rtol), float(parameters.atol))

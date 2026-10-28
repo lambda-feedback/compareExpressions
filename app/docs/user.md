@@ -11,7 +11,7 @@ Note that this function is designed to handle comparisons of mathematical expres
 There are 15 optional parameters that can be set: `absolute_tolerance`, `complexNumbers`, `convention`, `criteria`, `elementary_functions`, `feedback_for_incorrect_response`, `multiple_answers_criteria`, `physical_quantity`, `plus_minus`/`minus_plus`, `rtol`, `specialFunctions`, `strict_syntax`, `strictness`, `symbol_assumptions`.
 
 #### `absolute_tolerance` (`atol`)
-Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $|x-\tilde{x}| \leq e_aBy default `absolute_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
+Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $|x-\tilde{x}| \leq e_a$. If `relative_tolerance`, $e_r$, is also set, the two combine into $|x-\tilde{x}| \leq e_a + e_r|x|$ (the same rule as `numpy.isclose`). For physical quantities, $e_a$ is in the units of the answer. By default `absolute_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
 
 #### `complexNumbers`
 
@@ -77,7 +77,7 @@ When `physical_quantity` the evaluation function will generate feedback based on
 **TODO:** Generate new flowchart for updated physical quantity feedback generation procedure.
 
 #### `relative_tolerance` (`rtol`)
-Sets the relative tolerance, $e_r$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $\left|\frac{x-\tilde{x}}{x}\right| \leq e_r$. By default `relative_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
+Sets the relative tolerance, $e_r$, i.e. if the answer, $x$, and response, $\tilde{x}$, are numerical values then the response is considered equal to the answer if $\left|\frac{x-\tilde{x}}{x}\right| \leq e_r$. If `absolute_tolerance` is also set, see above for how the two combine. By default `relative_tolerance` is set to `0`, which means the comparison will be done with as high accuracy as possible. If either the answer or the response aren't numerical expressions this parameter is ignored.
 
 #### `strictness`
 
@@ -338,9 +338,11 @@ In the examples set there is one response area for each of the two conventions, 
 
 The evaluation function can be configured to do numerical comparisons in the following ways:
 
-- Setting the absolute error tolerance: This is done by setting the parameter `atol`. When `atol` is set to any positive value, then `response` will be considered correct if $|$`answer`$-$`response`$| < $`atol`.
+- Setting the absolute error tolerance: This is done by setting the parameter `atol`. When `atol` is set to any positive value, then `response` will be considered correct if $|$`answer`$-$`response`$| \leq $`atol`.
 
-- Setting the relative error tolerance: This is done by setting the parameter `rtol`. When `rtol` is set to any positive value, then `response` will be considered correct if $|$`answer`$-$`response`$|/|$`answer`$| < $`rtol`.
+- Setting the relative error tolerance: This is done by setting the parameter `rtol`. When `rtol` is set to any positive value, then `response` will be considered correct if $|$`answer`$-$`response`$|/|$`answer`$| \leq $`rtol`.
+
+- Setting both: `response` will be considered correct if $|$`answer`$-$`response`$| \leq $`atol`$ + $`rtol`$\cdot|$`answer`$|$, the same rule as `numpy.isclose`.
 
 **Note:** If the response area is used to compare physical quantities (i.e. the parameter `physical_quantity` is set to `true`) comparisons will be numerical be default (since unit conversion has finite precision).
 
