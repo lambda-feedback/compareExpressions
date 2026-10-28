@@ -1,6 +1,6 @@
 import pytest
 
-from app.evaluation import evaluation_function
+from app.evaluation import TaskConfigurationError, evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
 
@@ -2172,6 +2172,28 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is False
+
+    @pytest.mark.parametrize("response", ["8<9", "x<8", "8>=8", "8<5"])
+    def test_inequality_response_is_incorrect(self, response):
+        answer = "8"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+            "relative_tolerance": 0.0005,
+        }
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    @pytest.mark.parametrize("answer", ["5<1.43", "x<8"])
+    def test_inequality_answer_is_task_configuration_error(self, answer):
+        response = "5<1.43"
+        params = {
+            "strict_syntax": False,
+            "elementary_functions": True,
+        }
+        with pytest.raises(TaskConfigurationError) as e:
+            evaluation_function(response, answer, params)
+        assert "`answer` is an inequality" in str(e.value)
 
     def test_integral(self):
         response = "6y"

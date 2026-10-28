@@ -4,6 +4,8 @@ from collections.abc import Iterable
 
 from sympy import Basic, Equality, im, I
 from sympy import re as real_part
+from sympy.core.relational import Relational
+from sympy.logic.boolalg import BooleanAtom
 
 from lambdafeedback.criteria import where_substitutions
 from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expression
@@ -87,6 +89,13 @@ def do_comparison(comparison_symbol: str, expression: Basic) -> bool | None:
     return result
 
 
+def is_inequality_or_boolean(expr: object) -> bool:
+    # Inequalities (e.g. 8 < 9) and booleans (e.g. 5 < 1.43 evaluated to False) are not supported
+    # and cannot be subtracted, so they cannot be compared like other expressions.
+    # NOTE: Not checking for Boolean, since Symbol is a subclass of Boolean.
+    return isinstance(expr, (Relational, BooleanAtom)) and not isinstance(expr, Equality)
+
+
 def check_equality(
     criterion: ExprNode, parameters: EvaluationParameters, local_substitutions: Substitutions = ()
 ) -> bool | None:
@@ -94,6 +103,8 @@ def check_equality(
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         return False
     elif not isinstance(lhs_expr, Equality) and isinstance(rhs_expr, Equality):
+        return False
+    elif is_inequality_or_boolean(lhs_expr) or is_inequality_or_boolean(rhs_expr):
         return False
 
     try:

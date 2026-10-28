@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import json
+import logging
+import os
+import time
+import traceback
+import uuid
 from collections.abc import Collection, Iterable, Mapping
 from copy import deepcopy
 from typing import Any
@@ -17,14 +23,46 @@ from lambdafeedback.expression_parsing import (
 from app.context.base import Context
 from app.context.physical_quantity import context as quantity_context
 from app.context.symbolic import context as symbolic_context
+from app.context.symbolic.comparison import is_inequality_or_boolean
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators, internal_feedback
 from app.feedback.tags import FeedbackTag, FeedbackTagName
 from app.evaluation_parameters import EvaluationParameters
 from app.result import EvaluationResult
 from app.types import Parameters
 
+logger = logging.getLogger(__name__)
+logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+
+
+class TaskConfigurationError(Exception):
+    """
+    Raised for problems with the task setup (params, answer, criteria) or the shape of the request.
+    These are passed on unchanged by `evaluation_function`.
+    NOTE: The message must never contain the response.
+    """
+
+
+class ResponseParsingError(ValueError):
+    """
+    Raised when the response cannot be parsed.
+    Subclasses ValueError so that the base layer returns it as an unprocessable submission (HTTP 422).
+    These are passed on unchanged by `evaluation_function`.
+    NOTE: The message must never contain the response.
+    """
+
+
+class EvaluationError(Exception):
+    """
+    Generic error raised by `evaluation_function` in place of any unexpected
+    exception, since their messages can contain the response.
+    """
+
+
 messages = {
-    "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined."
+    "RESERVED_EXPRESSION_MISSING": lambda label: f"Reserved expression `{label}` is not defined.",
+    "RESERVED_EXPRESSION_INEQUALITY": lambda label: (
+        f"Reserved expression `{label}` is an inequality or evaluates to true/false, which is not supported."
+    )
 }
 
 
@@ -56,9 +94,9 @@ def _raise_on_collisions(keywords: Iterable[str], symbols: Collection[str], kind
     """Raises if any of `keywords` is used as an input symbol `kind` (e.g. "code" or "alternative")."""
     collisions = sorted(keyword for keyword in keywords if keyword in symbols)
     if len(collisions) == 1:
-        raise Exception("`" + "`, `".join(collisions) + f"` is a reserved keyword and cannot be used as an input symbol {kind}.")
+        raise TaskConfigurationError("`" + "`, `".join(collisions) + f"` is a reserved keyword and cannot be used as an input symbol {kind}.")
     elif len(collisions) > 1:
-        raise Exception("`" + "`, `".join(collisions) + f"` are reserved keywords and cannot be used as input symbol {kind}s.")
+        raise TaskConfigurationError("`" + "`, `".join(collisions) + f"` are reserved keywords and cannot be used as input symbol {kind}s.")
 
 
 def select_context(parameters: Parameters) -> Context:
@@ -139,14 +177,14 @@ def parse_reserved_expressions(
                 # Preprocess can only create warnings for responses in this case
                 tag = str(feedback.tag)
                 message = internal_feedback(feedback)
-                _report(key, result, tag, message, Exception(message, tag), cause=e)
+                _report(key, result, tag, message, TaskConfigurationError(message, tag), cause=e)
             reserved_expressions[key][label] = expr
             if not isinstance(expr, str):
-                raise Exception(f"Reserved expression {label} must be given as a string.")
+                raise TaskConfigurationError(f"Reserved expression {label} must be given as a string.")
             if len(expr.strip()) == 0:
                 tag = f"RESERVED_EXPRESSION_MISSING_{label}"
                 message = messages["RESERVED_EXPRESSION_MISSING"](label)
-                _report(key, result, tag, message, Exception(message, tag))
+                _report(key, result, tag, message, TaskConfigurationError(message, tag))
                 success = False
             else:
                 try:
@@ -156,7 +194,12 @@ def parse_reserved_expressions(
                     success = False
                     message = symbolic_comparison_internal_messages("PARSE_ERROR")({'x': expr})
                     # The error for a task expression has no tag
-                    _report(key, result, f"PARSE_ERROR_{label}", message, Exception(message), cause=e)
+                    _report(key, result, f"PARSE_ERROR_{label}", message, TaskConfigurationError(message), cause=e)
+                if key == "task" and is_inequality_or_boolean(expr_parsed):
+                    raise TaskConfigurationError(
+                        messages["RESERVED_EXPRESSION_INEQUALITY"](label),
+                        f"RESERVED_EXPRESSION_INEQUALITY_{label}"
+                    )
             reserved_expressions_dict[key].update({label: expr_parsed})
     return success, reserved_expressions_dict
 
@@ -177,11 +220,11 @@ def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameter
         criteria_string = preprocess("criteria", original_criteria_string, parameters)
     except (BracketNotationError, AbsoluteValueNotationError) as e:
         feedback = notation_error_feedback(e, original_criteria_string)
-        raise Exception(internal_feedback(feedback), str(feedback.tag)) from e
+        raise TaskConfigurationError(internal_feedback(feedback), str(feedback.tag)) from e
     try:
         criteria_string_list = split_criteria(criteria_string)
     except CriteriaSyntaxError as e:
-        raise Exception("Cannot parse criteria: `" + criteria_string + "`.") from e
+        raise TaskConfigurationError("Cannot parse criteria: `" + criteria_string + "`.") from e
     criteria_parsed: dict[str, ExprNode] = {}
     for criterion in criteria_string_list:
         try:
@@ -192,7 +235,7 @@ def create_criteria_dict(context: Context, criteria_parser: SLRParser, parameter
                 raise TypeError(f"criterion {criterion_parsed.content_string()!r} is given more than once")
             criteria_parsed.update({criterion_parsed.content_string(): criterion_parsed})
         except Exception as e:
-            raise Exception("Cannot parse criteria: `" + criterion + "`.") from e
+            raise TaskConfigurationError("Cannot parse criteria: `" + criterion + "`.") from e
     return criteria_parsed
 
 
@@ -239,8 +282,8 @@ def _apply_tolerance_aliases(params: dict[str, Any]) -> None:
 
 def _build_parameters(context: Context, params: dict[str, Any], response: str, answer: str) -> dict[str, Any]:
     """
-    A copy of `params` completed with the context's defaults, the reserved expressions
-    (with `response` read as LaTeX if `is_latex` is set), the reserved keywords and the parsing parameters.
+    A copy of `params` completed with the context's defaults, the reserved expressions,
+    the reserved keywords and the parsing parameters.
     """
     parameters = deepcopy(params)
 
@@ -272,18 +315,24 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
             "parsing_parameters": parsing_parameters,
         }
     )
-
-    # CONSIDER: Can this be moved into the preprocessing procedures in a consistent way?
-    # Can it be turned into its own context? Or moved into the select_context procedure?
-    # What solution will be most consistently reusable?
-    if parameters.get("is_latex", False):
-        parameters["reserved_expressions_strings"]["learner"].update(
-            {
-                "response": parse_latex(response, ExpressionParams.from_dict(parameters).symbols),
-            }
-        )
     return parameters
 
+
+# CONSIDER: Can this be moved into the preprocessing procedures in a consistent way?
+# Can it be turned into its own context? Or moved into the select_context procedure?
+# What solution will be most consistently reusable?
+def _parse_latex_response(parameters: dict[str, Any], response: str) -> None:
+    """Replaces the response in the reserved expressions of `parameters` with its LaTeX read as SymPy syntax."""
+    try:
+        response_parsed = parse_latex(response, ExpressionParams.from_dict(parameters).symbols)
+    except ValueError:
+        # `from None` stops the original exception, and its message (which can contain the response), being chained onto this one
+        raise ResponseParsingError("Failed to parse LaTeX expression") from None
+    parameters["reserved_expressions_strings"]["learner"].update(
+        {
+            "response": response_parsed,
+        }
+    )
 
 
 def _add_notation_warnings(evaluation_result: EvaluationResult, response: str, params: Parameters) -> None:
@@ -333,42 +382,127 @@ def _build_evaluation_parameters(
     )
 
 
+def log_event(event: str, eval_id: str, level: int = logging.INFO, **fields: Any) -> None:
+    """
+    Writes a single JSON line so that logs can be filtered with CloudWatch Logs Insights.
+    NOTE: Never pass user data (e.g. the response) or anything derived from it.
+    """
+    logger.log(level, json.dumps({"event": event, "eval_id": eval_id, **fields}, default=str))
+
+
+def elapsed_ms(start_time: float) -> float:
+    return round((time.perf_counter() - start_time) * 1000, 1)
+
+
+def traceback_frames(exception: BaseException) -> list[str]:
+    """
+    Returns the location of each frame in the traceback without the exception messages,
+    since these can contain the response.
+    """
+    return [f"{os.path.basename(frame.filename)}:{frame.lineno} in {frame.name}" for frame in traceback.extract_tb(exception.__traceback__)]
+
+
 def evaluation_function(response: str, answer: str, params: dict[str, Any], include_test_data: bool = False) -> dict[str, Any]:
     """
     Function that allows for various types of comparison of various kinds of expressions.
     Supported input parameters:
     strict_SI_syntax:
         - if set to True, use basic dimensional analysis functionality.
+
+    Logs the start, each stage and the end (or error) of the evaluation.
+    No user data is logged: the response, and exception messages and
+    tracebacks (which can contain the response), are left out.
+    For the same reason, any exception other than a TaskConfigurationError
+    or ResponseParsingError is replaced by a generic EvaluationError.
     """
+    eval_id = uuid.uuid4().hex[:8]
+    start_time = time.perf_counter()
+    stage: dict[str, Any] = {"name": "setup", "eval_id": eval_id, "start_time": start_time, "early_return": False}
+
+    log_event(
+        "evaluation_start",
+        eval_id,
+        params=params,
+        answer=answer,
+        include_test_data=include_test_data,
+    )
+
+    try:
+        result = _evaluate(response, answer, params, include_test_data, stage)
+    except Exception as e:
+        log_event(
+            "evaluation_error",
+            eval_id,
+            level=logging.ERROR,
+            stage=stage["name"],
+            duration_ms=elapsed_ms(start_time),
+            error_type=type(e).__name__,
+            cause_type=type(e.__cause__).__name__ if e.__cause__ is not None else None,
+            traceback=traceback_frames(e),
+        )
+        if isinstance(e, (TaskConfigurationError, ResponseParsingError)):
+            raise
+        # `from None` stops the original exception, and its message, being chained onto this one
+        raise EvaluationError(f"Evaluation failed during stage `{stage['name']}` ({type(e).__name__}). Reference: {eval_id}") from None
+
+    log_event(
+        "evaluation_end",
+        eval_id,
+        is_correct=result.get("is_correct"),
+        duration_ms=elapsed_ms(start_time),
+        early_return=stage["early_return"],
+    )
+    return result
+
+
+def _evaluate(
+    response: str, answer: str, params: dict[str, Any], include_test_data: bool, stage: dict[str, Any]
+) -> dict[str, Any]:
+    def enter_stage(name: str) -> None:
+        stage["name"] = name
+        log_event("stage_start", stage["eval_id"], stage=name, elapsed_ms=elapsed_ms(stage["start_time"]))
+
     _apply_tolerance_aliases(params)
 
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
+    enter_stage("determine_context")
     context = select_context(params)
     parameters = _build_parameters(context, params, response, answer)
 
+    if parameters.get("is_latex", False):
+        enter_stage("parse_latex")
+        _parse_latex_response(parameters, response)
+
     _add_notation_warnings(evaluation_result, response, params)
 
+    enter_stage("parse_reserved_expressions")
     reserved_expressions_success, reserved_expressions = parse_reserved_expressions(
         context, parameters["reserved_expressions_strings"], parameters, evaluation_result
     )
     if reserved_expressions_success is False:
+        stage["early_return"] = True
         return evaluation_result.serialise(include_test_data)
 
+    enter_stage("preview")
     _set_preview_fields(context, evaluation_result, response, parameters, reserved_expressions)
 
+    enter_stage("parse_criteria")
     criteria_parser = context.generate_criteria_parser(reserved_expressions)
     criteria = create_criteria_dict(context, criteria_parser, parameters)
 
     evaluation_parameters = _build_evaluation_parameters(parameters, reserved_expressions, criteria, evaluation_result)
 
     # Performs evaluation of response
+    enter_stage("generate_feedback_procedures")
     feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
     for graph in feedback_procedures.values():
         _disable_evaluation_nodes(graph, evaluation_parameters.disabled_evaluation_nodes)
+    enter_stage("generate_feedback")
     generate_feedback(feedback_procedures, evaluation_parameters)
 
+    enter_stage("serialise")
     result = evaluation_result.serialise(include_test_data)
 
     if parameters.get("feedback_for_incorrect_response", None) is not None:

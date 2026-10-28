@@ -127,6 +127,36 @@ class TestPreviewFunction:
     def test_fix_exponents(self, latex, expected):
         assert fix_exponents(latex) == expected
 
+    @pytest.mark.parametrize(
+        "response, is_latex", [
+            ("10 m/", False),
+            ("(10 m", False),
+            ("10 m)", False),
+            ("10 $ m", False),
+            (r"\frac{1}{", True),
+            (r"10~\mathrm{m}/", True),
+        ]
+    )
+    def test_unparsable_response_raises_value_error(self, response, is_latex):
+        # The base layer returns ValueError as an unprocessable submission (HTTP 422) instead of an internal error (HTTP 500)
+        params = {
+            "is_latex": is_latex,
+            "physical_quantity": True,
+            "elementary_functions": True,
+        }
+        with pytest.raises(ValueError):
+            preview_function(response, params)
+
+    def test_latex_response_parsed_as_list(self):
+        # latex2sympy returns a list for comma separated input, which used to raise `'list' object has no attribute 'subs'`
+        params = {
+            "is_latex": True,
+            "physical_quantity": True,
+            "elementary_functions": True,
+        }
+        result = preview_function(r"1,2~\mathrm{m}", params)["preview"]
+        assert result["sympy"] == "2 metre"
+
     def test_latex_preview_keeps_the_exponent_sign(self):
         preview = preview_function(r"162 \mathrm{~N} \mathrm{~m}**{-2}", {"is_latex": True})["preview"]
         assert preview["sympy"] == "162 newton metre**(-2)"
