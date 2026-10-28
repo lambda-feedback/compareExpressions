@@ -11,6 +11,7 @@ from lambdafeedback.slr_parsing import ExprNode
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
 from app.context.symbolic.comparison import check_equality, unsimplified_with_unsplittable
 from app.context.symbolic.graphs.set_equivalence import add_set_equivalence_nodes, as_sets
+from app.context.symbolic.inequalities import check_inequality_equivalence, inequality_bounds
 from app.evaluation_parameters import EvaluationParameters
 from app.feedback.symbolic import feedback_generators as symbolic_feedback_string_generators
 
@@ -113,6 +114,90 @@ def add_equality_equivalence_nodes(
     )
 
 
+def _inequality_equivalence(label: str, parameters: EvaluationParameters) -> Evaluate:
+    def inequality_equivalence(_response: Any) -> ReachedCriteria:
+        res = parameters.reserved_expressions["response"]
+        ans = parameters.reserved_expressions["answer"]
+        result = check_inequality_equivalence(res, ans, parameters)
+        return {label + "_" + result.name: None}
+    return inequality_equivalence
+
+
+def add_inequality_equivalence_nodes(
+    graph: CriteriaGraph, END: OutputNode, parameters: EvaluationParameters, label: str, lhs: str, rhs: str
+) -> None:
+    """Adds the nodes that check if the inequalities (or `!=` relations) `lhs` and `rhs` are equivalent to `graph`."""
+    graph.add_evaluation_node(
+        label,
+        summary=label,
+        details="Checks if " + str(lhs) + " is an equivalent inequality to " + str(rhs) + ".",
+        evaluate=_inequality_equivalence(label, parameters)
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_TRUE",
+        END,
+        summary=str(lhs) + " is equivalent to " + str(rhs),
+        details=str(lhs) + " is an equivalent inequality to " + str(rhs) + ".",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITIES_EQUIVALENT")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_FALSE",
+        END,
+        summary=str(lhs) + " is not equivalent to " + str(rhs),
+        details=str(lhs) + " is not an equivalent inequality to " + str(rhs) + ".",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITIES_NOT_EQUIVALENT")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_UNKNOWN",
+        END,
+        summary="Cannot determine if " + str(lhs) + " is equivalent to " + str(rhs),
+        details="Cannot determine if " + str(lhs) + " is an equivalent inequality to " + str(rhs) + ".",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITY_EQUIVALENCE_UNKNOWN")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_WRONG_DIRECTION",
+        END,
+        summary=str(lhs) + " is the opposite inequality to " + str(rhs),
+        details=str(lhs) + " points in the opposite direction to " + str(rhs) + ".",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITIES_WRONG_DIRECTION")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_STRICTNESS_MISMATCH",
+        END,
+        summary=str(lhs) + " has a different strictness to " + str(rhs),
+        details=str(lhs) + " uses a strict/non-strict inequality where " + str(rhs) + " does not.",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("INEQUALITY_STRICTNESS_MISMATCH")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_RESPONSE_NOT_INEQUALITY",
+        END,
+        summary=str(lhs) + " is an expression, not an inequality.",
+        details=str(lhs) + " is an expression, not an inequality.",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("RESPONSE_NOT_INEQUALITY")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_ANSWER_NOT_INEQUALITY",
+        END,
+        summary=str(rhs) + " is an expression, not an inequality.",
+        details=str(rhs) + " is an expression, not an inequality.",
+        feedback_string_generator=symbolic_feedback_string_generators["INTERNAL"]("ANSWER_NOT_INEQUALITY")
+    )
+
+
 def add_mathematical_equivalence_nodes(
     graph: CriteriaGraph, END: OutputNode, criterion: ExprNode, parameters: EvaluationParameters, label: str, lhs: str, rhs: str
 ) -> None:
@@ -196,6 +281,8 @@ def criterion_equality_node(criterion: ExprNode, parameters: EvaluationParameter
 
     if use_set_equivalence is True:
         add_set_equivalence_nodes(graph, END, criterion, parameters, label, lhs, rhs, response_list, answer_list)
+    elif inequality_bounds(res) is not None or inequality_bounds(ans) is not None:
+        add_inequality_equivalence_nodes(graph, END, parameters, label, lhs, rhs)
     elif isinstance(res, Equality) or isinstance(ans, Equality):
         add_equality_equivalence_nodes(graph, END, parameters, label, lhs, rhs)
     else:
