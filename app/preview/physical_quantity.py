@@ -9,7 +9,7 @@ from typing import Any
 from lambdafeedback.expression_parsing import (
     SympyParsingConfig,
     find_matching_parenthesis,
-    parse_expression,
+    parse_expressions,
     parse_latex,
     sanitise_latex,
     sympy_to_latex,
@@ -69,7 +69,8 @@ def preview_function(response: str, params: QuantityParams | Mapping[str, Any]) 
             value_latex = value_sympy = ""
             if value is not None:
                 value_string = parse_latex(value.content_string(), params.symbols, params.simplify)
-                value_expr = parse_expression(value_string, SympyParsingConfig.from_params(params))
+                # A list ("1,2~\mathrm{m}") is previewed as its last value.
+                value_expr = parse_expressions(value_string, SympyParsingConfig.from_params(params))[-1]
                 value_latex = sympy_to_latex(value_expr, params.symbols)
                 value_sympy = str(value_expr)
             separators = ("~", " ") if value is not None and unit is not None else ("", "")
