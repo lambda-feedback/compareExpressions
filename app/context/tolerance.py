@@ -22,3 +22,13 @@ def values_within_tolerance(res: Basic, ans: Basic, rtol: float, atol: float) ->
         return bool(abs(float((ans - res) / ans)) <= rtol)
     except (TypeError, ZeroDivisionError):
         return False
+
+
+def relative_tolerance_from_sig_figs(sig_figs: int) -> float:
+    """The relative tolerance for agreement to `sig_figs` significant figures, 5*10**(-sig_figs)."""
+    return 5 * 10 ** (-sig_figs)
+
+
+def absolute_tolerance_from_decimal_places(decimal_places: int) -> float:
+    """The absolute tolerance for agreement to `decimal_places` decimal places, 0.5*10**(-decimal_places)."""
+    return 0.5 * 10 ** (-decimal_places)
