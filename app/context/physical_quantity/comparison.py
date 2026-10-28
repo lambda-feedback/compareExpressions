@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from sympy import Basic, Symbol
 
 from lambdafeedback.expression_parsing import parse_expression
+from lambdafeedback.physical_quantities import parse_quantity as parse_physical_quantity
 from lambdafeedback.slr_parsing import ExprNode
-from lambdafeedback.units import parse_quantity as parse_physical_quantity
 
 from app.context.operators import COMPARISON_OPERATORS
 from app.context.physical_quantity.parsing import ParsedQuantity, parsed_quantity
