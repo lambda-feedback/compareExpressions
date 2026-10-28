@@ -1,6 +1,9 @@
 import pytest
+from sympy import Integer, Symbol
 
 # Import necessary data and reference cases for tests
+from app import evaluation
+from app.context.physical_quantity.comparison import is_proportional
 from app.evaluation import evaluation_function
 from app.tests.physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from lambdafeedback.physical_quantities import (
@@ -558,8 +561,7 @@ class TestEvaluationFunction():
             ("response matches 2 m", False),
             ("response matches 2", False),
             ("2 m matches response", False),
-            # Only checks that it no longer raises: the value match ignores `dimension(...)`
-            ("dimension(response) matches dimension(answer)", None),
+            ("dimension(response) matches dimension(answer)", True),
             ("answer matches answer", True),
         ]
     )
@@ -572,8 +574,30 @@ class TestEvaluationFunction():
             'criteria': criteria,
         }
         result = evaluation_function("2.1 m", "1.0 m", params)
-        if is_correct is not None:
-            assert result["is_correct"] is is_correct
+        assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "res,criteria,is_correct",
+        [
+            ("1.0 m", "dimension(response) matches dimension(answer)", True),
+            # Used to be false because the values were compared (bug 15 in the bug report)
+            ("2 m", "dimension(response) matches dimension(answer)", True),
+            ("2 km", "dimension(response) matches dimension(answer)", True),
+            ("2 s", "dimension(response) matches dimension(answer)", False),
+            ("2", "dimension(response) matches dimension(answer)", False),
+            ("2 m", "dimension(response) matches dimension(3 ft)", True),
+            ("2 m", "dimension(response) matches dimension(2 s)", False),
+        ]
+    )
+    def test_dimension_matches_compares_only_dimensions(self, res, criteria, is_correct):
+        params = {
+            'strict_syntax': False,
+            'physical_quantity': True,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        result = evaluation_function(res, "1.0 m", params)
+        assert result["is_correct"] is is_correct
 
     @pytest.mark.parametrize(
         "res,ans,criteria,is_correct",
@@ -619,6 +643,38 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(res, "1 m", params)
         assert result["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "lhs_value,rhs_value,expected",
+        [
+            (Integer(2000), Integer(2), (True, 1000.0)),
+            (Integer(2), Integer(2000), (True, 0.001)),
+            # Used to divide by zero (bug 2 in the bug report)
+            (Integer(2), Integer(0), (False, None)),
+            (Integer(0), Integer(2), (False, None)),
+            (Integer(0), Integer(0), (False, None)),
+            (Symbol("z"), Integer(2), (False, None)),
+        ]
+    )
+    def test_is_proportional(self, lhs_value, rhs_value, expected):
+        # Units and dimensions are never zero, so `evaluation_function` cannot reach these cases
+        x, y = Symbol("x"), Symbol("y")
+        assert is_proportional(x, y, [("x", lhs_value), ("y", rhs_value)]) == expected
+
+    @pytest.mark.parametrize("criteria", ["response matches answer", "response > answer"])
+    def test_criteria_graph_identifier(self, criteria, monkeypatch):
+        # The identifier is not in the serialised test data, so capture the graphs before feedback is generated
+        criteria_graphs = {}
+        generate_feedback = evaluation.generate_feedback
+
+        def capture_graphs(graphs, evaluation_parameters):
+            criteria_graphs.update(graphs)
+            generate_feedback(graphs, evaluation_parameters)
+
+        monkeypatch.setattr(evaluation, "generate_feedback", capture_graphs)
+        evaluation_function("2.1 m", "1 m", {"physical_quantity": True, "criteria": criteria})
+        # The matches graph used to have identifier None (bug 8 in the bug report)
+        assert criteria_graphs[criteria].identifier == criteria
 
     @pytest.mark.parametrize(
         "ans,res",

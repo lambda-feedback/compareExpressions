@@ -286,6 +286,8 @@ def _build_parameters(context: Context, params: dict[str, Any], response: str, a
     the reserved keywords and the parsing parameters.
     """
     parameters = deepcopy(params)
+    # Applied to the copy, so the caller's `params` keep only what they set
+    _apply_tolerance_aliases(parameters)
 
     reserved_expressions_strings = {
         "learner": {
@@ -462,8 +464,6 @@ def _evaluate(
         stage["name"] = name
         log_event("stage_start", stage["eval_id"], stage=name, elapsed_ms=elapsed_ms(stage["start_time"]))
 
-    _apply_tolerance_aliases(params)
-
     evaluation_result = EvaluationResult()
     evaluation_result.is_correct = False
 
@@ -496,7 +496,11 @@ def _evaluate(
 
     # Performs evaluation of response
     enter_stage("generate_feedback_procedures")
-    feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
+    try:
+        feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
+    except CriteriaSyntaxError as e:
+        # e.g. a WHERE substitution that is not an equality, which is only found when its graph is built
+        raise TaskConfigurationError(str(e)) from e
     for graph in feedback_procedures.values():
         _disable_evaluation_nodes(graph, evaluation_parameters.disabled_evaluation_nodes)
     enter_stage("generate_feedback")

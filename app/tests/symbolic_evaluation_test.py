@@ -1,8 +1,14 @@
 import pytest
 
-from sympy import Integer, Symbol, oo, zoo
+from sympy import I, Integer, Symbol, cos, oo, parse_expr, sin, zoo
 
-from app.context.symbolic.comparison import do_comparison_infinite
+from app.context.symbolic.comparison import do_comparison_infinite, normalise_complex
+from app.context.symbolic.graphs.substitution import _group_values
+from app.context.symbolic.variations import (
+    one_addition_to_subtraction,
+    one_exponent_flip,
+    one_swap_addition_and_multiplication,
+)
 from app.evaluation import TaskConfigurationError, evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2136,6 +2142,125 @@ class TestEvaluationFunction():
     def test_do_comparison_infinite_only_evaluates_requested_comparison(self, comparison_symbol, lhs, rhs, expected):
         # The end-to-end test above only reaches this function in some runs, so check it directly
         assert do_comparison_infinite(comparison_symbol, lhs, rhs) is expected
+
+    @pytest.mark.parametrize(
+        "lhs,rhs,expected_lhs,expected_rhs",
+        [
+            ((1 + I)**2, Integer(1), 2 * I, Integer(1)),
+            # Used to be left as written when only the right-hand side has an imaginary part (bug 3 in the bug report)
+            (Integer(1), (1 + I)**2, Integer(1), 2 * I),
+            ((1 + Symbol("x", real=True))**2, Integer(1), (1 + Symbol("x", real=True))**2, Integer(1)),
+        ]
+    )
+    def test_normalise_complex(self, lhs, rhs, expected_lhs, expected_rhs):
+        assert normalise_complex(lhs, rhs) == (expected_lhs, expected_rhs)
+
+    @pytest.mark.parametrize(
+        "criteria",
+        [
+            # Used to raise TypeError: 'ExprNode' object is not iterable (bug 6 in the bug report)
+            "response = answer where x > 1",
+            # Used to substitute x = 1
+            "response = answer where x > 1; y = 2",
+            "response = answer where y = 2; x > 1",
+        ]
+    )
+    def test_where_criteria_with_substitution_that_is_not_an_equality(self, criteria):
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': criteria,
+        }
+        with pytest.raises(Exception, match="Cannot parse criteria: `x > 1`"):
+            evaluation_function("x+y", "x+y", params)
+
+    def test_where_criteria_with_several_substitutions(self):
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': 'response = answer where x = 1; y = 2; z = 3',
+        }
+        result = evaluation_function("x+y+z", "6", params)
+        assert result["is_correct"] is True
+
+    def test_group_values_does_not_blame_variation_with_correct_value(self):
+        # A correct response takes the TRUE branch, so `evaluation_function` cannot show this; call it directly
+        x, y, z = Symbol("x"), Symbol("y"), Symbol("z")
+        expression = sin(x)**2 + cos(x)**2 + y * z
+        variation_groups = {
+            "ONE_ADDITION_TO_SUBTRACTION": {
+                "variations": one_addition_to_subtraction(expression),
+                "summary": "",
+            }
+        }
+        _, values_and_variations_group = _group_values(expression, variation_groups, [(z, 0)])
+        # sin(x)**2+cos(x)**2-y*z only equals the correct value after simplification,
+        # and used to be tagged ONE_ADDITION_TO_SUBTRACTION (bug 11 in the bug report)
+        assert values_and_variations_group["1"] == {"UNKNOWN"}
+        assert values_and_variations_group["cos(2*x)"] == {"ONE_ADDITION_TO_SUBTRACTION"}
+        assert values_and_variations_group["-cos(2*x)"] == {"ONE_ADDITION_TO_SUBTRACTION"}
+
+    @pytest.mark.parametrize(
+        "expression,expected",
+        [
+            # Used to give 2*a*b - a - b twice (bug 4 in the bug report)
+            ("a*b", ["a + b"]),
+            ("a*b + c", ["a*b*c", "a + b + c"]),
+            ("2*a", ["a + 2"]),
+        ]
+    )
+    def test_one_swap_addition_and_multiplication(self, expression, expected):
+        variations = one_swap_addition_and_multiplication(parse_expr(expression))
+        assert sorted(str(v) for v in variations) == sorted(expected)
+
+    @pytest.mark.parametrize(
+        "expression,expected",
+        [
+            # Used to give every variation twice (found while fixing bug 4 in the bug report)
+            ("x**2", ["x**(-2)"]),
+            ("x**2 + y**3", ["y**3 + x**(-2)", "x**2 + y**(-3)"]),
+        ]
+    )
+    def test_one_exponent_flip(self, expression, expected):
+        variations = one_exponent_flip(parse_expr(expression))
+        assert sorted(str(v) for v in variations) == sorted(expected)
+
+    def test_identify_reason_swap_multiplication_to_addition(self):
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': 'response = answer where a = 2; b = 3',
+        }
+        result = evaluation_function("a+b", "a*b", params)
+        assert result["is_correct"] is False
+        assert "response = answer where a = 2; b = 3_ONE_SWAP_ADDITION_AND_MULTIPLICATION" in result["tags"]
+
+    @pytest.mark.parametrize(
+        "alias,tolerance",
+        [
+            ("relative_tolerance", 0.1),
+            ("absolute_tolerance", 0.1),
+        ]
+    )
+    def test_tolerance_aliases_do_not_change_params(self, alias, tolerance):
+        params = {alias: tolerance}
+        assert evaluation_function("1.05", "1", params)["is_correct"] is True
+        # Used to add rtol/atol to the caller's params (bug 7 in the bug report)
+        assert params == {alias: tolerance}
+        # so a reused dict still applied the tolerance after the alias was removed
+        del params[alias]
+        assert evaluation_function("1.05", "1", params)["is_correct"] is False
+
+    def test_feedback_follows_criteria_order(self):
+        # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs
+        params = {
+            'strict_syntax': False,
+            'elementary_functions': True,
+            'criteria': 'response < answer, response contains y',
+        }
+        for _ in range(10):
+            result = evaluation_function("x+2", "x+1", params)
+            assert result["feedback"] == "response < answer is false.<br>response contains y is false."
 
     def test_equality_expression_mismatch_with_custom_criteria(self):
         response = "x-0.883x^2=0.251X^3"
