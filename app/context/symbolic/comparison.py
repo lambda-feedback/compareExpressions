@@ -12,6 +12,7 @@ from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expressi
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.operators import COMPARISON_OPERATORS
+from app.context.symbolic.equalities import EqualityComparison, check_equality_equivalence, is_equality_chain
 from app.context.symbolic.inequalities import InequalityComparison, check_inequality_equivalence, inequality_bounds
 from app.context.symbolic.numerical import compare_numerically, matches_written_precision
 from app.evaluation_parameters import EvaluationParameters
@@ -139,6 +140,14 @@ def check_equality(
     if lhs_is_inequality and rhs_is_inequality:
         return check_inequality_equivalence(lhs_expr, rhs_expr, parameters) is InequalityComparison.TRUE
     elif lhs_is_inequality or rhs_is_inequality:
+        return False
+
+    # Chained equalities are `And` objects, so they must be intercepted for the same reason
+    lhs_is_equality_chain = is_equality_chain(lhs_expr)
+    rhs_is_equality_chain = is_equality_chain(rhs_expr)
+    if lhs_is_equality_chain and rhs_is_equality_chain:
+        return check_equality_equivalence(lhs_expr, rhs_expr, parameters) is EqualityComparison.TRUE
+    elif lhs_is_equality_chain or rhs_is_equality_chain:
         return False
 
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):

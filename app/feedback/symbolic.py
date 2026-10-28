@@ -22,6 +22,8 @@ feedback_generators["INTERNAL"] = lambda tag: lambda inputs: {
     "EQUALITIES_EQUIVALENT": None,
     "EQUALITIES_NOT_EQUIVALENT": "The response is not the expected equality.",
     "EQUALITY_EQUIVALENCE_UNKNOWN": "Cannot determine if the given equality is equivalent to the expected equality.",
+    "CHAIN_NOT_EQUALITY": "The response was a chained equality but a single equality was expected.",
+    "EQUALITY_NOT_CHAIN": "The response was a single equality but a chained equality was expected.",
     "RESPONSE_NOT_INEQUALITY": "The response was an expression but was expected to be an inequality.",
     "ANSWER_NOT_INEQUALITY": "The response was an inequality but the answer is not, so they cannot be compared.",
     "INEQUALITIES_EQUIVALENT": None,
