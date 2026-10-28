@@ -12,8 +12,9 @@ from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expressi
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.operators import COMPARISON_OPERATORS
-from app.context.symbolic.numerical import compare_numerically
+from app.context.symbolic.numerical import compare_numerically, numerically_equal
 from app.evaluation_parameters import EvaluationParameters
+from app.time_budget import comparison_budget
 from app.types import SubstitutionList, Substitutions
 
 
@@ -107,32 +108,32 @@ def check_equality(
     elif is_inequality_or_boolean(lhs_expr) or is_inequality_or_boolean(rhs_expr):
         return False
 
-    try:
-        either_is_infinite = lhs_expr.is_infinite or rhs_expr.is_infinite
-    except (KeyError, TypeError):
-        either_is_infinite = False
-    if either_is_infinite:
-        result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
-    else:
-        result = do_comparison(criterion.content, lhs_expr - rhs_expr)
-    if result is not False:
-        return result
+    result: bool | None = None
+    with comparison_budget() as budget:
+        try:
+            either_is_infinite = lhs_expr.is_infinite or rhs_expr.is_infinite
+        except (KeyError, TypeError):
+            either_is_infinite = False
+        if either_is_infinite:
+            result = do_comparison_infinite(criterion.content, lhs_expr, rhs_expr)
+        else:
+            result = do_comparison(criterion.content, lhs_expr - rhs_expr)
 
-    # There are some types of expression, e.g. those containing hyperbolic trigonometric functions, that can behave
-    # unpredictably when simplification is applied. For that reason we check several different combinations of
-    # simplifications here in order to reduce the likelihood of false negatives.
-    # Each side is simplified only once a retry needs it.
-    simplified_rhs_expr = rhs_expr.simplify()
-    result = do_comparison(criterion.content, lhs_expr - simplified_rhs_expr)
-    if result is not False:
-        return result
-
-    simplified_lhs_expr = lhs_expr.simplify()
-    result = do_comparison(criterion.content, simplified_lhs_expr - rhs_expr)
-    if result is not False:
-        return result
-
-    result = do_comparison(criterion.content, simplified_lhs_expr - simplified_rhs_expr)
+        # There are some types of expression, e.g. those containing hyperbolic trigonometric functions, that can behave
+        # unpredictably when simplification is applied. For that reason we check several different combinations of
+        # simplifications here in order to reduce the likelihood of false negatives.
+        # Each side is simplified only once a retry needs it.
+        if result is False:
+            simplified_rhs_expr = rhs_expr.simplify()
+            result = do_comparison(criterion.content, lhs_expr - simplified_rhs_expr)
+        if result is False:
+            simplified_lhs_expr = lhs_expr.simplify()
+            result = do_comparison(criterion.content, simplified_lhs_expr - rhs_expr)
+        if result is False:
+            result = do_comparison(criterion.content, simplified_lhs_expr - simplified_rhs_expr)
+    if budget.exceeded:
+        # Simplifying took too long (e.g. 10^8*log(0.1) builds 10^(10^8)), so compare numbers by value instead
+        result = numerically_equal(lhs_expr, rhs_expr) if criterion.content.strip() == "=" else None
     if result is not False:
         return result
 
@@ -141,17 +142,20 @@ def check_equality(
 
 def check_order(criterion: ExprNode, parameters: EvaluationParameters) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters)
-    result = do_comparison(criterion.content, lhs_expr - rhs_expr)
+    result = None
+    with comparison_budget():
+        result = do_comparison(criterion.content, lhs_expr - rhs_expr)
     return result
 
 
 def check_proportionality(criterion: ExprNode, parameters: EvaluationParameters) -> bool | None:
     lhs_expr, rhs_expr = create_expressions_for_comparison(criterion, parameters)
     result = None
-    if lhs_expr.cancel().simplify().simplify() != 0:
-        result = (rhs_expr / lhs_expr).cancel().simplify()
-    elif rhs_expr.cancel().simplify().simplify() != 0:
-        result = (lhs_expr / rhs_expr).cancel().simplify()
+    with comparison_budget():
+        if lhs_expr.cancel().simplify().simplify() != 0:
+            result = (rhs_expr / lhs_expr).cancel().simplify()
+        elif rhs_expr.cancel().simplify().simplify() != 0:
+            result = (lhs_expr / rhs_expr).cancel().simplify()
     if result == 0 or result is None:
         result = False
     else:
