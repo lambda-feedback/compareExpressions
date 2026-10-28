@@ -496,7 +496,11 @@ def _evaluate(
 
     # Performs evaluation of response
     enter_stage("generate_feedback_procedures")
-    feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
+    try:
+        feedback_procedures = context.feedback_procedure_generator(evaluation_parameters)
+    except CriteriaSyntaxError as e:
+        # e.g. a WHERE substitution that is not an equality, which is only found when its graph is built
+        raise TaskConfigurationError(str(e)) from e
     for graph in feedback_procedures.values():
         _disable_evaluation_nodes(graph, evaluation_parameters.disabled_evaluation_nodes)
     enter_stage("generate_feedback")

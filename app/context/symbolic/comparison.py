@@ -30,7 +30,7 @@ def where_substitution_strings(subs_node: ExprNode) -> list[tuple[str, str]]:
     try:
         return where_substitutions(subs_node)
     except CriteriaSyntaxError as e:
-        raise Exception("Cannot parse criteria: " + str(e)) from e
+        raise CriteriaSyntaxError("Cannot parse criteria: " + str(e)) from e
 
 
 def parse_where_substitutions(subs_node: ExprNode, parsing_params: SympyParsingConfig) -> SubstitutionList:
