@@ -1,7 +1,8 @@
 import pytest
 
-from sympy import I, Integer, Symbol, cos, oo, parse_expr, sin, zoo
+from sympy import Float, I, Integer, Symbol, cos, oo, parse_expr, sin, zoo
 
+from app.context.tolerance import values_within_tolerance
 from app.context.symbolic.comparison import do_comparison_infinite, normalise_complex
 from app.context.symbolic.graphs.substitution import _group_values
 from app.context.symbolic.variations import (
@@ -2250,6 +2251,40 @@ class TestEvaluationFunction():
         # so a reused dict still applied the tolerance after the alias was removed
         del params[alias]
         assert evaluation_function("1.05", "1", params)["is_correct"] is False
+
+    @pytest.mark.parametrize(
+        "response,answer,tolerances,is_correct",
+        [
+            # Both tolerances used to have to pass separately (bug 9 in the bug report),
+            # now they combine as in numpy.isclose: |answer - response| <= atol + rtol*|answer|
+            ("1.55", "1", {"rtol": 0.1, "atol": 0.5}, True),
+            ("1.65", "1", {"rtol": 0.1, "atol": 0.5}, False),
+            # A difference equal to the tolerance used to be rejected
+            ("1.5", "1", {"atol": 0.5}, True),
+            # Symbols that cancel in (answer - response)/answer are compared with rtol, also when atol is set
+            ("1.05*rho*L**3", "rho*L**3", {"rtol": 0.1}, True),
+            ("1.05*rho*L**3", "rho*L**3", {"rtol": 0.1, "atol": 0.01}, True),
+            ("1.2*rho*L**3", "rho*L**3", {"rtol": 0.1, "atol": 0.01}, False),
+        ]
+    )
+    def test_numerical_tolerances(self, response, answer, tolerances, is_correct):
+        params = {'strict_syntax': False, 'elementary_functions': True, **tolerances}
+        assert evaluation_function(response, answer, params)["is_correct"] is is_correct
+
+    @pytest.mark.parametrize(
+        "res,ans,rtol,atol,expected",
+        [
+            (Float(1.55), Integer(1), 0.1, 0.5, True),
+            (Float(1.65), Integer(1), 0.1, 0.5, False),
+            (Integer(0), Integer(0), 0.1, 0, True),
+            (Float(0.1), Integer(0), 0.1, 0, False),
+            # Values that cannot be converted to float are not within tolerance
+            (I, Integer(1), 0.1, 0.5, False),
+            (Symbol('x'), Symbol('y'), 0.1, 0.5, False),
+        ]
+    )
+    def test_values_within_tolerance(self, res, ans, rtol, atol, expected):
+        assert values_within_tolerance(res, ans, rtol, atol) is expected
 
     def test_feedback_follows_criteria_order(self):
         # The order used to depend on memory addresses (bug 13 in the bug report), so check several runs
