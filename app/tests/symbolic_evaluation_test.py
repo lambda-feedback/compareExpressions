@@ -763,6 +763,63 @@ class TestEvaluationFunction():
         assert result["is_correct"] is False
         assert "could not be parsed" in result["feedback"]
 
+    @pytest.mark.parametrize(
+        "response,answer,value",
+        [
+            ("x = y = z", "x = y = z", True),
+            # A chain asserts that every operand is equal to the others, so the
+            # order the operands are written in carries no meaning.
+            ("z = y = x", "x = y = z", True),
+            ("y = x = z", "x = y = z", True),
+            ("x = z = y", "x = y = z", True),
+            # Equivalent up to a constant factor or offset, as for a single equality.
+            ("2*x = 2*y = 2*z", "x = y = z", True),
+            ("x + 1 = y + 1 = z + 1", "x = y = z", True),
+            # Longer chains.
+            ("x = y = z = w", "x = y = z = w", True),
+            ("w = z = y = x", "x = y = z = w", True),
+            ("x = y = z = v", "x = y = z = w", False),
+            # A different final operand must not be silently discarded.
+            ("x = y = w", "x = y = z", False),
+            ("x = y = 5", "x = y = 7", False),
+            ("x = y = 5", "x = y = 5", True),
+            # Degenerate chains that assert no more than a single equality.
+            ("x = y = y", "x = y", True),
+            ("x = y = x", "x = y", True),
+        ]
+    )
+    def test_chained_equality_in_answer_and_response(self, response, answer, value):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is value
+
+    @pytest.mark.parametrize(
+        "response,answer,tag",
+        [
+            ("x = y = z", "x = y", "response = answer_CHAIN_NOT_EQUALITY"),
+            ("2 = 2 = 3", "2 = 2", "response = answer_CHAIN_NOT_EQUALITY"),
+            ("x = y", "x = y = z", "response = answer_EQUALITY_NOT_CHAIN"),
+            ("x + y", "x = y = z", "response = answer_EXPRESSION_NOT_EQUALITY"),
+            ("x = y = z", "x + y", "response = answer_EQUALITY_NOT_EXPRESSION"),
+        ]
+    )
+    def test_chained_equality_feedback_tags(self, response, answer, tag):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params, include_test_data=True)
+        assert result["is_correct"] is False
+        assert tag in result["tags"]
+
+    @pytest.mark.parametrize(
+        "response,answer",
+        [("x = y = w", "x = y = z"), ("x = y = 5", "x = y = 7")]
+    )
+    def test_chained_equality_is_not_truncated(self, response, answer):
+        # Regression: only the first two operands used to be parsed, so these
+        # responses compared equal to the answer.
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
     def test_empty_old_format_input_symbols_codes_and_alternatives(self):
         answer = '(1+(gamma-1)/2)((-1)/(gamma-1))'
         response = '(1+(gamma-1)/2)((-1)/(gamma-1))'
