@@ -32,5 +32,8 @@ class EvaluationParameters:
     # The tolerances as given in the request (0 if not given)
     atol: float
     rtol: float
+    # The number of significant figures or decimal places the response must be written to (None if not given)
+    sig_figs: int | None
+    dp: int | None
     # Custom feedback strings by tag
     custom_feedback: Mapping[str, Any]

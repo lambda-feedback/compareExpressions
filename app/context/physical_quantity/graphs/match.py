@@ -17,6 +17,7 @@ from app.context.physical_quantity.comparison import (
     is_proportional,
     parse_criterion_sides,
 )
+from app.context.symbolic.numerical import matches_written_precision
 from app.context.tolerance import values_within_tolerance
 from app.evaluation_parameters import EvaluationParameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
@@ -25,10 +26,14 @@ is_equal = comparison_function("=")
 
 
 def _tolerances(parameters: EvaluationParameters) -> tuple[float, float]:
-    """`(rtol, atol)`, with `rtol` taken from the significant figures of the answer if no tolerance is given."""
+    """
+    `(rtol, atol)`, with `rtol` taken from the significant figures of the answer if no tolerance is given
+    and the response isn't checked for its written precision (`sig_figs`/`dp`).
+    """
     rtol = parameters.parsing_parameters["rtol"]
     atol = parameters.parsing_parameters["atol"]
-    if parameters.atol == 0 and parameters.rtol == 0:
+    uses_precision = parameters.sig_figs is not None or parameters.dp is not None
+    if parameters.atol == 0 and parameters.rtol == 0 and not uses_precision:
         ans = parameters.reserved_expressions["answer"].quantity.value
         if ans is not None:
             rtol = compute_relative_tolerance_from_significant_decimals(ans.content_string())
@@ -82,18 +87,42 @@ def _within_tolerance(parameters: EvaluationParameters, lhs_string: str, rhs_str
     return values_within_tolerance(res, ans, rtol, atol * answer_unit_factor)
 
 
+def _matches_written_precision(parameters: EvaluationParameters) -> bool:
+    """
+    Whether the value of the response, as written, is the value of the answer to `sig_figs`/`dp`.
+    The values are compared in SI base units, so `dp` assumes the response has the unit of the answer.
+    """
+    response_value = parameters.reserved_expressions["response"].quantity.value
+    if response_value is None:
+        return False
+    return matches_written_precision(
+        parameters.reserved_expressions["response"].standard_value,
+        parameters.reserved_expressions["answer"].standard_value,
+        response_value.content_string(),
+        parameters,
+    )
+
+
 def _quantity_match(parameters: EvaluationParameters, label: str, sides: CriterionSides, rtol: float, atol: float) -> Evaluate:
     quantities = sides.quantities.items()
+    is_response_answer_criterion = {sides.lhs_string, sides.rhs_string} == {"response", "answer"}
+    uses_precision = parameters.sig_figs is not None or parameters.dp is not None
 
     def quantity_match(_response: Any) -> ReachedCriteria:
         missing_or_unexpected = _missing_or_unexpected(parameters, label, sides.lhs_string, sides.rhs_string)
         if missing_or_unexpected is not None:
             return missing_or_unexpected
 
-        substitutions = [(key, expr.standard_value) for (key, expr) in quantities]
-        value_match = is_equal(sides.lhs, sides.rhs, substitutions)
-        if value_match is False:
-            value_match = _within_tolerance(parameters, sides.lhs_string, sides.rhs_string, rtol, atol)
+        # sig_figs/dp replace the value comparison rather than being a fallback,
+        # since a value equal to the answer but written to the wrong precision is incorrect
+        value_match: bool | None
+        if uses_precision and is_response_answer_criterion:
+            value_match = _matches_written_precision(parameters)
+        else:
+            substitutions = [(key, expr.standard_value) for (key, expr) in quantities]
+            value_match = is_equal(sides.lhs, sides.rhs, substitutions)
+            if value_match is False:
+                value_match = _within_tolerance(parameters, sides.lhs_string, sides.rhs_string, rtol, atol)
 
         substitutions = [(key, expr.standard_unit) for (key, expr) in quantities]
         unit_match = is_equal(sides.lhs, sides.rhs, substitutions)
