@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import cmath
+
 from sympy import Basic, pi, N
 
 from app.evaluation_parameters import EvaluationParameters
@@ -21,17 +23,21 @@ def numerically_equal(lhs_expr: Basic, rhs_expr: Basic) -> bool | None:
     Whether `lhs_expr` and `rhs_expr` are equal when evaluated to 50 digits: compares numbers
     without simplifying them, which can take practically forever (see `app.time_budget`).
 
-    Returns None if either contains symbols other than `pi` or can't be evaluated to a number.
+    Returns None if either contains symbols other than `pi`, can't be evaluated to a number,
+    or is too large to evaluate as a float (e.g. 99^9999999, which would become inf).
     """
     lhs, rhs = replace_pi(lhs_expr, pi), replace_pi(rhs_expr, pi)
     if lhs.free_symbols or rhs.free_symbols:
         return None
     try:
-        difference = abs(complex(N(lhs - rhs, 50)))
-        scale = max(1.0, abs(complex(N(lhs, 50))), abs(complex(N(rhs, 50))))
+        difference = complex(N(lhs - rhs, 50))
+        lhs_value, rhs_value = complex(N(lhs, 50)), complex(N(rhs, 50))
     except (TypeError, ValueError, OverflowError):
         return None
-    return bool(difference <= 1e-30 * scale)
+    if not all(cmath.isfinite(value) for value in (difference, lhs_value, rhs_value)):
+        return None
+    scale = max(1.0, abs(lhs_value), abs(rhs_value))
+    return bool(abs(difference) <= 1e-30 * scale)
 
 
 def compare_numerically(lhs_expr: Basic, rhs_expr: Basic, parameters: EvaluationParameters) -> bool:

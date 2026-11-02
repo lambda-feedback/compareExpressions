@@ -1,8 +1,10 @@
 import time
 
 import pytest
+from sympy import Integer, Pow
 
 from app import time_budget
+from app.context.symbolic.numerical import numerically_equal
 from app.evaluation import TaskConfigurationError, evaluation_function
 from lambdafeedback.expression_parsing import substitute
 from lambdafeedback.expression_parsing.symbol_tables import ELEMENTARY_FUNCTIONS as elementary_functions_names
@@ -2331,6 +2333,15 @@ class TestEvaluationFunction():
         params = self.large_power_in_log_params
         assert evaluation_function(response, "-10^8*log(10)/pi", params)["is_correct"] is True
         assert evaluation_function(response, "-10^8*log(10)/pi+10^-20", params)["is_correct"] is False
+
+    def test_numbers_too_large_for_floats_are_not_compared_numerically(self):
+        huge_power = Pow(Integer(99), Integer(9999999), evaluate=False)
+        assert numerically_equal(huge_power, Integer(1)) is None
+
+    @pytest.mark.slow
+    def test_numbers_too_large_for_floats_are_graded_incorrect(self):
+        result = evaluation_function("99^9999999", "1", {})
+        assert result["is_correct"] is False
 
     def test_large_power_times_symbolic_log_is_simplified(self):
         start = time.monotonic()
