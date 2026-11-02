@@ -12,6 +12,7 @@ from lambdafeedback.expression_parsing import SympyParsingConfig, parse_expressi
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.operators import COMPARISON_OPERATORS
+from app.context.symbolic.inequalities import InequalityComparison, check_inequality_equivalence, inequality_bounds
 from app.context.symbolic.numerical import compare_numerically, matches_written_precision
 from app.evaluation_parameters import EvaluationParameters
 from app.types import SubstitutionList, Substitutions
@@ -131,6 +132,14 @@ def check_equality(
     # since a response equal to the answer but written to the wrong precision is incorrect
     if uses_written_precision(criterion, parameters):
         return check_written_precision(criterion, lhs_expr, rhs_expr, parameters)
+
+    # Subtracting relations raises a TypeError, so they must not reach the `lhs_expr - rhs_expr` comparison below
+    lhs_is_inequality = inequality_bounds(lhs_expr) is not None
+    rhs_is_inequality = inequality_bounds(rhs_expr) is not None
+    if lhs_is_inequality and rhs_is_inequality:
+        return check_inequality_equivalence(lhs_expr, rhs_expr, parameters) is InequalityComparison.TRUE
+    elif lhs_is_inequality or rhs_is_inequality:
+        return False
 
     if isinstance(lhs_expr, Equality) and not isinstance(rhs_expr, Equality):
         return False
