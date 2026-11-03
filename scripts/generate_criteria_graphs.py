@@ -13,6 +13,7 @@ import html
 import subprocess
 import tempfile
 import textwrap
+from collections.abc import Collection
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,10 @@ NODE_STYLES = {
     "output": {"shape": "hexagon", "style": "filled", "fillcolor": "#C5CAE9", "color": "#2F3C86"},
 }
 
+# Extra style for the nodes and edges on the path a response took (see `add_criteria_graph`).
+REACHED_NODE_STYLE = {"color": "#E65100", "penwidth": "3"}
+REACHED_EDGE_STYLE = {"color": "#E65100", "penwidth": "2.5"}
+
 # Characters per line of a node's details in the graphviz drawings (mermaid wraps them itself).
 DETAILS_WIDTH = 45
 
@@ -82,23 +87,63 @@ def _node_label(label: str, details: str) -> str:
     return f"<<b>{html.escape(label)}</b><br/><font point-size='10'>{details_lines}</font>>"
 
 
-def graph_to_dot(graph: CriteriaGraph) -> pydot.Dot:
-    """`graph` drawn with graphviz from its nodes and edges; sufficiencies are dotted edges."""
-    dot = pydot.Dot(graph_type="digraph", rankdir="TB", fontname="Helvetica", bgcolor="white")
-    dot.set_node_defaults(fontname="Helvetica", fontsize="12")
+def reached_nodes(graph: CriteriaGraph, reached_criteria: Collection[str]) -> set[str]:
+    """The labels of the nodes on the path through `graph` that reached `reached_criteria`.
+
+    These are the reached criteria, the evaluations that reported them and the output nodes they lead to.
+    """
+    reached = {label for label in graph.criteria if label in reached_criteria}
+    for (label, node) in graph.evaluations.items():
+        if any(edge.target.label in reached for edge in node.outgoing):
+            reached.add(label)
+    for label in graph.outputs:
+        if any(edge.source.label in reached for edge in graph.outputs[label].incoming):
+            reached.add(label)
+    return reached
+
+
+def add_criteria_graph(
+    container: pydot.Graph, graph: CriteriaGraph, prefix: str = "", reached_criteria: Collection[str] = ()
+) -> dict[str, str]:
+    """Adds the nodes and edges of `graph` to `container` and returns the graphviz identifier of each node label.
+
+    Sufficiencies are dotted edges. The path that reached `reached_criteria` is highlighted, and `prefix` keeps the
+    identifiers apart from other nodes in the same drawing.
+    """
     groups = [("evaluation", graph.evaluations), ("criterion", graph.criteria), ("output", graph.outputs)]
-    identifiers = {label: f"{kind}_{index}" for (kind, nodes) in groups for (index, label) in enumerate(nodes)}
+    identifiers = {label: f"{prefix}{kind}_{index}" for (kind, nodes) in groups for (index, label) in enumerate(nodes)}
+    reached = reached_nodes(graph, reached_criteria)
     for (kind, nodes) in groups:
         for (label, node) in nodes.items():
-            dot.add_node(pydot.Node(identifiers[label], label=_node_label(label, node.details), **NODE_STYLES[kind]))
+            style = dict(NODE_STYLES[kind])
+            if label in reached:
+                style.update(REACHED_NODE_STYLE)
+            container.add_node(pydot.Node(identifiers[label], label=_node_label(label, node.details), **style))
     for (kind, nodes) in groups:
         for (label, node) in nodes.items():
             for edge in node.outgoing:
-                dot.add_edge(pydot.Edge(identifiers[label], identifiers[edge.target.label]))
+                if label in reached and edge.target.label in reached:
+                    container.add_edge(pydot.Edge(identifiers[label], identifiers[edge.target.label], **REACHED_EDGE_STYLE))
+                else:
+                    container.add_edge(pydot.Edge(identifiers[label], identifiers[edge.target.label]))
             if isinstance(node, EvaluationNode):
                 for sufficiency in node.sufficiencies:
                     if sufficiency in identifiers:
-                        dot.add_edge(pydot.Edge(identifiers[label], identifiers[sufficiency], style="dotted"))
+                        container.add_edge(pydot.Edge(identifiers[label], identifiers[sufficiency], style="dotted"))
+    return identifiers
+
+
+def new_drawing() -> pydot.Dot:
+    """An empty top-to-bottom graphviz drawing with the styles shared by the documentation graphs."""
+    dot = pydot.Dot(graph_type="digraph", rankdir="TB", fontname="Helvetica", bgcolor="white")
+    dot.set_node_defaults(fontname="Helvetica", fontsize="12")
+    return dot
+
+
+def graph_to_dot(graph: CriteriaGraph) -> pydot.Dot:
+    """`graph` drawn with graphviz from its nodes and edges; sufficiencies are dotted edges."""
+    dot = new_drawing()
+    add_criteria_graph(dot, graph)
     return dot
 
 

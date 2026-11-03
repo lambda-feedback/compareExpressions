@@ -44,6 +44,57 @@ The overall flow of the evaluation procedure can be described as follows:
 
 **TODO** Describe what further information is supplied when `include_test_data` is set to true.
 
+#### Process graphs
+
+These graphs come from running `evaluation_function` on example inputs. `_evaluate` logs a `stage_start` event as it enters each stage, and these are the stages:
+
+- `setup`: copies the tolerance aliases to `rtol` and `atol` and creates the `EvaluationResult`.
+- `determine_context`: `select_context` chooses the context from `params`, and the context's default parameters and criteria are added.
+- `parse_latex`: runs only when `is_latex` is set, and reads the LaTeX response as SymPy syntax.
+- `parse_reserved_expressions`: preprocesses and parses the response and answer. If either can't be parsed, the result is serialised here with its feedback and returned early.
+- `preview`: sets the LaTeX and simplified forms of the response.
+- `parse_criteria`: parses the criteria with the context's criteria parser.
+- `generate_feedback_procedures`: the context builds a criteria graph for each criterion.
+- `generate_feedback`: runs each criteria graph on the response and collects the feedback and tags.
+- `serialise`: serialises the result.
+
+Each example has two graphs:
+- The stages, with the criteria graph the response went through. The path the response took through it is highlighted in orange. Stages that didn't run are greyed out.
+- The `app` and `lambdafeedback` functions called in each stage, up to two calls below `_evaluate`. Repeated calls from the same caller are shown once and marked ×n.
+
+**Symbolic:** response `1 + x`, answer `x + 1`, default criteria.
+
+![Process of a symbolic evaluation](process_graphs/process_symbolic.svg)
+
+<details><summary>Function calls</summary>
+
+![Functions called in a symbolic evaluation](process_graphs/process_symbolic_calls.svg)
+</details>
+
+**Physical quantity:** response `100 cm`, answer `1 m`, `physical_quantity: true`.
+
+![Process of a physical quantity evaluation](process_graphs/process_physical_quantity.svg)
+
+<details><summary>Function calls</summary>
+
+![Functions called in a physical quantity evaluation](process_graphs/process_physical_quantity_calls.svg)
+</details>
+
+**Parse error:** response `x +* 1`, answer `x + 1`. The response can't be parsed, so the evaluation returns after `parse_reserved_expressions`.
+
+![Process of an evaluation where the response can't be parsed](process_graphs/process_symbolic_parse_error.svg)
+
+<details><summary>Function calls</summary>
+
+![Functions called when the response can't be parsed](process_graphs/process_symbolic_parse_error_calls.svg)
+</details>
+
+To regenerate the images after changing the evaluation, run this from the repository root (it needs graphviz, i.e. `dot`):
+
+```bash
+python -m scripts.generate_process_graphs
+```
+
 ### Context
 
 The context is a frozen `Context` dataclass, defined in `context/base.py`, with the following fields:
