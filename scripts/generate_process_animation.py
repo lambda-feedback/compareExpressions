@@ -51,7 +51,7 @@ MAX_DEPTH = 5
 # The depth the page starts at: the depth of the static calls figures.
 START_DEPTH = 2
 
-# How many calls of each function keep their arguments and return value, for the details of a clicked node.
+# How many calls of each function keep their arguments and return value, for the list of calls in the panel.
 INVOCATION_VALUES = 20
 
 CRITERION_STYLE = {"shape": "note", "style": "filled", "fillcolor": "#FFF8E1", "color": "#8D6E63"}
@@ -628,11 +628,7 @@ footer {
 #graph g.edge.is-reached > polygon { stroke: #e65100; fill: #e65100; }
 #graph g.node:not(.is-hidden) { cursor: pointer; }
 #graph g.node:not(.is-hidden):hover > :is(polygon, path, ellipse):first-of-type { stroke-width: 2.5px; }
-#graph g.is-pinned > :is(polygon, path, ellipse):first-of-type { stroke: #7b1fa2; stroke-width: 4px; stroke-dasharray: none; }
 
-.pinned { border: 1px solid var(--border); border-left: 3px solid #ab47bc; border-radius: 8px; padding: 10px 12px; }
-.pinned-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.pinned-head button { min-height: 26px; padding: 0 8px; }
 .link { color: var(--accent); background: none; border: none; padding: 0; min-height: 0; text-decoration: underline; cursor: pointer; }
 .invocations { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
 .invocations li { border-top: 1px solid var(--border); padding-top: 6px; }
@@ -733,7 +729,6 @@ details.more pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-all
           <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#fb8c00" stroke-width="2" stroke-dasharray="4 2"/></svg>its callers (the call stack)</div>
           <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" rx="3" fill="#E5F8FB" stroke="#00b8d4" stroke-width="3"/></svg>evaluation run</div>
           <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#e65100" stroke-width="2.5"/></svg>criterion reached, and its path</div>
-          <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#7b1fa2" stroke-width="3"/></svg>pinned in the panel</div>
           <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#212121" opacity="0.28"/></svg>not reached yet</div>
           <div class="group-label">Edges</div>
           <div class="legend-row"><svg width="28" height="18"><path d="M2 9h20" stroke="#212121"/><path d="M21 6l5 3-5 3z" fill="#212121"/></svg>calls</div>
@@ -796,8 +791,6 @@ const state = {
   sections: {},
   // The index in the example's steps of the step shown.
   step: 0,
-  // The graphviz title of the node whose details are pinned in the panel, or null.
-  pinned: null,
   playing: false,
   timer: null,
   layout: null,
@@ -983,7 +976,7 @@ function fitZoom() {
 }
 
 const STATE_CLASSES = [
-  "is-hidden", "is-waiting", "is-current", "is-stack", "is-visited", "is-reached", "is-pinned", "appear", "draw",
+  "is-hidden", "is-waiting", "is-current", "is-stack", "is-visited", "is-reached", "appear", "draw",
 ];
 
 // Whether the node `name` is only drawn once a step reveals it: calls, criteria and criteria graph nodes.
@@ -1294,15 +1287,32 @@ function callSection(step) {
   const total = invocationEvents(step.call).length;
   let body = `<div class="call-name mono">${escapeHtml(call.qualname)}</div>
     <div class="muted mono">${escapeHtml(call.module)} · depth ${call.depth}</div>
+    <div class="source mono">${escapeHtml(call.source)}</div>
     <div class="stack">${stack.map((name) => `<span class="mono">${escapeHtml(name)}</span>`).join("")}</div>
     ${call.doc === "" ? "" : `<p class="doc">${escapeHtml(call.doc)}</p>`}`;
+  if (state.values) {
+    body += argumentsHtml(step.arguments, true) + outcomeHtml(step, true);
+  }
   if (total > 1) {
     body += `<p class="muted">First of ${total} calls from this caller; the rest raise the count on its node.</p>`;
-  }
-  if (state.values) {
-    body += argumentsHtml(step.arguments, false) + outcomeHtml(step, false);
+    if (state.values) {
+      body += laterCalls(step.call, total);
+    }
   }
   return `<section><h2>Call</h2>${body}</section>`;
+}
+
+// The calls after the first from the same caller, with the values of those that kept them, behind "show".
+function laterCalls(callId, total) {
+  const values = example().invocations[callId].values.slice(1);
+  if (values.length === 0) {
+    return "";
+  }
+  const items = values.map((invocation, position) => `<li><div class="muted">Call ${position + 2}</div>
+    ${argumentsHtml(invocation.arguments, true)}${outcomeHtml(invocation, true)}</li>`);
+  const kept = values.length + 1 < total ? `<p class="muted">Only the first ${values.length + 1} calls keep their values.</p>` : "";
+  return `<details class="more"><summary>show the other calls</summary>
+    <ul class="invocations">${items.join("")}</ul>${kept}</details>`;
 }
 
 // The parameters `_build_parameters` completed, once it has returned.
@@ -1354,7 +1364,8 @@ function formsSection(step) {
   return collapsible("forms", "Response forms", `<ul class="forms">${items.join("")}</ul>`);
 }
 
-// A tag of the result: the criteria graph criterion it came from (a link that pins it) and its feedback text.
+// A tag of the result: the criteria graph criterion it came from (a link to the evaluation that reached it) and its
+// feedback text.
 function tagItem(tag) {
   const source = example().feedback[tag];
   if (source === undefined) {
@@ -1362,7 +1373,7 @@ function tagItem(tag) {
       <div class="muted">Added by the evaluation itself, not by a criteria graph.</div></li>`;
   }
   const name = source.node === null ? `<span class="mono">${escapeHtml(tag)}</span>`
-    : `<button class="link mono" data-pin="${escapeHtml(source.node)}">${escapeHtml(tag)}</button>`;
+    : `<button class="link mono" data-node="${escapeHtml(source.node)}">${escapeHtml(tag)}</button>`;
   const text = source.text === "" ? `<span class="muted">No feedback text.</span>`
     : `“${escapeHtml(source.text)}”`;
   return `<li>${name}
@@ -1479,7 +1490,7 @@ function criteriaSection(step) {
       ${identifiers.map((identifier) => `<code>${escapeHtml(identifier)}</code>`).join(" ")}</li>`];
   for (const identifier of identifiers) {
     items.push(`<li class="${identifier === focus ? "is-focus" : ""}">
-      <div><button class="link mono" data-pin="criterion_${chainOf(identifier).index}">${escapeHtml(identifier)}</button></div>
+      <div><button class="link mono" data-node="criterion_${chainOf(identifier).index}">${escapeHtml(identifier)}</button></div>
       <ul class="chain">${criterionChainItems(identifier, step).join("")}</ul></li>`);
   }
   const statuses = identifiers.map((identifier) => mainCriterionStatus(identifier, step));
@@ -1492,124 +1503,71 @@ function criteriaSection(step) {
   return collapsible("criteria", "Criteria", `<ul class="chain">${items.join("")}</ul>`);
 }
 
-// Pinned details
+// Clicking a node
 
-function pinnedCall(callId, step) {
-  const call = example().calls[callId];
-  const caller = callerOf(callId);
-  const parent = parentOf(callId);
-  const callerName = parent === null ? "the " + call.stage + " stage" : example().calls[parent].qualname;
-  const count = invocationsUpTo(callId, step.event);
-  const values = (example().invocations[callId]?.values || []).filter((invocation) => invocation.event <= step.event);
-  let body = `<div class="call-name mono">${escapeHtml(call.qualname)}</div>
-    <div class="muted mono">${escapeHtml(call.module)} · depth ${call.depth} · stage ${escapeHtml(call.stage)}</div>
-    <div class="source mono">${escapeHtml(call.source)}</div>
-    ${call.doc === "" ? `<p class="doc muted">No docstring.</p>` : `<p class="doc">${escapeHtml(call.doc)}</p>`}
-    <div class="muted">Called by <button class="link mono" data-pin="${escapeHtml(caller)}">${escapeHtml(callerName)}</button>,
-      ${count} time${count === 1 ? "" : "s"} so far.</div>`;
-  if (values.length > 0) {
-    const items = values.map((invocation, position) =>
-      `<li><div class="muted">Call ${position + 1}</div>${argumentsHtml(invocation.arguments, true)}${outcomeHtml(invocation, true)}</li>`);
-    body += `<ul class="invocations">${items.join("")}</ul>`;
-    if (count > values.length) {
-      body += `<p class="muted">Only the first ${values.length} calls keep their values.</p>`;
-    }
-  }
-  return body;
-}
-
-function pinnedStage(stageId, step) {
-  const stage = example().stages.find((candidate) => candidate.id === stageId);
-  const calls = Object.entries(example().calls).filter(([callId, call]) => call.stage === stage.name
-    && parentOf(callId) === null && !(state.internals && call.internal) && invocationsUpTo(callId, step.event) > 0);
-  const list = calls.length === 0 ? `<p class="muted">No calls made in this stage yet.</p>`
-    : `<div>Calls:</div><ul class="reached-list">${calls.map(([callId, call]) =>
-      `<li><button class="link mono" data-pin="${callId}">${escapeHtml(call.qualname)}</button></li>`).join("")}</ul>`;
-  const duration = durationText(stage);
-  return `<span class="chip">${escapeHtml(stage.name)}</span>
-    ${duration === "" ? "" : `<span class="muted">${duration}</span>`}
-    <p class="muted">${escapeHtml(stage.description)}</p>${list}
-    ${duration === "" ? "" : `<p class="muted">${escapeHtml(TIMING_NOTE)}</p>`}`;
-}
-
-function pinnedCriteriaNode(nodeId, step) {
+// The criteria graph `nodes` entry with the graphviz title `name`, with its criterion and label, or null.
+function criteriaGraphNode(name) {
   for (const [identifier, criterionNodes] of Object.entries(example().criteria)) {
     for (const [label, node] of Object.entries(criterionNodes)) {
-      if (node.id !== nodeId) {
-        continue;
+      if (node.id === name) {
+        return { identifier: identifier, label: label, node: node };
       }
-      const evaluations = example().steps.filter((candidate) => candidate.kind === "evaluate"
-        && candidate.criterion === identifier && candidate.event <= step.event);
-      let status = "";
-      if (node.kind === "evaluation") {
-        const visit = evaluations.find((evaluation) => evaluation.node === label);
-        status = visit === undefined ? `<p class="muted">Not evaluated by this step.</p>`
-          : `<p>Evaluated; it reported ${visit.reached.map((reached) =>
-            `<code>${escapeHtml(reached)}</code>`).join(", ") || "no criteria"}.</p>`;
-      } else if (node.kind === "criterion") {
-        const reached = evaluations.some((evaluation) => evaluation.reached.includes(label));
-        status = reached ? `<p class="status-good">Reached.</p>` : `<p class="muted">Not reached by this step.</p>`;
-      }
-      return `<div class="muted">Criteria graph of <code>${escapeHtml(identifier)}</code> · ${node.kind} node</div>
-        <div class="call-name">${escapeHtml(label)}</div>
-        ${node.summary && node.summary !== label ? `<p>${escapeHtml(node.summary)}</p>` : ""}
-        ${node.details ? `<p class="muted">${escapeHtml(node.details)}</p>` : ""}
-        ${status}`;
     }
   }
-  return `<p class="muted">No details.</p>`;
+  return null;
 }
 
-function pinnedCriterion(nodeId, step) {
-  const index = Number(nodeId.replace("criterion_", ""));
-  const identifier = Object.keys(example().chain.criteria).find((key) => chainOf(key).index === index);
-  return `<div class="muted">Criterion</div>
-    <div class="call-name mono">${escapeHtml(identifier)}</div>
-    <ul class="chain">${criterionChainItems(identifier, step).join("")}</ul>`;
+// The shown steps of the evaluations of the criteria graph of `identifier` that reached one of `labels`.
+function stepsReaching(identifier, labels) {
+  return shownSteps().filter((step) => step.kind === "evaluate" && step.criterion === identifier
+    && step.reached.some((label) => labels.includes(label)));
 }
 
-function pinnedSection(step) {
-  const name = state.pinned;
-  let body;
-  if (name.startsWith("call_") && example().calls[name] !== undefined) {
-    body = pinnedCall(name, step);
+// The shown steps that make the node `name` the current node. A criteria graph criterion is never current itself, so
+// its steps are the evaluations that reached it, and an output's are those that reached a criterion leading to it.
+function stepsOfNode(name) {
+  const steps = shownSteps();
+  if (name === "result") {
+    return steps.filter((step) => step.kind === "result");
   } else if (name.startsWith("stage_")) {
-    body = pinnedStage(name, step);
+    return steps.filter((step) => step.kind === "stage" && stageOf(step.stage).id === name);
+  } else if (name.startsWith("call_")) {
+    return steps.filter((step) => step.kind === "call" && step.call === name);
   } else if (name.startsWith("criterion_")) {
-    body = pinnedCriterion(name, step);
-  } else if (name.startsWith("criteria_")) {
-    body = pinnedCriteriaNode(name, step);
-  } else if (name === "result") {
-    body = resultSection();
-  } else {
-    body = `<p class="muted">No details.</p>`;
+    return steps.filter((step) => step.kind === "criteria"
+      && step.criteria.some((identifier) => "criterion_" + chainOf(identifier).index === name));
   }
-  return `<section class="pinned">
-    <div class="pinned-head"><h2>Pinned</h2>
-      <button id="unpin" title="Unpin and show the current step" aria-label="Unpin">✕</button></div>
-    ${body}
-  </section>`;
+  const found = criteriaGraphNode(name);
+  if (found === null) {
+    return [];
+  }
+  if (found.node.kind === "evaluation") {
+    return steps.filter((step) => step.kind === "evaluate" && step.criterion === found.identifier
+      && step.node === found.label);
+  } else if (found.node.kind === "criterion") {
+    return stepsReaching(found.identifier, [found.label]);
+  }
+  const sources = [...edges.keys()].filter((edge) => edge.split("->")[1] === name)
+    .map((edge) => criteriaGraphNode(edge.split("->")[0])).filter((source) => source !== null)
+    .map((source) => source.label);
+  return stepsReaching(found.identifier, sources);
 }
 
-function markPinned() {
-  for (const group of nodes.values()) {
-    group.classList.remove("is-pinned");
+// Moves to the step that makes the node `name` current: its latest such step up to the current one, or else its first.
+function goToNode(name) {
+  const steps = stepsOfNode(name);
+  if (steps.length === 0) {
+    return;
   }
-  if (state.pinned !== null) {
-    nodes.get(state.pinned)?.classList.add("is-pinned");
-  }
-}
-
-function pin(name) {
-  state.pinned = name;
-  markPinned();
-  renderPanel(example().steps[state.step]);
+  const earlier = steps.filter((step) => step.index <= state.step);
+  setPlaying(false);
+  state.step = (earlier.length > 0 ? earlier[earlier.length - 1] : steps[0]).index;
+  render();
   document.getElementById("panel").scrollTo(0, 0);
 }
 
 function renderPanel(step) {
-  let content = state.pinned === null ? "" : pinnedSection(step);
-  content += stageSection(step);
+  let content = stageSection(step);
   if (step.kind === "call") {
     content += callSection(step);
   } else if (step.kind === "evaluate") {
@@ -1645,7 +1603,6 @@ function render() {
     applyStep(shown, shown.index === state.step);
   }
   updateCounts(step.event);
-  markPinned();
   renderPanel(step);
   const shown = shownSteps();
   const position = shown.findIndex((candidate) => candidate.index === state.step);
@@ -1667,11 +1624,6 @@ function moveBy(offset) {
 
 function setPlaying(playing) {
   state.playing = playing;
-  if (playing && state.pinned !== null) {
-    state.pinned = null;
-    markPinned();
-    renderPanel(example().steps[state.step]);
-  }
   const button = document.getElementById("play");
   button.textContent = playing ? "⏸ Pause" : "▶ Play";
   button.setAttribute("aria-label", playing ? "Pause" : "Play");
@@ -1696,7 +1648,6 @@ async function selectExample(index) {
   state.example = index;
   state.layout = null;
   state.step = 0;
-  state.pinned = null;
   const current = example();
   document.getElementById("inputs").innerHTML = `
     <span>response <code>${escapeHtml(current.response)}</code></span>
@@ -1769,9 +1720,6 @@ function setUp() {
   document.getElementById("hide-internals").addEventListener("change", (event) => {
     state.internals = event.target.checked;
     state.step = nearestShownStep(state.step);
-    if (state.pinned !== null && state.internals && example().calls[state.pinned]?.internal) {
-      state.pinned = null;
-    }
     saveSettings();
     render();
   });
@@ -1798,7 +1746,6 @@ function setUp() {
   });
   document.getElementById("scrubber").addEventListener("input", (event) => {
     setPlaying(false);
-    state.pinned = null;
     state.step = shownSteps()[Number(event.target.value)].index;
     render();
   });
@@ -1807,18 +1754,12 @@ function setUp() {
     if (group === null || group.classList.contains("is-hidden")) {
       return;
     }
-    pin(group.querySelector(":scope > title").textContent);
+    goToNode(group.querySelector(":scope > title").textContent);
   });
   document.getElementById("panel").addEventListener("click", (event) => {
-    if (event.target.closest("#unpin") !== null) {
-      state.pinned = null;
-      markPinned();
-      renderPanel(example().steps[state.step]);
-      return;
-    }
-    const link = event.target.closest("[data-pin]");
+    const link = event.target.closest("[data-node]");
     if (link !== null) {
-      pin(link.dataset.pin);
+      goToNode(link.dataset.node);
     }
   });
   // `toggle` does not bubble, so it is caught on its way down to the section
