@@ -1,0 +1,66 @@
+name: Regenerate Documentation Graphs
+
+# Regenerates the criteria and process graph images in app/docs and commits them to the pull request's branch if they
+# changed. Pull requests from forks are skipped, since this workflow can't push to them.
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "scripts/generate_criteria_graphs.py"
+      - "scripts/generate_process_graphs.py"
+      - ".github/workflows/doc-graphs.yml"
+
+concurrency:
+  group: doc-graphs-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    name: Regenerate the documentation graphs
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes graphviz
+          # Ubuntu 24.04 blocks the user namespaces Chrome's sandbox needs; mermaid-cli renders with Chrome
+          sudo sysctl --write kernel.apparmor_restrict_unprivileged_userns=0
+          python -m venv .venv
+          .venv/bin/pip install -r app/requirements.txt
+
+      - name: Generate the graphs
+        run: |
+          .venv/bin/python -m scripts.generate_criteria_graphs
+          .venv/bin/python -m scripts.generate_process_graphs
+
+      - name: Commit the graphs if they changed
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          git add app/docs/criteria_graphs app/docs/process_graphs
+          if git diff --cached --quiet; then
+            echo "The documentation graphs are up to date."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --message "Regenerate the documentation graphs"
+            git push origin "HEAD:$BRANCH"
+          fi
