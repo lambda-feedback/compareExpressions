@@ -10,18 +10,20 @@ Run from the repository root with `python -m scripts.generate_process_graphs`.
 """
 from __future__ import annotations
 
+import dis
 import html
 import inspect
 import json
 import logging
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, is_dataclass
 from pathlib import Path
 from types import FrameType
 from typing import Any
 
 import pydot
+import sympy
 from lambdafeedback.criteria import CriteriaGraph
 
 from app import evaluation
@@ -38,6 +40,9 @@ EXAMPLES: list[tuple[str, str, str, dict[str, Any]]] = [
 
 # How many calls below `_evaluate` the call graphs go.
 CALL_DEPTH = 2
+
+# The longest an argument or return value recorded for the process animation gets before it is cut short.
+VALUE_LENGTH = 200
 
 # Functions left out of the call graphs; the functions they call are shown under their caller instead.
 HIDDEN_FUNCTIONS = {"log_event", "elapsed_ms", "_evaluate.<locals>.enter_stage"}
@@ -67,36 +72,165 @@ class Call:
     qualname: str
     stage: str
     parent: Call | None
+    depth: int
     count: int = 1
 
 
 @dataclass
 class Recording:
-    """What happened during one `evaluation_function` call."""
+    """What happened during one `evaluation_function` call.
+
+    `events` is filled only when values are recorded (see `Recorder`): every stage entered, call made, value returned
+    and criteria graph evaluation run, in order, as JSON-ready dictionaries.
+    """
 
     stages: list[str] = field(default_factory=list)
     early_return: bool = False
     calls: dict[tuple[Any, ...], Call] = field(default_factory=dict)
     criteria_graphs: dict[str, CriteriaGraph] = field(default_factory=dict)
+    events: list[dict[str, Any]] = field(default_factory=list)
+
+
+def short_repr(value: Any) -> str:
+    """`repr(value)` without memory addresses, cut short at `VALUE_LENGTH` characters."""
+    try:
+        text = repr(value)
+    except (AttributeError, TypeError, ValueError, KeyError):
+        # Objects whose `__init__` is still running can fail to give a repr.
+        text = f"<{type(value).__name__}>"
+    text = re.sub(r" at 0x[0-9a-f]+", "", text)
+    if len(text) > VALUE_LENGTH:
+        return text[:VALUE_LENGTH - 1] + "…"
+    return text
+
+
+def frame_argument_values(frame: FrameType) -> list[tuple[str, Any]]:
+    """The name and value of each argument of the function running in `frame`."""
+    arguments = inspect.getargvalues(frame)
+    names = list(arguments.args)
+    if arguments.varargs is not None:
+        names.append(arguments.varargs)
+    if arguments.keywords is not None:
+        names.append(arguments.keywords)
+    return [(name, arguments.locals.get(name)) for name in names]
+
+
+def is_response_form(value: Any) -> bool:
+    """Whether `value` is the kind of value the response is turned into: a string, a SymPy expression, an `app` or
+    `lambdafeedback` dataclass such as a parsed quantity or a token, or a list or tuple of these.
+    """
+    if isinstance(value, (str, sympy.Basic)):
+        return True
+    elif isinstance(value, (list, tuple)):
+        return len(value) > 0 and all(is_response_form(item) for item in value)
+    elif type(value).__module__.startswith("lambdafeedback."):
+        return True
+    return type(value).__module__.startswith("app.") and is_dataclass(value)
+
+
+def returned_normally(frame: FrameType) -> bool:
+    """Whether `frame` is returning (or yielding) a value, rather than stopping because of an exception."""
+    instruction = dis.opname[frame.f_code.co_code[frame.f_lasti]]
+    return instruction in ("RETURN_VALUE", "RETURN_CONST", "YIELD_VALUE")
 
 
 class Recorder(logging.Handler):
-    """Records the stages from the evaluation's log events, and the function calls with `sys.setprofile`."""
+    """Records the stages from the evaluation's log events, and the function calls with `sys.setprofile`.
 
-    def __init__(self) -> None:
+    Calls are followed down to `depth` calls below `_evaluate`. With `record_values`, these are kept in order in
+    `Recording.events`:
+    - the arguments and return value of each call, and whether it raised an exception instead of returning;
+    - the evaluations each criteria graph runs, and the criteria each one reports;
+    - each new form of the response (see `is_response_form`): the value returned by a call that was given the response,
+      or an earlier form of it, as an argument.
+    """
+
+    def __init__(self, depth: int = CALL_DEPTH, record_values: bool = False, response: str = "") -> None:
         super().__init__()
         self.recording = Recording()
         self.stage = FIRST_STAGE
+        self.depth = depth
+        self.record_values = record_values
         # Each frame being followed: (the Call it belongs to, or None for `_evaluate`, its depth below `_evaluate`).
         self.frames: dict[FrameType, tuple[Call | None, int]] = {}
+        # The frames whose return is recorded: each frame's Call, or the criterion and evaluation node it runs.
+        self.call_frames: dict[FrameType, Call] = {}
+        self.evaluation_frames: dict[FrameType, tuple[str, str]] = {}
+        # The reprs of the forms the response has taken so far, and the frames given one of them as an argument.
+        self.response_forms = {repr(response)}
+        self.response_frames: set[FrameType] = set()
 
     def emit(self, record: logging.LogRecord) -> None:
         event = json.loads(record.getMessage())
         if event["event"] == "stage_start":
             self.stage = event["stage"]
             self.recording.stages.append(self.stage)
+            if self.record_values:
+                self.recording.events.append({"kind": "stage", "stage": self.stage})
         elif event["event"] == "evaluation_end":
             self.recording.early_return = event["early_return"]
+
+    def _record_evaluation(self, frame: FrameType) -> None:
+        """Records the start of a criteria graph evaluation, when `frame` is the `evaluate` function of one."""
+        runner = frame.f_back
+        if runner is None or runner.f_code.co_qualname != "CriteriaGraph.generate_feedback":
+            return
+        evaluate = runner.f_locals.get("evaluate")
+        # `evaluate` can be a `functools.partial` of the function that runs
+        function = getattr(evaluate, "func", evaluate)
+        if getattr(function, "__code__", None) is not frame.f_code:
+            return
+        criterion = runner.f_locals["main_criterion"].removesuffix("_TRUE")
+        node = runner.f_locals["label"]
+        self.evaluation_frames[frame] = (criterion, node)
+        self.recording.events.append({"kind": "evaluate", "stage": self.stage, "criterion": criterion, "node": node})
+
+    def _record_call(self, frame: FrameType, call: Call) -> None:
+        self.call_frames[frame] = call
+        arguments = frame_argument_values(frame)
+        for (name, value) in arguments:
+            if name != "self" and is_response_form(value) and repr(value) in self.response_forms:
+                self.response_frames.add(frame)
+                break
+        shown_arguments = []
+        for (name, value) in arguments:
+            if name == "self":
+                shown_arguments.append((name, f"<{type(value).__name__}>"))
+            else:
+                shown_arguments.append((name, short_repr(value)))
+        self.recording.events.append({
+            "kind": "call", "stage": self.stage, "call": call.identifier, "arguments": shown_arguments
+        })
+
+    def _record_return(self, frame: FrameType, value: Any) -> None:
+        call = self.call_frames.pop(frame, None)
+        given_response = frame in self.response_frames
+        self.response_frames.discard(frame)
+        if call is not None:
+            raised = not returned_normally(frame)
+            self.recording.events.append({
+                "kind": "return",
+                "stage": self.stage,
+                "call": call.identifier,
+                "value": "" if raised else short_repr(value),
+                "raised": raised,
+            })
+            if given_response and not raised and is_response_form(value) and repr(value) not in self.response_forms:
+                self.response_forms.add(repr(value))
+                self.recording.events.append({
+                    "kind": "form",
+                    "stage": self.stage,
+                    "call": call.identifier,
+                    "value": short_repr(value),
+                    "type": type(value).__name__,
+                })
+        evaluation = self.evaluation_frames.pop(frame, None)
+        if evaluation is not None:
+            (criterion, node) = evaluation
+            reached = list(value) if isinstance(value, dict) else []
+            self.recording.events.append({
+                "kind": "evaluated", "stage": self.stage, "criterion": criterion, "node": node, "reached": reached
+            })
 
     def _caller(self, frame: FrameType) -> tuple[Call | None, int] | None:
         caller = frame.f_back
@@ -112,6 +246,8 @@ class Recorder(logging.Handler):
         if event == "return":
             if qualname == "feedback_procedure_generator" and module.startswith("app.context."):
                 self.recording.criteria_graphs.update(arg)
+            if self.record_values:
+                self._record_return(frame, arg)
             self.frames.pop(frame, None)
             return
         if event != "call":
@@ -119,6 +255,8 @@ class Recorder(logging.Handler):
         if module == "app.evaluation" and qualname == "_evaluate":
             self.frames[frame] = (None, 0)
             return
+        if self.record_values:
+            self._record_evaluation(frame)
         if not module.startswith(("app.", "lambdafeedback.")):
             return
         caller = self._caller(frame)
@@ -128,22 +266,29 @@ class Recorder(logging.Handler):
         if qualname in HIDDEN_FUNCTIONS or any(part in qualname for part in HIDDEN_FUNCTION_PARTS):
             self.frames[frame] = caller
             return
-        if depth >= CALL_DEPTH:
+        if depth >= self.depth:
             self.frames[frame] = (parent, depth + 1)
             return
         key = (self.stage if parent is None else parent.identifier, module, qualname)
         call = self.recording.calls.get(key)
         if call is None:
-            call = Call(f"call_{len(self.recording.calls)}", module, qualname, self.stage, parent)
+            call = Call(f"call_{len(self.recording.calls)}", module, qualname, self.stage, parent, depth + 1)
             self.recording.calls[key] = call
         else:
             call.count += 1
         self.frames[frame] = (call, depth + 1)
+        if self.record_values:
+            self._record_call(frame, call)
 
 
-def record(response: str, answer: str, params: dict[str, Any]) -> tuple[Recording, dict[str, Any]]:
-    """Runs `evaluation_function` on the example and returns what happened, and the result."""
-    recorder = Recorder()
+def record(
+    response: str, answer: str, params: dict[str, Any], depth: int = CALL_DEPTH, record_values: bool = False
+) -> tuple[Recording, dict[str, Any]]:
+    """Runs `evaluation_function` on the example and returns what happened, and the result.
+
+    See `Recorder` for `depth` and `record_values`.
+    """
+    recorder = Recorder(depth, record_values, response)
     logger = logging.getLogger(evaluation.__name__)
     logger.addHandler(recorder)
     sys.setprofile(recorder.profile)
@@ -225,8 +370,12 @@ def process_to_dot(recording: Recording, params: dict[str, Any], result: dict[st
     return dot
 
 
-def calls_to_dot(recording: Recording, params: dict[str, Any], result: dict[str, Any]) -> pydot.Dot:
-    """The stages of the evaluation down the left, each with the functions called during it to its right."""
+def calls_to_dot(
+    recording: Recording, params: dict[str, Any], result: dict[str, Any], depth: int = CALL_DEPTH
+) -> pydot.Dot:
+    """The stages of the evaluation down the left, each with the functions called during it to its right, down to
+    `depth` calls below `_evaluate`.
+    """
     dot = new_drawing()
     dot.set("rankdir", "LR")
     pipeline = pydot.Subgraph("pipeline", rank="same")
@@ -238,7 +387,9 @@ def calls_to_dot(recording: Recording, params: dict[str, Any], result: dict[str,
         clusters[stage] = cluster
         dot.add_subgraph(cluster)
     for call in recording.calls.values():
-        label = call.qualname if call.count == 1 else f"{call.qualname} ×{call.count}"
+        if call.depth > depth:
+            continue
+        label =call.qualname if call.count == 1 else f"{call.qualname} ×{call.count}"
         clusters[call.stage].add_node(pydot.Node(call.identifier, label=_node_label(label, call.module), **CALL_STYLE))
         caller = stages[call.stage] if call.parent is None else call.parent.identifier
         dot.add_edge(pydot.Edge(caller, call.identifier))
