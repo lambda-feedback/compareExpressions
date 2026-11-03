@@ -142,7 +142,8 @@ class Recorder(logging.Handler):
     - the arguments and return value of each call, and whether it raised an exception instead of returning;
     - the evaluations each criteria graph runs, and the criteria each one reports;
     - each new form of the response (see `is_response_form`): the value returned by a call that was given the response,
-      or an earlier form of it, as an argument.
+      or an earlier form of it, as an argument;
+    - the criteria `create_criteria_dict` parses, and the template that builds each one's criteria graph.
     """
 
     def __init__(self, depth: int = CALL_DEPTH, record_values: bool = False, response: str = "") -> None:
@@ -202,10 +203,54 @@ class Recorder(logging.Handler):
             "kind": "call", "stage": self.stage, "call": call.identifier, "arguments": shown_arguments
         })
 
+    def _record_criteria(self, frame: FrameType, value: Any) -> None:
+        """Records the criteria when `frame` is `create_criteria_dict` returning them: the criteria string before and
+        after preprocessing, and each criterion with the label and tree its parse gave.
+        """
+        if frame.f_code.co_qualname != "create_criteria_dict" or not isinstance(value, dict):
+            return
+        self.recording.events.append({
+            "kind": "criteria",
+            "stage": self.stage,
+            "original": frame.f_locals.get("original_criteria_string", ""),
+            "preprocessed": frame.f_locals.get("criteria_string", ""),
+            "criteria": [
+                {"identifier": identifier, "label": node.label.strip(), "tree": node.tree_string()}
+                for (identifier, node) in value.items()
+            ],
+        })
+
+    def _record_template(self, frame: FrameType, value: Any, call: Call | None) -> None:
+        """Records which template built which criteria graph, when `frame` is a template `feedback_procedure_generator`
+        called to build the graph of one criterion.
+        """
+        generator = frame.f_back
+        if generator is None or generator.f_code.co_qualname != "feedback_procedure_generator":
+            return
+        if not isinstance(value, CriteriaGraph):
+            return
+        # The key of `graph_templates` that chose this template, or None when the template is the context's default
+        label = None
+        for (key, template) in generator.f_globals.get("graph_templates", {}).items():
+            if getattr(template, "__code__", None) is frame.f_code:
+                label = key.strip()
+        self.recording.events.append({
+            "kind": "template",
+            "stage": self.stage,
+            "call": None if call is None else call.identifier,
+            "criterion": generator.f_locals["label"],
+            "template": frame.f_code.co_qualname,
+            "label": label,
+            "evaluations": len(value.evaluations),
+        })
+
     def _record_return(self, frame: FrameType, value: Any) -> None:
         call = self.call_frames.pop(frame, None)
         given_response = frame in self.response_frames
         self.response_frames.discard(frame)
+        if returned_normally(frame):
+            self._record_criteria(frame, value)
+            self._record_template(frame, value, call)
         if call is not None:
             raised = not returned_normally(frame)
             self.recording.events.append({
@@ -389,7 +434,7 @@ def calls_to_dot(
     for call in recording.calls.values():
         if call.depth > depth:
             continue
-        label =call.qualname if call.count == 1 else f"{call.qualname} ×{call.count}"
+        label = call.qualname if call.count == 1 else f"{call.qualname} ×{call.count}"
         clusters[call.stage].add_node(pydot.Node(call.identifier, label=_node_label(label, call.module), **CALL_STYLE))
         caller = stages[call.stage] if call.parent is None else call.parent.identifier
         dot.add_edge(pydot.Edge(caller, call.identifier))

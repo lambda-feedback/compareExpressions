@@ -19,7 +19,7 @@ from typing import Any
 
 import pydot
 
-from scripts.generate_criteria_graphs import add_criteria_graph
+from scripts.generate_criteria_graphs import _node_label, add_criteria_graph
 from scripts.generate_process_graphs import (
     EXAMPLES,
     FIRST_STAGE,
@@ -38,6 +38,12 @@ MAX_DEPTH = 5
 # The depth the page starts at: the depth of the static calls figures.
 START_DEPTH = 2
 
+# How many calls of each function keep their arguments and return value, for the details of a clicked node.
+INVOCATION_VALUES = 20
+
+CRITERION_STYLE = {"shape": "note", "style": "filled", "fillcolor": "#FFF8E1", "color": "#8D6E63"}
+CRITERION_EDGE_STYLE = {"color": "#8D6E63", "fontcolor": "#5D4037", "fontname": "Helvetica", "fontsize": "10"}
+
 
 def example_title(name: str) -> str:
     """The name shown on the page for the example `name`, e.g. "Physical quantity" for `process_physical_quantity`."""
@@ -49,28 +55,35 @@ def stage_identifier(stage: str) -> str:
     return f"stage_{all_stages().index(stage)}"
 
 
-def build_steps(recording: Recording) -> tuple[list[dict[str, Any]], dict[str, list[int]], list[dict[str, Any]]]:
+def build_steps(recording: Recording) -> tuple[list[dict[str, Any]], dict[str, dict[str, list[Any]]], list[dict[str, Any]]]:
     """The steps of the animation, the index of the event of each call of each function, and the forms the response
     took, from the events in `recording`.
 
     Each step is a stage being entered, a function called for the first time from its caller (a node of the calls
-    graph appearing), a criteria graph evaluation, or the result. Later calls of the same function only raise its
-    count, so they are not steps of their own.
+    graph appearing), the criteria being parsed, a template building a criteria graph, a criteria graph evaluation, or
+    the result. Later calls of the same function only raise its count, so they are not steps of their own.
+
+    The invocations of each call are the index of the event of each, and the values of the first `INVOCATION_VALUES`.
     """
     steps: list[dict[str, Any]] = [{"kind": "stage", "stage": FIRST_STAGE, "event": -1, "depth": 0}]
-    invocations: dict[str, list[int]] = {}
+    invocations: dict[str, dict[str, list[Any]]] = {}
     forms: list[dict[str, Any]] = []
     calls = {call.identifier: call for call in recording.calls.values()}
-    # The step of each call still running, or None for a call that is not the first of its function.
-    running: list[dict[str, Any] | None] = []
+    # The values of each call still running, and its step, or None for a call that is not the first of its function.
+    running: list[tuple[dict[str, Any], dict[str, Any] | None]] = []
     evaluation_step: dict[str, Any] = {}
     for (index, event) in enumerate(recording.events):
         kind = event["kind"]
         if kind == "stage":
             steps.append({"kind": "stage", "stage": event["stage"], "event": index, "depth": 0})
         elif kind == "call":
-            invocations.setdefault(event["call"], []).append(index)
-            if len(invocations[event["call"]]) == 1:
+            call_invocations = invocations.setdefault(event["call"], {"events": [], "values": []})
+            call_invocations["events"].append(index)
+            values = {"event": index, "arguments": event["arguments"], "returned": "", "raised": False}
+            # Only the first calls keep their values, as some functions are called over a thousand times
+            if len(call_invocations["values"]) < INVOCATION_VALUES:
+                call_invocations["values"].append(values)
+            if len(call_invocations["events"]) == 1:
                 step = {
                     "kind": "call",
                     "call": event["call"],
@@ -82,14 +95,25 @@ def build_steps(recording: Recording) -> tuple[list[dict[str, Any]], dict[str, l
                     "raised": False,
                 }
                 steps.append(step)
-                running.append(step)
+                running.append((values, step))
             else:
-                running.append(None)
+                running.append((values, None))
         elif kind == "return":
-            step = running.pop()
+            (values, step) = running.pop()
+            values["returned"] = event["value"]
+            values["raised"] = event["raised"]
             if step is not None:
                 step["returned"] = event["value"]
                 step["raised"] = event["raised"]
+        elif kind == "criteria":
+            steps.append({
+                "kind": "criteria",
+                "depth": 0,
+                "event": index,
+                "criteria": [criterion["identifier"] for criterion in event["criteria"]],
+            })
+        elif kind == "template":
+            steps.append({"kind": "template", "depth": 0, "event": index, "criterion": event["criterion"]})
         elif kind == "evaluate":
             evaluation_step = {
                 "kind": "evaluate",
@@ -112,27 +136,111 @@ def build_steps(recording: Recording) -> tuple[list[dict[str, Any]], dict[str, l
     return (steps, invocations, forms)
 
 
+def criteria_chain(recording: Recording, params: dict[str, Any]) -> dict[str, Any]:
+    """How the example's criteria graphs came about: where the criteria string came from, the string before and after
+    preprocessing, and for each criterion (by its identifier) its parse, the template that built its graph and the
+    index of its graph's cluster.
+
+    Empty when the evaluation stopped before parsing the criteria.
+    """
+    criteria_event = next((event for event in recording.events if event["kind"] == "criteria"), None)
+    if criteria_event is None:
+        return {}
+    if "criteria" in params:
+        source = 'Given in params["criteria"].'
+    else:
+        context = "physical_quantity" if params.get("physical_quantity", False) is True else "symbolic"
+        source = f"Not given in params, so the default criteria of the {context} context."
+    if params.get("syntactical_comparison", False) is True:
+        source += ' syntactical_comparison adds "response written as answer".'
+    indices = {criterion: index for (index, criterion) in enumerate(recording.criteria_graphs)}
+    criteria = {}
+    for criterion in criteria_event["criteria"]:
+        criteria[criterion["identifier"]] = {
+            "index": indices.get(criterion["identifier"]),
+            "label": criterion["label"],
+            "tree": criterion["tree"],
+        }
+    for event in recording.events:
+        if event["kind"] == "template":
+            criteria[event["criterion"]].update({
+                "template": event["template"],
+                "templateLabel": event["label"],
+                "call": event["call"],
+                "evaluations": event["evaluations"],
+            })
+    return {
+        "source": source,
+        "original": criteria_event["original"],
+        "preprocessed": criteria_event["preprocessed"],
+        "criteria": criteria,
+    }
+
+
+def visible_call(recording: Recording, identifier: str, depth: int) -> str:
+    """The identifier of the call `identifier`, or of its nearest caller, that is drawn down to `depth`."""
+    calls = {call.identifier: call for call in recording.calls.values()}
+    call = calls[identifier]
+    while call.depth > depth and call.parent is not None:
+        call = call.parent
+    return call.identifier
+
+
 def calls_layout(
-    recording: Recording, params: dict[str, Any], result: dict[str, Any], depth: int, with_criteria: bool
+    recording: Recording,
+    params: dict[str, Any],
+    result: dict[str, Any],
+    chain: dict[str, Any],
+    depth: int,
+    with_criteria: bool,
 ) -> tuple[pydot.Dot, dict[str, dict[str, str]]]:
-    """The calls graph down to `depth`, and with `with_criteria`, each criteria graph beside the `generate_feedback`
-    stage, with the graphviz identifier of each of its nodes by criterion and node label.
+    """The calls graph down to `depth`, with the graphviz identifier of each criteria graph node by criterion and node
+    label.
+
+    With `with_criteria`, each criterion gets a node in the `parse_criteria` stage, with an edge to the template call
+    its parse label chose, and each criteria graph is drawn with an edge from that template call, which built it, and
+    from the `generate_feedback` stage, which ran it.
     """
     dot = calls_to_dot(recording, params, result, depth)
     identifiers: dict[str, dict[str, str]] = {}
-    if not with_criteria:
+    # Without criteria, i.e. when the evaluation stopped before parsing them, there is nothing to add
+    if not with_criteria or not chain:
         return (dot, identifiers)
     dot.set("compound", "true")
+    stages = all_stages()
+    parse_cluster = dot.get_subgraph(f"cluster_stage_cluster_{stages.index('parse_criteria')}")[0]
+    parser_call = next(call.identifier for call in recording.calls.values() if call.qualname == "create_criteria_dict")
     for (index, (criterion, graph)) in enumerate(recording.criteria_graphs.items()):
-        cluster = pydot.Cluster(f"criteria_{index}", label=f"Criteria graph: {html.escape(criterion)}", color="#9E9E9E")
+        details = chain["criteria"][criterion]
+        template_call = visible_call(recording, details["call"], depth)
+        criterion_node = f"criterion_{index}"
+        parse_cluster.add_node(pydot.Node(
+            criterion_node, label=_node_label(criterion, f"parse label: {details['label']}"), **CRITERION_STYLE
+        ))
+        dot.add_edge(pydot.Edge(parser_call, criterion_node, **CRITERION_EDGE_STYLE))
+        choice = details["label"] if details["templateLabel"] is not None else "default"
+        dot.add_edge(pydot.Edge(criterion_node, template_call, label=html.escape(choice), **CRITERION_EDGE_STYLE))
+        title = f"Criteria graph: {criterion} (built by {details['template']})"
+        cluster = pydot.Cluster(f"criteria_{index}", label=html.escape(title), color="#9E9E9E")
         identifiers[criterion] = add_criteria_graph(cluster, graph, prefix=f"criteria_{index}_")
         dot.add_subgraph(cluster)
         for start in graph.starting_evaluations(criterion + "_TRUE"):
             dot.add_edge(pydot.Edge(
-                stage_identifier("generate_feedback"),
+                template_call,
                 identifiers[criterion][start],
+                label="builds",
                 style="dashed",
                 lhead=cluster.get_name(),
+                **CRITERION_EDGE_STYLE,
+            ))
+            dot.add_edge(pydot.Edge(
+                stage_identifier("generate_feedback"),
+                identifiers[criterion][start],
+                label="runs",
+                style="dashed",
+                lhead=cluster.get_name(),
+                fontname="Helvetica",
+                fontsize="10",
             ))
     return (dot, identifiers)
 
@@ -151,7 +259,9 @@ def criteria_data(recording: Recording, identifiers: dict[str, dict[str, str]]) 
         groups = [("evaluation", graph.evaluations), ("criterion", graph.criteria), ("output", graph.outputs)]
         for (kind, group) in groups:
             for (label, node) in group.items():
-                nodes[label] = {"id": identifiers[criterion][label], "kind": kind, "details": node.details}
+                nodes[label] = {
+                    "id": identifiers[criterion][label], "kind": kind, "summary": node.summary, "details": node.details
+                }
         data[criterion] = nodes
     return data
 
@@ -160,11 +270,12 @@ def example_data(name: str, response: str, answer: str, params: dict[str, Any]) 
     """Everything the page needs to animate one example."""
     (recording, result) = record(response, answer, params, depth=MAX_DEPTH, record_values=True)
     (steps, invocations, forms) = build_steps(recording)
+    chain = criteria_chain(recording, params)
     layouts = {}
     criteria_identifiers: dict[str, dict[str, str]] = {}
     for depth in range(1, MAX_DEPTH + 1):
         for with_criteria in (False, True):
-            (dot, identifiers) = calls_layout(recording, params, result, depth, with_criteria)
+            (dot, identifiers) = calls_layout(recording, params, result, chain, depth, with_criteria)
             layouts[f"{depth}{'c' if with_criteria else ''}"] = svg_markup(dot)
             if with_criteria:
                 criteria_identifiers = identifiers
@@ -198,6 +309,7 @@ def example_data(name: str, response: str, answer: str, params: dict[str, Any]) 
         "invocations": invocations,
         "forms": forms,
         "criteria": criteria_data(recording, criteria_identifiers),
+        "chain": chain,
         "layouts": layouts,
         "result": {
             "is_correct": result["is_correct"],
@@ -434,6 +546,32 @@ footer {
 #graph g.is-reached > :is(polygon, path, ellipse):first-of-type { stroke: #e65100; stroke-width: 3px; }
 #graph g.edge.is-reached > path { stroke: #e65100; stroke-width: 2.5px; }
 #graph g.edge.is-reached > polygon { stroke: #e65100; fill: #e65100; }
+#graph g.node:not(.is-hidden) { cursor: pointer; }
+#graph g.node:not(.is-hidden):hover > :is(polygon, path, ellipse):first-of-type { stroke-width: 2.5px; }
+#graph g.is-pinned > :is(polygon, path, ellipse):first-of-type { stroke: #7b1fa2; stroke-width: 4px; stroke-dasharray: none; }
+
+.pinned { border: 1px solid var(--border); border-left: 3px solid #ab47bc; border-radius: 8px; padding: 10px 12px; }
+.pinned-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.pinned-head button { min-height: 26px; padding: 0 8px; }
+.link { color: var(--accent); background: none; border: none; padding: 0; min-height: 0; text-decoration: underline; cursor: pointer; }
+.invocations { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.invocations li { border-top: 1px solid var(--border); padding-top: 6px; }
+.chain { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.chain > li { padding-left: 12px; border-left: 2px solid var(--border); }
+.chain > li.is-focus { border-left-color: var(--highlight); }
+.chain .step-label { font-size: 12px; color: var(--muted); }
+.chain code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; word-break: break-word; }
+.tree {
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  background: var(--code-bg);
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.status-good { color: var(--good); font-weight: 600; }
+.status-bad { color: var(--bad); font-weight: 600; }
 
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; grid-template-rows: minmax(320px, 55vh) auto; overflow-y: auto; }
@@ -504,6 +642,8 @@ const state = {
   zoom: 0.9,
   // The index in the example's steps of the step shown.
   step: 0,
+  // The graphviz title of the node whose details are pinned in the panel, or null.
+  pinned: null,
   playing: false,
   timer: null,
   layout: null,
@@ -553,7 +693,7 @@ function stageOf(stageName) {
 }
 
 function isShown(step) {
-  if (step.kind === "evaluate") {
+  if (step.kind === "evaluate" || step.kind === "criteria" || step.kind === "template") {
     return state.criteria;
   }
   return step.depth <= state.depth;
@@ -585,12 +725,26 @@ function callerOf(callId) {
 
 function invocationsUpTo(callId, event) {
   let count = 0;
-  for (const index of example().invocations[callId] || []) {
+  for (const index of invocationEvents(callId)) {
     if (index <= event) {
       count += 1;
     }
   }
   return count;
+}
+
+function invocationEvents(callId) {
+  const invocations = example().invocations[callId];
+  return invocations === undefined ? [] : invocations.events;
+}
+
+// The chain of the criterion `identifier`: its parse, template and graph cluster index.
+function chainOf(identifier) {
+  return example().chain.criteria[identifier];
+}
+
+function firstStepOf(kind) {
+  return example().steps.find((step) => step.kind === kind);
 }
 
 // Drawing
@@ -648,22 +802,29 @@ function fitZoom() {
   saveSettings();
 }
 
-const STATE_CLASSES = ["is-hidden", "is-waiting", "is-current", "is-stack", "is-visited", "is-reached", "appear", "draw"];
+const STATE_CLASSES = [
+  "is-hidden", "is-waiting", "is-current", "is-stack", "is-visited", "is-reached", "is-pinned", "appear", "draw",
+];
+
+// Whether the node `name` is only drawn once a step reveals it: calls, criteria and criteria graph nodes.
+function isRevealedNode(name) {
+  return name.startsWith("call_") || name.startsWith("criteria_") || name.startsWith("criterion_");
+}
 
 function resetGraph() {
   for (const group of [...nodes.values(), ...edges.values(), ...clusters.values()]) {
     group.classList.remove(...STATE_CLASSES);
   }
   for (const [name, group] of nodes) {
-    if (name.startsWith("call_") || name.startsWith("criteria_")) {
+    if (isRevealedNode(name)) {
       group.classList.add("is-hidden");
     } else {
       group.classList.add("is-waiting");
     }
   }
   for (const [name, group] of edges) {
-    const target = name.split("->")[1];
-    if (target.startsWith("call_") || target.startsWith("criteria_")) {
+    const [source, target] = name.split("->");
+    if (isRevealedNode(target) || source.startsWith("criterion_")) {
       group.classList.add("is-hidden");
     }
   }
@@ -687,20 +848,66 @@ function reveal(group, isCurrent, animation) {
   }
 }
 
-function showCriteriaGraphs(isCurrent) {
-  for (const [name, group] of clusters) {
-    if (name.startsWith("cluster_criteria_")) {
-      reveal(group, isCurrent, "appear");
+// The criteria parsed: each criterion's node, and the edge to it from the call that parsed it.
+function applyCriteria(step, isCurrent) {
+  for (const identifier of step.criteria) {
+    const node = "criterion_" + chainOf(identifier).index;
+    reveal(nodes.get(node), isCurrent, "appear");
+    for (const [name, group] of edges) {
+      if (name.split("->")[1] === node) {
+        reveal(group, isCurrent, "draw");
+      }
+    }
+    if (isCurrent) {
+      nodes.get(node)?.classList.add("is-current");
     }
   }
+}
+
+// A template building a criteria graph: the edge from the criterion to the template its label chose, and the graph,
+// dimmed until `generate_feedback` runs it.
+function applyTemplate(step, isCurrent) {
+  const index = chainOf(step.criterion).index;
+  const node = "criterion_" + index;
+  const prefix = "criteria_" + index + "_";
+  reveal(clusters.get("cluster_criteria_" + index), isCurrent, "appear");
   for (const [name, group] of nodes) {
-    if (name.startsWith("criteria_")) {
+    if (name.startsWith(prefix)) {
       reveal(group, isCurrent, "appear");
+      group.classList.add("is-waiting");
     }
   }
   for (const [name, group] of edges) {
-    if (name.split("->")[1].startsWith("criteria_")) {
+    const [source, target] = name.split("->");
+    if (source === node) {
+      reveal(group, isCurrent, "draw");
+    } else if (source.startsWith(prefix)) {
       reveal(group, isCurrent, "appear");
+      group.classList.add("is-waiting");
+    } else if (target.startsWith(prefix) && source.startsWith("call_")) {
+      // The template call building the graph
+      reveal(group, isCurrent, "draw");
+    }
+  }
+  if (isCurrent) {
+    nodes.get(node)?.classList.add("is-current");
+  }
+}
+
+// `generate_feedback` starting: the criteria graphs are no longer dimmed, and the edges to them from the stage show.
+function runCriteriaGraphs(stageId, isCurrent) {
+  for (const [name, group] of nodes) {
+    if (name.startsWith("criteria_")) {
+      group.classList.remove("is-waiting");
+    }
+  }
+  for (const [name, group] of edges) {
+    const [source, target] = name.split("->");
+    if (target.startsWith("criteria_")) {
+      group.classList.remove("is-waiting");
+      if (source === stageId) {
+        reveal(group, isCurrent, "draw");
+      }
     }
   }
 }
@@ -749,8 +956,8 @@ function applyStep(step, isCurrent) {
     const stageGroup = nodes.get(stageOf(step.stage).id);
     reveal(stageGroup, false, "appear");
     reveal(stageCluster(stageOf(step.stage).id), isCurrent, "appear");
-    if (step.stage === "generate_feedback_procedures") {
-      showCriteriaGraphs(isCurrent);
+    if (step.stage === "generate_feedback") {
+      runCriteriaGraphs(stageOf(step.stage).id, isCurrent);
     }
     if (isCurrent && stageGroup !== undefined) {
       stageGroup.classList.add("is-current");
@@ -763,6 +970,10 @@ function applyStep(step, isCurrent) {
       callGroup.classList.add("is-current");
       markCallStack(step.call);
     }
+  } else if (step.kind === "criteria") {
+    applyCriteria(step, isCurrent);
+  } else if (step.kind === "template") {
+    applyTemplate(step, isCurrent);
   } else if (step.kind === "evaluate") {
     applyEvaluation(step, isCurrent);
   } else if (step.kind === "result") {
@@ -856,7 +1067,7 @@ function callSection(step) {
   const call = example().calls[step.call];
   const stack = [stepStage(step), ...callStack(step.call).map((id) => example().calls[id].qualname), call.qualname];
   const count = invocationsUpTo(step.call, step.event);
-  const total = (example().invocations[step.call] || []).length;
+  const total = invocationEvents(step.call).length;
   let body = `<div class="call-name mono">${escapeHtml(call.qualname)}</div>
     <div class="muted mono">${escapeHtml(call.module)} · depth ${call.depth}</div>
     <div class="stack">${stack.map((name) => `<span class="mono">${escapeHtml(name)}</span>`).join("")}</div>`;
@@ -935,14 +1146,238 @@ function resultSection() {
   </section>`;
 }
 
+// The template that built the graph of the criterion `identifier`, and why that one.
+function templateChoice(details) {
+  if (details.templateLabel !== null) {
+    return `Its parse label <code>${escapeHtml(details.label)}</code> is in <code>graph_templates</code>, which maps it
+      to <code>${escapeHtml(details.template)}</code>.`;
+  }
+  return `Its parse label <code>${escapeHtml(details.label)}</code> is not in <code>graph_templates</code>, so the
+    context's default template <code>${escapeHtml(details.template)}</code> is used.`;
+}
+
+// Whether the criteria graph of `identifier` reached its main criterion by `step`: "reached", "missed" once
+// `generate_feedback` has finished without reaching it, "running", "built" or "" before the graph is built.
+function mainCriterionStatus(identifier, step) {
+  const main = identifier + "_TRUE";
+  const evaluations = example().steps.filter(
+    (candidate) => candidate.kind === "evaluate" && candidate.criterion === identifier && candidate.event <= step.event
+  );
+  if (evaluations.some((evaluation) => evaluation.reached.includes(main))) {
+    return "reached";
+  }
+  const serialise = example().steps.find((candidate) => candidate.kind === "stage" && candidate.stage === "serialise");
+  if (serialise !== undefined && step.event >= serialise.event) {
+    return "missed";
+  }
+  if (evaluations.length > 0) {
+    return "running";
+  }
+  const built = example().steps.some(
+    (candidate) => candidate.kind === "template" && candidate.criterion === identifier && candidate.event <= step.event
+  );
+  return built ? "built" : "";
+}
+
+function criterionChainItems(identifier, step) {
+  const details = chainOf(identifier);
+  const items = [`<li>
+    <div class="step-label">Parsed by the criteria parser into</div>
+    <pre class="tree mono">${escapeHtml(details.tree)}</pre>
+    <div class="muted">Parse label <code>${escapeHtml(details.label)}</code></div></li>`];
+  const template = firstStepOf("template") === undefined ? undefined : example().steps.find(
+    (candidate) => candidate.kind === "template" && candidate.criterion === identifier
+  );
+  if (template !== undefined && template.event <= step.event) {
+    items.push(`<li><div class="step-label">feedback_procedure_generator chooses its template</div>
+      <div>${templateChoice(details)}</div>
+      <div class="muted">It builds a criteria graph with ${details.evaluations} evaluation
+        node${details.evaluations === 1 ? "" : "s"}.</div></li>`);
+  }
+  const status = mainCriterionStatus(identifier, step);
+  const main = `<code>${escapeHtml(identifier + "_TRUE")}</code>`;
+  if (status === "reached") {
+    items.push(`<li><div class="step-label">generate_feedback runs the graph</div>
+      <span class="status-good">✓ reached ${main}</span></li>`);
+  } else if (status === "missed") {
+    items.push(`<li><div class="step-label">generate_feedback runs the graph</div>
+      <span class="status-bad">✗ did not reach ${main}</span></li>`);
+  } else if (status === "running") {
+    items.push(`<li><div class="step-label">generate_feedback runs the graph</div>
+      <span class="muted">Running; the main criterion is ${main}.</span></li>`);
+  } else if (status === "built") {
+    items.push(`<li><div class="step-label">Waiting for generate_feedback</div>
+      <span class="muted">The response is correct for this criterion if the graph reaches ${main}.</span></li>`);
+  }
+  return items;
+}
+
+// How the criteria graphs came about, up to `step`, from the criteria string to whether each reached its main
+// criterion; empty before the criteria are parsed.
+function criteriaSection(step) {
+  const chain = example().chain;
+  const criteriaStep = firstStepOf("criteria");
+  if (chain.criteria === undefined || criteriaStep === undefined || step.event < criteriaStep.event) {
+    return "";
+  }
+  const focus = step.kind === "template" ? step.criterion : null;
+  const identifiers = Object.keys(chain.criteria);
+  const items = [`<li>
+      <div class="step-label">The criteria string</div>
+      <code>${escapeHtml(chain.original)}</code>
+      <div class="muted">${escapeHtml(chain.source)}</div></li>`,
+    `<li><div class="step-label">${chain.preprocessed === chain.original ? "Preprocessing leaves it unchanged; "
+      : `Preprocessed to <code>${escapeHtml(chain.preprocessed)}</code>, then `}split at the top-level commas into
+      ${identifiers.length} criteri${identifiers.length === 1 ? "on" : "a"}, one criteria graph each</div>
+      ${identifiers.map((identifier) => `<code>${escapeHtml(identifier)}</code>`).join(" ")}</li>`];
+  for (const identifier of identifiers) {
+    items.push(`<li class="${identifier === focus ? "is-focus" : ""}">
+      <div><button class="link mono" data-pin="criterion_${chainOf(identifier).index}">${escapeHtml(identifier)}</button></div>
+      <ul class="chain">${criterionChainItems(identifier, step).join("")}</ul></li>`);
+  }
+  const statuses = identifiers.map((identifier) => mainCriterionStatus(identifier, step));
+  if (statuses.every((status) => status === "reached" || status === "missed")) {
+    const correct = statuses.every((status) => status === "reached");
+    items.push(`<li><div class="step-label">is_correct</div>
+      <span class="${correct ? "status-good" : "status-bad"}">${correct}</span>:
+      true only if every criteria graph reached its main criterion.</li>`);
+  }
+  return `<section><h2>Criteria</h2><ul class="chain">${items.join("")}</ul></section>`;
+}
+
+// Pinned details
+
+function pinnedCall(callId, step) {
+  const call = example().calls[callId];
+  const caller = callerOf(callId);
+  const callerName = call.parent === null ? "the " + call.stage + " stage" : example().calls[call.parent].qualname;
+  const count = invocationsUpTo(callId, step.event);
+  const values = (example().invocations[callId]?.values || []).filter((invocation) => invocation.event <= step.event);
+  let body = `<div class="call-name mono">${escapeHtml(call.qualname)}</div>
+    <div class="muted mono">${escapeHtml(call.module)} · depth ${call.depth} · stage ${escapeHtml(call.stage)}</div>
+    <div class="muted">Called by <button class="link mono" data-pin="${escapeHtml(caller)}">${escapeHtml(callerName)}</button>,
+      ${count} time${count === 1 ? "" : "s"} so far.</div>`;
+  if (values.length > 0) {
+    const items = values.map((invocation, position) => {
+      const argumentList = invocation.arguments.length === 0 ? `<p class="muted">No arguments.</p>`
+        : `<dl class="values">${invocation.arguments.map(([name, value]) =>
+          `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>`;
+      let returned;
+      if (invocation.event > step.event) {
+        returned = "";
+      } else if (invocation.raised) {
+        returned = `<div class="returned raised mono">raised an exception</div>`;
+      } else {
+        returned = `<div class="returned mono">↩ ${escapeHtml(invocation.returned)}</div>`;
+      }
+      return `<li><div class="muted">Call ${position + 1}</div>${argumentList}${returned}</li>`;
+    });
+    body += `<ul class="invocations">${items.join("")}</ul>`;
+    if (count > values.length) {
+      body += `<p class="muted">Only the first ${values.length} calls keep their values.</p>`;
+    }
+  }
+  return body;
+}
+
+function pinnedStage(stageId, step) {
+  const stage = example().stages.find((candidate) => candidate.id === stageId);
+  const calls = Object.entries(example().calls).filter(([callId, call]) =>
+    call.stage === stage.name && call.parent === null && invocationsUpTo(callId, step.event) > 0);
+  const list = calls.length === 0 ? `<p class="muted">No calls made in this stage yet.</p>`
+    : `<div>Calls:</div><ul class="reached-list">${calls.map(([callId, call]) =>
+      `<li><button class="link mono" data-pin="${callId}">${escapeHtml(call.qualname)}</button></li>`).join("")}</ul>`;
+  return `<span class="chip">${escapeHtml(stage.name)}</span>
+    <p class="muted">${escapeHtml(stage.description)}</p>${list}`;
+}
+
+function pinnedCriteriaNode(nodeId, step) {
+  for (const [identifier, criterionNodes] of Object.entries(example().criteria)) {
+    for (const [label, node] of Object.entries(criterionNodes)) {
+      if (node.id !== nodeId) {
+        continue;
+      }
+      const evaluations = example().steps.filter((candidate) => candidate.kind === "evaluate"
+        && candidate.criterion === identifier && candidate.event <= step.event);
+      let status = "";
+      if (node.kind === "evaluation") {
+        const visit = evaluations.find((evaluation) => evaluation.node === label);
+        status = visit === undefined ? `<p class="muted">Not evaluated by this step.</p>`
+          : `<p>Evaluated; it reported ${visit.reached.map((reached) =>
+            `<code>${escapeHtml(reached)}</code>`).join(", ") || "no criteria"}.</p>`;
+      } else if (node.kind === "criterion") {
+        const reached = evaluations.some((evaluation) => evaluation.reached.includes(label));
+        status = reached ? `<p class="status-good">Reached.</p>` : `<p class="muted">Not reached by this step.</p>`;
+      }
+      return `<div class="muted">Criteria graph of <code>${escapeHtml(identifier)}</code> · ${node.kind} node</div>
+        <div class="call-name">${escapeHtml(label)}</div>
+        ${node.summary && node.summary !== label ? `<p>${escapeHtml(node.summary)}</p>` : ""}
+        ${node.details ? `<p class="muted">${escapeHtml(node.details)}</p>` : ""}
+        ${status}`;
+    }
+  }
+  return `<p class="muted">No details.</p>`;
+}
+
+function pinnedCriterion(nodeId, step) {
+  const index = Number(nodeId.replace("criterion_", ""));
+  const identifier = Object.keys(example().chain.criteria).find((key) => chainOf(key).index === index);
+  return `<div class="muted">Criterion</div>
+    <div class="call-name mono">${escapeHtml(identifier)}</div>
+    <ul class="chain">${criterionChainItems(identifier, step).join("")}</ul>`;
+}
+
+function pinnedSection(step) {
+  const name = state.pinned;
+  let body;
+  if (name.startsWith("call_") && example().calls[name] !== undefined) {
+    body = pinnedCall(name, step);
+  } else if (name.startsWith("stage_")) {
+    body = pinnedStage(name, step);
+  } else if (name.startsWith("criterion_")) {
+    body = pinnedCriterion(name, step);
+  } else if (name.startsWith("criteria_")) {
+    body = pinnedCriteriaNode(name, step);
+  } else if (name === "result") {
+    body = resultSection();
+  } else {
+    body = `<p class="muted">No details.</p>`;
+  }
+  return `<section class="pinned">
+    <div class="pinned-head"><h2>Pinned</h2>
+      <button id="unpin" title="Unpin and show the current step" aria-label="Unpin">✕</button></div>
+    ${body}
+  </section>`;
+}
+
+function markPinned() {
+  for (const group of nodes.values()) {
+    group.classList.remove("is-pinned");
+  }
+  if (state.pinned !== null) {
+    nodes.get(state.pinned)?.classList.add("is-pinned");
+  }
+}
+
+function pin(name) {
+  state.pinned = name;
+  markPinned();
+  renderPanel(example().steps[state.step]);
+  document.getElementById("panel").scrollTo(0, 0);
+}
+
 function renderPanel(step) {
-  let content = stageSection(step);
+  let content = state.pinned === null ? "" : pinnedSection(step);
+  content += stageSection(step);
   if (step.kind === "call") {
     content += callSection(step);
   } else if (step.kind === "evaluate") {
     content += evaluationSection(step);
   } else if (step.kind === "result") {
     content += resultSection();
+  }
+  if (state.criteria) {
+    content += criteriaSection(step);
   }
   if (state.forms) {
     content += formsSection(step);
@@ -964,6 +1399,7 @@ function render() {
     applyStep(shown, shown.index === state.step);
   }
   updateCounts(step.event);
+  markPinned();
   renderPanel(step);
   const shown = shownSteps();
   const position = shown.findIndex((candidate) => candidate.index === state.step);
@@ -985,6 +1421,11 @@ function moveBy(offset) {
 
 function setPlaying(playing) {
   state.playing = playing;
+  if (playing && state.pinned !== null) {
+    state.pinned = null;
+    markPinned();
+    renderPanel(example().steps[state.step]);
+  }
   const button = document.getElementById("play");
   button.textContent = playing ? "⏸ Pause" : "▶ Play";
   button.setAttribute("aria-label", playing ? "Pause" : "Play");
@@ -1009,6 +1450,7 @@ function selectExample(index) {
   state.example = index;
   state.layout = null;
   state.step = 0;
+  state.pinned = null;
   const current = example();
   document.getElementById("inputs").innerHTML = `
     <span>response <code>${escapeHtml(current.response)}</code></span>
@@ -1087,8 +1529,28 @@ function setUp() {
   });
   document.getElementById("scrubber").addEventListener("input", (event) => {
     setPlaying(false);
+    state.pinned = null;
     state.step = shownSteps()[Number(event.target.value)].index;
     render();
+  });
+  document.getElementById("graph").addEventListener("click", (event) => {
+    const group = event.target.closest("g.node");
+    if (group === null || group.classList.contains("is-hidden")) {
+      return;
+    }
+    pin(group.querySelector(":scope > title").textContent);
+  });
+  document.getElementById("panel").addEventListener("click", (event) => {
+    if (event.target.closest("#unpin") !== null) {
+      state.pinned = null;
+      markPinned();
+      renderPanel(example().steps[state.step]);
+      return;
+    }
+    const link = event.target.closest("[data-pin]");
+    if (link !== null) {
+      pin(link.dataset.pin);
+    }
   });
   document.getElementById("zoom-in").addEventListener("click", () => {
     state.zoom = Math.min(4, state.zoom * 1.25);
