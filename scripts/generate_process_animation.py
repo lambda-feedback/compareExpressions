@@ -1,19 +1,23 @@
 """Generates `build/process_animation.html`: an interactive page that animates the process graphs of
 `scripts/generate_process_graphs.py`.
 
-Each example is run through `evaluation_function` while recording every call down to `MAX_DEPTH` calls below
-`_evaluate`, with its arguments and return value, the forms the response takes, and the evaluations each criteria
-graph runs. The calls graph is laid out with graphviz once for each depth, with and without the criteria graphs, and
-the page grows it in the order the functions were called. A side panel shows each step's details, and these can be
-switched on and off on the page.
+Each example (those of the static figures, and `EXTRA_EXAMPLES`) is run through `evaluation_function` while recording
+every call down to `MAX_DEPTH` calls below `_evaluate`, with its arguments and return value or exception, the forms the
+response takes, the parameters, the criteria and the evaluations each criteria graph runs. The calls graph is laid out
+with graphviz once for each depth, with and without the criteria graphs and the internal (dunder) calls, and the page
+grows it in the order the functions were called. A side panel shows each step's details, and these can be switched on
+and off on the page.
 
 The page is a build output and is not committed. Run from the repository root with
 `python -m scripts.generate_process_animation` (it needs graphviz, i.e. `dot`), then open the page in a browser.
 """
 from __future__ import annotations
 
+import base64
+import gzip
 import html
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -27,10 +31,19 @@ from scripts.generate_process_graphs import (
     all_stages,
     calls_to_dot,
     record,
+    shown_parent,
     stage_description,
 )
 
 OUTPUT_FILE = Path(__file__).resolve().parent.parent / "build" / "process_animation.html"
+
+# Examples shown only in the animation, for the parts of the criteria chain the static figures' examples don't reach:
+# a response that is not correct, more than one criterion, and a criterion without a template of its own.
+EXTRA_EXAMPLES: list[tuple[str, str, str, dict[str, Any]]] = [
+    ("process_symbolic_incorrect", "x + 2", "x + 1", {}),
+    ("process_symbolic_syntactical_comparison", "1 + x", "x + 1", {"syntactical_comparison": True}),
+    ("process_symbolic_default_template", "2*x + 1", "x + 1", {"criteria": "response contains x"}),
+]
 
 # The deepest calls below `_evaluate` recorded, and the deepest the page can show.
 MAX_DEPTH = 5
@@ -100,11 +113,14 @@ def build_steps(recording: Recording) -> tuple[list[dict[str, Any]], dict[str, d
                 running.append((values, None))
         elif kind == "return":
             (values, step) = running.pop()
-            values["returned"] = event["value"]
-            values["raised"] = event["raised"]
+            outcome = {"returned": event["value"], "raised": event["raised"]}
+            if "full" in event:
+                outcome["returnedFull"] = event["full"]
+            if "exception" in event:
+                outcome["exception"] = event["exception"]
+            values.update(outcome)
             if step is not None:
-                step["returned"] = event["value"]
-                step["raised"] = event["raised"]
+                step.update(outcome)
         elif kind == "criteria":
             steps.append({
                 "kind": "criteria",
@@ -128,6 +144,9 @@ def build_steps(recording: Recording) -> tuple[list[dict[str, Any]], dict[str, d
             evaluation_step["reached"] = event["reached"]
         elif kind == "form":
             forms.append({"event": index, "call": event["call"], "value": event["value"], "type": event["type"]})
+        elif kind == "parameters" or kind == "feedback":
+            # Shown in the panel rather than as steps (see `parameters_data` and `feedback_data`)
+            continue
         else:
             raise ValueError(f"Unknown event kind {kind!r}.")
     steps.append({"kind": "result", "event": len(recording.events), "depth": 0})
@@ -177,11 +196,13 @@ def criteria_chain(recording: Recording, params: dict[str, Any]) -> dict[str, An
     }
 
 
-def visible_call(recording: Recording, identifier: str, depth: int) -> str:
-    """The identifier of the call `identifier`, or of its nearest caller, that is drawn down to `depth`."""
+def visible_call(recording: Recording, identifier: str, depth: int, hide_internals: bool) -> str:
+    """The identifier of the call `identifier`, or of its nearest caller, that is drawn down to `depth`, with or
+    without the internal calls.
+    """
     calls = {call.identifier: call for call in recording.calls.values()}
     call = calls[identifier]
-    while call.depth > depth and call.parent is not None:
+    while call.parent is not None and (call.depth > depth or (hide_internals and call.internal)):
         call = call.parent
     return call.identifier
 
@@ -193,15 +214,19 @@ def calls_layout(
     chain: dict[str, Any],
     depth: int,
     with_criteria: bool,
+    hide_internals: bool,
 ) -> tuple[pydot.Dot, dict[str, dict[str, str]]]:
     """The calls graph down to `depth`, with the graphviz identifier of each criteria graph node by criterion and node
     label.
 
     With `with_criteria`, each criterion gets a node in the `parse_criteria` stage, with an edge to the template call
     its parse label chose, and each criteria graph is drawn with an edge from that template call, which built it, and
-    from the `generate_feedback` stage, which ran it.
+    from the `generate_feedback` stage, which ran it. Only the edge from the stage places the graph, so it is drawn
+    next to the stage rather than past the template call.
+
+    With `hide_internals`, the internal calls are left out (see `calls_to_dot`).
     """
-    dot = calls_to_dot(recording, params, result, depth)
+    dot = calls_to_dot(recording, params, result, depth, hide_internals)
     identifiers: dict[str, dict[str, str]] = {}
     # Without criteria, i.e. when the evaluation stopped before parsing them, there is nothing to add
     if not with_criteria or not chain:
@@ -212,7 +237,7 @@ def calls_layout(
     parser_call = next(call.identifier for call in recording.calls.values() if call.qualname == "create_criteria_dict")
     for (index, (criterion, graph)) in enumerate(recording.criteria_graphs.items()):
         details = chain["criteria"][criterion]
-        template_call = visible_call(recording, details["call"], depth)
+        template_call = visible_call(recording, details["call"], depth, hide_internals)
         criterion_node = f"criterion_{index}"
         parse_cluster.add_node(pydot.Node(
             criterion_node, label=_node_label(criterion, f"parse label: {details['label']}"), **CRITERION_STYLE
@@ -231,6 +256,7 @@ def calls_layout(
                 label="builds",
                 style="dashed",
                 lhead=cluster.get_name(),
+                constraint="false",
                 **CRITERION_EDGE_STYLE,
             ))
             dot.add_edge(pydot.Edge(
@@ -246,9 +272,15 @@ def calls_layout(
 
 
 def svg_markup(dot: pydot.Dot) -> str:
-    """`dot` drawn as an SVG element, without the XML declaration and doctype in front of it."""
+    """`dot` drawn as an SVG element, gzipped and base64 encoded (the page unpacks it).
+
+    The SVG is left without the XML declaration and doctype in front of it, or the comments graphviz writes before each
+    node and edge (their titles hold the same names). The 20 layouts of an example are mostly the same markup, so
+    gzipping them makes the page about a tenth of the size.
+    """
     svg = dot.create(format="svg").decode("utf-8")
-    return svg[svg.index("<svg"):]
+    svg = re.sub(r"<!--.*?-->\n?", "", svg[svg.index("<svg"):], flags=re.DOTALL)
+    return base64.b64encode(gzip.compress(svg.encode("utf-8"), mtime=0)).decode("ascii")
 
 
 def criteria_data(recording: Recording, identifiers: dict[str, dict[str, str]]) -> dict[str, Any]:
@@ -266,6 +298,48 @@ def criteria_data(recording: Recording, identifiers: dict[str, dict[str, str]]) 
     return data
 
 
+def parameters_data(recording: Recording) -> dict[str, Any]:
+    """The parameters `_build_parameters` completed: the index of its event, the ones it was given and the ones it
+    added. Empty when it wasn't called.
+    """
+    for (index, event) in enumerate(recording.events):
+        if event["kind"] == "parameters":
+            return {"event": index, "given": event["given"], "added": event["added"]}
+    return {}
+
+
+def feedback_data(recording: Recording, identifiers: dict[str, dict[str, str]]) -> dict[str, dict[str, Any]]:
+    """For each tag a criteria graph exported, the criterion whose graph exported it first, its feedback text and the
+    graphviz identifier of its criteria node.
+    """
+    feedback: dict[str, dict[str, Any]] = {}
+    for event in recording.events:
+        if event["kind"] != "feedback" or event["criterion"] is None:
+            continue
+        for (tag, text) in event["feedback"]:
+            if tag not in feedback:
+                feedback[tag] = {
+                    "criterion": event["criterion"],
+                    "text": text,
+                    "node": identifiers.get(event["criterion"], {}).get(tag),
+                }
+    return feedback
+
+
+def stage_durations(recording: Recording) -> dict[str, float]:
+    """How long each stage that ran took, in milliseconds: from its start to the next stage's, or to the end of the
+    evaluation for the last one.
+    """
+    starts = [(FIRST_STAGE, 0.0)] + list(recording.stage_times.items())
+    durations = {}
+    for (position, (stage, start)) in enumerate(starts):
+        if position + 1 < len(starts):
+            durations[stage] = round(starts[position + 1][1] - start, 1)
+        elif recording.duration_ms is not None:
+            durations[stage] = round(recording.duration_ms - start, 1)
+    return durations
+
+
 def example_data(name: str, response: str, answer: str, params: dict[str, Any]) -> dict[str, Any]:
     """Everything the page needs to animate one example."""
     (recording, result) = record(response, answer, params, depth=MAX_DEPTH, record_values=True)
@@ -275,21 +349,30 @@ def example_data(name: str, response: str, answer: str, params: dict[str, Any]) 
     criteria_identifiers: dict[str, dict[str, str]] = {}
     for depth in range(1, MAX_DEPTH + 1):
         for with_criteria in (False, True):
-            (dot, identifiers) = calls_layout(recording, params, result, chain, depth, with_criteria)
-            layouts[f"{depth}{'c' if with_criteria else ''}"] = svg_markup(dot)
-            if with_criteria:
-                criteria_identifiers = identifiers
-    calls = {
-        call.identifier: {
+            for hide_internals in (False, True):
+                (dot, identifiers) = calls_layout(
+                    recording, params, result, chain, depth, with_criteria, hide_internals
+                )
+                key = f"{depth}{'c' if with_criteria else ''}{'h' if hide_internals else ''}"
+                layouts[key] = svg_markup(dot)
+                if with_criteria:
+                    criteria_identifiers = identifiers
+    calls = {}
+    for call in recording.calls.values():
+        parent = shown_parent(call, hide_internals=True)
+        calls[call.identifier] = {
             "qualname": call.qualname,
             "module": call.module,
             "depth": call.depth,
             "stage": call.stage,
             "parent": None if call.parent is None else call.parent.identifier,
+            # The caller drawn when the internal calls are hidden
+            "shownParent": None if parent is None else parent.identifier,
+            "internal": call.internal,
+            "doc": call.doc,
+            "source": call.source,
         }
-        for call in recording.calls.values()
-    }
-    stages = all_stages()
+    durations = stage_durations(recording)
     return {
         "name": name,
         "title": example_title(name),
@@ -301,15 +384,19 @@ def example_data(name: str, response: str, answer: str, params: dict[str, Any]) 
                 "name": stage,
                 "id": stage_identifier(stage),
                 "description": stage_description(stage, recording, params, result),
+                "duration": durations.get(stage),
             }
-            for stage in stages
+            for stage in all_stages()
         ],
+        "duration": recording.duration_ms,
         "calls": calls,
         "steps": steps,
         "invocations": invocations,
         "forms": forms,
         "criteria": criteria_data(recording, criteria_identifiers),
         "chain": chain,
+        "parameters": parameters_data(recording),
+        "feedback": feedback_data(recording, criteria_identifiers),
         "layouts": layouts,
         "result": {
             "is_correct": result["is_correct"],
@@ -323,7 +410,7 @@ def example_data(name: str, response: str, answer: str, params: dict[str, Any]) 
 
 def main() -> None:
     examples = []
-    for (name, response, answer, params) in EXAMPLES:
+    for (name, response, answer, params) in EXAMPLES + EXTRA_EXAMPLES:
         examples.append(example_data(name, response, answer, params))
         print(f"Recorded {name}: {len(examples[-1]['steps'])} steps")
     data = json.dumps({"examples": examples, "maxDepth": MAX_DEPTH, "startDepth": START_DEPTH})
@@ -439,14 +526,7 @@ main {
   filter: var(--graph-filter);
 }
 #graph svg { display: block; height: auto; }
-.zoom {
-  position: absolute;
-  right: 12px;
-  top: 12px;
-  display: flex;
-  gap: 4px;
-  z-index: 1;
-}
+.zoom { display: flex; gap: 4px; }
 .zoom button { min-width: 32px; padding: 4px 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 aside {
   min-height: 0;
@@ -572,6 +652,47 @@ footer {
 }
 .status-good { color: var(--good); font-weight: 600; }
 .status-bad { color: var(--bad); font-weight: 600; }
+.doc { margin: 6px 0 0; }
+.source { font-size: 12px; color: var(--muted); }
+details.section { margin-bottom: 18px; }
+details.section > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+details.section > summary::-webkit-details-marker { display: none; }
+details.section > summary::before { content: "▸"; color: var(--muted); font-size: 11px; transition: transform 0.15s; }
+details.section[open] > summary::before { transform: rotate(90deg); }
+details.section > summary h2 { margin: 0; }
+details.more > summary { cursor: pointer; color: var(--accent); font-family: system-ui, sans-serif; font-size: 12px; }
+details.more pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-all; }
+.group-label { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.feedback-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.feedback-list li { padding-left: 10px; border-left: 2px solid var(--border); }
+.feedback-text { margin-top: 2px; }
+
+.graph-tools {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  z-index: 1;
+  max-height: calc(100% - 24px);
+}
+.legend {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.legend > summary { cursor: pointer; padding: 5px 10px; font-weight: 600; }
+.legend-body { padding: 4px 10px 8px; display: grid; gap: 2px; }
+.legend-body .group-label { margin-top: 4px; font-weight: 600; }
+.legend-row { display: flex; align-items: center; gap: 8px; }
+/* The swatches are drawn in the graph's colours, and recoloured with it in dark mode */
+.legend-row svg { flex: none; background: white; filter: var(--graph-filter); border-radius: 2px; }
 
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; grid-template-rows: minmax(320px, 55vh) auto; overflow-y: auto; }
@@ -591,10 +712,37 @@ footer {
 </header>
 <main>
   <div id="graph-wrap">
-    <div class="zoom">
-      <button id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
-      <button id="zoom-fit" title="Fit to width">Fit</button>
-      <button id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+    <div class="graph-tools">
+      <div class="zoom">
+        <button id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+        <button id="zoom-fit" title="Fit to width">Fit</button>
+        <button id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+      </div>
+      <details class="legend" id="legend">
+        <summary>Key</summary>
+        <div class="legend-body">
+          <div class="group-label">Nodes</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="2" y="3" width="24" height="12" rx="4" fill="#E8EAF6" stroke="#2F3C86"/></svg>stage of <code>_evaluate</code></div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="2" y="3" width="24" height="12" fill="#FFFFFF" stroke="#212121"/></svg>function call (×N: calls from that caller)</div>
+          <div class="legend-row"><svg width="28" height="18"><path d="M2 3h19l5 5v7H2z" fill="#FFF8E1" stroke="#8D6E63"/></svg>criterion parsed from the criteria</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="2" y="3" width="24" height="12" rx="4" fill="#E5F8FB" stroke="#00B8D4"/></svg>criteria graph evaluation</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="2" y="3" width="24" height="12" fill="#FFFFFF" stroke="#212121"/></svg>criteria graph criterion (a tag)</div>
+          <div class="legend-row"><svg width="28" height="18"><path d="M2 9l5-6h14l5 6-5 6H7z" fill="#C5CAE9" stroke="#2F3C86"/></svg>output, or the result</div>
+          <div class="group-label">States</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#e65100" stroke-width="3" style="filter: drop-shadow(0 0 2px rgba(230, 81, 0, 0.8))"/></svg>the current step</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#fb8c00" stroke-width="2" stroke-dasharray="4 2"/></svg>its callers (the call stack)</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" rx="3" fill="#E5F8FB" stroke="#00b8d4" stroke-width="3"/></svg>evaluation run</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#e65100" stroke-width="2.5"/></svg>criterion reached, and its path</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#7b1fa2" stroke-width="3"/></svg>pinned in the panel</div>
+          <div class="legend-row"><svg width="28" height="18"><rect x="3" y="4" width="22" height="10" fill="#FFFFFF" stroke="#212121" opacity="0.28"/></svg>not reached yet</div>
+          <div class="group-label">Edges</div>
+          <div class="legend-row"><svg width="28" height="18"><path d="M2 9h20" stroke="#212121"/><path d="M21 6l5 3-5 3z" fill="#212121"/></svg>calls</div>
+          <div class="legend-row"><svg width="28" height="18"><path d="M2 9h20" stroke="#8D6E63"/><path d="M21 6l5 3-5 3z" fill="#8D6E63"/></svg>criterion chooses its template</div>
+          <div class="legend-row"><svg width="28" height="18"><path d="M2 9h20" stroke="#8D6E63" stroke-dasharray="4 2"/><path d="M21 6l5 3-5 3z" fill="#8D6E63"/></svg>template builds the graph</div>
+          <div class="legend-row"><svg width="28" height="18"><path d="M2 9h20" stroke="#212121" stroke-dasharray="4 2"/><path d="M21 6l5 3-5 3z" fill="#212121"/></svg><code>generate_feedback</code> runs the graph</div>
+          <div class="legend-row"><svg width="28" height="18"><path d="M2 9h20" stroke="#212121" stroke-dasharray="1 2"/><path d="M21 6l5 3-5 3z" fill="#212121"/></svg>sufficiency in a criteria graph</div>
+        </div>
+      </details>
     </div>
     <div id="graph"></div>
   </div>
@@ -623,6 +771,8 @@ footer {
     <label><input type="checkbox" id="show-forms" checked> Response forms</label>
     <label><input type="checkbox" id="show-values" checked> Arguments and returns</label>
     <label><input type="checkbox" id="show-criteria" checked> Criteria graph</label>
+    <label title="Leaves out dunder methods such as __init__; the calls they make are drawn under their caller">
+      <input type="checkbox" id="hide-internals" checked> Hide internals</label>
   </div>
 </footer>
 <script type="application/json" id="data">__DATA__</script>
@@ -638,8 +788,12 @@ const state = {
   forms: true,
   values: true,
   criteria: true,
+  // Whether the internal (dunder) calls are left out of the graph.
+  internals: true,
   speed: 1,
   zoom: 0.9,
+  // Whether each collapsible panel section is open, by its key, when it differs from `SECTION_DEFAULTS`.
+  sections: {},
   // The index in the example's steps of the step shown.
   step: 0,
   // The graphviz title of the node whose details are pinned in the panel, or null.
@@ -654,10 +808,25 @@ let nodes = new Map();
 let edges = new Map();
 let clusters = new Map();
 
+// The SVG markup of each layout of the example `layoutsExample`, by its key, unpacked by `unpackLayouts`.
+let layouts = new Map();
+let layoutsExample = -1;
+
+// The layouts of the example `index`, which are gzipped and base64 encoded in the data.
+async function unpackLayouts(index) {
+  const unpacked = new Map();
+  for (const [key, packed] of Object.entries(DATA.examples[index].layouts)) {
+    const bytes = Uint8Array.from(atob(packed), (character) => character.charCodeAt(0));
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    unpacked.set(key, await new Response(stream).text());
+  }
+  return unpacked;
+}
+
 function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    for (const key of ["depth", "forms", "values", "criteria", "speed", "zoom"]) {
+    for (const key of ["depth", "forms", "values", "criteria", "internals", "speed", "zoom", "sections"]) {
       if (key in saved) {
         state[key] = saved[key];
       }
@@ -669,8 +838,10 @@ function loadSettings() {
 
 function saveSettings() {
   try {
-    const { depth, forms, values, criteria, speed, zoom } = state;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ depth, forms, values, criteria, speed, zoom }));
+    const { depth, forms, values, criteria, internals, speed, zoom, sections } = state;
+    localStorage.setItem(
+      STORAGE_KEY, JSON.stringify({ depth, forms, values, criteria, internals, speed, zoom, sections })
+    );
   } catch (error) {
     // The settings are only a convenience, so they are not saved when storage is unavailable.
   }
@@ -695,8 +866,17 @@ function stageOf(stageName) {
 function isShown(step) {
   if (step.kind === "evaluate" || step.kind === "criteria" || step.kind === "template") {
     return state.criteria;
+  } else if (step.kind === "call" && state.internals && example().calls[step.call].internal) {
+    return false;
   }
   return step.depth <= state.depth;
+}
+
+// The caller drawn for the call `callId`: its parent, or its nearest caller that is not internal when the internal
+// calls are hidden; null for a call made by `_evaluate`.
+function parentOf(callId) {
+  const call = example().calls[callId];
+  return state.internals ? call.shownParent : call.parent;
 }
 
 function shownSteps() {
@@ -716,11 +896,11 @@ function nearestShownStep(index) {
 }
 
 function callerOf(callId) {
-  const call = example().calls[callId];
-  if (call.parent === null) {
-    return stageOf(call.stage).id;
+  const parent = parentOf(callId);
+  if (parent === null) {
+    return stageOf(example().calls[callId].stage).id;
   }
-  return call.parent;
+  return parent;
 }
 
 function invocationsUpTo(callId, event) {
@@ -750,14 +930,14 @@ function firstStepOf(kind) {
 // Drawing
 
 function drawLayout() {
-  const key = String(state.depth) + (state.criteria ? "c" : "");
+  const key = String(state.depth) + (state.criteria ? "c" : "") + (state.internals ? "h" : "");
   const layoutId = state.example + ":" + key;
   if (state.layout === layoutId) {
     return;
   }
   state.layout = layoutId;
   const graph = document.getElementById("graph");
-  graph.innerHTML = example().layouts[key];
+  graph.innerHTML = layouts.get(key);
   nodes = new Map();
   edges = new Map();
   clusters = new Map();
@@ -991,10 +1171,10 @@ function applyStep(step, isCurrent) {
 
 function callStack(callId) {
   const stack = [];
-  let current = example().calls[callId];
-  while (current.parent !== null) {
-    stack.unshift(current.parent);
-    current = example().calls[current.parent];
+  let current = parentOf(callId);
+  while (current !== null) {
+    stack.unshift(current);
+    current = parentOf(current);
   }
   return stack;
 }
@@ -1054,40 +1234,88 @@ function stepStage(step) {
   return steps[0].stage;
 }
 
+// Whether each collapsible section is open until it is opened or closed on the page.
+const SECTION_DEFAULTS = { stage: true, parameters: false, criteria: true, forms: true };
+
+function sectionOpen(key) {
+  return key in state.sections ? state.sections[key] : SECTION_DEFAULTS[key];
+}
+
+// A panel section that can be collapsed, and stays open or closed from step to step.
+function collapsible(key, title, body) {
+  return `<details class="section" data-section="${key}"${sectionOpen(key) ? " open" : ""}>
+    <summary><h2>${escapeHtml(title)}</h2></summary>${body}</details>`;
+}
+
+// A recorded value; with `withFull`, a summarised value has its full value behind "show more".
+function valueHtml(value, full, withFull) {
+  if (!withFull || full === undefined) {
+    return escapeHtml(value);
+  }
+  return `${escapeHtml(value)}<details class="more"><summary>show more</summary><pre>${escapeHtml(full)}</pre></details>`;
+}
+
+// `[name, value, full?]` pairs as a list of names and values.
+function namedValues(pairs, withFull) {
+  return `<dl class="values">${pairs.map(([name, value, full]) =>
+    `<dt>${escapeHtml(name)}</dt><dd>${valueHtml(value, full, withFull)}</dd>`).join("")}</dl>`;
+}
+
+function argumentsHtml(argumentList, withFull) {
+  return argumentList.length === 0 ? `<p class="muted">No arguments.</p>` : namedValues(argumentList, withFull);
+}
+
+// What a call returned, or the exception it raised.
+function outcomeHtml(values, withFull) {
+  if (values.raised) {
+    const exception = values.exception === undefined ? "an exception" : values.exception;
+    return `<div class="returned raised mono">raised ${escapeHtml(exception)}</div>`;
+  }
+  return `<div class="returned mono">↩ ${valueHtml(values.returned, values.returnedFull, withFull)}</div>`;
+}
+
+function durationText(stage) {
+  return stage.duration === null || stage.duration === undefined ? "" : `took ${stage.duration} ms`;
+}
+
+const TIMING_NOTE = "Times are measured while every call is recorded, so they are far longer than a normal evaluation's.";
+
 function stageSection(step) {
   const stage = stageOf(stepStage(step));
-  return `<section>
-    <h2>Stage</h2>
-    <span class="chip">${escapeHtml(stage.name)}</span>
-    <p class="muted">${escapeHtml(stage.description)}</p>
-  </section>`;
+  const duration = durationText(stage);
+  return collapsible("stage", "Stage", `<span class="chip">${escapeHtml(stage.name)}</span>
+    ${duration === "" ? "" : `<span class="muted" title="${escapeHtml(TIMING_NOTE)}">${duration}</span>`}
+    <p class="muted">${escapeHtml(stage.description)}</p>`);
 }
 
 function callSection(step) {
   const call = example().calls[step.call];
   const stack = [stepStage(step), ...callStack(step.call).map((id) => example().calls[id].qualname), call.qualname];
-  const count = invocationsUpTo(step.call, step.event);
   const total = invocationEvents(step.call).length;
   let body = `<div class="call-name mono">${escapeHtml(call.qualname)}</div>
     <div class="muted mono">${escapeHtml(call.module)} · depth ${call.depth}</div>
-    <div class="stack">${stack.map((name) => `<span class="mono">${escapeHtml(name)}</span>`).join("")}</div>`;
+    <div class="stack">${stack.map((name) => `<span class="mono">${escapeHtml(name)}</span>`).join("")}</div>
+    ${call.doc === "" ? "" : `<p class="doc">${escapeHtml(call.doc)}</p>`}`;
   if (total > 1) {
     body += `<p class="muted">First of ${total} calls from this caller; the rest raise the count on its node.</p>`;
   }
   if (state.values) {
-    if (step.arguments.length > 0) {
-      body += `<dl class="values">${step.arguments.map(([name, value]) =>
-        `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>`;
-    } else {
-      body += `<p class="muted">No arguments.</p>`;
-    }
-    if (step.raised) {
-      body += `<div class="returned raised mono">raised an exception</div>`;
-    } else {
-      body += `<div class="returned mono">↩ ${escapeHtml(step.returned)}</div>`;
-    }
+    body += argumentsHtml(step.arguments, false) + outcomeHtml(step, false);
   }
   return `<section><h2>Call</h2>${body}</section>`;
+}
+
+// The parameters `_build_parameters` completed, once it has returned.
+function parametersSection(step) {
+  const parameters = example().parameters;
+  if (parameters.event === undefined || step.event < parameters.event) {
+    return "";
+  }
+  const group = (pairs) => pairs.length === 0 ? `<p class="muted">None.</p>` : namedValues(pairs, true);
+  return collapsible("parameters", "Parameters", `
+    <div class="group-label">Given in params</div>${group(parameters.given)}
+    <div class="group-label">Added by <code>_build_parameters</code>: the context's defaults and the parsing set-up</div>
+    ${group(parameters.added)}`);
 }
 
 function evaluationSection(step) {
@@ -1123,7 +1351,23 @@ function formsSection(step) {
         ${isNew ? '<span class="new-badge">new</span>' : ""}</div>
       <span class="value mono">${escapeHtml(form.value)}</span></li>`);
   });
-  return `<section><h2>Response forms</h2><ul class="forms">${items.join("")}</ul></section>`;
+  return collapsible("forms", "Response forms", `<ul class="forms">${items.join("")}</ul>`);
+}
+
+// A tag of the result: the criteria graph criterion it came from (a link that pins it) and its feedback text.
+function tagItem(tag) {
+  const source = example().feedback[tag];
+  if (source === undefined) {
+    return `<li><span class="mono">${escapeHtml(tag)}</span>
+      <div class="muted">Added by the evaluation itself, not by a criteria graph.</div></li>`;
+  }
+  const name = source.node === null ? `<span class="mono">${escapeHtml(tag)}</span>`
+    : `<button class="link mono" data-pin="${escapeHtml(source.node)}">${escapeHtml(tag)}</button>`;
+  const text = source.text === "" ? `<span class="muted">No feedback text.</span>`
+    : `“${escapeHtml(source.text)}”`;
+  return `<li>${name}
+    <div class="muted">Reached in the criteria graph of <code>${escapeHtml(source.criterion)}</code></div>
+    <div class="feedback-text">${text}</div></li>`;
 }
 
 function resultSection() {
@@ -1134,14 +1378,17 @@ function resultSection() {
     preview = `<div class="muted">Preview LaTeX: <span class="mono">${escapeHtml(result.response_latex)}</span></div>
       <div class="muted">Simplified: <span class="mono">${escapeHtml(result.response_simplified)}</span></div>`;
   }
+  const duration = example().duration === null ? ""
+    : `<div class="muted" title="${escapeHtml(TIMING_NOTE)}">The evaluation took ${example().duration} ms while recording.</div>`;
   return `<section>
     <h2>Result</h2>
     <div class="result-box">
       <div class="verdict ${verdict}">is_correct: ${result.is_correct}</div>
-      <p>${escapeHtml(result.feedback)}</p>
-      <div class="muted">Tags</div>
-      <ul class="reached-list">${result.tags.map((tag) => `<li class="mono">${escapeHtml(tag)}</li>`).join("")}</ul>
+      ${result.feedback === "" ? `<p class="muted">No feedback text.</p>` : `<p>${escapeHtml(result.feedback)}</p>`}
+      <div class="muted">Tags, and where each came from</div>
+      <ul class="feedback-list">${result.tags.map(tagItem).join("")}</ul>
       ${preview}
+      ${duration}
     </div>
   </section>`;
 }
@@ -1242,7 +1489,7 @@ function criteriaSection(step) {
       <span class="${correct ? "status-good" : "status-bad"}">${correct}</span>:
       true only if every criteria graph reached its main criterion.</li>`);
   }
-  return `<section><h2>Criteria</h2><ul class="chain">${items.join("")}</ul></section>`;
+  return collapsible("criteria", "Criteria", `<ul class="chain">${items.join("")}</ul>`);
 }
 
 // Pinned details
@@ -1250,28 +1497,19 @@ function criteriaSection(step) {
 function pinnedCall(callId, step) {
   const call = example().calls[callId];
   const caller = callerOf(callId);
-  const callerName = call.parent === null ? "the " + call.stage + " stage" : example().calls[call.parent].qualname;
+  const parent = parentOf(callId);
+  const callerName = parent === null ? "the " + call.stage + " stage" : example().calls[parent].qualname;
   const count = invocationsUpTo(callId, step.event);
   const values = (example().invocations[callId]?.values || []).filter((invocation) => invocation.event <= step.event);
   let body = `<div class="call-name mono">${escapeHtml(call.qualname)}</div>
     <div class="muted mono">${escapeHtml(call.module)} · depth ${call.depth} · stage ${escapeHtml(call.stage)}</div>
+    <div class="source mono">${escapeHtml(call.source)}</div>
+    ${call.doc === "" ? `<p class="doc muted">No docstring.</p>` : `<p class="doc">${escapeHtml(call.doc)}</p>`}
     <div class="muted">Called by <button class="link mono" data-pin="${escapeHtml(caller)}">${escapeHtml(callerName)}</button>,
       ${count} time${count === 1 ? "" : "s"} so far.</div>`;
   if (values.length > 0) {
-    const items = values.map((invocation, position) => {
-      const argumentList = invocation.arguments.length === 0 ? `<p class="muted">No arguments.</p>`
-        : `<dl class="values">${invocation.arguments.map(([name, value]) =>
-          `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>`;
-      let returned;
-      if (invocation.event > step.event) {
-        returned = "";
-      } else if (invocation.raised) {
-        returned = `<div class="returned raised mono">raised an exception</div>`;
-      } else {
-        returned = `<div class="returned mono">↩ ${escapeHtml(invocation.returned)}</div>`;
-      }
-      return `<li><div class="muted">Call ${position + 1}</div>${argumentList}${returned}</li>`;
-    });
+    const items = values.map((invocation, position) =>
+      `<li><div class="muted">Call ${position + 1}</div>${argumentsHtml(invocation.arguments, true)}${outcomeHtml(invocation, true)}</li>`);
     body += `<ul class="invocations">${items.join("")}</ul>`;
     if (count > values.length) {
       body += `<p class="muted">Only the first ${values.length} calls keep their values.</p>`;
@@ -1282,13 +1520,16 @@ function pinnedCall(callId, step) {
 
 function pinnedStage(stageId, step) {
   const stage = example().stages.find((candidate) => candidate.id === stageId);
-  const calls = Object.entries(example().calls).filter(([callId, call]) =>
-    call.stage === stage.name && call.parent === null && invocationsUpTo(callId, step.event) > 0);
+  const calls = Object.entries(example().calls).filter(([callId, call]) => call.stage === stage.name
+    && parentOf(callId) === null && !(state.internals && call.internal) && invocationsUpTo(callId, step.event) > 0);
   const list = calls.length === 0 ? `<p class="muted">No calls made in this stage yet.</p>`
     : `<div>Calls:</div><ul class="reached-list">${calls.map(([callId, call]) =>
       `<li><button class="link mono" data-pin="${callId}">${escapeHtml(call.qualname)}</button></li>`).join("")}</ul>`;
+  const duration = durationText(stage);
   return `<span class="chip">${escapeHtml(stage.name)}</span>
-    <p class="muted">${escapeHtml(stage.description)}</p>${list}`;
+    ${duration === "" ? "" : `<span class="muted">${duration}</span>`}
+    <p class="muted">${escapeHtml(stage.description)}</p>${list}
+    ${duration === "" ? "" : `<p class="muted">${escapeHtml(TIMING_NOTE)}</p>`}`;
 }
 
 function pinnedCriteriaNode(nodeId, step) {
@@ -1376,6 +1617,7 @@ function renderPanel(step) {
   } else if (step.kind === "result") {
     content += resultSection();
   }
+  content += parametersSection(step);
   if (state.criteria) {
     content += criteriaSection(step);
   }
@@ -1388,6 +1630,10 @@ function renderPanel(step) {
 // Rendering and controls
 
 function render() {
+  // Until the example's layouts are unpacked; `selectExample` renders once they are
+  if (layoutsExample !== state.example) {
+    return;
+  }
   drawLayout();
   const steps = example().steps;
   const step = steps[state.step];
@@ -1446,7 +1692,7 @@ function scheduleNext() {
   }, 1100 / state.speed);
 }
 
-function selectExample(index) {
+async function selectExample(index) {
   state.example = index;
   state.layout = null;
   state.step = 0;
@@ -1456,6 +1702,13 @@ function selectExample(index) {
     <span>response <code>${escapeHtml(current.response)}</code></span>
     <span>answer <code>${escapeHtml(current.answer)}</code></span>
     <span>params <code>${escapeHtml(JSON.stringify(current.params))}</code></span>`;
+  const unpacked = await unpackLayouts(index);
+  // Another example can be chosen while these layouts are unpacked
+  if (state.example !== index) {
+    return;
+  }
+  layouts = unpacked;
+  layoutsExample = index;
   render();
   document.getElementById("graph").scrollTo(0, 0);
 }
@@ -1475,6 +1728,13 @@ function setUp() {
   document.getElementById("show-forms").checked = state.forms;
   document.getElementById("show-values").checked = state.values;
   document.getElementById("show-criteria").checked = state.criteria;
+  document.getElementById("hide-internals").checked = state.internals;
+  const legend = document.getElementById("legend");
+  legend.open = state.sections.legend === true;
+  legend.addEventListener("toggle", () => {
+    state.sections.legend = legend.open;
+    saveSettings();
+  });
 
   exampleSelect.addEventListener("change", () => {
     setPlaying(false);
@@ -1503,6 +1763,15 @@ function setUp() {
   document.getElementById("show-criteria").addEventListener("change", (event) => {
     state.criteria = event.target.checked;
     state.step = nearestShownStep(state.step);
+    saveSettings();
+    render();
+  });
+  document.getElementById("hide-internals").addEventListener("change", (event) => {
+    state.internals = event.target.checked;
+    state.step = nearestShownStep(state.step);
+    if (state.pinned !== null && state.internals && example().calls[state.pinned]?.internal) {
+      state.pinned = null;
+    }
     saveSettings();
     render();
   });
@@ -1552,6 +1821,14 @@ function setUp() {
       pin(link.dataset.pin);
     }
   });
+  // `toggle` does not bubble, so it is caught on its way down to the section
+  document.getElementById("panel").addEventListener("toggle", (event) => {
+    const key = event.target.dataset?.section;
+    if (key !== undefined && sectionOpen(key) !== event.target.open) {
+      state.sections[key] = event.target.open;
+      saveSettings();
+    }
+  }, true);
   document.getElementById("zoom-in").addEventListener("click", () => {
     state.zoom = Math.min(4, state.zoom * 1.25);
     applyZoom();

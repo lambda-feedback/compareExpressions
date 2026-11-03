@@ -27,6 +27,8 @@ import sympy
 from lambdafeedback.criteria import CriteriaGraph
 
 from app import evaluation
+from app.context.base import Context
+from app.result import EvaluationResult
 from scripts.generate_criteria_graphs import _node_label, add_criteria_graph, new_drawing
 
 OUTPUT_DIRECTORY = Path(__file__).resolve().parent.parent / "app" / "docs" / "process_graphs"
@@ -41,8 +43,15 @@ EXAMPLES: list[tuple[str, str, str, dict[str, Any]]] = [
 # How many calls below `_evaluate` the call graphs go.
 CALL_DEPTH = 2
 
-# The longest an argument or return value recorded for the process animation gets before it is cut short.
+# The longest an argument or return value recorded for the process animation gets before it is cut short, and the
+# longest the full value of a summarised dictionary gets.
 VALUE_LENGTH = 200
+FULL_VALUE_LENGTH = 1000
+
+# The longest an exception's type and message recorded for the process animation get before they are cut short.
+EXCEPTION_LENGTH = 160
+
+REPOSITORY = Path(__file__).resolve().parent.parent
 
 # Functions left out of the call graphs; the functions they call are shown under their caller instead.
 HIDDEN_FUNCTIONS = {"log_event", "elapsed_ms", "_evaluate.<locals>.enter_stage"}
@@ -74,6 +83,16 @@ class Call:
     parent: Call | None
     depth: int
     count: int = 1
+    # The first paragraph of the function's docstring, and where it is defined (`path:line`); only set when values
+    # are recorded.
+    doc: str = ""
+    source: str = ""
+
+    @property
+    def internal(self) -> bool:
+        """Whether the function is a dunder method, such as `__init__` or `__getstate__`."""
+        name = self.qualname.rsplit(".", 1)[-1]
+        return name.startswith("__") and name.endswith("__")
 
 
 @dataclass
@@ -82,6 +101,9 @@ class Recording:
 
     `events` is filled only when values are recorded (see `Recorder`): every stage entered, call made, value returned
     and criteria graph evaluation run, in order, as JSON-ready dictionaries.
+
+    `stage_times` is the time from the start of the evaluation to the start of each stage, and `duration_ms` the time
+    the whole evaluation took, in milliseconds, both from the evaluation's log events.
     """
 
     stages: list[str] = field(default_factory=list)
@@ -89,19 +111,144 @@ class Recording:
     calls: dict[tuple[Any, ...], Call] = field(default_factory=dict)
     criteria_graphs: dict[str, CriteriaGraph] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
+    stage_times: dict[str, float] = field(default_factory=dict)
+    duration_ms: float | None = None
 
 
-def short_repr(value: Any) -> str:
-    """`repr(value)` without memory addresses, cut short at `VALUE_LENGTH` characters."""
+def _cut(text: str, length: int) -> str:
+    if len(text) > length:
+        return text[:length - 1] + "…"
+    return text
+
+
+def _plain_repr(value: Any) -> str:
+    """`repr(value)` without memory addresses."""
     try:
         text = repr(value)
     except (AttributeError, TypeError, ValueError, KeyError):
         # Objects whose `__init__` is still running can fail to give a repr.
         text = f"<{type(value).__name__}>"
-    text = re.sub(r" at 0x[0-9a-f]+", "", text)
-    if len(text) > VALUE_LENGTH:
-        return text[:VALUE_LENGTH - 1] + "…"
+    return re.sub(r" at 0x[0-9a-f]+", "", text)
+
+
+def short_repr(value: Any) -> str:
+    """A short description of `value` for the process animation: `repr(value)` without memory addresses, cut short at
+    `VALUE_LENGTH` characters.
+
+    The values whose repr says little are summarised instead: a context by its name, an `EvaluationResult` by its
+    correctness and tags, and a dictionary too long to show by its keys.
+    """
+    if isinstance(value, Context):
+        name = value.feedback_procedure_generator.__module__.removeprefix("app.context.").split(".")[0]
+        return f"{name} context"
+    elif isinstance(value, EvaluationResult):
+        try:
+            return f"EvaluationResult(is_correct={value.is_correct}, tags={value.tags})"
+        except AttributeError:
+            # The result's `__init__` is still running
+            return "EvaluationResult()"
+    text = _plain_repr(value)
+    if isinstance(value, dict) and len(text) > VALUE_LENGTH:
+        keys = ", ".join(str(key) for key in value)
+        return _cut(f"{{… {len(value)} keys: {keys} …}}", VALUE_LENGTH)
+    return _cut(text, VALUE_LENGTH)
+
+
+def full_repr(value: Any) -> str | None:
+    """The repr of `value`, cut short at `FULL_VALUE_LENGTH` characters, when `short_repr` summarises it as a dictionary
+    of keys; None otherwise.
+    """
+    if not isinstance(value, dict):
+        return None
+    text = _plain_repr(value)
+    if len(text) <= VALUE_LENGTH:
+        return None
+    return _cut(text, FULL_VALUE_LENGTH)
+
+
+def shown_value(name: str, value: Any) -> list[str]:
+    """The name of an argument and its `short_repr`, followed by its `full_repr` when there is one."""
+    full = full_repr(value)
+    if full is None:
+        return [name, short_repr(value)]
+    return [name, short_repr(value), full]
+
+
+def exception_text(exception: BaseException) -> str:
+    """The type and message of `exception`, cut short at `EXCEPTION_LENGTH` characters."""
+    try:
+        message = str(exception)
+    except (AttributeError, TypeError, ValueError):
+        message = ""
+    name = type(exception).__name__
+    return _cut(f"{name}: {message}" if message else name, EXCEPTION_LENGTH)
+
+
+def parse_tree_text(node: Any) -> str:
+    """The criteria parse tree under `node` drawn with `├─` and `└─` connectors, one node per line as `label: content`,
+    followed by the node's tags when it has any.
+    """
+    lines = [_parse_node_text(node)]
+    _add_parse_children(node, "", lines)
+    return "\n".join(lines)
+
+
+def _parse_node_text(node: Any) -> str:
+    label = node.label.strip()
+    content = str(node.content).strip()
+    text = label if content in ("", label) else f"{label}: {content}"
+    if node.tags:
+        text += f"  tags: {', '.join(sorted(str(tag) for tag in node.tags))}"
     return text
+
+
+def _add_parse_children(node: Any, indent: str, lines: list[str]) -> None:
+    for (index, child) in enumerate(node.children):
+        last = index == len(node.children) - 1
+        lines.append(indent + ("└─ " if last else "├─ ") + _parse_node_text(child))
+        _add_parse_children(child, indent + ("   " if last else "│  "), lines)
+
+
+def source_location(frame: FrameType) -> str:
+    """Where the function running in `frame` is defined, as `path:line`, with the path relative to the repository or,
+    for an installed package, to `site-packages`.
+    """
+    path = Path(frame.f_code.co_filename)
+    if path.is_relative_to(REPOSITORY) and "site-packages" not in path.parts:
+        shown = str(path.relative_to(REPOSITORY))
+    elif "site-packages" in path.parts:
+        shown = "/".join(path.parts[path.parts.index("site-packages") + 1:])
+    else:
+        shown = path.name
+    return f"{shown}:{frame.f_code.co_firstlineno}"
+
+
+def first_doc_paragraph(frame: FrameType) -> str:
+    """The first paragraph of the docstring of the function running in `frame`, on one line, found from its module by
+    its qualified name; empty when it has none of its own, or is defined inside another function.
+    """
+    qualname = frame.f_code.co_qualname
+    if "<locals>" in qualname:
+        return ""
+    function: Any = None
+    for (index, part) in enumerate(qualname.split(".")):
+        if index == 0:
+            function = frame.f_globals.get(part)
+        else:
+            function = inspect.getattr_static(function, part, None)
+        if function is None:
+            return ""
+    if isinstance(function, (staticmethod, classmethod)):
+        function = function.__func__
+    elif isinstance(function, property):
+        function = function.fget
+    # `__doc__` rather than `inspect.getdoc`, which falls back to the docstring of the method a class inherits from,
+    # e.g. `object.__init__`'s "Initialize self."
+    doc = getattr(function, "__doc__", None)
+    if not isinstance(doc, str):
+        return ""
+    paragraph = inspect.cleandoc(doc).split("\n\n")[0]
+    return _cut(" ".join(paragraph.split()), VALUE_LENGTH)
 
 
 def frame_argument_values(frame: FrameType) -> list[tuple[str, Any]]:
@@ -139,11 +286,14 @@ class Recorder(logging.Handler):
 
     Calls are followed down to `depth` calls below `_evaluate`. With `record_values`, these are kept in order in
     `Recording.events`:
-    - the arguments and return value of each call, and whether it raised an exception instead of returning;
+    - the arguments and return value of each call, or the exception it raised instead of returning (see `unwind`);
     - the evaluations each criteria graph runs, and the criteria each one reports;
     - each new form of the response (see `is_response_form`): the value returned by a call that was given the response,
       or an earlier form of it, as an argument;
-    - the criteria `create_criteria_dict` parses, and the template that builds each one's criteria graph.
+    - the criteria `create_criteria_dict` parses, and the template that builds each one's criteria graph;
+    - the parameters `_build_parameters` completes, and the feedback each criteria graph exports for its reached
+      criteria.
+    The docstring and source location of each function called are kept on its `Call` too.
     """
 
     def __init__(self, depth: int = CALL_DEPTH, record_values: bool = False, response: str = "") -> None:
@@ -160,16 +310,31 @@ class Recorder(logging.Handler):
         # The reprs of the forms the response has taken so far, and the frames given one of them as an argument.
         self.response_forms = {repr(response)}
         self.response_frames: set[FrameType] = set()
+        # The code of the last call recorded as raising an exception, and its return event, until `unwind` fills in
+        # the exception.
+        self.raised: tuple[Any, dict[str, Any]] | None = None
 
     def emit(self, record: logging.LogRecord) -> None:
         event = json.loads(record.getMessage())
         if event["event"] == "stage_start":
             self.stage = event["stage"]
             self.recording.stages.append(self.stage)
+            self.recording.stage_times[self.stage] = event["elapsed_ms"]
             if self.record_values:
                 self.recording.events.append({"kind": "stage", "stage": self.stage})
         elif event["event"] == "evaluation_end":
             self.recording.early_return = event["early_return"]
+            self.recording.duration_ms = event["duration_ms"]
+
+    def unwind(self, code: Any, offset: int, exception: BaseException) -> None:
+        """The `sys.monitoring` `PY_UNWIND` callback: a frame of `code` is stopping because of `exception`.
+
+        It runs just after the profile function's `return` event for the same frame, which cannot see the exception,
+        so the exception is added to the return event recorded there.
+        """
+        if self.raised is not None and self.raised[0] is code:
+            self.raised[1]["exception"] = exception_text(exception)
+        self.raised = None
 
     def _record_evaluation(self, frame: FrameType) -> None:
         """Records the start of a criteria graph evaluation, when `frame` is the `evaluate` function of one."""
@@ -196,9 +361,9 @@ class Recorder(logging.Handler):
         shown_arguments = []
         for (name, value) in arguments:
             if name == "self":
-                shown_arguments.append((name, f"<{type(value).__name__}>"))
+                shown_arguments.append([name, f"<{type(value).__name__}>"])
             else:
-                shown_arguments.append((name, short_repr(value)))
+                shown_arguments.append(shown_value(name, value))
         self.recording.events.append({
             "kind": "call", "stage": self.stage, "call": call.identifier, "arguments": shown_arguments
         })
@@ -215,9 +380,41 @@ class Recorder(logging.Handler):
             "original": frame.f_locals.get("original_criteria_string", ""),
             "preprocessed": frame.f_locals.get("criteria_string", ""),
             "criteria": [
-                {"identifier": identifier, "label": node.label.strip(), "tree": node.tree_string()}
+                {"identifier": identifier, "label": node.label.strip(), "tree": parse_tree_text(node)}
                 for (identifier, node) in value.items()
             ],
+        })
+
+    def _record_parameters(self, frame: FrameType, value: Any) -> None:
+        """Records the parameters when `frame` is `_build_parameters` returning them: the parameters it was given, and
+        the ones it added.
+        """
+        if frame.f_code.co_qualname != "_build_parameters" or not isinstance(value, dict):
+            return
+        given = frame.f_locals.get("params", {})
+        self.recording.events.append({
+            "kind": "parameters",
+            "stage": self.stage,
+            "given": [shown_value(str(key), item) for (key, item) in value.items() if key in given],
+            "added": [shown_value(str(key), item) for (key, item) in value.items() if key not in given],
+        })
+
+    def _record_feedback(self, frame: FrameType, value: Any) -> None:
+        """Records the feedback text of each reached criterion, when `frame` is `CriteriaGraph.resolve_feedback`
+        returning it for `CriteriaGraph.export_feedback`.
+        """
+        exporter = frame.f_back
+        if frame.f_code.co_qualname != "CriteriaGraph.resolve_feedback" or exporter is None:
+            return
+        if exporter.f_code.co_qualname != "CriteriaGraph.export_feedback":
+            return
+        graph = frame.f_locals.get("self")
+        criterion = next((key for (key, item) in self.recording.criteria_graphs.items() if item is graph), None)
+        self.recording.events.append({
+            "kind": "feedback",
+            "stage": self.stage,
+            "criterion": criterion,
+            "feedback": [[str(tag), str(text)] for (tag, text) in value],
         })
 
     def _record_template(self, frame: FrameType, value: Any, call: Call | None) -> None:
@@ -251,15 +448,23 @@ class Recorder(logging.Handler):
         if returned_normally(frame):
             self._record_criteria(frame, value)
             self._record_template(frame, value, call)
+            self._record_parameters(frame, value)
+            self._record_feedback(frame, value)
         if call is not None:
             raised = not returned_normally(frame)
-            self.recording.events.append({
+            event = {
                 "kind": "return",
                 "stage": self.stage,
                 "call": call.identifier,
                 "value": "" if raised else short_repr(value),
                 "raised": raised,
-            })
+            }
+            full = None if raised else full_repr(value)
+            if full is not None:
+                event["full"] = full
+            self.recording.events.append(event)
+            if raised:
+                self.raised = (frame.f_code, event)
             if given_response and not raised and is_response_form(value) and repr(value) not in self.response_forms:
                 self.response_forms.add(repr(value))
                 self.recording.events.append({
@@ -318,6 +523,9 @@ class Recorder(logging.Handler):
         call = self.recording.calls.get(key)
         if call is None:
             call = Call(f"call_{len(self.recording.calls)}", module, qualname, self.stage, parent, depth + 1)
+            if self.record_values:
+                call.doc = first_doc_paragraph(frame)
+                call.source = source_location(frame)
             self.recording.calls[key] = call
         else:
             call.count += 1
@@ -336,12 +544,22 @@ def record(
     recorder = Recorder(depth, record_values, response)
     logger = logging.getLogger(evaluation.__name__)
     logger.addHandler(recorder)
+    monitoring = sys.monitoring
+    unwind = monitoring.events.PY_UNWIND
+    if record_values:
+        monitoring.use_tool_id(monitoring.PROFILER_ID, "generate_process_graphs")
+        monitoring.register_callback(monitoring.PROFILER_ID, unwind, recorder.unwind)
+        monitoring.set_events(monitoring.PROFILER_ID, unwind)
     sys.setprofile(recorder.profile)
     try:
         result = evaluation.evaluation_function(response, answer, dict(params), include_test_data=True)
     finally:
         sys.setprofile(None)
         logger.removeHandler(recorder)
+        if record_values:
+            monitoring.set_events(monitoring.PROFILER_ID, monitoring.events.NO_EVENTS)
+            monitoring.register_callback(monitoring.PROFILER_ID, unwind, None)
+            monitoring.free_tool_id(monitoring.PROFILER_ID)
     return (recorder.recording, result)
 
 
@@ -415,11 +633,27 @@ def process_to_dot(recording: Recording, params: dict[str, Any], result: dict[st
     return dot
 
 
+def shown_parent(call: Call, hide_internals: bool) -> Call | None:
+    """The caller drawn for `call`: its parent, or with `hide_internals` its nearest caller that is not internal (see
+    `Call.internal`); None for a call made by `_evaluate`.
+    """
+    parent = call.parent
+    while hide_internals and parent is not None and parent.internal:
+        parent = parent.parent
+    return parent
+
+
 def calls_to_dot(
-    recording: Recording, params: dict[str, Any], result: dict[str, Any], depth: int = CALL_DEPTH
+    recording: Recording,
+    params: dict[str, Any],
+    result: dict[str, Any],
+    depth: int = CALL_DEPTH,
+    hide_internals: bool = False,
 ) -> pydot.Dot:
     """The stages of the evaluation down the left, each with the functions called during it to its right, down to
     `depth` calls below `_evaluate`.
+
+    With `hide_internals`, dunder methods are left out, and the calls they made are drawn under their caller.
     """
     dot = new_drawing()
     dot.set("rankdir", "LR")
@@ -432,11 +666,12 @@ def calls_to_dot(
         clusters[stage] = cluster
         dot.add_subgraph(cluster)
     for call in recording.calls.values():
-        if call.depth > depth:
+        if call.depth > depth or (hide_internals and call.internal):
             continue
         label = call.qualname if call.count == 1 else f"{call.qualname} ×{call.count}"
         clusters[call.stage].add_node(pydot.Node(call.identifier, label=_node_label(label, call.module), **CALL_STYLE))
-        caller = stages[call.stage] if call.parent is None else call.parent.identifier
+        parent = shown_parent(call, hide_internals)
+        caller = stages[call.stage] if parent is None else parent.identifier
         dot.add_edge(pydot.Edge(caller, call.identifier))
     return dot
 
