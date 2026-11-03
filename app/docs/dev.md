@@ -1,4 +1,3 @@
-=======
 # CompareExpressions
 This function utilises the [`SymPy`](https://docs.sympy.org/latest/index.html) to provide a maths-aware evaluation of a learner's response.
 
@@ -195,6 +194,76 @@ along the the following base tokens:
 - Generate feedback procedures from criteria, each procedure return a boolean that indicates whether the corresponding criterion is satisfied or not, a string intended to be shown to the student, and a list of tags indicating what was found when checking the criteria
 - For each criterion; run the corresponding procedure and store the result, the feedback string and the list of tags
 - If all criteria are found to be true, then the response is considered correct
+
+### Criteria graphs
+Each criterion's feedback procedure is a `CriteriaGraph` (from `lambdafeedback.criteria`), built by the graph template the context picks for the criterion. A graph has three kinds of node:
+- **Evaluation nodes** (rounded, blue) run a check on the response and report which of the criterion nodes after them are reached.
+- **Criterion nodes** (rectangles) are the outcomes of an evaluation; each one produces the feedback for that outcome and its label is added to the tags.
+- **Output nodes** (hexagons) end the evaluation, usually `END`.
+
+A dotted edge is a sufficiency: when deciding where to start, an evaluation can be replaced by the evaluations leading to the criteria it points to. The response satisfies a criterion when `<criterion>_TRUE` is reached.
+
+The graphs below are for one example answer each, since the shape can depend on the answer (e.g. whether it is an expression, an equation or a set). Each image is drawn with graphviz from the graph's nodes; the mermaid version, from `CriteriaGraph.to_mermaid` (the `criteria_graphs_vis` field in the test data), is under each image. Regenerate them with `python -m scripts.generate_criteria_graphs` from the repository root; it needs graphviz, and Node.js for the mermaid images (if puppeteer can't find Chrome, set `PUPPETEER_EXECUTABLE_PATH` to a local Chrome).
+
+#### `symbolic`: `response = answer`, answer `x + 1`
+![Criteria graph for response = answer with an expression answer](criteria_graphs/symbolic_equality.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response = answer with an expression answer](criteria_graphs/symbolic_equality_mermaid.svg)
+</details>
+
+#### `symbolic`: `response = answer`, answer `x = 1`
+![Criteria graph for response = answer with an equation answer](criteria_graphs/symbolic_equality_of_equations.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response = answer with an equation answer](criteria_graphs/symbolic_equality_of_equations_mermaid.svg)
+</details>
+
+#### `symbolic`: `response = answer`, answer `{1, 2}`
+![Criteria graph for response = answer with a set answer](criteria_graphs/symbolic_equality_of_sets.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response = answer with a set answer](criteria_graphs/symbolic_equality_of_sets_mermaid.svg)
+</details>
+
+#### `symbolic`: `response = answer where x = 0`
+![Criteria graph for response = answer where x = 0](criteria_graphs/symbolic_where.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response = answer where x = 0](criteria_graphs/symbolic_where_mermaid.svg)
+</details>
+
+#### `symbolic`: `response written as answer`
+![Criteria graph for response written as answer](criteria_graphs/symbolic_written_as.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response written as answer](criteria_graphs/symbolic_written_as_mermaid.svg)
+</details>
+
+#### `symbolic`: other criteria, e.g. `response contains x`
+Criteria without their own template (e.g. `contains` and order comparisons such as `response > answer`) use the generic graph.
+
+![Criteria graph for response contains x](criteria_graphs/symbolic_other.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response contains x](criteria_graphs/symbolic_other_mermaid.svg)
+</details>
+
+#### `physical_quantity`: `response matches answer`, answer `1 m`
+![Criteria graph for response matches answer](criteria_graphs/physical_quantity_matches.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response matches answer](criteria_graphs/physical_quantity_matches_mermaid.svg)
+</details>
+
+#### `physical_quantity`: `response > answer`, answer `1 m`
+`>=`, `<` and `<=` give the same graph with their own operator.
+
+![Criteria graph for response > answer with physical quantities](criteria_graphs/physical_quantity_order.svg)
+<details><summary>Mermaid</summary>
+
+![Mermaid criteria graph for response > answer with physical quantities](criteria_graphs/physical_quantity_order_mermaid.svg)
+</details>
 
 ### Tag conventions
 The feedback procedures consists of a series of function calls, the specifics are determined by the particular criteria, that each return a list of strings (called tags). Each tag then indicates what further function calls must be performed to continue the evaluation, as well as what feedback string (if any) should be generated. When there are no remaining function calls the feedback procedure is completed. The tags are formatted according as *criteria*`_`*name of function call outcome*. For tags that are not connected to a specific criteria (e.g. tags that indicate an issue with expression parsing) the criteria name and underscore is omitted.
