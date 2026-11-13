@@ -10,7 +10,7 @@ from lambdafeedback.expression_parsing import compute_relative_tolerance_from_si
 from lambdafeedback.slr_parsing import ExprNode
 
 from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
-from app.context.physical_quantity.comparison import comparison_function, is_proportional, parse_criterion_sides
+from app.context.physical_quantity.comparison import CriterionSides, comparison_function, is_proportional, parse_criterion_sides
 from app.evaluation_parameters import EvaluationParameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
@@ -49,67 +49,78 @@ def _missing_or_unexpected(parameters: EvaluationParameters, label: str, lhs_str
 
 def _within_tolerance(parameters: EvaluationParameters, lhs_string: str, rhs_string: str, rtol: float, atol: float) -> bool:
     """Whether the standard values of the response and answer are within the numerical tolerances."""
-    value_match = False
     # TODO: better analysis of where `answer` is found in the criteria so that
     #       numerical tolerances can be applied appropriately
-    if rtol > 0 or atol > 0:
-        if (lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer'):
-            ans = parameters.reserved_expressions["answer"].standard_value.simplify()
-            res = parameters.reserved_expressions["response"].standard_value.simplify()
-        if (ans is not None and ans.is_constant()) and (res is not None and res.is_constant()):
-            if rtol > 0 and (ans != 0):
-                value_match = bool(abs(float((ans - res) / ans)) < rtol)
-            elif atol > 0 or (ans == 0):
-                answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
-                value_match = bool(abs(float(ans - res)) < atol * answer_unit_factor)
+    if rtol == 0 and atol == 0:
+        return False
+
+    if not ((lhs_string == 'answer' and rhs_string == 'response') or (lhs_string == 'response' and rhs_string == 'answer')):
+        return False
+
+    ans_value = parameters.reserved_expressions["answer"].standard_value
+    res_value = parameters.reserved_expressions["response"].standard_value
+
+    # Quantities with several standard values are a set, and quantities without a value are None
+    if not (isinstance(ans_value, Basic) and isinstance(res_value, Basic)):
+        return False
+
+    ans = ans_value.simplify()
+    res = res_value.simplify()
+
+    value_match = False
+
+    if ans.is_constant() and res.is_constant():
+        if rtol > 0 and (ans != 0):
+            value_match = bool(abs(float((ans - res) / ans)) < rtol)
+        elif atol > 0 or (ans == 0):
+            answer_unit_factor = float(parameters.reserved_expressions["answer"].quantity.unit_factor)
+            value_match = bool(abs(float(ans - res)) < atol * answer_unit_factor)
     return value_match
 
 
-def _quantity_match(
-    parameters: EvaluationParameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str, rtol: float, atol: float
-) -> Evaluate:
-    reserved_expressions = parameters.reserved_expressions.items()
+def _quantity_match(parameters: EvaluationParameters, label: str, sides: CriterionSides, rtol: float, atol: float) -> Evaluate:
+    quantities = sides.quantities.items()
 
     def quantity_match(_response: Any) -> ReachedCriteria:
-        missing_or_unexpected = _missing_or_unexpected(parameters, label, lhs_string, rhs_string)
+        missing_or_unexpected = _missing_or_unexpected(parameters, label, sides.lhs_string, sides.rhs_string)
         if missing_or_unexpected is not None:
             return missing_or_unexpected
 
-        substitutions = [(key, expr.standard_value) for (key, expr) in reserved_expressions]
-        value_match = is_equal(lhs, rhs, substitutions)
+        substitutions = [(key, expr.standard_value) for (key, expr) in quantities]
+        value_match = is_equal(sides.lhs, sides.rhs, substitutions)
         if value_match is False:
-            value_match = _within_tolerance(parameters, lhs_string, rhs_string, rtol, atol)
+            value_match = _within_tolerance(parameters, sides.lhs_string, sides.rhs_string, rtol, atol)
 
-        substitutions = [(key, expr.standard_unit) for (key, expr) in reserved_expressions]
-        unit_match = is_equal(lhs, rhs, substitutions)
+        substitutions = [(key, expr.standard_unit) for (key, expr) in quantities]
+        unit_match = is_equal(sides.lhs, sides.rhs, substitutions)
 
-        return outcome_tag(label, value_match is True and unit_match is True, {"lhs": lhs_string, "rhs": rhs_string})
+        return outcome_tag(label, value_match is True and unit_match is True, {"lhs": sides.lhs_string, "rhs": sides.rhs_string})
     return quantity_match
 
 
-def _dimension_match(parameters: EvaluationParameters, label: str, lhs: Basic, rhs: Basic, lhs_string: str, rhs_string: str) -> Evaluate:
-    reserved_expressions = parameters.reserved_expressions.items()
+def _dimension_match(label: str, sides: CriterionSides) -> Evaluate:
+    quantities = sides.quantities.items()
 
     def dimension_match(_response: Any) -> ReachedCriteria:
-        substitutions = [(key, expr.dimension) for (key, expr) in reserved_expressions]
-        dimension_match, _ = is_proportional(lhs, rhs, substitutions)
-        return outcome_tag(label + "_DIMENSION_MATCH", dimension_match is True, {"lhs": lhs_string, "rhs": rhs_string})
+        substitutions = [(key, expr.dimension) for (key, expr) in quantities]
+        dimension_match, _ = is_proportional(sides.lhs, sides.rhs, substitutions)
+        return outcome_tag(label + "_DIMENSION_MATCH", dimension_match is True, {"lhs": sides.lhs_string, "rhs": sides.rhs_string})
     return dimension_match
 
 
-def _unit_comparison(parameters: EvaluationParameters, label: str, lhs: Basic, rhs: Basic) -> Evaluate:
-    reserved_expressions = parameters.reserved_expressions.items()
+def _unit_comparison(label: str, sides: CriterionSides) -> Evaluate:
+    quantities = sides.quantities.items()
 
     def unit_comparison(_response: Any) -> ReachedCriteria:
-        substitutions = [(key, expr.original_unit) for (key, expr) in reserved_expressions]
+        substitutions = [(key, expr.original_unit) for (key, expr) in quantities]
 
-        if is_equal(lhs, rhs, substitutions) is True:
+        if is_equal(sides.lhs, sides.rhs, substitutions) is True:
             output_tags = {
                 label + "_UNIT_COMPARISON" + "_IDENTICAL": None
             }
         else:
-            local_substitutions = [(key, expr.quantity.expanded_unit) for (key, expr) in reserved_expressions]
-            result, ratio = is_proportional(lhs, rhs, local_substitutions)
+            local_substitutions = [(key, expr.quantity.expanded_unit) for (key, expr) in quantities]
+            result, ratio = is_proportional(sides.lhs, sides.rhs, local_substitutions)
             # `is_proportional` returns a ratio whenever the result is True
             if result is True and ratio is not None and ratio >= 1000:
                 output_tags = {
@@ -263,15 +274,15 @@ def criterion_match_node(criterion: ExprNode, parameters: EvaluationParameters, 
         label = criterion.content_string()
 
     inputs = criterion.children
-    lhs_string, rhs_string, lhs, rhs = parse_criterion_sides(criterion, parameters)
+    sides = parse_criterion_sides(criterion, parameters)
 
     _add_match_nodes(
         graph,
         END,
         label,
         inputs,
-        quantity_match=_quantity_match(parameters, label, lhs, rhs, lhs_string, rhs_string, rtol, atol),
-        dimension_match=_dimension_match(parameters, label, lhs, rhs, lhs_string, rhs_string),
-        unit_comparison=_unit_comparison(parameters, label, lhs, rhs),
+        quantity_match=_quantity_match(parameters, label, sides, rtol, atol),
+        dimension_match=_dimension_match(label, sides),
+        unit_comparison=_unit_comparison(label, sides),
     )
     return graph
