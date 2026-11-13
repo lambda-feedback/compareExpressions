@@ -9,8 +9,14 @@ from lambdafeedback.criteria import CriteriaGraph, Evaluate, OutputNode, Reached
 from lambdafeedback.expression_parsing import compute_relative_tolerance_from_significant_decimals
 from lambdafeedback.slr_parsing import ExprNode
 
-from app.context.graph_helpers import attach_terminal_criterion, outcome_tag
-from app.context.physical_quantity.comparison import CriterionSides, comparison_function, is_proportional, parse_criterion_sides
+from app.context.graph_helpers import attach_terminal_criterion, outcome_graph, outcome_tag
+from app.context.physical_quantity.comparison import (
+    CriterionSides,
+    comparison_function,
+    is_dimension,
+    is_proportional,
+    parse_criterion_sides,
+)
 from app.evaluation_parameters import EvaluationParameters
 from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 
@@ -98,13 +104,13 @@ def _quantity_match(parameters: EvaluationParameters, label: str, sides: Criteri
     return quantity_match
 
 
-def _dimension_match(label: str, sides: CriterionSides) -> Evaluate:
+def _dimension_match(evaluation_label: str, sides: CriterionSides) -> Evaluate:
     quantities = sides.quantities.items()
 
     def dimension_match(_response: Any) -> ReachedCriteria:
         substitutions = [(key, expr.dimension) for (key, expr) in quantities]
         dimension_match, _ = is_proportional(sides.lhs, sides.rhs, substitutions)
-        return outcome_tag(label + "_DIMENSION_MATCH", dimension_match is True, {"lhs": sides.lhs_string, "rhs": sides.rhs_string})
+        return outcome_tag(evaluation_label, dimension_match is True, {"lhs": sides.lhs_string, "rhs": sides.rhs_string})
     return dimension_match
 
 
@@ -265,16 +271,50 @@ def _add_match_nodes(
     )
 
 
-def criterion_match_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
-    graph = CriteriaGraph(label)  # type: ignore[arg-type]  # Bug 8 in the bug report: label is None here
-    END = graph.add_end_node()
-    rtol, atol = _tolerances(parameters)
+def _dimension_graph(label: str, sides: CriterionSides) -> CriteriaGraph:
+    """A graph for `dimension(...) matches dimension(...)`, which only compares the dimensions."""
+    lhs, rhs = sides.lhs_string, sides.rhs_string
+    graph, END = outcome_graph(
+        label,
+        summary=f"Do the dimensions of {lhs} and {rhs} match?",
+        details=f"Do the dimensions of {lhs} and {rhs} match?",
+        evaluate=_dimension_match(label, sides)
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_TRUE",
+        END,
+        summary=f"The quantities {lhs} and {rhs} have the same dimensions.",
+        details=f"The quantities {lhs} and {rhs} have the same dimensions.",
+        feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("DIMENSION_MATCH")
+    )
+    attach_terminal_criterion(
+        graph,
+        label,
+        label + "_FALSE",
+        END,
+        summary=f"The quantities {lhs} and {rhs} have different dimensions.",
+        details=f"The quantities {lhs} and {rhs} have different dimensions.",
+        feedback_string_generator=physical_quantity_feedback_string_generators["MATCHES"]("DIMENSION_MISMATCH")
+    )
+    return graph
 
+
+def criterion_match_node(criterion: ExprNode, parameters: EvaluationParameters, label: str | None = None) -> CriteriaGraph:
     if label is None:
         label = criterion.content_string()
 
     inputs = criterion.children
     sides = parse_criterion_sides(criterion, parameters)
+
+    # The criteria grammar only has `dimension(...) matches dimension(...)`, so both sides are dimensions
+    if is_dimension(inputs[0]):
+        return _dimension_graph(label, sides)
+
+    graph = CriteriaGraph(label)
+    END = graph.add_end_node()
+    rtol, atol = _tolerances(parameters)
 
     _add_match_nodes(
         graph,
@@ -282,7 +322,7 @@ def criterion_match_node(criterion: ExprNode, parameters: EvaluationParameters, 
         label,
         inputs,
         quantity_match=_quantity_match(parameters, label, sides, rtol, atol),
-        dimension_match=_dimension_match(label, sides),
+        dimension_match=_dimension_match(label + "_DIMENSION_MATCH", sides),
         unit_comparison=_unit_comparison(label, sides),
     )
     return graph

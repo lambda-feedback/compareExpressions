@@ -50,16 +50,19 @@ def one_swap_addition_and_multiplication(expression: Basic) -> list[Basic]:
         return node - node.args[k - 1] - node.args[k] + node.args[k - 1] * node.args[k]
 
     def multiplication_to_addition(node: Basic, k: int) -> Basic:
-        return node - 2 * node.args[k]
+        return node / (node.args[k - 1] * node.args[k]) * (node.args[k - 1] + node.args[k])
 
     variations = replace_node_variations(expression, Add, addition_to_multiplication)
-    variations += replace_node_variations(expression, Mul, addition_to_multiplication)
+    variations += replace_node_variations(expression, Mul, multiplication_to_addition)
 
-    return variations
+    # For a node with two arguments, k-1 wraps around at k = 0, so each pair is changed twice
+    return list(dict.fromkeys(variations))
 
 
 def one_exponent_flip(expression: Basic) -> list[Basic]:
     def exponent_flip(node: Basic, k: int) -> Basic:
         return node**(-1)
     variations = replace_node_variations(expression, Pow, exponent_flip)
-    return variations
+
+    # The flip does not depend on k, so each power would be flipped once per argument
+    return list(dict.fromkeys(variations))
