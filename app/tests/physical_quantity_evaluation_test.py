@@ -5,6 +5,7 @@ from sympy import Integer, Symbol
 from app import evaluation
 from app.context.physical_quantity.comparison import is_proportional
 from app.evaluation import evaluation_function
+from app.feedback.physical_quantity import feedback_string_generators as physical_quantity_feedback_string_generators
 from app.tests.physical_quantity_test_cases import slr_strict_si_syntax_test_cases, slr_natural_si_syntax_test_cases
 from lambdafeedback.physical_quantities import (
     COMMON_UNITS,
@@ -598,6 +599,17 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(res, "1.0 m", params)
         assert result["is_correct"] is is_correct
+
+    def test_unexpected_value_feedback(self):
+        params = {"strict_syntax": False, "physical_quantity": True, "units_string": "SI", "strictness": "strict"}
+        result = evaluation_function("-10.5 kg m/s^2", "kg m/s^2", params)
+        # Used to say "is expected only have" (feedback strings in the bug report)
+        assert result["feedback"] == "The response is expected to only have unit(s), no value."
+
+    def test_dimension_match_feedback_string(self):
+        # Used to start with a space. The feedback is trimmed before it is returned, so check the string itself
+        feedback = physical_quantity_feedback_string_generators["MATCHES"]("DIMENSION_MATCH")({"lhs": "response"})
+        assert feedback == "$response$ has the expected dimensions"
 
     @pytest.mark.parametrize(
         "res,ans,criteria,is_correct",

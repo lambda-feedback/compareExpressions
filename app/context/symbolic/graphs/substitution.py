@@ -166,7 +166,7 @@ def criterion_where_node(criterion: ExprNode, parameters: EvaluationParameters, 
         label + "_TRUE",
         END,
         summary=expression.content_string() + " where " + subs_string,
-        details=expression.content_string() + " where " + subs_string + "is true.",
+        details=expression.content_string() + " where " + subs_string + " is true.",
         feedback_string_generator=symbolic_feedback_string_generators["response=answer_where"]("TRUE")
     )
     graph.attach_new_criterion(
