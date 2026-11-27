@@ -362,3 +362,18 @@ class TestPreviewFunction():
         result = preview_function("{1, 2}", params)
         assert result["preview"]["latex"] == "\\left\\{1,~2\\right\\}"
         assert result["preview"]["sympy"] == "{1, 2}"
+
+    @pytest.mark.parametrize(
+        "response,latex,sympy",
+        [
+            ("3i+2j+6k", r"3 \cdot i + 2 \cdot j + 6 \cdot k", "3i+2j+6k"),
+            ("2.5J", r"2.5 \cdot J", "2.5J"),
+            ("x2j", r"x \cdot 2 \cdot j", "x2j"),
+            ("x_2j", r"x_{2j}", "x_2j"),
+        ]
+    )
+    def test_number_followed_by_j_is_multiplication(self, response, latex, sympy):
+        params = {"is_latex": False, "strict_syntax": False, "elementary_functions": True}
+        result = preview_function(response, params)
+        assert result["preview"]["latex"] == latex
+        assert result["preview"]["sympy"] == sympy
