@@ -17,6 +17,8 @@ Sets the absolute tolerance, $e_a$, i.e. if the answer, $x$, and response, $\til
 
 If you want to use `I` for the imaginary constant, set the grading parameter `complexNumbers` to True.
 
+With `complexNumbers` set to True, a number directly followed by `j` or `J` (e.g. `2j`) is also read as an imaginary number, `2*I`. Otherwise `2j` is read like `2i`: as `2*j` (or as a syntax error with `strict_syntax`), see [Entering vectors as `3i+2j+6k`](#entering-vectors-as-3i2j6k).
+
 #### `convention`
 
 Changes the implicit multiplication convention. If unset it will default to `equal_precedence`.
@@ -504,6 +506,12 @@ In this example, `complexNumbers` is set to `true` and the answer is `2+I`. An i
 Any response that is mathematically equivalent $2+i$ to will be accepted, e.g. `2+I`, `2+(-1)^(1/2)`, `conjugate(2-I)`, `2sqrt(2)e^(I\*pi/4)+e^(I\*3\*pi/2)` or `re(2-I)-im(2-I)\*I`.
 
 **Note:** If the particular way that the answer is written matter, e.g. only answers on cartesian form should be accepted, then that requires further configuration, see the example *Syntactical comparison*.
+
+#### Entering vectors as `3i+2j+6k`
+
+With `complexNumbers` unset (or `false`), `i`, `j` and `k` are ordinary symbols, so a vector can be written using the unit vectors $\mathbf{i}$, $\mathbf{j}$ and $\mathbf{k}$. If the answer is `3*i+2*j+6*k`, the responses `3i+2j+6k` and `3*i+2*j+6*k` are both accepted. A number directly followed by `j` or `J` is read as a multiplication, `2j` as `2*j`, in the same way as `2i` and `2k`. Input symbols for `i`, `j` and `k` can be added to show them as $\mathbf{i}$, $\mathbf{j}$ and $\mathbf{k}$ in the preview.
+
+With `strict_syntax` set to `true`, implicit multiplication is not allowed, so the response must be written `3*i+2*j+6*k`. Do not set `complexNumbers` to `true` for such a question: then `2j` is read as the imaginary number $2i$.
 
 #### Using `constant` and `function` assumptions
 

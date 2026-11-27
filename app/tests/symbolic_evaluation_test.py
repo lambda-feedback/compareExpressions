@@ -2297,3 +2297,82 @@ class TestEvaluationFunction():
         }
         result = evaluation_function(response, answer, params)
         assert result["is_correct"] is True
+
+    vector_symbols = {
+        "i": {"aliases": [], "latex": r"\(\mathbf{i}\)"},
+        "j": {"aliases": [], "latex": r"\(\mathbf{j}\)"},
+        "k": {"aliases": [], "latex": r"\(\mathbf{k}\)"},
+    }
+
+    @pytest.mark.parametrize("symbols", [None, vector_symbols])
+    @pytest.mark.parametrize(
+        "response,answer",
+        generate_input_variations(response="3*i+2*j+6*k", answer="3*i+2*j+6*k")
+    )
+    def test_number_followed_by_j_is_multiplication(self, response, answer, symbols):
+        # Python reads `2j` as a complex literal, it should be read as `2*j` here
+        params = {"strict_syntax": False, "elementary_functions": True}
+        if symbols is not None:
+            params["symbols"] = symbols
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    @pytest.mark.parametrize("symbols", [None, vector_symbols])
+    @pytest.mark.parametrize(
+        "response,answer",
+        [
+            ("3i+2j+5k", "3*i+2*j+6*k"),
+            ("3i+2j+6k", "3*i+2*I+6*k"),
+            ("2j", "2*I"),
+            ("x_2j", "x_2*j"),  # `x_2j` is a single symbol
+        ]
+    )
+    def test_number_followed_by_j_is_multiplication_incorrect(self, response, answer, symbols):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        if symbols is not None:
+            params["symbols"] = symbols
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is False
+
+    @pytest.mark.parametrize(
+        "response,answer",
+        [
+            ("2.5j", "2.5*j"),
+            ("2J", "2*J"),
+            ("2.5J+x", "x+2.5*J"),
+            (".5j", "j/2"),
+            ("sin(2j)", "sin(2*j)"),
+            ("3*i+2*j", "3i+2j"),
+            ("x2j", "x2*j"),
+            ("abc2j", "abc2*j"),
+        ]
+    )
+    def test_number_followed_by_j_variations(self, response, answer):
+        params = {"strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, answer, params)
+        assert result["is_correct"] is True
+
+    def test_number_followed_by_j_in_identifier_with_symbols(self):
+        # `x2j` is a name, its digits are not a number followed by `j`
+        params = {
+            "strict_syntax": False,
+            "symbols": {"x2j": {"aliases": [], "latex": r"\(x_{2j}\)"}},
+        }
+        assert evaluation_function("3x2j", "3*x2j", params)["is_correct"] is True
+        assert evaluation_function("3x2j", "3*x2*j", params)["is_correct"] is False
+
+    @pytest.mark.parametrize("response", ["2j", "2J", "2*I"])
+    def test_number_followed_by_j_with_complex_numbers(self, response):
+        # With `complexNumbers` a number followed by `j` is still the imaginary number
+        params = {"complexNumbers": True, "strict_syntax": False, "elementary_functions": True}
+        result = evaluation_function(response, "2*I", params)
+        assert result["is_correct"] is True
+        assert evaluation_function(response, "2*j", params)["is_correct"] is False
+
+    @pytest.mark.parametrize("response", ["2j", "2J", "3i+2j+6k"])
+    def test_number_followed_by_j_with_strict_syntax(self, response):
+        # With strict syntax a number followed by `j` is rejected, like `2i`
+        params = {"strict_syntax": True, "elementary_functions": True}
+        for answer in ["2*j", "2*J", "3*i+2*j+6*k", "2*I"]:
+            assert evaluation_function(response, answer, params)["is_correct"] is False
+        assert evaluation_function("2i", "2*i", params)["is_correct"] is False
